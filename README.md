@@ -1,4 +1,4 @@
-# Welcome to your Expo app 👋
+# Welcome to nubian fashion ap 👋
 
 this is the nubian fashion app 
 ## Get started
