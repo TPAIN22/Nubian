@@ -9,7 +9,7 @@ export default function RootLayout() {
     <ClerkProvider tokenCache={tokenCache}>
       <>
         <Stack 
-          initialRouteName="index"
+          initialRouteName="(onboarding)"
           screenOptions={{ headerShown: false }}
         >
           <Stack.Screen name="(tabs)" />

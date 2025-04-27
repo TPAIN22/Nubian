@@ -14,14 +14,6 @@ import { Link, useRouter } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
 
 export default function welcom() {
-  const [selectedCity, setSelectedCity] = useState("");
-
-  const cities = [
-    { label: "اختر المدينة", value: "" },
-    { label: "مدني", value: "madani" },
-    { label: "بورتسودان", value: "portsudan" },
-    { label: "عطبرة", value: "Atabara" },
-  ];
 
   const router = useRouter();
   return (
@@ -54,65 +46,14 @@ export default function welcom() {
               {"\n"}
               اختار المدينة المتواجد فيها واستمتع بالعروض والتخفيضات
             </Text>
-
-            <View
-              style={{
-                backgroundColor: "#fff",
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: "#ddd",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 2,
-                marginTop: 10,
-                width: "80%",
-              }}
-            >
-              <Picker
-                style={{
-                  width: "100%",
-                  backgroundColor: "#fff",
-                  borderRadius: 10,
-                  color: "#A37E2C",
-                  paddingHorizontal: 10,
-                  height: 50,
-                  marginVertical: 10,
-                  fontSize: 20,
-                }}
-                selectedValue={selectedCity}
-                onValueChange={(itemValue) => setSelectedCity(itemValue)}
-              >
-                {cities.map((city) => (
-                  <Picker.Item
-                    color="#A37E2C"
-                    key={city.value}
-                    label={city.label}
-                    value={city.value}
-                    style={{ fontSize: 20 }}
-                  />
-                ))}
-              </Picker>
-            </View>
           </View>
         </View>
 
         <View style={{ padding: 20 }}>
           <TouchableOpacity
             onPress={() => {
-              if (!selectedCity) {
-                Toast.show({
-                swipeable: true,
-                
-                text1Style: { color: "#A37E2C" , fontSize: 25},
-                text2Style: { color: "#006348" , fontSize: 15},
-                  type: "error",
-                  text1: "تنبيه",
-                  text2: "من فضلك اختر المدينة أولاً 🏙️",
-                });
-                return;
-              }
+        
+  
               router.push(`../../(tabs)/home`);
             }}
             style={{

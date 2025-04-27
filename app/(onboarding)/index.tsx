@@ -15,7 +15,6 @@ import {
     return (
       <SafeAreaProvider>
         <SafeAreaView>
-          <Redirect href="/(tabs)/home" />
           <StatusBar style="dark" backgroundColor="#fff" />
           <View
             style={{
