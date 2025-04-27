@@ -2,19 +2,18 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Image } from 'expo-image';
 import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 const iconSize = 24;
-const focusedColor = '#4d4617';
-const unfocusedColor = '#A37E2C';
-const backgroundColorFocused = 'rgba(163, 126, 44, 0.2)'; // primary/20
+const focusedColor = '#A37E2C';
+const unfocusedColor = 'black';
 
 const TabIcon = ({ source, focused }: { source: any; focused: boolean }) => (
   <View
     style={{
-
       marginTop: 8,
       padding: 16,
       borderRadius: 100,
-      backgroundColor: focused ? backgroundColorFocused : 'transparent',
+      
     }}
   >
     <Image
@@ -31,35 +30,25 @@ const TabIcon = ({ source, focused }: { source: any; focused: boolean }) => (
 
 export default function _layout() {
   return (
+    <>
     <Tabs
       screenOptions={{
+        tabBarHideOnKeyboard: true,
         tabBarShowLabel: false,
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
           left: 5,
           right: 5,
-          bottom: 10,
           elevation: 0,
-          marginHorizontal: 30,
-          backgroundColor: '#E6E2E2FF',
-          borderRadius: 25,
           height: 60,
           paddingTop: 5,
-        },        
+        }, 
+        headerStyle: {
+          backgroundColor: '#A37E2C',
+        }       
       }}
     >
-       <Tabs.Screen
-        name="cart"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              source={require('../../assets/images/cart-shopping-solid.svg')}
-              focused={focused}
-            />
-          ),
-        }}
-      />
       <Tabs.Screen
         name="home"
         options={{
@@ -68,21 +57,22 @@ export default function _layout() {
           placeholder: 'Search',
           
           },
+          
           headerRight: () => (
             <Image
               source={require('../../assets/images/cart-shopping-solid.svg')}
-              style={{ width: 20, height: 20  ,marginRight: 10 , tintColor: '#A37E2C'}}
+              style={{ width: 20, height: 20  ,marginRight: 10}}
             />
           ),
-          headerShown: true,
           headerTitle: 'Nubian',
-          headerTintColor: '#A37E2C',
+         
           headerLeft: () => (
             <Image
               source={require('../../assets/images/icon.png')}
               style={{ width: 50, height: 50 ,top: 3}}
             />
           ),
+          
           tabBarIcon: ({ focused }) => (
             <TabIcon
               source={require('../../assets/images/house-solid.svg')}
@@ -91,18 +81,41 @@ export default function _layout() {
           ),
         }}
       />
+        <Tabs.Screen
+        name="cart"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+            source={require('../../assets/images/cart-shopping-solid.svg')}
+            focused={focused}
+            />
+          ),
+        }}
+        />
+
       <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              source={require('../../assets/images/user-solid.svg')}
-              focused={focused}
+            source={require('../../assets/images/user-solid.svg')}
+            focused={focused}
             />
           ),
         }}
-      />
-     
+        />
+      <Tabs.Screen
+        name="explor"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+            source={require('../../assets/images/search-solid.svg')}
+            focused={focused}
+            />
+          ),
+        }}
+     />
     </Tabs>
+    </>
   );
 }

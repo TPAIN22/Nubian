@@ -43,7 +43,7 @@ export default function welcom() {
               نـــوبيــــان{" "}
             </Text>
             <Image
-              source={require("../assets/images/Online-shopping.gif")}
+              source={require("../../assets/images/Online-shopping.gif")}
               style={{ width: 350, height: 300 }}
             />
             <Text className="text-2xl text-[#A37E2C] my-5 mt-5 font-extrabold">
@@ -113,7 +113,7 @@ export default function welcom() {
                 });
                 return;
               }
-              router.push(`/(tabs)/home`);
+              router.push(`../../(tabs)/home`);
             }}
             style={{
               backgroundColor: "#A37E2C",

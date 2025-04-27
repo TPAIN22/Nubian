@@ -1,116 +1,88 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  Alert,
-  StyleSheet,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useClerk, useUser } from '@clerk/clerk-expo';
+import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
+import { useEffect, useState } from 'react';
 
-export default function ProfileOrLogin() {
-  // نفترض إن فيه مستخدم أو لا
-  const [user, setUser] = useState(null); // null = غير مسجل
+export default function Profile() {
+  const { loaded, isSignedIn } = useClerk();
+  const { user } = useUser();
+  const router = useRouter();
 
-  const handleLogin = () => {
-    // محاكاة تسجيل دخول
-    setUser({
-      name: "مصطفى",
-      email: "mustafa@example.com",
-      avatar: "https://i.pravatar.cc/100", // صورة عشوائية
-    });
-  };
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert("تنبيه", "هل تريد تسجيل الخروج؟", [
-      { text: "إلغاء" },
-      { text: "تسجيل الخروج", onPress: () => setUser(null) },
-    ]);
-  };
+  // هذا الكود سيتحقق من حالة المستخدم بعد تحميل البيانات
+  useEffect(() => {
+    if (loaded && isSignedIn && user) {
+      setIsUserLoaded(true); // تأكد من أن المستخدم تم تحميله بعد التحقق من حالة تسجيل الدخول
+    } else {
+      setIsUserLoaded(false);
+    }
+  }, [loaded, isSignedIn, user]);
 
-  if (!user) {
-    // 👉 شاشة تسجيل الدخول
+  if (!loaded) {
     return (
-      <SafeAreaView style={styles.center}>
-        <Ionicons name="person-circle-outline" size={80} color="#A37E2C" />
-        <Text style={styles.title}>أهلاً بك!</Text>
-        <Text style={styles.subtitle}>سجل دخولك للمتابعة</Text>
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>تسجيل الدخول</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <View style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100%', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#A37E2C" />
+      </View>
     );
   }
 
-  // ✅ شاشة البروفايل
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.profileBox}>
-        <Image source={{ uri: user.avatar }} style={styles.avatar} />
-        <Text style={styles.name}>{user.name}</Text>
-        <Text style={styles.email}>{user.email}</Text>
-
-        <TouchableOpacity style={[styles.button, { marginTop: 30 }]} onPress={handleLogout}>
-          <Text style={styles.buttonText}>تسجيل الخروج</Text>
+  // عرض شاشة تسجيل الدخول إذا لم يكن المستخدم قد سجل الدخول
+  if (loaded && !isSignedIn) {
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100%', backgroundColor: '#fff' }}>
+        <Image source={require('../../../assets/images/profilelogin.svg')} style={{ width: '80%', height: 300 }} />
+        <Text>سجّل الدخول للمتابعة</Text>
+        <TouchableOpacity onPress={() => router.push('/(auth)/signin')} style={{ width: 200, alignItems: 'center', justifyContent: 'space-around', flexDirection: 'row', backgroundColor: '#9B7931DC', borderRadius: 15, padding: 10 }}>
+          <Text style={{ color: '#fff' }}>تسجيل الدخول</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    );
+  }
+
+  // إذا كان المستخدم مسجل دخول، عرض بياناته
+  if (isUserLoaded) {
+    return (
+      <View style={styles.container}>
+        <Image source={{ uri: user?.imageUrl }} style={styles.avatar} />
+        <Text style={styles.name}>{user?.fullName}</Text>
+        <Text style={styles.email}>{user?.primaryEmailAddress?.emailAddress}</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100%', backgroundColor: '#fff' }}>
+      <Text>خطأ في تحميل البيانات</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#F8F8F8',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
   },
-  profileBox: {
-    alignItems: "center",
-    marginTop: 50,
-  },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 15,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#A37E2C',
   },
   name: {
     fontSize: 22,
-    fontWeight: "bold",
-    color: "#A37E2C",
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
   },
   email: {
     fontSize: 16,
-    color: "#444",
-    marginTop: 4,
-  },
-  title: {
-    fontSize: 24,
-    color: "#A37E2C",
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#777",
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: "#A37E2C",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: '#777',
+    marginBottom: 24,
   },
 });

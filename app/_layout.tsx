@@ -1,15 +1,23 @@
 import { Stack } from "expo-router";
-import "./global.css"
+import "./global.css";
 import Toast from 'react-native-toast-message';
+import { ClerkProvider } from '@clerk/clerk-expo';
+import { tokenCache } from '@clerk/clerk-expo/token-cache';
 
 export default function RootLayout() {
   return (
-    <>
-    <Stack screenOptions={{ headerShown: false , animation: 'slide_from_left'}}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="welcom" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
-    <Toast/>
-    </>
-  )}
+    <ClerkProvider tokenCache={tokenCache}>
+      <>
+        <Stack 
+          initialRouteName="index"
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(onboarding)" />
+        </Stack>  
+        <Toast />
+      </>
+    </ClerkProvider>
+  );
+}
