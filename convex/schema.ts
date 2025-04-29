@@ -6,7 +6,7 @@ export default defineSchema({
     name: v.string(),
     description: v.string(),
     price: v.number(),
-    imageUrl: v.string(),
+    images: v.array(v.string()),
     category: v.string(),
     inStock: v.optional(v.boolean()), 
     ownerId: v.optional(v.string()), 

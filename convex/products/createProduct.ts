@@ -6,9 +6,10 @@ export const createProduct = mutation({
     name: v.string(),
     description: v.string(),
     price: v.number(),
-    imageUrl: v.string(),
+    images: v.array(v.string()),
     category: v.string(),
-    inStock: v.optional(v.boolean()),
+    inStock: v.optional(v.boolean()), 
+    ownerId: v.optional(v.string()), 
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -25,13 +26,17 @@ export const createProduct = mutation({
       throw new Error("Unauthorized: Only admins can create products");
     }
 
+    const imagesArray = args.images;
+    if (imagesArray.length < 4) {
+      throw new Error("يجب رفع أربع صور على الأقل للمنتج.");
+    }
     await ctx.db.insert("products", {
       name: args.name,
       description: args.description,
       price: args.price,
-      imageUrl: args.imageUrl,
+      images: imagesArray,
       category: args.category,
-      inStock: args.inStock ?? true,
+      inStock: args.inStock,
       ownerId: identity.subject,
     });
   },

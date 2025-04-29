@@ -44,12 +44,12 @@ export default function Profile() {
   ];
 
   const settingsAdminOptions = [
-    { title: "Add New Product", action: () => ({}), icon: "add" as const },
+    { title: "Add New Product", action: () => (router.push("/profile/addProduct")), icon: "add" as const },
     { title: "Delete Products", action: () => ({}), icon: "trash" as const },
     { title: "View Orders", action: () => ({}), icon: "eye" as const },
+    { title: "View Products", action: () => (router.push("/profile/viewProducts")), icon: "business" as const },
   ];
 
-  // ثبّت الهيدر شفاف مع بداية الشاشة
   useEffect(() => {
     navigation.setOptions({
       headerTransparent: true,

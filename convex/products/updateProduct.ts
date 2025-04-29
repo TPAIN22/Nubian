@@ -7,7 +7,7 @@ export const updateProduct = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     price: v.optional(v.number()),
-    imageUrl: v.optional(v.string()),
+    images: v.optional(v.array(v.string())),
     category: v.optional(v.string()),
     inStock: v.optional(v.boolean()),
   },
@@ -25,12 +25,15 @@ export const updateProduct = mutation({
     if (!user || !user.isAdmin) {
       throw new Error("Unauthorized: Only admins can update products");
     }
-
+    const imagesArray = args.images;
+    if (imagesArray!.length < 4) {
+      throw new Error("يجب رفع أربع صور على الأقل للمنتج.");
+    }
     await ctx.db.patch(args.productId, {
       name: args.name,
       description: args.description,
       price: args.price,
-      imageUrl: args.imageUrl,
+      images: imagesArray,
       category: args.category,
       inStock: args.inStock,
     });

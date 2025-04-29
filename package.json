@@ -53,7 +53,9 @@
     "react-native-webview": "13.12.5",
     "svix": "^1.64.1",
     "tailwindcss": "^3.4.17",
-    "undefined": "expo/vector-icons/Ionicons"
+    "undefined": "expo/vector-icons/Ionicons",
+    "expo-image-picker": "~16.0.6",
+    "expo-image-manipulator": "~13.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
