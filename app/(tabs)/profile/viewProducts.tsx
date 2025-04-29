@@ -4,9 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export default function ProductGallery() {
-  const products = useQuery(api.products.getProducts.getProducts, {}); // بدون تصنيف
-  // لو تبغى فلترة حسب تصنيف:
-  // const products = useQuery(api.products.getProducts, { category: "عطور" });
+  const products = useQuery(api.products.getProducts.getProducts, {});
 
   if (products === undefined) {
     return (
