@@ -44,7 +44,7 @@ export default function AddProduct() {
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: false,
-      quality: 0.7,
+      quality: 0.5,
       base64: true,
     });
 
@@ -53,8 +53,8 @@ export default function AddProduct() {
 
       const manipulated = await ImageManipulator.manipulateAsync(
         image.uri,
-        [{ resize: { width: 800 } }],
-        { compress: 0.7, base64: true }
+        [{ resize: { width:400 , height: 400 } }],
+        { compress: 0.5, base64: true }
       );
 
       if (manipulated.base64) {
@@ -89,7 +89,7 @@ export default function AddProduct() {
         price: Number(price),
         description,
         images,
-        category: "ملابس",
+        category: "نسائي",
         inStock: true,
         ownerId: "",
       });
