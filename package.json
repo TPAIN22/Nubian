@@ -17,11 +17,13 @@
     "@clerk/clerk-expo": "^2.10.1",
     "@clerk/types": "^4.55.1",
     "@expo/vector-icons": "^14.0.2",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-picker/picker": "2.9.0",
     "@react-native-seoul/masonry-list": "^1.4.2",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "axios": "^1.9.0",
+    "convex": "^1.23.0",
     "expo": "~52.0.46",
     "expo-auth-session": "~6.0.3",
     "expo-blur": "~14.0.3",
@@ -29,6 +31,8 @@
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
     "expo-image": "^2.0.7",
+    "expo-image-manipulator": "~13.0.6",
+    "expo-image-picker": "~16.0.6",
     "expo-linking": "~7.0.5",
     "expo-router": "~4.0.20",
     "expo-secure-store": "^14.0.1",
@@ -49,8 +53,9 @@
     "react-native-toast-message": "^2.3.0",
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
+    "svix": "^1.64.1",
     "tailwindcss": "^3.4.17",
-    "@react-native-async-storage/async-storage": "1.23.1"
+    "undefined": "expo/vector-icons/Ionicons"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
