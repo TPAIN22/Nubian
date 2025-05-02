@@ -83,8 +83,8 @@ const CustomHeader = () => {
       <ScrollView>
         <View style={styles.headerContent}>
           {/* Logo */}
-          <ExpoImage 
-            source={require('nubian/assets/images/icon.png')}
+          <Image
+            source={require('../../../assets/images/icon.png')}
             contentPosition="top"
             style={styles.logo}
             contentFit="contain"
