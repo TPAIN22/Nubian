@@ -9,7 +9,7 @@ const unfocusedColor = '#A37E2C';
 const backgroundColorFocused = 'rgba(163, 126, 44, 0.2)'; // primary/20
 import  Ionicons  from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, SafeAreaView, StyleSheet, ScrollView } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
@@ -80,51 +80,53 @@ const CustomHeader = () => {
 
   return (
     <SafeAreaView style={styles.headerContainer}>
-      <View style={styles.headerContent}>
-        {/* Logo */}
-        <ExpoImage 
-          source={require('nubian/assets/images/icon.png')}
-          contentPosition="top"
-          style={styles.logo}
-          contentFit="contain"
-        />
-        
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search products..."
-            placeholderTextColor="#888"
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-            clearButtonMode="while-editing"
+      <ScrollView>
+        <View style={styles.headerContent}>
+          {/* Logo */}
+          <ExpoImage 
+            source={require('nubian/assets/images/icon.png')}
+            contentPosition="top"
+            style={styles.logo}
+            contentFit="contain"
           />
-        </View>
-        {suggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            {suggestions.map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                onPress={() => handleSuggestionClick(product)}
-                style={styles.suggestionItem}
-              >
-                <Text>{product.title}</Text>
-              </TouchableOpacity>
-            ))}
+          
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search products..."
+              placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+              clearButtonMode="while-editing"
+            />
           </View>
-        )}
-        
-        {/* Notification Icon */}
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={24} color="#4d4617" />
-          {notificationCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>{notificationCount}</Text>
+          {suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              {suggestions.map((product) => (
+                <TouchableOpacity
+                  key={product.id}
+                  onPress={() => handleSuggestionClick(product)}
+                  style={styles.suggestionItem}
+                >
+                  <Text>{product.title}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
-        </TouchableOpacity>
-      </View>
+          
+          {/* Notification Icon */}
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="notifications-outline" size={24} color="#4d4617" />
+            {notificationCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>{notificationCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -132,7 +134,7 @@ const CustomHeader = () => {
 const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
+    borderBottomWidth: 5,
     borderBottomColor: '#f0f0f0',
   },
   headerContent: {
@@ -146,7 +148,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 50,
     height: 50,
-    borderRadius: 8,
+    borderRadius: 1,
     marginRight: -10,
   },
   searchContainer: {
@@ -155,7 +157,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
-    paddingHorizontal: 5,
+    paddingHorizontal: 9,
   },
   searchIcon: {
     marginRight: 5,

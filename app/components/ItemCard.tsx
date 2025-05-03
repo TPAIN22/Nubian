@@ -9,10 +9,7 @@ export default function ItemCard({ item }: { item: { image: string, title: strin
         source={{ uri: item.image }}
         style={styles.productImage}
       />
-      {/* <View style={styles.details}>
-        <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.price}>{item.price} جـ.س</Text>
-      </View> */}
+      
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Redirect } from 'expo-router';
 
+
 export default function Index() {
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 

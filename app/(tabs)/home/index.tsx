@@ -1,4 +1,4 @@
-import { View, FlatList, TouchableOpacity, Text, StyleSheet } from 'react-native'
+import { View, FlatList, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native'
 import axios from 'axios'
 import { useEffect, useState } from 'react';
 import ItemCard from "../../components/ItemCard";
@@ -36,7 +36,7 @@ export default function home() {
   };
 
   return (
-    <>
+    <ScrollView>
       <Categories />
       <Subcategories />
       <MasonryList
@@ -55,7 +55,7 @@ export default function home() {
               backgroundColor: "white",
               borderRadius: 18,
               margin: 1,
-              padding: 5,
+              padding: 1,
               position: "fixed",
             }}
           >
@@ -117,7 +117,7 @@ export default function home() {
                 style={{
                   backgroundColor: "#CBDDC86A",
                   color: "#A37E2C",
-                  borderRadius: 14,
+                  borderRadius: 4,
                   paddingVertical: 2,
                   paddingHorizontal: 15,
                   fontSize: 25,
@@ -131,42 +131,8 @@ export default function home() {
           </View>
         )}
       />
-    </>
+    </ScrollView>
   );
 }
 
 
-
-const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    borderRadius: 8,
-    backgroundColor: 'white',
-    overflow: 'hidden',
-  },
-  productImage: {
-    width: '100%',
-    height: 180,
-    resizeMode: 'contain', // Ensures the image fits within the given margin/padding
-    borderRadius: 8,
-  },
-  details: {
-    padding: 5,
-  },
-  title: {
-    textAlign: 'left',
-  },
-  price: {
-    textAlign: 'left',
-    backgroundColor: '#CBDDC86A',
-    width: '60%',
-    color: '#A37E2C',
-    borderRadius: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 5,
-    alignSelf: 'flex-end',
-    marginTop: 14,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});

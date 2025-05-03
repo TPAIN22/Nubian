@@ -1,5 +1,6 @@
 import React from 'react';
 import { Category } from '../../types/category';
+import { TouchableOpacity, View, Text } from 'react-native';
 
 interface CategoryListProps {
   categories: Category[];
@@ -8,34 +9,63 @@ interface CategoryListProps {
 
 const CategoryList: React.FC<CategoryListProps> = ({ categories, onSelect }) => {
   return (
-    <div className="category-list">
+    <View style={styles.categoryList}>
       {categories.map((category) => (
-        <div key={category.id} className="category-item">
-          <button 
-            onClick={() => onSelect(category.slug)}
-            className="category-button"
+        <View key={category.id} style={styles.categoryItem}>
+          <TouchableOpacity
+            onPress={() => onSelect(category.slug)}
+            style={styles.categoryButton}
           >
-            {category.name}
-          </button>
-          
+            <Text>{category.name}</Text>
+          </TouchableOpacity>
+
           {category.subcategories && (
-            <div className="subcategory-list">
+            <View style={styles.subcategoryList}>
               {category.subcategories.map((sub) => (
-                <button
+                <TouchableOpacity
                   key={sub.id}
-                  onClick={() => onSelect(sub.slug)}
-                  className="subcategory-button"
+                  onPress={() => onSelect(sub.slug)}
+                  style={styles.subcategoryButton}
                 >
-                  {sub.name}
-                </button>
+                  <Text>{sub.name}</Text>
+                </TouchableOpacity>
               ))}
-            </div>
+            </View>
           )}
-        </div>
+        </View>
       ))}
-    </div>
+    </View>
   );
 };
+
+import { StyleSheet } from 'react-native';
+
+const styles = StyleSheet.create({
+  categoryList: {
+    // Add your styles here
+    padding: 10,
+  },
+  categoryItem: {
+    // Add your styles here
+    marginBottom: 10,
+  },
+  categoryButton: {
+    // Add your styles here
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 5,
+  },
+  subcategoryList: {
+    // Add your styles here
+    marginLeft: 20,
+  },
+  subcategoryButton: {
+    // Add your styles here
+    backgroundColor: '#e0e0e0',
+    padding: 8,
+    borderRadius: 5,
+  },
+});
 
 export default CategoryList;
 // Note: The CSS classes used in this component should be defined in your CSS file to style the category list and buttons appropriately.
