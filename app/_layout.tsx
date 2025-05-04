@@ -2,12 +2,14 @@ import { Stack } from "expo-router";
 import "./global.css";
 import Toast from 'react-native-toast-message';
 import ClerckAndConvex from "@/providers/ClerckAndConvex";
+import { StatusBar } from "expo-status-bar";
 export default function RootLayout() {
   return (
     <ClerckAndConvex>
       <>
+      <StatusBar style="dark" />
         <Stack 
-          initialRouteName="(onboarding)"
+          initialRouteName="(tabs)"
           screenOptions={{ headerShown: false }}
           >
           <Stack.Screen name="(tabs)" />

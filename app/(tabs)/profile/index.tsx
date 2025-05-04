@@ -15,14 +15,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useGlobalContext } from "@/providers/GlobalContext";
+
 
 export default function Profile() {
+  const { user } = useUser();
   const { signOut } = useClerk();
   const tabbarHeight = useBottomTabBarHeight();
   const { loaded, isSignedIn } = useClerk();
-  const { state, dispatch } = useGlobalContext();
-  const { user } = state;
   const router = useRouter();
   const headerHeight = useHeaderHeight();
   const [isUserLoaded, setIsUserLoaded] = useState(false);
@@ -89,12 +88,6 @@ export default function Profile() {
       setIsUserLoaded(false);
     }
   }, [loaded, isSignedIn, user]);
-
-  const handleSignOut = () => {
-    dispatch({ type: "SET_USER", payload: null });
-    signOut();
-  };
-
   if (!loaded) {
     return (
       <View style={styles.loadingContainer}>
@@ -226,7 +219,7 @@ export default function Profile() {
           ) as any)}
         <View>
           <TouchableOpacity
-            onPress={handleSignOut}
+            onPress={()=> signOut()}
             className="flex flex-row items-center justify-between p-4 mb-2 mt-2 rounded-lg shadow-black drop-shadow-lg bg-white w-full"
           >
             <Text className="text-xl text-red-500">Log out</Text>

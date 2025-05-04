@@ -2,7 +2,6 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Image } from 'expo-image';
 import { View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 const iconSize = 24;
 const focusedColor = '#A37E2C';
 const unfocusedColor = 'black';
@@ -55,7 +54,6 @@ export default function _layout() {
           tabBarHideOnKeyboard: true,
           headerSearchBarOptions: {
           placeholder: 'Search',
-          
           },
           
           headerRight: () => (
