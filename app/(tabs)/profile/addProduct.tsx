@@ -50,40 +50,38 @@ export default function AddProduct() {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: false,
       quality: 0.5,
-      base64: true,
+      base64: false,
       legacy: true,
     });
 
     if (!result.canceled && result.assets?.length) {
       const image = result.assets[0];
 
-      const manipulated = await ImageManipulator.manipulateAsync(
-        image.uri,
-        [],
-        { compress: 0.5, base64: true }
-      );
+      const formData = new FormData();
+      formData.append("file", {
+        uri: image.uri,
+        type: image.mimeType || "image/jpeg",
+        name: `image_${Date.now()}.jpg`,
+      }as any);
 
-      if (manipulated.base64) {
-        try {
-          setLoading(true);
-          const formData = new FormData();
-          formData.append("file", `data:image/jpeg;base64,${manipulated.base64}`);
-          formData.append("fileName", `image_${Date.now()}.jpg`);
-
-          const response = await axios.post("https://nubian-auth.onrender.com/upload", formData, {
+      try {
+        setLoading(true);
+        const response = await axios.post(
+          "https://nubian-auth.onrender.com/upload",
+          formData,
+          {
             headers: {
               "Content-Type": "multipart/form-data",
             },
-          });
+          }
+        );
 
-          const imageUrl = response.data.url;
-          setImages((prev) => [...prev, imageUrl]);
-        } catch (error: any) {
-          console.error("Error uploading image:", error?.response?.data || error.message);
-          Alert.alert("فشل رفع الصورة", "تأكد من صحة بيانات ImageKit أو الخادم.");
-        } finally {
-          setLoading(false);
-        }
+        const imageUrl = response.data.url;
+        setImages((prev) => [...prev, imageUrl]);
+      } catch (error) {
+        Alert.alert("فشل رفع الصورة");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -194,7 +192,11 @@ export default function AddProduct() {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#9B7931" style={{ marginTop: 30 }} />
+          <ActivityIndicator
+            size="large"
+            color="#9B7931"
+            style={{ marginTop: 30 }}
+          />
         ) : (
           <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
             <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>

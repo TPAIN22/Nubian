@@ -58,7 +58,8 @@
     "react-router-dom": "^7.5.3",
     "svix": "^1.64.1",
     "tailwindcss": "^3.4.17",
-    "undefined": "expo/vector-icons/Ionicons"
+    "undefined": "expo/vector-icons/Ionicons",
+    "zustand": "^5.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
