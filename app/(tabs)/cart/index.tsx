@@ -72,8 +72,9 @@ const CartPage = () => {
       <>
       <Stack.Screen
         options={{
+
           headerLeft: () => (
-            <Ionicons name="arrow-back" size={24} color="#555958FF" />
+            <Ionicons name="cart-outline" size={24} color="#555958FF" />
           ),
           headerTransparent: true,
           headerTitleAlign: "center",
@@ -174,6 +175,14 @@ const CartPage = () => {
           )}
         />
       </View>
+      <View className="flex gap-2 flex-row items-center justify-around px-4 absolute bottom-20">
+      <TouchableOpacity className="bg-[#006348] p-2 rounded-xl flex-1 items-center">
+        <Text className="text-2xl font-bold text-[#eefcf8]">استمرار التسوق</Text>
+      </TouchableOpacity>
+      <TouchableOpacity className="bg-[#A37E2C] p-2 rounded-xl flex-1 items-center">
+        <Text className="text-2xl font-bold text-[#fcfaee]">اذهب الى الدفع </Text>
+      </TouchableOpacity>
+    </View>
     </>
   );
 };
