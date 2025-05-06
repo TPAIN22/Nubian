@@ -1,4 +1,6 @@
 import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   StyleSheet,
   View,
@@ -9,13 +11,21 @@ import MasonryList from "@react-native-seoul/masonry-list";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Link, RelativePathString, Stack } from "expo-router";
+import { Link, RelativePathString, Stack, useNavigation } from "expo-router";
 import useItemstore from "../../productStore/useItemStore";
 import { useHeaderHeight } from "@react-navigation/elements";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useRef } from "react";
+
   export default function Home() {
+  const scrollY = useRef(0);
+
   const headerHieght = useHeaderHeight();
   const products = useQuery(api.products.getProducts.getProducts, {});
   const { setItem } = useItemstore();
+  const tabBarHeight = useBottomTabBarHeight();
+    const navigation = useNavigation();
+  
 
   const isLoading = products === undefined;
 
@@ -23,6 +33,27 @@ import { useHeaderHeight } from "@react-navigation/elements";
     _id: `skeleton-${index}`,
     skeleton: true,
   }));
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+  
+      if (offsetY > 20 && scrollY.current <= 20) {
+        navigation.setOptions({
+          headerStyle: {
+            backgroundColor: "#F8F8F8",
+            elevation: 0,
+          },
+        });
+      } else if (offsetY <= 20 && scrollY.current > 20) {
+        navigation.setOptions({
+          headerStyle: {
+            backgroundColor: "transparent",
+            elevation: 0,
+          },
+        });
+      }
+  
+      scrollY.current = offsetY;
+    };
 
   return (
     <>
@@ -32,8 +63,9 @@ import { useHeaderHeight } from "@react-navigation/elements";
       data={isLoading ? skeletonItems : products}
       keyExtractor={(item: any) => item._id.toString()}
       numColumns={2}
+      style={{ marginBottom: 100 }}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ padding: 4, backgroundColor: "#f5f5f5" , marginTop: headerHieght }}
+      contentContainerStyle={{ padding: 4, backgroundColor: "#f5f5f5" , marginTop: headerHieght}}
       renderItem={({ item }: { item: any }) => {
         if (item.skeleton) return <ItemCardSkeleton />;
         return (

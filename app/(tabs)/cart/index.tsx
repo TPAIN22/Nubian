@@ -179,14 +179,13 @@ const CartPage = () => {
       <TouchableOpacity className="bg-[#006348] p-2 rounded-xl flex-1 items-center">
         <Text className="text-2xl font-bold text-[#eefcf8]">استمرار التسوق</Text>
       </TouchableOpacity>
-      <TouchableOpacity className="bg-[#A37E2C] p-2 rounded-xl flex-1 items-center">
+      <TouchableOpacity className="bg-[#A37E2C] p-2 rounded-xl flex-1 items-center" >
         <Text className="text-2xl font-bold text-[#fcfaee]">اذهب الى الدفع </Text>
       </TouchableOpacity>
     </View>
     </>
   );
 };
-
 const styles = StyleSheet.create({
   quantity: {
     fontSize: 12,

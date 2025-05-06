@@ -20,20 +20,20 @@ export default function ItemCard({
 }) {
   const [imageHeight, setImageHeight] = useState(120);
   const { width } = useWindowDimensions();
-  const cardWidth = width / 2 - 8;
+  const cardWidth = width / 2 - 10;
 
   useEffect(() => {
-    const uri = item.images?.[2] || item.image;
+    const uri = item.images?.[0] || item.image;
 
     RNImage.getSize(
       uri,
       (imgWidth, imgHeight) => {
         const ratio = imgHeight / imgWidth;
         const calculatedHeight = ratio * cardWidth;
-        setImageHeight(calculatedHeight < 120 ? 120 : calculatedHeight);
+        setImageHeight(calculatedHeight < 140 ? 140 : calculatedHeight  );
       },
       () => {
-        setImageHeight(120); // fallback in case of error
+        setImageHeight(120);
       }
     );
   }, [item.images, item.image]);
@@ -49,7 +49,7 @@ export default function ItemCard({
         <Text style={styles.name} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={styles.price}>SD {item.price}</Text>
+        <Text style={styles.price}>SDG{" "} {item.price}</Text>
       </View>
     </View>
   );
@@ -80,10 +80,11 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: 12,
     fontWeight: "bold",
-    maxWidth: 80,
-    backgroundColor: "#FAF5DCFF",
-    color: "#A37E2C",
+    maxWidth: 90,
+    backgroundColor: "#006348",
+    color: "#fff",
     paddingHorizontal: 6,
-    borderRadius: 8,
+    borderRadius: 2,
+    padding: 4,
   },
 });

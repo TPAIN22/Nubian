@@ -45,6 +45,7 @@ export default function AddProduct() {
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [category, setCategory] = useState("");
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -115,9 +116,9 @@ export default function AddProduct() {
         price: Number(price),
         description,
         images,
-        category: "نسائي",
+        category,
         inStock: true,
-        ownerId: "", // استبدل هذا بـ userId إن توفر
+        ownerId: "",
       });
 
       Alert.alert("تم إرسال المنتج بنجاح");
@@ -149,6 +150,13 @@ export default function AddProduct() {
           placeholder="مثال: تيشيرت رجالي"
           value={name}
           onChangeText={setName}
+        />
+        <Text style={styles.label}>التصنيف</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="مثال: تيشيرت رجالي"
+          value={category}
+          onChangeText={setCategory}
         />
 
         <Text style={styles.label}>السعر</Text>

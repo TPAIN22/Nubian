@@ -37,7 +37,6 @@ export default function Profile() {
     },
     { title: "Language", action: () => ({}), icon: "globe" as const },
   ];
-
   const privacyPolicyOptions = [
     { title: "Privacy Terms", action: () => ({}), icon: "eye" as const },
     { title: "Security", action: () => ({}), icon: "lock-closed" as const },
