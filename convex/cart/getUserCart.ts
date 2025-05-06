@@ -1,5 +1,6 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
+import { Id } from "../_generated/dataModel";
 
 export const getUserCart = query({
   args: {
@@ -11,6 +12,17 @@ export const getUserCart = query({
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
-    return cartItems;
+    const detailedCart = await Promise.all(
+      cartItems.map(async (item) => {
+        const product = await ctx.db.get(item.productId as Id<"products">);
+        return {
+          ...item,
+          product,
+        };
+      })
+    );
+
+    return detailedCart;
   },
 });
+

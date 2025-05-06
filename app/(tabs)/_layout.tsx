@@ -12,7 +12,6 @@ const TabIcon = ({ source, focused }: { source: any; focused: boolean }) => (
       marginTop: 8,
       padding: 16,
       borderRadius: 100,
-      
     }}
   >
     <Image
@@ -42,6 +41,7 @@ export default function _layout() {
           elevation: 0,
           height: 60,
           paddingTop: 5,
+          backgroundColor: '#f5f5f5',
         }, 
         headerStyle: {
           backgroundColor: '#A37E2C',
