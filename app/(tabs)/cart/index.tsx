@@ -7,10 +7,23 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Stack, useRouter } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
 import {Image} from "expo-image";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import BottomSheet, { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
+import { useCallback, useMemo, useRef } from 'react';
 
 const CartPage = () => {
   const { user } = useUser();
   const headerHight = useHeaderHeight();
+  const sheetRef = useRef<BottomSheet>(null);
+   
+  
+    const snapPoints = useMemo(() => ["60%"], []);
+      const handleSnapPress = useCallback((index: number) => {
+        sheetRef.current?.snapToIndex(index);
+      }, []);
+      const handleClosePress = useCallback(() => {
+        sheetRef.current?.close();
+      }, []);
   const router = useRouter();
   const cartItems = useQuery(
     api.cart.getUserCart.getUserCart,
@@ -67,6 +80,15 @@ const CartPage = () => {
     );
   }
 
+  const totalPrice = cartItems.reduce((total, item) => {
+    const price = Number(item.product?.price || 0);
+    const quantity = Number(item.quantity || 0);
+    return total + price * quantity;
+  }, 0);
+  const tax = Math.round(totalPrice * 0.05);
+  const finalAmount = totalPrice + tax;
+
+  
   if (cartItems.length === 0) {
     return (
       <>
@@ -120,7 +142,7 @@ const CartPage = () => {
   };
 
   return (
-    <>
+    <GestureHandlerRootView style={{flex: 1}}>
       <Stack.Screen
         options={{
           headerLeft: () => (
@@ -179,14 +201,58 @@ const CartPage = () => {
       <TouchableOpacity className="bg-[#006348] p-2 rounded-xl flex-1 items-center">
         <Text className="text-2xl font-bold text-[#eefcf8]">استمرار التسوق</Text>
       </TouchableOpacity>
-      <TouchableOpacity className="bg-[#A37E2C] p-2 rounded-xl flex-1 items-center" >
+      <TouchableOpacity className="bg-[#A37E2C] p-2 rounded-xl flex-1 items-center" onPress={()=> handleSnapPress(0)} >
         <Text className="text-2xl font-bold text-[#fcfaee]">اذهب الى الدفع </Text>
       </TouchableOpacity>
     </View>
-    </>
+    <BottomSheet
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        enableDynamicSizing={false}
+        onClose={handleClosePress}
+      >
+        <BottomSheetView style={{ paddingHorizontal: 20, paddingVertical: 10 }}>
+        <BottomSheetScrollView>
+          <View className="flex flex-row items-center justify-between mb-4">
+            <Text className="text-3xl font-bold text-[#006348]">ملخص الطلب</Text>
+            <TouchableOpacity onPress={handleClosePress}>
+              <Ionicons name="close" size={24} />
+            </TouchableOpacity>
+          </View>
+          <Devider />
+          <View className="flex flex-row items-center justify-between mb-4 px-4">
+            <Text className="text-xl font-light text-[#006348]">المجموع</Text>
+            <Text className="text-xl font-light text-[#006348]">{totalPrice} SDG</Text>
+          </View>
+          <Devider />
+          <View className="flex flex-row items-center justify-between mb-4 px-4">
+          <Text className="text-xl font-light text-[#006348]">الضريبة</Text>
+            <Text className="text-xl font-light text-[#006348]">{tax} SDG</Text>
+          </View>
+          <Devider />
+          <View className="flex flex-row items-center justify-between mb-4 px-4">
+            <Text className="text-xl font-bold text-[#006348]">المجموع الكلي</Text>
+            <Text className="text-xl font-bold text-[#006348]">{totalPrice + tax} SDG</Text>
+          </View>
+          <View className="flex flex-row items-center justify-between mt-4 px-4">
+            <Text className="text-xl font-light text-[#006348]">طريقة الدفع</Text> 
+            <View className="flex flex-row items-center gap-2">  
+            <Ionicons name="cash-outline" size={16} color="#006348" />
+            <Text className="text-xl font-light text-[#006348]">عند الاستلام</Text>  
+            </View>    
+          </View>
+            <TouchableOpacity className="bg-[#006348] p-1 rounded-xl flex-1 items-center mt-16">
+              <Text className="text-3xl font-bold text-[#fcfaee]">تاكيد الطلب</Text>
+            </TouchableOpacity>   
+        </BottomSheetScrollView>
+        </BottomSheetView>
+      </BottomSheet>
+  </GestureHandlerRootView>
+
   );
 };
 const styles = StyleSheet.create({
+  
   quantity: {
     fontSize: 12,
     fontWeight: "bold",
