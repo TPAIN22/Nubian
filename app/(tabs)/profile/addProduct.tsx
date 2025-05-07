@@ -11,10 +11,13 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
-
+import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 import { useNavigation, useRouter } from "expo-router";
@@ -22,6 +25,7 @@ import { useNavigation, useRouter } from "expo-router";
 export default function AddProduct() {
   const navigation = useNavigation();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,32 +40,49 @@ export default function AddProduct() {
       };
     }, [])
   );
+
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [category, setCategory] = useState("");
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: false,
       quality: 0.5,
-      base64: true,
+      base64: false,
+      legacy: true,
     });
 
     if (!result.canceled && result.assets?.length) {
       const image = result.assets[0];
 
-      const manipulated = await ImageManipulator.manipulateAsync(
-        image.uri,
-        [{ resize: { width:400 , height: 400 } }],
-        { compress: 0.5, base64: true }
-      );
+      const formData = new FormData();
+      formData.append("file", {
+        uri: image.uri,
+        type: image.mimeType || "image/jpeg",
+        name: `image_${Date.now()}.jpg`,
+      }as any);
 
-      if (manipulated.base64) {
-        setImages((prev) => [
-          ...prev,
-          `data:image/jpeg;base64,${manipulated.base64}`,
-        ]);
+      try {
+        setLoading(true);
+        const response = await axios.post(
+          "https://nubian-auth.onrender.com/upload",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        const imageUrl = response.data.url;
+        setImages((prev) => [...prev, imageUrl]);
+      } catch (error) {
+        Alert.alert("فشل رفع الصورة");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -83,16 +104,23 @@ export default function AddProduct() {
       return;
     }
 
+    if (isNaN(Number(price))) {
+      Alert.alert("السعر غير صحيح");
+      return;
+    }
+
     try {
+      setLoading(true);
       await createProduct({
         name,
         price: Number(price),
         description,
         images,
-        category: "نسائي",
+        category,
         inStock: true,
         ownerId: "",
       });
+
       Alert.alert("تم إرسال المنتج بنجاح");
       setImages([]);
       setName("");
@@ -100,69 +128,92 @@ export default function AddProduct() {
       setDescription("");
       router.back();
     } catch (error) {
-      Alert.alert(" حدث خطاء الرجاء المحاولة لاحقا" + error);
-      throw error;
+      Alert.alert("حدث خطأ، الرجاء المحاولة لاحقًا");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 40 }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1 }}
     >
-      <Text style={styles.label}>اسم المنتج</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="مثال: تيشيرت رجالي"
-        value={name}
-        onChangeText={setName}
-      />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        <Text style={styles.label}>اسم المنتج</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="مثال: تيشيرت رجالي"
+          value={name}
+          onChangeText={setName}
+        />
+        <Text style={styles.label}>التصنيف</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="مثال: تيشيرت رجالي"
+          value={category}
+          onChangeText={setCategory}
+        />
 
-      <Text style={styles.label}>السعر</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="مثال: 120"
-        value={price}
-        onChangeText={setPrice}
-        keyboardType="numeric"
-      />
+        <Text style={styles.label}>السعر</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="مثال: 120"
+          value={price}
+          onChangeText={setPrice}
+          keyboardType="numeric"
+        />
 
-      <Text style={styles.label}>الوصف</Text>
-      <TextInput
-        style={[styles.input, { height: 100 }]}
-        multiline
-        numberOfLines={4}
-        placeholder="أضف وصف المنتج"
-        value={description}
-        onChangeText={setDescription}
-      />
+        <Text style={styles.label}>الوصف</Text>
+        <TextInput
+          style={[styles.input, { height: 100 }]}
+          multiline
+          numberOfLines={4}
+          placeholder="أضف وصف المنتج"
+          value={description}
+          onChangeText={setDescription}
+        />
 
-      <Text style={styles.label}>الصور ({images.length} / 6)</Text>
-      <View style={styles.imageGrid}>
-        {images.map((uri, index) => (
-          <View key={index} style={styles.imageBox}>
-            <Image source={{ uri }} style={styles.image} />
-            <TouchableOpacity
-              onPress={() => removeImage(index)}
-              style={styles.removeBtn}
-            >
-              <Ionicons name="close" size={16} color="#fff" />
+        <Text style={styles.label}>الصور ({images.length} / 6)</Text>
+        <View style={styles.imageGrid}>
+          {images.map((uri, index) => (
+            <View key={index} style={styles.imageBox}>
+              <Image source={{ uri }} style={styles.image} />
+              <TouchableOpacity
+                onPress={() => removeImage(index)}
+                style={styles.removeBtn}
+              >
+                <Ionicons name="close" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {images.length < 6 && (
+            <TouchableOpacity onPress={pickImage} style={styles.addImageBox}>
+              <Ionicons name="add" size={30} color="#777" />
             </TouchableOpacity>
-          </View>
-        ))}
+          )}
+        </View>
 
-        {images.length < 6 && (
-          <TouchableOpacity onPress={pickImage} style={styles.addImageBox}>
-            <Ionicons name="add" size={30} color="#777" />
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#9B7931"
+            style={{ marginTop: 30 }}
+          />
+        ) : (
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+              إضافة المنتج
+            </Text>
           </TouchableOpacity>
         )}
-      </View>
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
-          إضافة المنتج
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

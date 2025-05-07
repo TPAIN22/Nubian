@@ -14,7 +14,7 @@ export default function SSOCallback() {
     if (!isLoaded) return; 
 
     if (sessionId) {
-      router.replace('/(tabs)/profile');
+      router.back();
     } else {
       return
     }

@@ -1,138 +1,116 @@
-import { View, FlatList, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native'
-import axios from 'axios'
-import { useEffect, useState } from 'react';
+import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import ItemCard from "../../components/ItemCard";
-import MasonryList from '@react-native-seoul/masonry-list';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useGlobalContext } from "@/providers/GlobalContext";
+import ItemCardSkeleton from "../../components/ItemCardSkeleton"; // أضف هذا
+import MasonryList from "@react-native-seoul/masonry-list";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import Categories from "../../components/Category/categories";
-import Subcategories from "../../components/Category/subcategories";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Link, RelativePathString, Stack, useNavigation } from "expo-router";
+import useItemstore from "../../productStore/useItemStore";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useRef } from "react";
 
-export default function home() {
-  const { state, dispatch } = useGlobalContext();
-  const [products, setProducts] = useState([]);
+  export default function Home() {
+  const scrollY = useRef(0);
+
+  const headerHieght = useHeaderHeight();
+  const products = useQuery(api.products.getProducts.getProducts, {});
+  const { setItem } = useItemstore();
   const tabBarHeight = useBottomTabBarHeight();
+    const navigation = useNavigation();
+  
 
-  const getProducts = async () => {
-    try {
-      const response = await axios.get("https://fakestoreapi.com/products");
-      setProducts(response.data);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    }
-  };
+  const isLoading = products === undefined;
 
-  useEffect(() => {
-    getProducts();
-  }, []);
-
-  const handleAddToCart = (product: any) => {
-    dispatch({ type: "ADD_TO_CART", payload: product });
-  };
-
-  const handleAddToWishlist = (product: { title: any; }) => {
-    dispatch({ type: "ADD_NOTIFICATION", payload: `${product.title} added to wishlist!` });
-  };
+  const skeletonItems = Array.from({ length: 12 }).map((_, index) => ({
+    _id: `skeleton-${index}`,
+    skeleton: true,
+  }));
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+  
+      if (offsetY > 20 && scrollY.current <= 20) {
+        navigation.setOptions({
+          headerStyle: {
+            backgroundColor: "#F8F8F8",
+            elevation: 0,
+          },
+        });
+      } else if (offsetY <= 20 && scrollY.current > 20) {
+        navigation.setOptions({
+          headerStyle: {
+            backgroundColor: "transparent",
+            elevation: 0,
+          },
+        });
+      }
+  
+      scrollY.current = offsetY;
+    };
 
   return (
-    <ScrollView>
-      <Categories />
-      <Subcategories />
-      <MasonryList
-        style={{ marginBottom: tabBarHeight }}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{
-          padding: 2,
-          elevation: 0,
-          backgroundColor: "#F3F3F3F7",
-        }}
-        numColumns={2}
-        data={products}
-        renderItem={({ item }: { item: any }) => (
-          <View
-            style={{
-              backgroundColor: "white",
-              borderRadius: 18,
-              margin: 1,
-              padding: 1,
-              position: "fixed",
-            }}
-          >
-            <ItemCard item={item} />
-            <TouchableOpacity
-              onPress={() => handleAddToWishlist(item)}
-              style={{
-                position: "absolute",
-                top: 10,
-                left: 10,
-                backgroundColor: "rgba(255, 255, 255, 0.8)",
-                borderRadius: 20,
-                padding: 5,
+    <>
+    <Stack.Screen options={{ headerTransparent: true}} />
+
+    <MasonryList
+      data={isLoading ? skeletonItems : products}
+      keyExtractor={(item: any) => item._id.toString()}
+      numColumns={2}
+      style={{ marginBottom: 100 }}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ padding: 4, backgroundColor: "#f5f5f5" , marginTop: headerHieght}}
+      renderItem={({ item }: { item: any }) => {
+        if (item.skeleton) return <ItemCardSkeleton />;
+        return (
+          <View>
+            <Link
+              href={{
+                pathname: `/${item._id}` as RelativePathString,
+                params: {
+                  name: item.name,
+                  price: item.price,
+                  image: JSON.stringify(item.images),
+                },
               }}
+              asChild
             >
-              <Ionicons name="heart-outline" size={25} color="#A37E2C" />
-            </TouchableOpacity>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginTop: 10,
-                paddingHorizontal: 10,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: 5,
-                }}
-                numberOfLines={1} // Ensure the product name is displayed in one line
-              >
-                {item.title}
-              </Text>
-            </View>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginTop: 10,
-                paddingHorizontal: 10,
-              }}
-            >
-              <TouchableOpacity
-                onPress={() => handleAddToCart(item)}
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.8)",
-                  borderRadius: 20,
-                  padding: 1,
-                }}
-              >
-                <Ionicons name="cart-outline" size={20} color="#A37E2C" />
-              </TouchableOpacity>
-              <Text
-                style={{
-                  backgroundColor: "#CBDDC86A",
-                  color: "#A37E2C",
-                  borderRadius: 4,
-                  paddingVertical: 2,
-                  paddingHorizontal: 15,
-                  fontSize: 25,
-                  fontWeight: "bold",
-                }}
-              >
-                {item.price} جـ.س
-              </Text>
-              
-            </View>
+              <Pressable onPress={() => setItem(item)}>
+                <ItemCard item={item} />
+              </Pressable>
+            </Link>
+
+            <Ionicons
+              name="cart-outline"
+              size={16}
+              color="black"
+              style={styles.cartIcon}
+            />
           </View>
-        )}
+        );
+      }}
       />
-    </ScrollView>
+    </>
   );
 }
 
-
+const styles = StyleSheet.create({
+  cartIcon: {
+    justifyContent: "space-between",
+    alignItems: "center",
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    borderColor: "#A37E2C",
+    borderWidth: 1,
+    borderRadius: 40,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+});
