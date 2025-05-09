@@ -9,13 +9,16 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.expo.nubian"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "dev.expo.nubian",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -44,6 +47,7 @@
       "eas": {
         "projectId": "ebf0d504-ffd1-4c9a-8f0b-9aefb9e75cba"
       }
-    }
+    },
+    "owner": "sd_nubian"
   }
 }
