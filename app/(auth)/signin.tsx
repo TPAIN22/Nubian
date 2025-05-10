@@ -10,11 +10,12 @@ import {
   useSSO,
 } from "@clerk/clerk-expo";
 import { View, TouchableOpacity, Text, ActivityIndicator } from "react-native";
+import * as Linking from "expo-linking";
+
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 
 WebBrowser.maybeCompleteAuthSession();
-
 export const useWarmUpBrowser = () => {
   useEffect(() => {
     void WebBrowser.warmUpAsync();
@@ -34,7 +35,9 @@ export default function Page() {
     try {
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: "oauth_google",
+        redirectUrl: Linking.createURL("/oauth-callback"),
       });
+
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
         router.replace("/(tabs)/profile");

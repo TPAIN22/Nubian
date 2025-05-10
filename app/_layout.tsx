@@ -20,7 +20,7 @@ export default function RootLayout() {
         <>
           <StatusBar style="dark" />
           <Stack
-            initialRouteName="(tabs)"
+            initialRouteName="(onboarding)"
             screenOptions={{ headerShown: false }}
           >
             <Stack.Screen name="(tabs)" />

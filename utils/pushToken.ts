@@ -24,8 +24,7 @@ export async function registerForPushNotificationsAsync() {
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync();
     const token = tokenResponse.data;
-    console.log('✅ Expo Push Token:', token);
-
+    
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',

@@ -48,6 +48,12 @@
         "projectId": "ebf0d504-ffd1-4c9a-8f0b-9aefb9e75cba"
       }
     },
-    "owner": "sd_nubian"
+    "owner": "sd_nubian",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ebf0d504-ffd1-4c9a-8f0b-9aefb9e75cba"
+    }
   }
 }

@@ -11,6 +11,10 @@ export default defineSchema({
     inStock: v.optional(v.boolean()), 
     ownerId: v.optional(v.string()), 
   }),
+  tokens: defineTable({
+    userId: v.string(),
+    token: v.string(),
+  }).index("by_user", ["userId"]),
 
   users: defineTable({
     username: v.string(),

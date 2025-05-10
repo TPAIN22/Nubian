@@ -56,27 +56,55 @@ const CartPage = () => {
 
   if (!user) {
     return (
+      <>
+       <Stack.Screen
+        options={{
+
+          headerLeft: () => (
+            <Ionicons name="cart-outline" size={24} color="#555958FF" />
+          ),
+          headerTransparent: true,
+          headerTitleAlign: "center",
+          title: "السلة",
+          headerTitleStyle: { fontSize: 25, color: "#242423C5" },
+        }}
+      />
       <View style={styles.loadingContainer}>
       <Image
         source={require("../../../assets/images/profilelogin.svg")}
         style={{ width: "80%", height: 300 }}
-      />
+        />
       <Text>سجّل الدخول للمتابعة</Text>
       <TouchableOpacity
         onPress={() => router.push("/(auth)/signin")}
         style={styles.loginButton}
-      >
+        >
         <Text style={{ color: "#fff" }}>تسجيل الدخول</Text>
       </TouchableOpacity>
     </View>
+        </>
     );
   }
 
   if (!cartItems) {
     return (
+      <>
+       <Stack.Screen
+        options={{
+
+          headerLeft: () => (
+            <Ionicons name="cart-outline" size={24} color="#555958FF" />
+          ),
+          headerTransparent: true,
+          headerTitleAlign: "center",
+          title: "السلة",
+          headerTitleStyle: { fontSize: 25, color: "#242423C5" },
+        }}
+      />
       <View style={styles.centered}>
         <Text>جارٍ تحميل السلة...</Text>
       </View>
+      </>
     );
   }
 

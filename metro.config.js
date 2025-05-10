@@ -1,11 +1,6 @@
 const { getDefaultConfig } = require("expo/metro-config");
-
-const config = getDefaultConfig(__dirname);
-
-// إزالة lightningcss
-config.transformer = {
-  ...config.transformer,
-  minifierPath: 'metro-minify-terser', // بديل lightningcss
-};
-
-module.exports = config;
+const { withNativeWind } = require('nativewind/metro');
+ 
+const config = getDefaultConfig(__dirname)
+ 
+module.exports = withNativeWind(config, { input: './app/global.css' })

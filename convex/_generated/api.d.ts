@@ -25,6 +25,8 @@ import type * as products_createProduct from "../products/createProduct.js";
 import type * as products_deleteProduct from "../products/deleteProduct.js";
 import type * as products_getProducts from "../products/getProducts.js";
 import type * as products_updateProduct from "../products/updateProduct.js";
+import type * as token_getTokens from "../token/getTokens.js";
+import type * as token_tokens from "../token/tokens.js";
 import type * as users_createUser from "../users/createUser.js";
 
 /**
@@ -48,6 +50,8 @@ declare const fullApi: ApiFromModules<{
   "products/deleteProduct": typeof products_deleteProduct;
   "products/getProducts": typeof products_getProducts;
   "products/updateProduct": typeof products_updateProduct;
+  "token/getTokens": typeof token_getTokens;
+  "token/tokens": typeof token_tokens;
   "users/createUser": typeof users_createUser;
 }>;
 export declare const api: FilterApi<
