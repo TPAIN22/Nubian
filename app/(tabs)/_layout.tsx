@@ -2,6 +2,7 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { Image } from "expo-image";
 import { View } from "react-native";
+import { StatusBar } from "expo-status-bar";
 const iconSize = 24;
 const focusedColor = "#A37E2C";
 const unfocusedColor = "black";
@@ -29,6 +30,7 @@ const TabIcon = ({ source, focused }: { source: any; focused: boolean }) => (
 export default function _layout() {
   return (
     <>
+    <StatusBar style="dark" />
       <Tabs
         screenOptions={{
           tabBarHideOnKeyboard: true,
@@ -41,7 +43,7 @@ export default function _layout() {
             elevation: 0,
             height: 60,
             paddingTop: 5,
-            backgroundColor: "#f5f5f5",
+            backgroundColor: "#FFFFFFFF",
           },
           headerStyle: {
             backgroundColor: "#A37E2C",

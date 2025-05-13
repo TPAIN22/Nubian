@@ -1,9 +1,11 @@
+import React from "react";
 import { Stack } from "expo-router";
 import "./global.css";
-import ClerckAndConvex from "@/providers/ClerckAndConvex";
+import ClerkProvider from "@/providers/ClerckAndConvex";
 import { StatusBar } from "expo-status-bar";
 import { NotificationProvider } from "@/providers/notificationProvider";
 import * as Notifications from "expo-notifications";
+import Toast from "react-native-toast-message";
 
 export default function RootLayout() {
   Notifications.setNotificationHandler({
@@ -15,7 +17,7 @@ export default function RootLayout() {
   });
 
   return (
-    <ClerckAndConvex>
+    <ClerkProvider>
       <NotificationProvider>
         <>
           <StatusBar style="dark" />
@@ -27,8 +29,9 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(onboarding)" />
           </Stack>
+          <Toast/>
         </>
       </NotificationProvider>
-    </ClerckAndConvex>
+    </ClerkProvider>
   );
 }

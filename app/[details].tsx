@@ -1,13 +1,40 @@
 import { Image } from "expo-image";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack } from "expo-router";
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import useItemStore from "./productStore/useItemStore";
+import useItemStore from "@/store/useItemStore";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useHeaderHeight } from "@react-navigation/elements";
 import AddToCartButton from "./components/AddToCartButton";
+
+const SIZES = ["S", "M", "L", "XL"];
+
 export default function ProductDetails() {
-  const headerHight = useHeaderHeight();
-  const { item } = useItemStore();
+  const headerHeight = useHeaderHeight();
+  const { product } = useItemStore();
+  const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState("M");
+
+  // Handle quantity changes
+  const decreaseQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  const increaseQuantity = () => {
+    setQuantity(quantity + 1);
+  };
+
+  if (!product) {
+    return (
+      <View style={[styles.container, { marginTop: headerHeight }]}>
+        <Text style={{ fontSize: 18, color: "#A37E2C" }}>
+          Product not found or still loading...
+        </Text>
+      </View>
+    );
+  }  
   return (
     <>
       <Stack.Screen
@@ -22,22 +49,29 @@ export default function ProductDetails() {
           ),
         }}
       />
-      <View style={[styles.container, { marginTop: headerHight }]}>
-        <Image source={{ uri: item?.images[1] }} style={styles.image} />
-        <Text style={styles.name}>{item.name}</Text>
+      <View style={[styles.container, { marginTop: headerHeight }]}>
+        <Image source={{ uri: product?.images?.[0] }} style={styles.image} />
+        <Text style={styles.name}>{product?.name}</Text>
         <View style={styles.details}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             <Text style={{ fontSize: 12, color: "#006348" }}>SDG</Text>
-            <Text style={styles.price}>{item.price}</Text>
+            <Text style={styles.price}>{product?.price}</Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Ionicons name="add-sharp" size={24} color="#A37E2C" />
-            <Text style={styles.counter}> 1 </Text>
-            <Ionicons name="remove-sharp" size={24} color="#A37E2C" />
+            <Pressable 
+              onPress={decreaseQuantity}
+              disabled={quantity <= 1}
+            >
+              <Ionicons name="remove-sharp" size={24} color={quantity <= 1 ? "#cccccc" : "#A37E2C"} />
+            </Pressable>
+            <Text style={styles.counter}>{quantity}</Text>
+            <Pressable onPress={increaseQuantity}>
+              <Ionicons name="add-sharp" size={24} color="#A37E2C" />
+            </Pressable>
           </View>
         </View>
         <View style={{ width: "100%", alignItems: "flex-end", marginTop: 10 }}>
-          <Text style={{}}>Size</Text>
+          <Text>Size</Text>
           <View
             style={{
               flexDirection: "row",
@@ -46,30 +80,49 @@ export default function ProductDetails() {
               justifyContent: "space-around",
             }}
           >
-            <Text style={styles.size}>M</Text>
-            <Text style={styles.size}>L</Text>
-            <Text style={styles.size}>XL</Text>
+            {SIZES.map((size) => (
+              <Pressable key={size} onPress={() => setSelectedSize(size)}>
+                <Text 
+                  style={[
+                    styles.size, 
+                    selectedSize === size && { 
+                      backgroundColor: "#A37E2C", 
+                      color: "#FFFFFF",
+                      borderColor: "#A37E2C" 
+                    }
+                  ]}
+                >
+                  {size}
+                </Text>
+              </Pressable>
+            ))}
           </View>
         </View>
         <View
           style={{
             width: "100%",
             marginTop: 10,
-            justifyContent: "space-between",
             position: "absolute",
             bottom: 40,
           }}
         >
           <AddToCartButton
-            productId={item._id}
+            product={{ ...product, quantity, size: selectedSize }}
             title="Add to cart"
             buttonStyle={styles.secondary}
-            textStyle={{ color: "#FFEDD6FF", fontSize: 20, fontWeight: "bold" }}
+            textStyle={{
+              color: "#FFEDD6FF",
+              fontSize: 20,
+              fontWeight: "bold",
+            }}
           />
-
           <Pressable style={styles.primary}>
             <Text
-              style={{ color: "#E9FFF9FF", fontSize: 20, fontWeight: "bold" }}
+              style={{
+                color: "#E9FFF9FF",
+                fontSize: 20,
+                fontWeight: "bold",
+              }}
             >
               Purchase
             </Text>
@@ -130,7 +183,7 @@ const styles = StyleSheet.create({
   price: {
     color: "#3F3D39FF",
     fontSize: 18,
-    fontWeight: "semibold",
+    fontWeight: "600",
     marginTop: 10,
     alignSelf: "flex-end",
   },

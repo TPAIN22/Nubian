@@ -1,49 +1,19 @@
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, RefreshControl } from "react-native";
+import { useState, useEffect, useCallback } from "react";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 
 const SearchPage = () => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-
-  // جلب جميع المنتجات من قاعدة البيانات
-  const products = useQuery(api.products.getProducts.getProducts, {});
-
-  // تصفية النتائج حسب النص المكتوب
-  const filteredProducts = products?.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
+  const [refreshing, setRefreshing] = useState(false);
   return (
     <View style={styles.container}>
-      {/* حقل البحث */}
       <TextInput
         placeholder="ابحث عن منتج..."
         style={styles.input}
         value={searchTerm}
         onChangeText={setSearchTerm}
-      />
-
-      {/* نتائج البحث */}
-      <FlatList
-        data={filteredProducts}
-        keyExtractor={(item) => item._id}
-        ListEmptyComponent={<Text style={styles.noResults}>لا توجد نتائج</Text>}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.itemContainer}
-            onPress={() => router.push(`/${item._id}`)}
-          >
-            <Image source={{ uri: item.images?.[0] }} style={styles.image} />
-            <View style={styles.info}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.price}>{item.price} SDG</Text>
-            </View>
-          </TouchableOpacity>
-        )}
       />
     </View>
   );

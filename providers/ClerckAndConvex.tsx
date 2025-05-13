@@ -1,32 +1,21 @@
-import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
+import { ClerkProvider as ClerkProviderComponent, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/dist/token-cache";
-import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { ConvexReactClient } from "convex/react";
-import { useEffect, useState } from "react";
-
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
-  unsavedChangesWarning: false,
-});
 
 function InnerProvider({ children }: { children: React.ReactNode }) {
   const { isLoaded } = useAuth();
 
-  if (!isLoaded) return null; // أو يمكنك عرض شاشة تحميل
+  if (!isLoaded) return null;
 
-  return (
-    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-      {children}
-    </ConvexProviderWithClerk>
-  );
+  return children;
 }
 
-export default function ClerckAndConvex({ children }: { children: React.ReactNode }) {
+export default function ClerkProvider({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider
+    <ClerkProviderComponent
       tokenCache={tokenCache}
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
     >
       <InnerProvider>{children}</InnerProvider>
-    </ClerkProvider>
+    </ClerkProviderComponent>
   );
 }

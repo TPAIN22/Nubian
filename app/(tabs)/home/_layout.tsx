@@ -10,6 +10,7 @@ export default function _layout() {
   return (
     <Tabs
       screenOptions={{
+        tabBarActiveTintColor: "#A37E2C",
         headerShown: true,
         tabBarHideOnKeyboard: true, 
         headerTitle: () => (

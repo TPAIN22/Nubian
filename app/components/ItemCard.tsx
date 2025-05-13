@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 10,
     margin: 4,
-    elevation: 2,
+    elevation: 1,
     overflow: "hidden",
   },
   productImage: {

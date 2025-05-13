@@ -1,101 +1,147 @@
+import React, { useCallback, useEffect, useMemo } from "react";
 import {
-  NativeScrollEvent,
   NativeSyntheticEvent,
+  NativeScrollEvent,
   Pressable,
   StyleSheet,
+  Text,
   View,
+  RefreshControl,
+  ScrollView,
 } from "react-native";
 import ItemCard from "../../components/ItemCard";
-import ItemCardSkeleton from "../../components/ItemCardSkeleton"; // أضف هذا
+import ItemCardSkeleton from "../../components/ItemCardSkeleton";
 import MasonryList from "@react-native-seoul/masonry-list";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Link, RelativePathString, Stack, useNavigation } from "expo-router";
-import useItemstore from "../../productStore/useItemStore";
+import { Link, RelativePathString, router, Stack, useNavigation } from "expo-router";
+import useItemStore from "@/store/useItemStore";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import useCartStore from "@/store/useCartStore";
+import { useAuth } from "@clerk/clerk-expo";
+interface Product {
+  _id: object;
+  name: string;
+  price: number;
+  images: string[];
+  image: string;
+}
 
-  export default function Home() {
+export default function Home() {
   const scrollY = useRef(0);
+  const headerHeight = useHeaderHeight();
+  const { setProduct, products, isProductsLoading, getProducts } = useItemStore();
+  const navigation = useNavigation();
+  const [refreshing, setRefreshing] = useState(false);
+  useEffect( () => {
+    getProducts();
+  }, []);
 
-  const headerHieght = useHeaderHeight();
-  const products = useQuery(api.products.getProducts.getProducts, {});
-  const { setItem } = useItemstore();
-  const tabBarHeight = useBottomTabBarHeight();
-    const navigation = useNavigation();
-  
 
-  const isLoading = products === undefined;
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await getProducts();
+    setRefreshing(false);
+  }, [getProducts]);
 
-  const skeletonItems = Array.from({ length: 12 }).map((_, index) => ({
-    _id: `skeleton-${index}`,
-    skeleton: true,
-  }));
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offsetY = event.nativeEvent.contentOffset.y;
-  
-      if (offsetY > 20 && scrollY.current <= 20) {
-        navigation.setOptions({
-          headerStyle: {
-            backgroundColor: "#F8F8F8",
-            elevation: 0,
-          },
-        });
-      } else if (offsetY <= 20 && scrollY.current > 20) {
-        navigation.setOptions({
-          headerStyle: {
-            backgroundColor: "transparent",
-            elevation: 0,
-          },
-        });
-      }
-  
-      scrollY.current = offsetY;
-    };
+  const skeletonItems = useMemo(() => 
+    Array.from({ length: 12 }).map((_, index) => ({
+      _id: `skeleton-${index}`,
+      skeleton: true,
+    })), 
+  []);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+
+    if (offsetY > 20 && scrollY.current <= 20) {
+      navigation.setOptions({
+        headerStyle: {
+          backgroundColor: "#FFFFFFFF",
+          elevation: 0,
+        },
+      });
+    } else if (offsetY <= 20 && scrollY.current > 20) {
+      navigation.setOptions({
+        headerStyle: {
+          backgroundColor: "transparent",
+          elevation: 0,
+        },
+      });
+    }
+
+    scrollY.current = offsetY;
+  }, [navigation]);
 
   return (
     <>
-    <Stack.Screen options={{ headerTransparent: true}} />
+      <Stack.Screen options={{ headerTransparent: true }}/>
+      <ScrollView
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={["#A37E2C"]} 
+            tintColor="#A37E2C"
+          />
+        }
+      >
+        <MasonryList
+          data={isProductsLoading ? skeletonItems : products}
+          keyExtractor={(item: Product | { _id: string; skeleton: boolean }) => item._id.toString()}
+          numColumns={2}
+          style={{ marginBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            padding: 4,
+            backgroundColor: "#FFFFF4A8",
+            paddingTop: headerHeight,
+          }}
+          renderItem={({ item, i }: { item: unknown; i: number }) => {
+            if (typeof item === 'object' && item !== null && 'skeleton' in item) return <ItemCardSkeleton />;
+            const product = item as Product;
+            return (
+              <View>
+                <Link
+                  href={{
+                    pathname: `/${product._id}` as RelativePathString,}}
+                  asChild
+                >
+                  <Pressable onPress={() => setProduct(product)}>
+                    <ItemCard item={product} />
+                  </Pressable>
+                </Link>
 
-    <MasonryList
-      data={isLoading ? skeletonItems : products}
-      keyExtractor={(item: any) => item._id.toString()}
-      numColumns={2}
-      style={{ marginBottom: 100 }}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ padding: 4, backgroundColor: "#f5f5f5" , marginTop: headerHieght}}
-      renderItem={({ item }: { item: any }) => {
-        if (item.skeleton) return <ItemCardSkeleton />;
-        return (
-          <View>
-            <Link
-              href={{
-                pathname: `/${item._id}` as RelativePathString,
-                params: {
-                  name: item.name,
-                  price: item.price,
-                  image: JSON.stringify(item.images),
-                },
-              }}
-              asChild
-            >
-              <Pressable onPress={() => setItem(item)}>
-                <ItemCard item={item} />
-              </Pressable>
-            </Link>
-
-            <Ionicons
-              name="cart-outline"
-              size={16}
-              color="black"
-              style={styles.cartIcon}
-            />
-          </View>
-        );
-      }}
-      />
+                <Pressable
+                  onPress={() => {
+                    setProduct(product);
+                    router.navigate(`/${product._id}`);
+                  }}
+                  accessibilityLabel="Add to cart"
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="cart-outline"
+                    size={16}
+                    color="black"
+                    style={styles.cartIcon}
+                  />
+                </Pressable>
+              </View>
+            );
+          }}
+          ListEmptyComponent={
+            !isProductsLoading ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="basket-outline" size={48} color="#A37E2C" />
+                <Text style={styles.emptyText}>No products available</Text>
+              </View>
+            ) : null
+          }
+        />
+      </ScrollView>
     </>
   );
 }
@@ -113,4 +159,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  emptyContainer: {
+    flex: 1,
+    height: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#A37E2C",
+  }
 });

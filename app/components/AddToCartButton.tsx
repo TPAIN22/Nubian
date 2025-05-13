@@ -1,61 +1,121 @@
-import React from "react";
-import { Pressable, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useUser } from "@clerk/clerk-expo";
+import React, { useState } from "react";
+import {
+  Pressable,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  View,
+  ActivityIndicator,
+} from "react-native";
+import useCartStore from "@/store/useCartStore";
+import { useUser, useAuth } from "@clerk/clerk-expo";
+import Toast from "react-native-toast-message";
 
 type Props = {
-  productId: string;
+  product: {
+    _id:any,
+    quantity?: number;
+    size?: string;
+    [key: string]: any;
+  };
   title?: string;
   buttonStyle?: ViewStyle;
   textStyle?: TextStyle;
 };
 
-const AddToCartButton = ({ productId, title = "أضف إلى السلة", buttonStyle, textStyle }: Props) => {
-  const addToCart = useMutation(api.cart.addToCart.addToCart);
-  const { user } = useUser();
+const AddToCartButton = ({
+  product,
+  title = "Add to cart",
+  buttonStyle,
+  textStyle,
+}: Props) => {
+  const { addToCart, errorMessage, clearError , getCartItms } = useCartStore();
+  const { isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAddToCart = async () => {
-    if (!user) {
-      alert("يجب تسجيل الدخول أولاً");
-      return;
-    }
-  
     try {
-      await addToCart({
-        userId: user.id,
-        productId,
-        quantity: 1,
-      });
-      alert("تمت إضافة المنتج للسلة");
+      setIsLoading(true);
+      clearError?.();
+      
+      if (!isSignedIn) {
+        setIsLoading(false);
+        return;
+      }
+      
+      const token = await getToken();
+      if (!token) {
+        console.log("Authentication token not available");
+        setIsLoading(false);
+        return;
+      }
+      
+      await addToCart(product, token, product.quantity || 1,);
+      Toast.show({
+        type: "success",
+        text1: "Product added to cart successfully",
+      });  
     } catch (err) {
-      console.error("فشل في الإضافة:", err);
-      alert("حدث خطأ أثناء إضافة المنتج");
+    } finally {
+      setIsLoading(false);
+      if (errorMessage) {
+        Toast.show({
+          type: "error",
+          text1: errorMessage,
+        });
+      }
     }
   };
-  
 
   return (
-    <Pressable style={[styles.button, buttonStyle]} onPress={handleAddToCart}>
-      <Text style={[styles.text, textStyle]}>{title}</Text>
-    </Pressable>
+    <View style={styles.container}>
+      <Pressable
+        style={[
+          styles.button,
+          buttonStyle,
+          isLoading && styles.disabledButton
+        ]}
+        onPress={handleAddToCart}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#FFEDD6" />
+        ) : (
+          <Text style={[styles.text, textStyle]}>{title}</Text>
+        )}
+      </Pressable>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    width: "100%",
+  },
   button: {
     backgroundColor: "#006348",
-    padding: 12,
+    padding: 14,
     borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
-    marginTop: 10,
+  },
+  disabledButton: {
+    opacity: 0.7,
+    padding: 14,
   },
   text: {
-    color: "#FFEDD6FF",
-    fontSize: 20,
+    color: "#FFEDD6",
+    fontSize: 18,
     fontWeight: "bold",
+  },
+  errorText: {
+    color: "#E53935",
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
   },
 });
 
