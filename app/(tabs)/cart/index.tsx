@@ -69,6 +69,18 @@ const CartPage = () => {
     });
   }, []);
 
+  const handleRemoveFromCart = async (productId: string) => {
+    const token = await getToken();
+    if (!token) {
+      Toast.show({
+        type: "error",
+        text1: "يرجى تسجيل الدخول أولاً",
+      });
+      return;
+    }
+    await removeFromCart(productId, token);
+  };
+
   const handleSaveChanges = async () => {
     const token = await getToken();
     if (!token) {
@@ -138,6 +150,7 @@ const CartPage = () => {
                 color="#A37D2C8A"
                 onPress={() => handleQuantityChange(item.product._id, true)}
               />
+              <Ionicons name="trash-outline" size={24} color="#A37D2C8A" onPress={() => handleRemoveFromCart(item.product._id)} />
             </View>
           </View>
         </View>
