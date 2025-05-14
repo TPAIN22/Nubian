@@ -96,7 +96,6 @@ export default function Home() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             padding: 4,
-            backgroundColor: "#FFFFF4A8",
             paddingTop: headerHeight,
           }}
           renderItem={({ item, i }: { item: unknown; i: number }) => {

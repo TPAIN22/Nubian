@@ -8,7 +8,14 @@ const useCartStore = create((set, get) => ({
   isCartLoading: false,
   errorMessage: null,
 
+  clearError: () => set({ errorMessage: null }),
+
   getCart: async (token) => {
+    if (!token) {
+      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
+      return;
+    }
+
     try {
       set({ isCartLoading: true, errorMessage: null });
       const response = await axiosInstance.get("/carts", {
@@ -16,6 +23,11 @@ const useCartStore = create((set, get) => ({
           Authorization: `Bearer ${token}`,
         },
       });
+
+      if (!response.data) {
+        throw new Error("لم يتم استلام بيانات من الخادم");
+      }
+
       set({ 
         cartItems: response.data.products || [], 
         totalQuantity: response.data.totalQuantity || 0,
@@ -26,12 +38,17 @@ const useCartStore = create((set, get) => ({
       set({
         isCartLoading: false,
         errorMessage:
-          error.response?.data?.message || "فشل في تحميل السلة",
+          error.response?.data?.message || error.message || "فشل في تحميل السلة",
       });
     }
   },
 
   addToCart: async (product, token) => {
+    if (!token) {
+      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
+      return;
+    }
+
     try {
       set({ isCartLoading: true, errorMessage: null });
       if (!product || !product._id) {
@@ -47,6 +64,11 @@ const useCartStore = create((set, get) => ({
           },
         }
       );
+
+      if (!response.data) {
+        throw new Error("لم يتم استلام بيانات من الخادم");
+      }
+
       set({ 
         cartItems: response.data.products || [], 
         totalQuantity: response.data.totalQuantity || 0,
@@ -56,7 +78,7 @@ const useCartStore = create((set, get) => ({
     } catch (error) {
       let message = "حدث خطأ أثناء إضافة المنتج إلى السلة.";
       if (error.response?.status === 401) {
-        message = error.response.data.message;
+        message = "غير مصرح لك بإجراء هذه العملية";
       } else if (error.response?.data?.message) {
         message = error.response.data.message;
       } else if (error.message) {
@@ -66,13 +88,24 @@ const useCartStore = create((set, get) => ({
     }
   },
 
-  updateCartItem: async (productId, quantity, token) => {
+  updateCartItem: async (product, token, quantity) => {
+    if (!token) {
+      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
+      return;
+    }
+
+    if (!product || !product._id) {
+      set({ errorMessage: "بيانات المنتج غير صحيحة" });
+      return;
+    }
+
     try {
       set({ isCartLoading: true, errorMessage: null });
-
+      const normalizedQuantity = quantity > 0 ? 1 : -1;
+      
       const response = await axiosInstance.put(
         "/carts/update",
-        { productId, quantity },
+        { productId: product._id, quantity: normalizedQuantity },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -80,7 +113,10 @@ const useCartStore = create((set, get) => ({
         }
       );
 
-      // تحديث كل بيانات السلة من الاستجابة
+      if (!response.data) {
+        throw new Error("لم يتم استلام بيانات من الخادم");
+      }
+
       set({ 
         cartItems: response.data.products || [], 
         totalQuantity: response.data.totalQuantity || 0,
@@ -91,18 +127,28 @@ const useCartStore = create((set, get) => ({
       set({
         isCartLoading: false,
         errorMessage:
-          error.response?.data?.message || "فشل في تحديث المنتج",
+          error.response?.data?.message || error.message || "فشل في تحديث المنتج",
       });
     }
   },
 
   removeFromCart: async (productId, token) => {
+    if (!token) {
+      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
+      return;
+    }
+
+    if (!productId) {
+      set({ errorMessage: "معرف المنتج غير صحيح" });
+      return;
+    }
+
     try {
       set({ isCartLoading: true, errorMessage: null });
 
       const response = await axiosInstance.put(
         "/carts/update",
-        { productId, quantity: 0 }, // استخدام quantity=0 للإزالة
+        { productId, quantity: 0 },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -110,7 +156,10 @@ const useCartStore = create((set, get) => ({
         }
       );
 
-      // تحديث كل بيانات السلة من الاستجابة
+      if (!response.data) {
+        throw new Error("لم يتم استلام بيانات من الخادم");
+      }
+
       set({ 
         cartItems: response.data.products || [], 
         totalQuantity: response.data.totalQuantity || 0,
@@ -121,16 +170,21 @@ const useCartStore = create((set, get) => ({
       set({
         isCartLoading: false,
         errorMessage:
-          error.response?.data?.message || "فشل في إزالة المنتج من السلة",
+          error.response?.data?.message || error.message || "فشل في إزالة المنتج من السلة",
       });
     }
   },
 
   clearCart: async (token) => {
+    if (!token) {
+      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
+      return;
+    }
+
     try {
       set({ isCartLoading: true, errorMessage: null });
 
-      await axiosInstance.delete("/carts", {
+      await axiosInstance.delete("/carts/delete", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -146,12 +200,11 @@ const useCartStore = create((set, get) => ({
       set({
         isCartLoading: false,
         errorMessage:
-          error.response?.data?.message || "فشل في حذف السلة",
+          error.response?.data?.message || error.message || "فشل في حذف السلة",
       });
     }
   },
 
-  // طرق مساعدة تعمل على الجانب العميل بدون طلبات للخادم
   getItemCount: () => {
     return get().totalQuantity;
   },

@@ -12,13 +12,15 @@ import useCartStore from "@/store/useCartStore";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
 
+type Product = {
+  _id: string;
+  quantity?: number;
+  size?: string;
+  [key: string]: any;
+};
+
 type Props = {
-  product: {
-    _id:any,
-    quantity?: number;
-    size?: string;
-    [key: string]: any;
-  };
+  product: Product;
   title?: string;
   buttonStyle?: ViewStyle;
   textStyle?: TextStyle;
@@ -30,34 +32,54 @@ const AddToCartButton = ({
   buttonStyle,
   textStyle,
 }: Props) => {
-  const { addToCart, errorMessage, clearError , getCartItms } = useCartStore();
+  const { addToCart, errorMessage, clearError } = useCartStore();
   const { isSignedIn } = useUser();
   const { getToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAddToCart = async () => {
     try {
+      if (!product || !product._id) {
+        Toast.show({
+          type: "error",
+          text1: "المنتج غير متوفر أو البيانات ناقصة",
+        });
+        return;
+      }
+
       setIsLoading(true);
       clearError?.();
-      
+
       if (!isSignedIn) {
+        Toast.show({
+          type: "error",
+          text1: "يرجى تسجيل الدخول أولاً",
+        });
         setIsLoading(false);
         return;
       }
-      
+
       const token = await getToken();
       if (!token) {
-        console.log("Authentication token not available");
+        Toast.show({
+          type: "error",
+          text1: "حدث خطأ في المصادقة",
+        });
         setIsLoading(false);
         return;
       }
-      
-      await addToCart(product, token, product.quantity || 1,);
+
+      await addToCart(product, token);
       Toast.show({
         type: "success",
-        text1: "Product added to cart successfully",
-      });  
+        text1: "تمت إضافة المنتج إلى السلة",
+      });
     } catch (err) {
+      console.error("خطأ أثناء الإضافة للسلة:", err);
+      Toast.show({
+        type: "error",
+        text1: "حدث خطأ أثناء إضافة المنتج للسلة",
+      });
     } finally {
       setIsLoading(false);
       if (errorMessage) {
@@ -110,12 +132,6 @@ const styles = StyleSheet.create({
     color: "#FFEDD6",
     fontSize: 18,
     fontWeight: "bold",
-  },
-  errorText: {
-    color: "#E53935",
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: "center",
   },
 });
 

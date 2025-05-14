@@ -43,7 +43,6 @@ export default function _layout() {
             elevation: 0,
             height: 60,
             paddingTop: 5,
-            backgroundColor: "#FFFFFFFF",
           },
           headerStyle: {
             backgroundColor: "#A37E2C",
