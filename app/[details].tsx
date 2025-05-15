@@ -8,13 +8,13 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import AddToCartButton from "./components/AddToCartButton";
 
 const SIZES = ["S", "M", "L", "XL"];
-const DEFAULT_IMAGE = "https://via.placeholder.com/400x260?text=No+Image";
+const DEFAULT_IMAGE = "https://placehold.jp/3d4070/ffffff/150x150.png";
 
 export default function ProductDetails() {
   const headerHeight = useHeaderHeight();
   const { product } = useItemStore();
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState("M");
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isImageLoading, setIsImageLoading] = useState(true);
 
   if (!product) {
@@ -56,7 +56,7 @@ export default function ProductDetails() {
             />
           )}
           <Image
-            source={{ uri: product?.images?.[0] || DEFAULT_IMAGE }}
+            source={{ uri: DEFAULT_IMAGE  || product?.images?.[0] }}
             style={styles.image}
             onLoadEnd={() => setIsImageLoading(false)}
             onError={handleImageError}
@@ -83,6 +83,7 @@ export default function ProductDetails() {
         </View>
         <View style={{ width: "100%", alignItems: "flex-end", marginTop: 10 }}>
           <Text>المقاس</Text>
+          {!selectedSize && <Text style={styles.sizeInfoText}>* الرجاء اختيار المقاس</Text>}
           <View style={styles.sizesContainer}>
             {SIZES.map((size) => (
               <Pressable 
@@ -106,12 +107,21 @@ export default function ProductDetails() {
         </View>
         <View style={styles.buttonsContainer}>
           <AddToCartButton
-            product={{ ...product, quantity, size: selectedSize }}
+            product={product ? { ...product, quantity, size: selectedSize } : undefined}
             title="إضافة للسلة"
-            buttonStyle={styles.secondary}
+            buttonStyle={StyleSheet.flatten([styles.secondary, !selectedSize && styles.buttonDisabled].filter(Boolean))}
             textStyle={styles.buttonText}
+            disabled={!selectedSize}
           />
-          <Pressable style={styles.primary}>
+          <Pressable 
+            style={StyleSheet.flatten([styles.primary, !selectedSize && styles.buttonDisabled].filter(Boolean))}
+            disabled={!selectedSize}
+            onPress={() => {
+              if (selectedSize) {
+                console.log("Buy Now pressed with product:", product, "quantity:", quantity, "size:", selectedSize);
+              }
+            }}
+          >
             <Text style={styles.buttonText}>
               شراء الآن
             </Text>
@@ -141,26 +151,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
     justifyContent: "space-around",
+    width: "100%",
   },
   sizeButton: {
-    marginHorizontal: 10,
-    padding: 15,
-    borderColor: "#1D161699",
-    borderWidth: 1,
-    borderRadius: 6,
+    marginHorizontal: 5,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderColor: "black",
+    borderWidth: 2,
+    borderRadius: 8,
+    backgroundColor: "#FFCCCC",
   },
   selectedSize: {
-    backgroundColor: "#A37E2C",
-    borderColor: "#A37E2C",
+    backgroundColor: "#CCE5FF",
   },
   pressedSize: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   sizeText: {
     color: "#1D161699",
   },
   selectedSizeText: {
     color: "#FFFFFF",
+  },
+  sizeInfoText: {
+    color: "#D32F2F",
+    fontSize: 18,
+    textAlign: "right",
+    width: "100%",
+    marginTop: 4,
+    marginBottom: 6,
   },
   buttonsContainer: {
     width: "100%",
@@ -169,8 +189,8 @@ const styles = StyleSheet.create({
     bottom: 40,
   },
   buttonText: {
-    color: "#FFEDD6FF",
-    fontSize: 20,
+    color: "#FAFAFAFF",
+    fontSize: 24,
     fontWeight: "bold",
   },
   secondary: {
@@ -190,6 +210,10 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     padding: 10,
     marginTop: 10,
+  },
+  buttonDisabled: {
+    backgroundColor: "#E0E0E0",
+    opacity: 0.7,
   },
   container: {
     flex: 1,

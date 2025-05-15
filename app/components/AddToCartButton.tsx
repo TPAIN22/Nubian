@@ -24,6 +24,7 @@ type Props = {
   title?: string;
   buttonStyle?: ViewStyle;
   textStyle?: TextStyle;
+  disabled?: boolean;
 };
 
 const AddToCartButton = ({
@@ -31,6 +32,7 @@ const AddToCartButton = ({
   title = "Add to cart",
   buttonStyle,
   textStyle,
+  disabled,
 }: Props) => {
   const { addToCart, errorMessage, clearError } = useCartStore();
   const { isSignedIn } = useUser();
@@ -38,6 +40,18 @@ const AddToCartButton = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAddToCart = async () => {
+    if (disabled) {
+      return;
+    }
+
+    if (!product?.size) {
+      Toast.show({
+        type: 'info',
+        text1: 'يرجى اختيار المقاس أولاً',
+      });
+      return;
+    }
+
     try {
       if (!product || !product._id) {
         Toast.show({
@@ -97,10 +111,10 @@ const AddToCartButton = ({
         style={[
           styles.button,
           buttonStyle,
-          isLoading && styles.disabledButton
+          (isLoading || disabled) && styles.disabledButton
         ]}
         onPress={handleAddToCart}
-        disabled={isLoading}
+        disabled={isLoading || disabled}
       >
         {isLoading ? (
           <ActivityIndicator size="small" color="#FFEDD6" />

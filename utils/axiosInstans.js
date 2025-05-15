@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const isDevelopment = process.env.EXPO_PUBLIC_API_URL === "development";
-const baseURL = isDevelopment ? "http://192.168.0.115:3000/api" : '/api';
+const baseURL = "https://nubian-lne4.onrender.com/api";
 
 const axiosInstance = axios.create({
     baseURL,

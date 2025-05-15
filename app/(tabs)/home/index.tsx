@@ -33,16 +33,20 @@ export default function Home() {
   const { setProduct, products, isProductsLoading, getProducts } = useItemStore();
   const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
+  const { isLoaded } = useAuth();
+
   useEffect( () => {
-    getProducts();
-  }, []);
+    if (isLoaded) {
+      getProducts();
+    }
+  }, [isLoaded]);
 
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await getProducts();
     setRefreshing(false);
-  }, [getProducts]);
+  }, []);
 
   const skeletonItems = useMemo(() => 
     Array.from({ length: 12 }).map((_, index) => ({
