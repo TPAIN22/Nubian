@@ -1,11 +1,12 @@
 import { Image } from "expo-image";
 import { Stack } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import { Pressable, StyleSheet, Text, View, ActivityIndicator, Animated, Alert } from "react-native";
 import useItemStore from "@/store/useItemStore";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useHeaderHeight } from "@react-navigation/elements";
 import AddToCartButton from "./components/AddToCartButton";
+import * as Haptics from 'expo-haptics';
 
 const SIZES = ["S", "M", "L", "XL"];
 const DEFAULT_IMAGE = "https://placehold.jp/3d4070/ffffff/150x150.png";
@@ -16,6 +17,22 @@ export default function ProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const scaleAnim = new Animated.Value(1);
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
 
   if (!product) {
     return (
@@ -49,17 +66,20 @@ export default function ProductDetails() {
       <View style={[styles.container, { marginTop: headerHeight }]}>
         <View style={styles.imageContainer}>
           {isImageLoading && (
-            <ActivityIndicator 
-              size="large" 
-              color="#A37E2C" 
-              style={styles.imageLoader} 
-            />
+            <View style={styles.imageLoaderContainer}>
+              <ActivityIndicator 
+                size="large" 
+                color="#A37E2C" 
+              />
+              <Text style={styles.loadingText}>جاري تحميل الصورة...</Text>
+            </View>
           )}
           <Image
-            source={{ uri: DEFAULT_IMAGE  || product?.images?.[0] }}
+            source={{ uri: DEFAULT_IMAGE || product?.images?.[0] }}
             style={styles.image}
             onLoadEnd={() => setIsImageLoading(false)}
             onError={handleImageError}
+            transition={1000}
           />
         </View>
         <Text style={styles.name}>{product?.name || "اسم المنتج غير متوفر"}</Text>
@@ -106,26 +126,33 @@ export default function ProductDetails() {
           </View>
         </View>
         <View style={styles.buttonsContainer}>
-          <AddToCartButton
-            product={product ? { ...product, quantity, size: selectedSize } : undefined}
-            title="إضافة للسلة"
-            buttonStyle={StyleSheet.flatten([styles.secondary, !selectedSize && styles.buttonDisabled].filter(Boolean))}
-            textStyle={styles.buttonText}
-            disabled={!selectedSize}
-          />
-          <Pressable 
-            style={StyleSheet.flatten([styles.primary, !selectedSize && styles.buttonDisabled].filter(Boolean))}
-            disabled={!selectedSize}
-            onPress={() => {
-              if (selectedSize) {
-                console.log("Buy Now pressed with product:", product, "quantity:", quantity, "size:", selectedSize);
-              }
-            }}
-          >
-            <Text style={styles.buttonText}>
-              شراء الآن
-            </Text>
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <AddToCartButton
+              product={product ? { ...product, quantity, size: selectedSize } : undefined}
+              title="إضافة للسلة"
+              buttonStyle={StyleSheet.flatten([styles.secondary, !selectedSize && styles.buttonDisabled].filter(Boolean))}
+              textStyle={styles.buttonText}
+              disabled={!selectedSize}
+            />
+          </Animated.View>
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <Pressable 
+              style={StyleSheet.flatten([styles.primary, !selectedSize && styles.buttonDisabled].filter(Boolean))}
+              disabled={!selectedSize}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              onPress={() => {
+                if (selectedSize) {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  console.log("Buy Now pressed with product:", product, "quantity:", quantity, "size:", selectedSize);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>
+                شراء الآن
+              </Text>
+            </Pressable>
+          </Animated.View>
         </View>
       </View>
     </>
@@ -139,12 +166,27 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: "hidden",
     backgroundColor: "#F5F5F5",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  imageLoader: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: [{ translateX: -12 }, { translateY: -12 }],
+  imageLoaderContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    zIndex: 1,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#A37E2C',
+    fontSize: 16,
   },
   sizesContainer: {
     flexDirection: "row",

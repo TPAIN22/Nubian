@@ -3,14 +3,14 @@ import { Stack } from "expo-router";
 import "./global.css";
 import ClerkProvider from "@/providers/ClerckAndConvex";
 import { StatusBar } from "expo-status-bar";
-import { NotificationProvider } from "@/providers/notificationProvider";
+import { NotificationProvider} from "@/providers/notificationProvider";
 import * as Notifications from "expo-notifications";
 import Toast from "react-native-toast-message";
 
 export default function RootLayout() {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true, // <== هذه مهمة
+      shouldShowAlert: true, 
       shouldPlaySound: true,
       shouldSetBadge: false,
     }),

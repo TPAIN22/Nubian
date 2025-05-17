@@ -54,7 +54,6 @@ const useCartStore = create((set, get) => ({
       if (!product || !product._id) {
         throw new Error("بيانات المنتج غير صحيحة");
       }
-
       const response = await axiosInstance.post(
         "/carts/add",
         { productId: product._id, quantity: 1 },
