@@ -7,6 +7,7 @@ const useCartStore = create((set, get) => ({
   totalPrice: 0,
   isCartLoading: false,
   errorMessage: null,
+  setCartItems: (items) => set({ cartItems: items }),
 
   clearError: () => set({ errorMessage: null }),
 

@@ -83,6 +83,7 @@ export default function _layout() {
         <Tabs.Screen
           name="cart"
           options={{
+            tabBarStyle: { display: 'none' },
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 source={require("../../assets/images/cart-shopping-solid.svg")}

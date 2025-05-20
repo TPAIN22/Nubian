@@ -11,6 +11,7 @@ import {
 import useCartStore from "@/store/useCartStore";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
+import { router } from "expo-router";
 
 type Product = {
   _id: string;
@@ -44,7 +45,7 @@ const AddToCartButton = ({
       return;
     }
 
-    if (!product?.size) {
+    if (!product?.size && product?.category?.includes("ملابس")) {
       Toast.show({
         type: 'info',
         text1: 'يرجى اختيار المقاس أولاً',
@@ -88,6 +89,7 @@ const AddToCartButton = ({
         type: "success",
         text1: "تمت إضافة المنتج إلى السلة",
       });
+      router.push("/(tabs)/cart");
     } catch (err) {
       console.error("خطأ أثناء الإضافة للسلة:", err);
       Toast.show({
@@ -96,12 +98,6 @@ const AddToCartButton = ({
       });
     } finally {
       setIsLoading(false);
-      if (errorMessage) {
-        Toast.show({
-          type: "error",
-          text1: errorMessage,
-        });
-      }
     }
   };
 
