@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseURL = "http://192.168.0.115:3000/api";
+const baseURL = "https://nubian-lne4.onrender.com/api";
 
 const axiosInstance = axios.create({
     baseURL,
