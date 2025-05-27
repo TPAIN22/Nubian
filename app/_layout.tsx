@@ -15,7 +15,6 @@ export default function RootLayout() {
       shouldSetBadge: false,
     }),
   });
-
   return (
     <ClerkProvider>
       <NotificationProvider>

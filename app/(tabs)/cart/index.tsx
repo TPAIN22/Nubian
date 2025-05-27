@@ -6,9 +6,7 @@ import {
   TouchableOpacity,
   Image,
   Modal,
-  ScrollView,
   Alert,
-  StyleSheet,
   Pressable,
 } from "react-native";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
@@ -257,6 +255,7 @@ export default function Cart() {
                   width: "100%",
                   padding: 10,
                   justifyContent: "flex-end",
+                  
                 }}
               >
                 <Text style={{ fontSize: 20, color: "#A37E2C" }}>
@@ -271,7 +270,7 @@ export default function Cart() {
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <Pressable onPress={() => handlePress(item)}>
-              <ItemCard item={item} />
+              <ItemCard item={item}/>
             </Pressable>
           )}
           ListFooterComponent={
