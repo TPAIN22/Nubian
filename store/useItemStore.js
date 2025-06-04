@@ -8,33 +8,43 @@ const useItemStore = create((set , get) => ({
   error: null,
   page: 1,
   hasMore: true,
+  isTabBarVisible: true,
+  signInModelVisible: false,
+
+  setSignInModelVisible: (visible) => set(() => ({ signInModelVisible: visible })),
+
+  setIsTabBarVisible: (visible) => set(() => ({ isTabBarVisible: visible })),
   setProduct: (product) => set(() => ({ product })),
   setError: (error) => set(() => ({ error })),
+  
 
 
-  getProducts: async () => {
+ getProducts: async () => {
     const { page, hasMore, isProductsLoading } = get();
-  
-    if (!hasMore || isProductsLoading) return;
-  
+    if (!hasMore || isProductsLoading) {
+      return;
+    }
+ 
     set({ isProductsLoading: true });
-  
+ 
     try {
       const response = await axiosInstance.get("/products", {
         params: { page, limit: 6 },
       });
       const newProducts = response.data.products;
       const totalPages = response.data.totalPages;
-  
-      set((state) => ({
-        products: [...state.products, ...newProducts],
-        page: state.page + 1,
-        hasMore: state.page + 1 <= totalPages,
-        isProductsLoading: false,
-      }));
+ 
+      set((state) => {
+        const nextHasMore = state.page + 1 <= totalPages;
+        return {
+          products: [...state.products, ...newProducts],
+          page: state.page + 1,
+          hasMore: nextHasMore,
+          isProductsLoading: false,
+        };
+      });
     } catch (error) {
-      console.log(error);
-      set({ isProductsLoading: false });
+      set({ isProductsLoading: false, error: error.message });
     }
   }
   

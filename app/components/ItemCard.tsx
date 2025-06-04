@@ -6,62 +6,128 @@ import {
   Image as RNImage,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
+const PLACEHOLDER_IMAGE_URI = "https://via.placeholder.com/150";
+
+interface ProductItem {
+  images?: string[];
+  image?: string;
+  name: string;
+  price: number;
+  discountPrice?: number;
+}
+
 export default function ItemCard({
   item,
-  onAddPress,
+  onAddPress, // تم تغيير اسم الـ prop هنا
 }: {
-  item: {
-    images: string[];
-    image: string;
-    name: string;
-    discountPrice: number;
-  };
-  onAddPress?: () => void;
+  item: ProductItem;
+  onAddPress?: () => void; // هذا الـ prop هو دالة لا تأخذ معلمات
 }) {
+  if (!item || !item.name || typeof item.price !== "number") {
+    console.warn("ItemCard received invalid item prop:", item);
+    return null;
+  }
+
   const [imageHeight, setImageHeight] = useState(160);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { width } = useWindowDimensions();
-  const cardWidth = width / 2 - 16;
 
-  const imageUris = item.images?.length ? item.images : [item.image];
+  const CARD_HORIZONTAL_MARGIN = 4;
+  const PADDING_FLATLIST = 4;
+  const cardWidth =
+    (width - PADDING_FLATLIST * 2 - CARD_HORIZONTAL_MARGIN * 2) / 2;
+
+  const safeItem = useMemo(
+    () => ({
+      name: item.name,
+      price: item.price,
+      discountPrice:
+        typeof item.discountPrice === "number" ? item.discountPrice : undefined,
+      images: item.images || [],
+      image: item.image || null,
+    }),
+    [item]
+  );
+
+  const imageUris = useMemo(() => {
+    if (safeItem.images && safeItem.images.length > 0) {
+      return safeItem.images.filter((uri) => uri && typeof uri === "string");
+    }
+    if (safeItem.image && typeof safeItem.image === "string") {
+      return [safeItem.image];
+    }
+    return [PLACEHOLDER_IMAGE_URI];
+  }, [safeItem.images, safeItem.image]);
+
+  const calculateImageHeight = useCallback(
+    (uri: string) => {
+      if (!uri || typeof uri !== "string" || uri.startsWith("data:")) {
+        setImageHeight(160);
+        return;
+      }
+
+      RNImage.getSize(
+        uri,
+        (imgWidth, imgHeight) => {
+          if (imgWidth === 0 || imgHeight === 0) {
+            setImageHeight(160);
+            return;
+          }
+          const ratio = imgHeight / imgWidth;
+          const calculatedHeight = ratio * cardWidth;
+          setImageHeight(
+            calculatedHeight < 160 ? 160 : Math.min(calculatedHeight, 220)
+          );
+        },
+        (error) => {
+          console.warn("Failed to get image size for uri:", uri, error);
+          setImageHeight(160);
+        }
+      );
+    },
+    [cardWidth]
+  );
 
   useEffect(() => {
-    const uri = imageUris[0];
-    if (!uri) return;
+    if (imageUris.length > 0) {
+      calculateImageHeight(imageUris[0]);
+    }
+  }, [imageUris, calculateImageHeight]);
 
-    RNImage.getSize(
-      uri,
-      (imgWidth, imgHeight) => {
-        const ratio = imgHeight / imgWidth;
-        const calculatedHeight = ratio * cardWidth;
-        setImageHeight(
-          calculatedHeight < 160 ? 160 : Math.min(calculatedHeight, 220)
-        );
-      },
-      () => {
-        setImageHeight(160);
-      }
-    );
-  }, [item.images, item.image, cardWidth]);
-
-  const handleScroll = (event: any) => {
-    const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / cardWidth);
-    setCurrentImageIndex(index);
-  };
-
-  const discountPercentage = Math.round(
-    ((item.discountPrice - item.price) / item.discountPrice) * 100
+  const handleScroll = useCallback(
+    (event: any) => {
+      const scrollPosition = event.nativeEvent.contentOffset.x;
+      const index = Math.round(scrollPosition / cardWidth);
+      setCurrentImageIndex(Math.max(0, Math.min(index, imageUris.length - 1)));
+    },
+    [cardWidth, imageUris.length]
   );
+
+  const discountPercentage = useMemo(() => {
+    if (
+      safeItem.discountPrice !== undefined &&
+      safeItem.discountPrice > safeItem.price
+    ) {
+      const percentage = Math.round(
+        ((safeItem.discountPrice - safeItem.price) / safeItem.discountPrice) *
+          100
+      );
+      return Math.max(0, Math.min(percentage, 99));
+    }
+    return 0;
+  }, [safeItem.discountPrice, safeItem.price]);
+  const handlePress = async () => {};
+
+  const hasValidDiscount = discountPercentage > 0;
 
   return (
     <View style={[styles.card, { width: cardWidth }]}>
-      {/* Image Carousel */}
       <View style={styles.imageContainer}>
         <ScrollView
           horizontal
@@ -69,34 +135,33 @@ export default function ItemCard({
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          style={{ width: "100%", height: imageHeight }}
+          style={{ width: cardWidth, height: imageHeight }}
         >
           {imageUris.map((uri, index) => (
             <Image
-              key={index}
+              key={`image-${index}`}
               source={{ uri }}
               style={{
                 width: cardWidth,
                 height: imageHeight,
               }}
               contentFit="cover"
+              placeholder={{ uri: PLACEHOLDER_IMAGE_URI }}
             />
           ))}
         </ScrollView>
 
-        {/* Discount Badge */}
-        {item.discountPrice !== item.price && (
+        {hasValidDiscount && (
           <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{discountPercentage}%</Text>
+            <Text style={styles.discountText}>خصم {discountPercentage}%</Text>
           </View>
         )}
 
-        {/* Image Indicators */}
         {imageUris.length > 1 && (
           <View style={styles.indicatorContainer}>
             {imageUris.map((_, index) => (
               <View
-                key={index}
+                key={`indicator-${index}`}
                 style={[
                   styles.indicator,
                   {
@@ -104,31 +169,44 @@ export default function ItemCard({
                       index === currentImageIndex ? "#A37E2C" : "#FFFFFF80",
                   },
                 ]}
+                accessibilityLabel={`صورة ${index + 1} من ${imageUris.length}`}
               />
             ))}
           </View>
         )}
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={2}>
-          {item.name}
+        <Text
+          style={styles.name}
+          numberOfLines={2}
+          accessibilityRole="text"
+          accessibilityLabel={`اسم المنتج: ${safeItem.name}`}
+        >
+          {safeItem.name}
         </Text>
 
         <View style={styles.bottomRow}>
           <View style={styles.priceContainer}>
-            {item.discountPrice !== item.price && (
-              <Text style={styles.fakePrice}>{item.discountPrice} جنيه</Text>
+            {hasValidDiscount && (
+              <Text style={styles.fakePrice}>
+                {safeItem.discountPrice} جنيه
+              </Text>
             )}
-
-            <Text style={styles.price}>{item.price} جنيه</Text>
+            <Text
+              style={styles.price}
+              accessibilityLabel={`السعر: ${safeItem.price} جنيه سوداني`}
+            >
+              {safeItem.price} جنيه
+            </Text>
           </View>
 
           <TouchableOpacity
             style={styles.addButton}
-            onPress={onAddPress}
+            onPress={onAddPress} // استدعاء الدالة الممررة هنا
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`إضافة ${safeItem.name} إلى السلة`}
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
           </TouchableOpacity>
@@ -137,13 +215,11 @@ export default function ItemCard({
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    margin: 8,
-    elevation: 3,
+    marginHorizontal: 4,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -152,7 +228,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     overflow: "hidden",
-    marginBottom: 16,
   },
   imageContainer: {
     position: "relative",
@@ -164,7 +239,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#E53E3E",
+    backgroundColor: "#006C33FF",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -220,23 +295,22 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#38A169",
+    color: "#006C33FF",
   },
   addButton: {
-    backgroundColor: "#A37E2C",
+    backgroundColor: "#29292980",
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 8,
-    elevation: 2,
-    shadowColor: "#A37E2C",
+    marginLeft: 12,
+    shadowColor: "white",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 3,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
   },
 });

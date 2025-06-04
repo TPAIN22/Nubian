@@ -8,6 +8,7 @@ import {
   Modal,
   Alert,
   Pressable,
+  StyleSheet,
 } from "react-native";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import useCartStore from "@/store/useCartStore";
@@ -166,7 +167,7 @@ export default function Cart() {
               {item.product.name}
             </Text>
             <Text className="text-gray-600">
-              {item.product.price.toFixed(2)} ريال
+              {item.product.price.toFixed(2)} جنيه
             </Text>
             <View className="flex-row items-center mt-2">
               <TouchableOpacity
@@ -191,7 +192,7 @@ export default function Cart() {
               </TouchableOpacity>
             </View>
             <Text className="text-sm text-gray-500 mt-1">
-              المجموع: {(item.product.price * item.quantity).toFixed(2)} ريال
+              المجموع: {(item.product.price * item.quantity).toFixed(2)} جنيه
             </Text>
           </View>
           <TouchableOpacity
@@ -207,23 +208,42 @@ export default function Cart() {
   );
 
   const handlePress = (item: any) => {
-    // Handle item press logic here
     setProduct(item);
     router.push(`/${item._id}`);
   };
+  const totalQuantityOfAllItems = cartItems.reduce(
+    (accumulator: number, currentItem: any) => {
+      return accumulator + currentItem.quantity;
+    },
+    0
+  );
 
   return (
     <>
-    <StatusBar style="dark" />
+      <StatusBar style="dark" />
       <Stack.Screen
         options={{
-          headerLeft: () => (
-            <Ionicons name="arrow-back" size={24} color="#006348" style={{ marginRight: 20  }} onPress={() => router.back() }  />
-          ),
           headerShadowVisible: false,
           headerTitle: "سلة التسوق",
+          headerTitleAlign: "center",
+          headerBackVisible: false,
+          
+
           headerRight: () => (
-            <Ionicons name="cart-outline" size={24} color="#006348" />
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 10,
+              }}
+            >
+              <Pressable className="relative items-center justify-center">
+                <Ionicons name="cart-outline" size={30} color="#006348" />
+                <Text className="absolute -top-2 -left-2 rounded-full bg-red-400 text-white w-6 h-6 flex text-center text-md">
+                  {totalQuantityOfAllItems}
+                </Text>
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -255,7 +275,6 @@ export default function Cart() {
                   width: "100%",
                   padding: 10,
                   justifyContent: "flex-end",
-                  
                 }}
               >
                 <Text style={{ fontSize: 20, color: "#A37E2C" }}>
@@ -267,10 +286,11 @@ export default function Cart() {
           numColumns={2}
           data={products}
           onEndReached={async () => getProducts()}
+          columnWrapperStyle={styles.columnWrapper}
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <Pressable onPress={() => handlePress(item)}>
-              <ItemCard item={item}/>
+              <ItemCard item={item} />
             </Pressable>
           )}
           ListFooterComponent={
@@ -306,7 +326,7 @@ export default function Cart() {
             <View className="flex-row justify-between mb-4">
               <Text className="text-lg font-semibold">المجموع:</Text>
               <Text className="text-lg font-bold text-[#006348]">
-                {totalPrice.toFixed(2)} ريال
+                {totalPrice.toFixed(2)} جنيه
               </Text>
             </View>
             <TouchableOpacity
@@ -372,3 +392,11 @@ export default function Cart() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  columnWrapper: {
+    justifyContent: "space-around",
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+});

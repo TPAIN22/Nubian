@@ -11,12 +11,24 @@ import {
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { useNavigation, useRouter } from "expo-router";
 import { Image } from "expo-image";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-
-
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import BottomSheet, {
+  BottomSheetModal,
+  BottomSheetView,
+  BottomSheetModalProvider,
+} from "@gorhom/bottom-sheet";
+import { Button } from "react-native";
+import GoogleSignInSheet from "@/app/(auth)/signin";
 export default function Profile() {
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -27,12 +39,21 @@ export default function Profile() {
   const [isUserLoaded, setIsUserLoaded] = useState(false);
   const navigation = useNavigation();
   const scrollY = useRef(0);
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+
+  // callbacks
+  const handlePresentModalPress = useCallback(() => {
+  
+    bottomSheetModalRef.current?.present();
+  }, []);
+  const handleSheetChanges = useCallback((index: number) => {
+  }, []);
 
   const settingsOptions = [
     { title: "Edit Profile", action: () => ({}), icon: "pencil" as const },
     {
       title: "Notifications",
-      action: () => ({}),
+      action: () => {router.push("/notification")},
       icon: "notifications" as const,
     },
     { title: "Language", action: () => ({}), icon: "globe" as const },
@@ -41,13 +62,6 @@ export default function Profile() {
     { title: "Privacy Terms", action: () => ({}), icon: "eye" as const },
     { title: "Security", action: () => ({}), icon: "lock-closed" as const },
     { title: "Cookies", action: () => ({}), icon: "" as never },
-  ];
-
-  const settingsAdminOptions = [
-    { title: "Add New Product", action: () => (router.push("/profile/addProduct")), icon: "add" as const },
-    { title: "Delete Products", action: () => ({}), icon: "trash" as const },
-    { title: "View Orders", action: () => ({}), icon: "eye" as const },
-    { title: "View Products", action: () => (router.push("/profile/viewProducts")), icon: "business" as const },
   ];
 
   useEffect(() => {
@@ -97,19 +111,40 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <View style={styles.loadingContainer}>
-        <Image
-          source={require("../../../assets/images/profilelogin.svg")}
-          style={{ width: "80%", height: 300 }}
-        />
-        <Text>سجّل الدخول للمتابعة</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/(auth)/signin")}
-          style={styles.loginButton}
-        >
-          <Text style={{ color: "#fff" }}>تسجيل الدخول</Text>
-        </TouchableOpacity>
-      </View>
+      <GestureHandlerRootView style={styles.loadingContainer}>
+        <BottomSheetModalProvider>
+          <Image
+            source={require("../../../assets/images/profilelogin.svg")}
+            style={{ width: "80%", height: 300 }}
+          />
+          <Text
+            style={{
+              color: "#A37E2C",
+              fontSize: 20,
+              fontWeight: "bold",
+              padding: 20,
+            }}
+          >
+            سجّل الدخول للمتابعة
+          </Text>
+          <TouchableOpacity
+            onPress={handlePresentModalPress}
+            style={styles.loginButton}
+          >
+            <Text style={{ color: "#fff", fontSize: 20, fontWeight: "bold" }}>
+              تسجيل الدخول
+            </Text>
+          </TouchableOpacity>
+          <BottomSheetModal
+            ref={bottomSheetModalRef}
+            onChange={handleSheetChanges}
+          >
+            <BottomSheetView style={styles.contentContainer}>
+              <GoogleSignInSheet />
+            </BottomSheetView>
+          </BottomSheetModal>
+        </BottomSheetModalProvider>
+      </GestureHandlerRootView>
     );
   }
 
@@ -118,7 +153,12 @@ export default function Profile() {
       <ScrollView
         onScroll={handleScroll}
         scrollEventThrottle={30}
-        style={{ flex: 1,borderTopWidth: 2 , borderTopColor: "#58492813" , backgroundColor: "#F9F9F9FF" }}
+        style={{
+          flex: 1,
+          borderTopWidth: 2,
+          borderTopColor: "#58492813",
+          backgroundColor: "#F9F9F9FF",
+        }}
         contentContainerStyle={{
           paddingTop: headerHeight,
           paddingBottom: tabbarHeight + 40,
@@ -127,9 +167,7 @@ export default function Profile() {
           borderTopWidth: 2,
         }}
       >
-        <View className=" mb-4 h-[1px] bg-[#241d0d8b]">
-
-        </View>
+        <View className=" mb-4 h-[1px] bg-[#241d0d8b]"></View>
         <View className="flex flex-row items-center gap-4">
           <Image
             source={{ uri: user?.imageUrl }}
@@ -189,36 +227,9 @@ export default function Profile() {
           </TouchableOpacity>
         ))}
 
-        {user?.publicMetadata?.isAdmin &&
-          ((
-            <>
-              <Text className="text-2xl mt-8 font-bold text-[#333333cb] mb-2">
-                Admin Panel
-              </Text>
-              {settingsAdminOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={option.action}
-                  className="flex flex-row items-center justify-between p-4 mb-2 mt-2 rounded-lg shadow-black drop-shadow-lg bg-white w-full"
-                >
-                  <View className="flex flex-row items-center gap-4">
-                    <Ionicons name={option.icon} size={16} color="#333333b1" />
-                    <Text className="text-base font-bold text-[#333333b1]">
-                      {option.title}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name="arrow-forward-sharp"
-                    size={16}
-                    color="#333333b1"
-                  />
-                </TouchableOpacity>
-              ))}
-            </>
-          ) as any)}
         <View>
           <TouchableOpacity
-            onPress={()=> signOut()}
+            onPress={() => signOut()}
             className="flex flex-row items-center justify-between p-4 mb-2 mt-2 rounded-lg shadow-black drop-shadow-lg bg-white w-full"
           >
             <Text className="text-xl text-red-500">Log out</Text>
@@ -249,8 +260,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     flexDirection: "row",
     backgroundColor: "#9B7931DC",
-    borderRadius: 15,
+    borderRadius: 35,
     padding: 10,
     marginTop: 10,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "grey",
+  },
+  contentContainer: {
+    flex: 1,
+    padding: 36,
+    alignItems: "center",
+    paddingBottom: 40,
   },
 });

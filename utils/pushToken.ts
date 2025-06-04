@@ -24,7 +24,22 @@ export async function registerForPushNotificationsAsync() {
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync();
     const token = tokenResponse.data;
-    
+
+    console.log('✅ Success getting push token:', token);
+
+    // 🟨 أرسل التوكن إلى السيرفر
+    await fetch('https://nubian-lne4.onrender.com/api/notifications/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        platform: Platform.OS,
+        deviceId: Device.osInternalBuildId ?? 'unknown-device',
+      }),
+    });
+
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',

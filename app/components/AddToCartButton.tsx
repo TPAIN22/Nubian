@@ -12,6 +12,7 @@ import useCartStore from "@/store/useCartStore";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
 import { router } from "expo-router";
+import useItemStore from "@/store/useItemStore";
 
 type Product = {
   _id: string;
@@ -39,6 +40,7 @@ const AddToCartButton = ({
   const { isSignedIn } = useUser();
   const { getToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const {signInModelVisible, setSignInModelVisible} = useItemStore()
 
   const handleAddToCart = async () => {
     if (disabled) {
@@ -66,6 +68,7 @@ const AddToCartButton = ({
       clearError?.();
 
       if (!isSignedIn) {
+        setSignInModelVisible(true);
         Toast.show({
           type: "error",
           text1: "يرجى تسجيل الدخول أولاً",

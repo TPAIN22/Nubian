@@ -1,11 +1,24 @@
-import React from "react";
+// app/(tabs)/_layout.js
+
+import React, { useEffect } from "react"; // [تغيير/إضافة] استيراد useEffect
 import { Tabs } from "expo-router";
 import { Image } from "expo-image";
-import { View } from "react-native";
+import { View, LayoutAnimation, Platform, UIManager } from "react-native"; // [تغيير/إضافة] استيراد LayoutAnimation, Platform, UIManager
 import { StatusBar } from "expo-status-bar";
+import useItemStore from "@/store/useItemStore"; // الاستيراد كما هو، لا تغيير فيه حسب طلبك
+
 const iconSize = 24;
 const focusedColor = "#A37E2C";
 const unfocusedColor = "black";
+
+// [تغيير/إضافة] تفعيل LayoutAnimation للـ Android
+// هذا السطر ضروري لجعل الإنيميشن يعمل بسلاسة على أندرويد.
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const TabIcon = ({ source, focused }: { source: any; focused: boolean }) => (
   <View
@@ -27,10 +40,20 @@ const TabIcon = ({ source, focused }: { source: any; focused: boolean }) => (
   </View>
 );
 
-export default function _layout() {
+export default function TabsLayout() {
+  // استخدام Zustand store للحصول على حالة ظهور الـ Tab Bar
+  const isTabBarVisible = useItemStore((state) => state.isTabBarVisible); // [تغيير] تأكد أن isTabBarVisible موجودة في useItemStore وتصل إليها هكذا
+
+  // [تغيير/إضافة] تطبيق الإنيميشن عند تغيير isTabBarVisible
+  // كلما تغيرت قيمة 'isTabBarVisible'، سيتم تهيئة LayoutAnimation
+  // لتطبيق تأثير 'easeInEaseOut' على أي تغييرات في الـ layout التالية.
+  useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }, [isTabBarVisible]); // [تغيير/إضافة] الإنيميشن هيتنفذ كل ما تتغير isTabBarVisible
+
   return (
     <>
-    <StatusBar style="dark" />
+      <StatusBar style="dark" />
       <Tabs
         screenOptions={{
           tabBarHideOnKeyboard: true,
@@ -43,47 +66,47 @@ export default function _layout() {
             elevation: 0,
             height: 60,
             paddingTop: 5,
-          },
-          headerStyle: {
-            backgroundColor: "#A37E2C",
+            // [تغيير] التحكم في خاصية 'display' بناءً على حالة الـ Tab Bar من Zustand
+            // هذا هو السطر الذي يجعل الـ Tab Bar يختفي أو يظهر بشكل عام لكل التابات.
+            display: isTabBarVisible ? 'flex' : 'none',
           },
         }}
       >
         <Tabs.Screen
           name="home"
-          options={{
-            tabBarHideOnKeyboard: true,
-            headerSearchBarOptions: {
-              placeholder: "Search",
-            },
-
-            headerRight: () => (
-              <Image
-                source={require("../../assets/images/cart-shopping-solid.svg")}
-                style={{ width: 20, height: 20, marginRight: 10 }}
-              />
-            ),
-            headerTitle: "Nubian",
-
-            headerLeft: () => (
-              <Image
-                source={require("../../assets/images/icon.png")}
-                style={{ width: 50, height: 50, top: 3 }}
-              />
-            ),
-
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                source={require("../../assets/images/house-solid.svg")}
-                focused={focused}
-              />
-            ),
+          options={({ route }) => {
+            return {
+              tabBarHideOnKeyboard: true,
+              headerSearchBarOptions: {
+                placeholder: "Search",
+              },
+              headerRight: () => (
+                <Image
+                  source={require("../../assets/images/cart-shopping-solid.svg")}
+                  style={{ width: 20, height: 20, marginRight: 10 }}
+                />
+              ),
+              headerTitle: "Nubian",
+              headerLeft: () => (
+                <Image
+                  source={require("../../assets/images/icon.png")}
+                  style={{ width: 50, height: 50, top: 3 }}
+                />
+              ),
+              tabBarIcon: ({ focused }) => (
+                <TabIcon
+                  source={require("../../assets/images/house-solid.svg")}
+                  focused={focused}
+                />
+              ),
+            };
           }}
         />
         <Tabs.Screen
           name="cart"
           options={{
-            tabBarStyle: { display: 'none' },
+            tabBarStyle: { display: "none" },
+            headerShown: false,
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 source={require("../../assets/images/cart-shopping-solid.svg")}
