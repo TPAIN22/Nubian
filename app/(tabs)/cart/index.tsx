@@ -178,7 +178,7 @@ export default function Cart() {
                 <Ionicons
                   name="remove"
                   size={20}
-                  color={item.quantity <= 1 ? "#ccc" : "#006348"}
+                  color={item.quantity <= 1 ? "#ccc" : "#30a1a7"}
                 />
               </TouchableOpacity>
               <Text className="mx-4 text-lg font-semibold">
@@ -188,7 +188,7 @@ export default function Cart() {
                 onPress={() => handleQuantityChange(item.product, 1)}
                 className="bg-gray-200 p-2 rounded-full"
               >
-                <Ionicons name="add" size={20} color="#006348" />
+                <Ionicons name="add" size={20} color="#30a1a7" />
               </TouchableOpacity>
             </View>
             <Text className="text-sm text-gray-500 mt-1">
@@ -238,7 +238,7 @@ export default function Cart() {
               }}
             >
               <Pressable className="relative items-center justify-center">
-                <Ionicons name="cart-outline" size={30} color="#006348" />
+                <Ionicons name="cart-outline" size={30} color="#30a1a7" />
                 <Text className="absolute -top-2 -left-2 rounded-full bg-red-400 text-white w-6 h-6 flex text-center text-md">
                   {totalQuantityOfAllItems}
                 </Text>
@@ -250,7 +250,7 @@ export default function Cart() {
 
       {isLoading && cartItems.length === 0 ? (
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#006348" />
+          <ActivityIndicator size="large" color="#30a1a7" />
         </View>
       ) : memoizedCartItems.length === 0 ? (
         <FlatList
@@ -263,8 +263,8 @@ export default function Cart() {
                   backgroundColor: "#fff",
                 }}
               >
-                <Ionicons name="cart-outline" size={50} color="#006348" />
-                <Text style={{ fontSize: 20, color: "#006348" }}>
+                <Ionicons name="cart-outline" size={50} color="#30a1a7" />
+                <Text style={{ fontSize: 20, color: "#30a1a7" }}>
                   سلة التسوق فارغة
                 </Text>
               </View>
@@ -277,7 +277,7 @@ export default function Cart() {
                   justifyContent: "flex-end",
                 }}
               >
-                <Text style={{ fontSize: 20, color: "#A37E2C" }}>
+                <Text style={{ fontSize: 20, color: "#e98c22" }}>
                   اضف الى سلة التسوق
                 </Text>
               </View>
@@ -296,13 +296,13 @@ export default function Cart() {
           ListFooterComponent={
             <View style={{ height: 100 }}>
               {hasMore ? (
-                <ActivityIndicator size="large" color="#006348" />
+                <ActivityIndicator size="large" color="#30a1a7" />
               ) : (
                 <View style={{ height: 100, marginTop: 10 }}>
                   <Text
                     style={{
                       fontSize: 20,
-                      color: "#A37E2C",
+                      color: "#e98c22",
                       alignSelf: "center",
                     }}
                   >
@@ -325,13 +325,13 @@ export default function Cart() {
           <View className="absolute bottom-0 left-0 right-0 bg-white p-4 shadow-md border-t border-gray-200">
             <View className="flex-row justify-between mb-4">
               <Text className="text-lg font-semibold">المجموع:</Text>
-              <Text className="text-lg font-bold text-[#006348]">
+              <Text className="text-lg font-bold text-[#30a1a7]">
                 {totalPrice.toFixed(2)} جنيه
               </Text>
             </View>
             <TouchableOpacity
               onPress={checkOut}
-              className="bg-[#006348] p-4 rounded-full"
+              className="bg-[#30a1a7] p-4 rounded-full"
             >
               <Text className="text-white text-center font-semibold text-lg">
                 إتمام الطلب
@@ -370,7 +370,7 @@ export default function Cart() {
                 <TouchableOpacity
                   style={{
                     marginTop: 20,
-                    backgroundColor: "#006348",
+                    backgroundColor: "#30a1a7",
                     padding: 10,
                     borderRadius: 5,
                   }}

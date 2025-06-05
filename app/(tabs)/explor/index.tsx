@@ -138,18 +138,18 @@ const SearchPage = () => {
 
       <View style={styles.filterContainer}>
         <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="filter" size={18} color="#A37E2C" />
+          <Ionicons name="filter" size={18} color="#e98c22" />
           <Text style={styles.filterText}>تصفية</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="swap-vertical" size={18} color="#A37E2C" />
+          <Ionicons name="swap-vertical" size={18} color="#e98c22" />
           <Text style={styles.filterText}>ترتيب</Text>
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A37E2C" />
+          <ActivityIndicator size="large" color="#e98c22" />
         </View>
       ) : (
         <FlatList
@@ -164,8 +164,8 @@ const SearchPage = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#A37E2C"]}
-              tintColor="#A37E2C"
+              colors={["#e98c22"]}
+              tintColor="#e98c22"
             />
           }
           ListEmptyComponent={ListEmptyComponent}

@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   addToCartButtonDetails: {
-    backgroundColor: "#A37E2C",
+    backgroundColor: "#e98c22",
     borderRadius: 30,
     width: "100%",
     alignSelf: "center",
@@ -105,12 +105,12 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#A37E2C",
+    borderColor: "#e98c22",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
     elevation: 2,
-    shadowColor: "#A37E2C",
+    shadowColor: "#e98c22",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: 14,
-    color: "#A37E2C",
+    color: "#e98c22",
     fontWeight: "600",
   },
   itemPressable: {
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   loadingMoreText: {
-    color: "#A37E2C",
+    color: "#e98c22",
     fontSize: 14,
     fontWeight: "500",
     marginTop: 8,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   loadingTextBottomSheet: {
     fontSize: 18,
-    color: "#A37E2C",
+    color: "#e98c22",
   },
   emptyContainer: {
     flex: 1,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: "#A37E2C",
+    borderColor: "#e98c22",
     backgroundColor: "#F7FAFC",
   },
   sizeTextDetails: {
@@ -282,8 +282,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   selectedSizeDetails: {
-    borderColor: "#A37E2C",
-    backgroundColor: "#A37E2C",
+    borderColor: "#e98c22",
+    backgroundColor: "#e98c22",
   },
   selectedSizeTextDetails: {
     color: "#FFFFFF",
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#A37E2C",
+    color: "#e98c22",
   },
 });
 export default styles;

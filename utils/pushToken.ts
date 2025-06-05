@@ -24,9 +24,6 @@ export async function registerForPushNotificationsAsync() {
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync();
     const token = tokenResponse.data;
-
-    console.log('✅ Success getting push token:', token);
-
     // 🟨 أرسل التوكن إلى السيرفر
     await fetch('https://nubian-lne4.onrender.com/api/notifications/save', {
       method: 'POST',
@@ -51,7 +48,6 @@ export async function registerForPushNotificationsAsync() {
 
     return token;
   } catch (error) {
-    console.error('❌ Error getting push token:', error);
     return null;
   }
 }

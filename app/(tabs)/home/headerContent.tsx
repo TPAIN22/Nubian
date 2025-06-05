@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 40,
   
-    minWidth: "90%",
+    minWidth: "96%",
     backgroundColor: "#ffffff",
     borderWidth: 1,
     elevation: 0,

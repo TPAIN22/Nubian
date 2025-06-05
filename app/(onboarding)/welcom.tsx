@@ -31,17 +31,17 @@ export default function welcom() {
           }}
         >
           <View style={{ width: "100%", alignItems: "center" }}>
-            <Text className="text-5xl text-[#A37E2C] my-5 mt-5 font-extrabold text-center">
+            <Text className="text-5xl text-[#e98c22] my-5 mt-5 font-extrabold text-center">
               نـــوبيــــان{" "}
             </Text>
             <Image
               source={require("../../assets/images/Online-shopping.gif")}
               style={{ width: 350, height: 300 }}
             />
-            <Text className="text-2xl text-[#A37E2C] my-5 mt-5 font-extrabold">
+            <Text className="text-2xl text-[#e98c22] my-5 mt-5 font-extrabold">
               جبنا ليك السوق كامل بين ايديك
             </Text>
-            <Text className="text-xl text-[#006348] font-medium text-right">
+            <Text className="text-xl text-[#30a1a7] font-medium text-right">
               منتظر شنو!!🤔 
               {"\n"}
               اختار المدينة المتواجد فيها واستمتع بالعروض والتخفيضات
@@ -57,7 +57,7 @@ export default function welcom() {
               router.push(`../../(tabs)/home`);
             }}
             style={{
-              backgroundColor: "#A37E2C",
+              backgroundColor: "#e98c22",
               padding: 15,
               marginBottom: 60,
               borderRadius: 10,

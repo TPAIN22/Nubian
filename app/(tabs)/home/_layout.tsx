@@ -14,7 +14,7 @@ export default function _layout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#A37E2C",
+        tabBarActiveTintColor: "##e98c22",
         headerShown: true,
         tabBarHideOnKeyboard: true,
         headerStyle: {
@@ -32,12 +32,12 @@ export default function _layout() {
             }}
           >
              <Pressable onPress={() => router.push("/notification")}>
-              <Ionicons name="notifications" size={24} color="#A37E2C" style={{marginRight:8}}/>
+              <Ionicons name="notifications" size={24} color="##e98c22" style={{marginRight:8}}/>
             </Pressable>
             <Pressable className="relative items-center justify-center"
             onPress={() =>router.push("/cart")}
             >
-            <Ionicons name="cart" size={30} color="#A37E2C" />
+            <Ionicons name="cart" size={30} color="##e98c22" />
             <Text className="absolute -top-2 -left-2 rounded-full bg-red-400 text-white w-6 h-6 flex text-center text-md">{totalQuantityOfAllItems}</Text>
             </Pressable>
            
@@ -46,8 +46,8 @@ export default function _layout() {
         headerLeft: () => (
           <View style={{ paddingHorizontal: 2}}>
             <Image
-              source={require("../../../assets/images/icon.png")}
-              style={{ width: 50, height: 50, top: 3 }}
+              source={require("../../../assets/images/nubian.png")}
+              style={{ width: 30, height: 30, top: 1 }}
             />
           </View>
         ),

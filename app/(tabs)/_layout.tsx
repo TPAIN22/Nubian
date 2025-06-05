@@ -8,7 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import useItemStore from "@/store/useItemStore"; // الاستيراد كما هو، لا تغيير فيه حسب طلبك
 
 const iconSize = 24;
-const focusedColor = "#A37E2C";
+const focusedColor = "#e98c22";
 const unfocusedColor = "black";
 
 // [تغيير/إضافة] تفعيل LayoutAnimation للـ Android

@@ -104,7 +104,7 @@ export default function Profile() {
   if (!loaded) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#A37E2C" />
+        <ActivityIndicator size="large" color="#e98c22" />
       </View>
     );
   }
@@ -119,7 +119,7 @@ export default function Profile() {
           />
           <Text
             style={{
-              color: "#A37E2C",
+              color: "#e98c22",
               fontSize: 20,
               fontWeight: "bold",
               padding: 20,

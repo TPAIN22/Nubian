@@ -1,33 +1,37 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image'; // مهم: استورد Image من expo-image
+import { View, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 
-export default function GifLoadingScreen({ onAnimationFinish }) {
-  // استخدام useEffect لتحديد مدة عرض الـ GIF
+// <--- أضف onMount هنا كـ prop
+export default function GifLoadingScreen({ onAnimationFinish, onMount }) {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onAnimationFinish(); // استدعاء الدالة لإنهاء شاشة الـ GIF
-    }, 3000); // 3000 ملي ثانية = 3 ثواني. قم بتعديل هذه المدة حسب طول الـ GIF الخاص بك ورغبتك.
+    // <--- استدعاء onMount بمجرد ما المكون يتعرض لأول مرة
+    if (onMount) {
+      onMount();
+    }
 
-    // دالة التنظيف لإلغاء الـ timer إذا تم إلغاء تحميل المكون قبل انتهاء الوقت
-    return () => clearTimeout(timer);
-  }, []); // onAnimationFinish كـ dependency لضمان التنفيذ الصحيح
+    // المؤقت الاحتياطي كما هو
+    const fallbackTimer = setTimeout(() => {
+      console.log('GIF_FALLBACK_TIMER_TRIGGERED: Animation did not signal completion or took too long.');
+      onAnimationFinish();
+    }, 5000); // 5 ثواني كحد أقصى للـ GIF، يمكنك تعديلها
+
+    return () => clearTimeout(fallbackTimer);
+  }, [onAnimationFinish, onMount]); // أضف onMount هنا
 
   return (
     <>
-    <StatusBar style="dark" />
-    <View style={styles.container}>
-      {/* تأكد من وضع ملف الـ GIF الخاص بك في مجلد assets/ */}
-      <Image
-        source={require('../assets/images/logo.gif')} // **غير هذا المسار ليتطابق مع ملف الـ GIF الخاص بك**
-        style={styles.gif}
-        contentFit="contain" // عرض الـ GIF بالكامل داخل المساحة المحددة
-        // contentFit="cover" // يمكنك استخدام cover لملء المساحة وقص الزوائد
-      />
-      {/* <ActivityIndicator size="large" color="#0000ff" style={styles.indicator} /> */}
-    </View>
-        </>
+      <StatusBar style="dark" />
+      <View style={styles.container}>
+        <Image
+          source={require('../assets/images/logo.gif')}
+          style={styles.gif}
+          contentFit="contain"
+          onAnimationEnd={onAnimationFinish}
+        />
+      </View>
+    </>
   );
 }
 
@@ -36,13 +40,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF', // **مهم: ضع هنا نفس لون خلفية شاشة البداية الأصلية (المحددة في app.json)**
+    backgroundColor: '#FFFFFF',
   },
   gif: {
-    width: 300, // عدّل الأبعاد هذه لتناسب حجم الـ GIF الذي تريد عرضه
+    width: 300,
     height: 300,
-  },
-  indicator: {
-    marginTop: 20,
   },
 });

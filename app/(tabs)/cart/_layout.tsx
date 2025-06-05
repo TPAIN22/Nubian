@@ -11,7 +11,7 @@ export default function _layout() {
                 <Pressable
                 hitSlop={30}
                  onPress={() => router.replace("/(tabs)/home")}>
-                  <Ionicons name="arrow-back" size={30} color="#006348" />
+                  <Ionicons name="arrow-back" size={30} color="#30a1a7" />
                 </Pressable>
               ),
     }}/>

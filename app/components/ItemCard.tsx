@@ -166,7 +166,7 @@ export default function ItemCard({
                   styles.indicator,
                   {
                     backgroundColor:
-                      index === currentImageIndex ? "#A37E2C" : "#FFFFFF80",
+                      index === currentImageIndex ? "#e98c22" : "#FFFFFF80",
                   },
                 ]}
                 accessibilityLabel={`صورة ${index + 1} من ${imageUris.length}`}
@@ -203,12 +203,12 @@ export default function ItemCard({
 
           <TouchableOpacity
             style={styles.addButton}
-            onPress={onAddPress} // استدعاء الدالة الممررة هنا
+            onPress={onAddPress}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={`إضافة ${safeItem.name} إلى السلة`}
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add-circle-outline" size={32} color="##30a1a7" />
           </TouchableOpacity>
         </View>
       </View>
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#006C33FF",
+    backgroundColor: "#30a1a7",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -295,10 +295,9 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#006C33FF",
+    color: "#30a1a7",
   },
   addButton: {
-    backgroundColor: "#29292980",
     width: 32,
     height: 32,
     borderRadius: 18,

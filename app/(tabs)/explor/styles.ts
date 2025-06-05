@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     marginLeft: 5,
-    color: "#A37E2C",
+    color: "#e98c22",
     fontWeight: "500",
   },
   listContainer: {
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   },
   currency: {
     fontSize: 14,
-    color: "#006348",
+    color: "#30a1a7",
     marginRight: 5,
   },
   price: {
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#A37E2C",
+    backgroundColor: "#e98c22",
     justifyContent: "center",
     alignItems: "center",
   },

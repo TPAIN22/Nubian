@@ -326,7 +326,7 @@ export default function Home() {
     if (isProductsLoading && products.length > 0 && hasMore) {
       return (
         <View style={styles.footerContainer}>
-          <ActivityIndicator size="large" color="#A37E2C" />
+          <ActivityIndicator size="large" color="#e98c22" />
         </View>
       );
     }
@@ -386,7 +386,7 @@ export default function Home() {
                   <Ionicons
                     name={category.icon as any}
                     size={24}
-                    color="#A37E2C"
+                    color="#e98c22"
                   />
                 </View>
                 <Text style={styles.categoryText}>{category.name}</Text>
@@ -470,7 +470,7 @@ export default function Home() {
               <HomeHeaderContent
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                borderColor='#A37E2C'
+                borderColor='#e98c22'
               />
             ),
           }}
@@ -511,7 +511,7 @@ export default function Home() {
 
         {isProductsLoading && products.length === 0 && (
           <View style={styles.initialLoadingOverlay}>
-            <ActivityIndicator size="large" color="#A37E2C" />
+            <ActivityIndicator size="large" color="#e98c22" />
             <Text style={styles.loadingText}>جاري تحميل المنتجات...</Text>
           </View>
         )}
@@ -639,7 +639,7 @@ export default function Home() {
                           <Ionicons
                             name="remove-circle"
                             size={38}
-                            color="#A37E2C"
+                            color="#e98c22"
                           />
                         </TouchableOpacity>
                         <Text
@@ -656,7 +656,7 @@ export default function Home() {
                           <Ionicons
                             name="add-circle"
                             size={38}
-                            color="#A37E2C"
+                            color="#e98c22"
                           />
                         </TouchableOpacity>
                       </View>

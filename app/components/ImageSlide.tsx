@@ -13,7 +13,7 @@ const images = [
 export default function ImageSlider() {
   return (
     <View style={{ height: 200, overflow: 'hidden'}}>
-      <Swiper autoplay={true} showsPagination={true} loop={true}  activeDotColor='#A37E2C'>
+      <Swiper autoplay={true} showsPagination={true} loop={true}  activeDotColor='#e98c22'>
         {images.map((uri, index) => (
           <Image key={index} source={uri} style={styles.image} />
         ))}

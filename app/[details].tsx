@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 18, // Slightly larger font size
     fontWeight: "600",
-    color: "#006348",
+    color: "#30a1a7",
   },
   productPrice: {
     fontSize: 24, // Larger font size for price

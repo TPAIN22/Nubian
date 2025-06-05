@@ -4,7 +4,7 @@
     "slug": "Nubian",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/splash.png",
+    "icon": "./assets/images/screen.png",
     "scheme": "sdnubian",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -26,7 +26,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/splash.png",
+        "foregroundImage": "./assets/images/screen.png",
         "backgroundColor": "#ffffff"
       },
       "package": "dev.expo.nubian",
@@ -50,17 +50,18 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/splash.png"
+      "favicon": "./assets/images/screen.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash.png",
+          "image": "./assets/images/screen.png",
           "imageWidth": 200,
           "resizeMode": "cover",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#ffffff",
+          "duration": 0 
         }
       ],
       "expo-secure-store",
