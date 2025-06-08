@@ -8,27 +8,25 @@ export const useOrderStore = create((set, get) => ({
     
     getOrder: () => get().order,
     
-    createOrder: async (token) => {
+    createOrder: async (token , deliveryAddress) => {
         try {
             set({ isLoading: true, error: null });
             const response = await axiosInstance.post("/orders", { 
                 paymentMethod: "cash",
-                deliveryAddress: "test"
+                deliveryAddress
             }, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             });
             
-            // حفظ الأوردر الكامل
             set({ order: response.data });
             
-            // إرجاع الأوردر للاستخدام في الكومبوننت
             return response.data;
         } catch (error) {
             const errorMessage = error.response?.data?.message || "حدث خطأ أثناء إنشاء الطلب";
             set({ error: errorMessage });
-            throw error; // إعادة throw للتعامل مع الخطأ في الكومبوننت
+            throw error;
         } finally {
             set({ isLoading: false });
         }

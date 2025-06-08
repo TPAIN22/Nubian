@@ -33,14 +33,9 @@ function AppLoaderWithClerk() {
   const [isUpdateChecking, setIsUpdateChecking] = useState(true);
   const isShowingNoNetworkAlert = useRef(false);
 
-  // <--- NEW: حالة جديدة لتحديد ما إذا كان الـ GIF بدأ بالفعل في الظهور
   const [hasGifStartedDisplaying, setHasGifStartedDisplaying] = useState(false);
 
-  // --- لوجات تشخيصية لحالة التحميل ---
-  useEffect(() => {
-  }, [isLoaded, gifAnimationFinished, isConnected, isUpdateChecking, hasGifStartedDisplaying]);
 
-  // --- 1. جزء فحص الشبكة الأولي عند التحميل ---
   const checkNetworkStatus = useCallback(async () => {
     try {
       const networkState = await Network.getNetworkStateAsync();
@@ -58,7 +53,6 @@ function AppLoaderWithClerk() {
     }
   }, [isConnected, checkNetworkStatus]);
 
-  // --- NEW: منطق تحديثات OTA (بدون تغيير) ---
   useEffect(() => {
     async function onFetchUpdateAsync() {
       if (!__DEV__) {
@@ -68,10 +62,24 @@ function AppLoaderWithClerk() {
 
           if (update.isAvailable) {
             await Updates.fetchUpdateAsync();
+
             Alert.alert(
               "تحديث متاح!",
               "يوجد تحديث جديد للتطبيق. هل تريد إعادة تشغيل التطبيق لتطبيق التحديث؟",
               [
+                {
+                  text: "لا",
+                  style: "cancel",
+                  onPress: () => {
+                    setIsUpdateChecking(false);
+                  }
+                },
+                {
+                  text: "نعم",
+                  onPress: () => {
+                    Updates.reloadAsync(); 
+                  }
+                }
               ],
               { cancelable: false }
             );
@@ -95,7 +103,6 @@ function AppLoaderWithClerk() {
     }
   }, [isConnected]);
 
-  // --- مراقبة حالة الشبكة في الوقت الفعلي بعد التحميل الأولي (بدون تغيير جوهري) ---
   useEffect(() => {
     let unsubscribe: EventSubscription | undefined;
     if (isLoaded && gifAnimationFinished && isConnected === true && !isUpdateChecking) {
@@ -118,28 +125,20 @@ function AppLoaderWithClerk() {
     return () => { if (unsubscribe) { unsubscribe.remove(); } };
   }, [isLoaded, gifAnimationFinished, isConnected, isUpdateChecking]);
 
-  // --- 2. إدارة انتهاء الـ GIF ---
   const onGifFinish = useCallback(() => {
     setGifAnimationFinished(true);
   }, []);
 
-  // <--- NEW: وظيفة مساعدة لتشغيلها عند بدء عرض الـ GIF
   const onGifComponentMounted = useCallback(() => {
-    setHasGifStartedDisplaying(true); // <--- تحديث الحالة
-    // ممكن تنادي على SplashScreen.hideAsync() هنا مباشرة لو عايز
-    // لكن الأفضل نخليها في useEffect اللي جاي عشان الترتيب يكون أوضح
+    setHasGifStartedDisplaying(true);
   }, []);
 
 
-  // --- 3. المنطق النهائي لإخفاء Splash Screen (تعديل طفيف) ---
   useEffect(() => {
     async function hideSplash() {
-      // الشرط الجديد: لو الـ GIF بدأ يظهر (hasGifStartedDisplaying)، نخفي الـ Splash الأولي
       if (hasGifStartedDisplaying) {
         await SplashScreen.hideAsync();
       }
-      // الشرط الأصلي بتاع إخفاء الـ Splash في النهاية لما كل حاجة تكون خلصت
-      // ده عشان لو كان فيه تأخير في ظهور الـ GIF نفسه (لكن حالتك بتقول إنه بيظهر فوراً)
       else if (isConnected === true && isLoaded && gifAnimationFinished && !isUpdateChecking) {
         await SplashScreen.hideAsync();
       } else if (isConnected === false) {
@@ -148,35 +147,27 @@ function AppLoaderWithClerk() {
       }
     }
     hideSplash();
-  }, [isConnected, isLoaded, gifAnimationFinished, isUpdateChecking, hasGifStartedDisplaying]); // أضف hasGifStartedDisplaying هنا
+  }, [isConnected, isLoaded, gifAnimationFinished, isUpdateChecking, hasGifStartedDisplaying]);
 
 
-  // --- 4. إعادة محاولة الاتصال بالشبكة (بدون تغيير) ---
   const onRetryNetwork = useCallback(() => {
     setIsConnected(null);
     setIsUpdateChecking(true);
   }, []);
 
-  // --- ترتيب العرض: الأولوية للأكثر حرجاً ---
 
-  // 1. لو لسه بنفحص الشبكة
   if (isConnected === null) {
-    // <--- تمرير onGifComponentMounted
     return <GifLoadingScreen onAnimationFinish={() => {}} onMount={onGifComponentMounted} />;
   }
 
-  // 2. لو مفيش شبكة
   if (isConnected === false) {
     return <NoNetworkScreen onRetry={onRetryNetwork} />;
   }
 
-  // 3. لو فيه شبكة، لكن الـ GIF لسه بيعرض أو Clerk لسه بيحمل أو بنتحقق من التحديثات
-  // هنا بنظهر الـ GIF و بنمرر onMount للـ GIF
   if (!gifAnimationFinished || !isLoaded || isUpdateChecking) {
     return <GifLoadingScreen onAnimationFinish={onGifFinish} onMount={onGifComponentMounted} />;
   }
 
-  // 4. لو كل حاجة تمام
   return (
     <NotificationProvider>
       <>

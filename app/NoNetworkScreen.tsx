@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   },
   wifiBar: {
     position: 'absolute',
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#e98c22',
     borderRadius: 4,
   },
   bar1: {
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 3,
     height: 70,
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#e98c22',
     transform: [{ rotate: '45deg' }],
   },
   title: {
