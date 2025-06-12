@@ -1,18 +1,33 @@
-// app/(tabs)/_layout.js
-
-import React, { useEffect } from "react"; // [تغيير/إضافة] استيراد useEffect
+import React, { useEffect } from "react";
 import { Tabs } from "expo-router";
 import { Image } from "expo-image";
-import { View, LayoutAnimation, Platform, UIManager } from "react-native"; // [تغيير/إضافة] استيراد LayoutAnimation, Platform, UIManager
+import { 
+  View, 
+  LayoutAnimation, 
+  Platform, 
+  UIManager, 
+  Pressable,
+  StyleSheet ,
+  TextInput
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
-import useItemStore from "@/store/useItemStore"; // الاستيراد كما هو، لا تغيير فيه حسب طلبك
+import useItemStore from "@/store/useItemStore";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
-const iconSize = 24;
-const focusedColor = "#e98c22";
-const unfocusedColor = "black";
+const CONSTANTS = {
+  iconSize: 24,
+  headerIconSize: 20,
+  logoSize: 40,
+  tabBarRadius: 15,
+  tabBarMargin: 8,
+  colors: {
+    focused: "#e98c22",
+    unfocused: "#6B7280",
+    background: "#FFFFFF",
+    shadow: "rgba(0, 0, 0, 0.1)",
+  }
+};
 
-// [تغيير/إضافة] تفعيل LayoutAnimation للـ Android
-// هذا السطر ضروري لجعل الإنيميشن يعمل بسلاسة على أندرويد.
 if (
   Platform.OS === "android" &&
   UIManager.setLayoutAnimationEnabledExperimental
@@ -20,97 +35,106 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const TabIcon = ({ source, focused }: { source: any; focused: boolean }) => (
-  <View
-    style={{
-      marginTop: 8,
-      padding: 16,
-      borderRadius: 100,
-    }}
-  >
-    <Image
-      source={source}
-      style={{
-        width: iconSize,
-        height: iconSize,
-        tintColor: focused ? focusedColor : unfocusedColor,
-      }}
-      contentFit="contain"
-    />
+const TabIcon = ({ source, focused, label }: { source: any; focused: boolean; label: string }) => (
+  <View style={styles.tabIconContainer}>
+    <View style={[
+      styles.iconWrapper,
+      focused && styles.iconWrapperFocused
+    ]}>
+      <Image
+        source={source}
+        style={[
+          styles.tabIcon,
+          { tintColor: focused ? CONSTANTS.colors.focused : CONSTANTS.colors.unfocused }
+        ]}
+        contentFit="contain"
+      />
+    </View>
   </View>
 );
 
-export default function TabsLayout() {
-  // استخدام Zustand store للحصول على حالة ظهور الـ Tab Bar
-  const isTabBarVisible = useItemStore((state) => state.isTabBarVisible); // [تغيير] تأكد أن isTabBarVisible موجودة في useItemStore وتصل إليها هكذا
+const CustomTabButton = (props: any) => (
+  <Pressable
+    {...props}
+    android_ripple={{ color: 'transparent' }} 
+    style={styles.tabButton}
+  >
+    {props.children}
+  </Pressable>
+);
 
-  // [تغيير/إضافة] تطبيق الإنيميشن عند تغيير isTabBarVisible
-  // كلما تغيرت قيمة 'isTabBarVisible'، سيتم تهيئة LayoutAnimation
-  // لتطبيق تأثير 'easeInEaseOut' على أي تغييرات في الـ layout التالية.
+export default function TabsLayout() {
+  const {isTabBarVisible} = useItemStore()
+
   useEffect(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-  }, [isTabBarVisible]); // [تغيير/إضافة] الإنيميشن هيتنفذ كل ما تتغير isTabBarVisible
+    LayoutAnimation.configureNext({
+      duration: 300,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+    });
+  }, [isTabBarVisible]);
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style="dark" backgroundColor="#FFFFFF" />
       <Tabs
         screenOptions={{
           tabBarHideOnKeyboard: true,
           tabBarShowLabel: false,
-          headerShown: false,
-          tabBarStyle: {
-            position: "absolute",
-            left: 5,
-            right: 5,
-            elevation: 0,
-            height: 60,
-            paddingTop: 5,
-            // [تغيير] التحكم في خاصية 'display' بناءً على حالة الـ Tab Bar من Zustand
-            // هذا هو السطر الذي يجعل الـ Tab Bar يختفي أو يظهر بشكل عام لكل التابات.
-            display: isTabBarVisible ? 'flex' : 'none',
-          },
+          tabBarStyle: [
+            styles.tabBar,
+            {
+              display: isTabBarVisible ? "flex" : "none",
+            }
+          ],
+          tabBarButton: CustomTabButton,
+          tabBarActiveTintColor: CONSTANTS.colors.focused,
+          tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
+          headerShadowVisible: false,
         }}
       >
         <Tabs.Screen
-          name="home"
-          options={({ route }) => {
-            return {
-              tabBarHideOnKeyboard: true,
-              headerSearchBarOptions: {
-                placeholder: "Search",
-              },
-              headerRight: () => (
-                <Image
-                  source={require("../../assets/images/cart-shopping-solid.svg")}
-                  style={{ width: 20, height: 20, marginRight: 10 }}
-                />
-              ),
-              headerTitle: "Nubian",
-              headerLeft: () => (
-                <Image
-                  source={require("../../assets/images/icon.png")}
-                  style={{ width: 50, height: 50, top: 3 }}
-                />
-              ),
-              tabBarIcon: ({ focused }) => (
-                <TabIcon
-                  source={require("../../assets/images/house-solid.svg")}
-                  focused={focused}
-                />
-              ),
-            };
-          }}
+          name="index"
+          options={({ route }) => ({
+            tabBarHideOnKeyboard: true,
+          headerTitle(props) {
+            return (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" ,gap: 10}}>
+              <Image source={require("../../assets/images/icon.png")} style={{width: 36, height: 36}}/>
+               <TextInput
+                placeholder="بحث"
+                style={{width: 250 , borderWidth: 1 ,borderColor: "#A9A9A937",paddingHorizontal: 10, borderRadius: 20 ,height: 40}}/>
+                <View style={{flexDirection: "row"}}>
+                <Ionicons name="notifications-outline" size={26} color="black" style={{marginRight: 10}} />
+                <Ionicons name="cart-outline" size={26} color="black" style={{marginRight: 10}} />
+                </View>
+              </View>
+            );
+          },
+           
+            tabBarIcon: ({ focused }) => (
+              <TabIcon
+                source={require("../../assets/images/house-solid.svg")}
+                focused={focused}
+                label="الرئيسية"
+              />
+            ),
+          })}
         />
+
         <Tabs.Screen
           name="cart"
           options={{
-            tabBarStyle: { display: "none" },
-            headerShown: false,
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 source={require("../../assets/images/cart-shopping-solid.svg")}
                 focused={focused}
+                label="السلة"
               />
             ),
           }}
@@ -119,10 +143,12 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="explor"
           options={{
+            headerShown: false,
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 source={require("../../assets/images/search-solid.svg")}
                 focused={focused}
+                label="استكشاف"
               />
             ),
           }}
@@ -134,6 +160,7 @@ export default function TabsLayout() {
               <TabIcon
                 source={require("../../assets/images/user-solid.svg")}
                 focused={focused}
+                label="الملف الشخصي"
               />
             ),
           }}
@@ -142,3 +169,77 @@ export default function TabsLayout() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    position: "absolute",
+    left: CONSTANTS.tabBarMargin,
+    right: CONSTANTS.tabBarMargin,
+    backgroundColor: CONSTANTS.colors.background,
+    borderRadius: CONSTANTS.tabBarRadius,
+    paddingTop: 5,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 5,
+    shadowColor: CONSTANTS.colors.shadow,
+  
+  },
+
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+
+  tabIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  iconWrapper: {
+    padding: 12,
+    borderRadius: 25,
+  },
+  iconWrapperFocused: {
+    backgroundColor: CONSTANTS.colors.focused + '15',
+  },
+
+  tabIcon: {
+    width: CONSTANTS.iconSize,
+    height: CONSTANTS.iconSize,
+  },
+  header: {
+    backgroundColor: CONSTANTS.colors.background,
+    elevation: 0,
+  },
+
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    width: '100%',
+  },
+
+  headerButton: {
+    marginRight: 15,
+    padding: 8,
+    borderRadius: 8,
+  },
+
+  headerIcon: {
+    width: CONSTANTS.headerIconSize,
+    height: CONSTANTS.headerIconSize,
+    tintColor: '#374151',
+  },
+
+  logoContainer: {
+    marginLeft: 5,
+    padding: 5,
+  },
+
+  logo: {
+    width: CONSTANTS.logoSize,
+    height: CONSTANTS.logoSize,
+    borderRadius: 8,
+    marginTop: 5,
+  },
+});

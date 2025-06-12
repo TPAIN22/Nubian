@@ -27,6 +27,7 @@ type Props = {
   buttonStyle?: ViewStyle;
   textStyle?: TextStyle;
   disabled?: boolean;
+  selectedSize?: string
 };
 
 const AddToCartButton = ({
@@ -35,6 +36,7 @@ const AddToCartButton = ({
   buttonStyle,
   textStyle,
   disabled,
+  selectedSize
 }: Props) => {
   const { addToCart, errorMessage, clearError } = useCartStore();
   const { isSignedIn } = useUser();
@@ -87,14 +89,13 @@ const AddToCartButton = ({
         return;
       }
 
-      await addToCart(product, token);
+      await addToCart(product, token , selectedSize);
       Toast.show({
         type: "success",
         text1: "تمت إضافة المنتج إلى السلة",
       });
       router.push("/(tabs)/cart");
     } catch (err) {
-      console.error("خطأ أثناء الإضافة للسلة:", err);
       Toast.show({
         type: "error",
         text1: "حدث خطأ أثناء إضافة المنتج للسلة",

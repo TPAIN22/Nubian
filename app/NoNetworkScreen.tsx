@@ -27,13 +27,6 @@ export default function NoNetworkScreen({ onRetry }: { onRetry: () => void }) {
           <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
             <Text style={styles.retryButtonText}>إعادة المحاولة</Text>
           </TouchableOpacity>
-
-          <View style={styles.tipsContainer}>
-            <Text style={styles.tipsTitle}>نصائح للحل:</Text>
-            <Text style={styles.tipText}>• تأكد من تشغيل Wi-Fi أو البيانات الخلوية</Text>
-            <Text style={styles.tipText}>• جرب الاقتراب من جهاز التوجيه</Text>
-            <Text style={styles.tipText}>• أعد تشغيل التطبيق</Text>
-          </View>
         </View>
       </View>
     </>
@@ -43,7 +36,6 @@ export default function NoNetworkScreen({ onRetry }: { onRetry: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -95,26 +87,26 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#4E4D4DFF',
     textAlign: 'center',
     marginBottom: 16,
     fontFamily: 'System',
   },
   message: {
     fontSize: 18,
-    color: '#b0b0b0',
+    color: '#4E4D4DFF',
     textAlign: 'center',
     lineHeight: 26,
     marginBottom: 40,
     paddingHorizontal: 10,
   },
   retryButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 16,
+    backgroundColor: '#e98c22',
+    paddingVertical: 10,
     paddingHorizontal: 40,
     borderRadius: 25,
     elevation: 3,
-    shadowColor: '#3498db',
+    shadowColor: '#e98c22',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -140,13 +132,13 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#727272FF',
     marginBottom: 12,
     textAlign: 'center',
   },
   tipText: {
     fontSize: 14,
-    color: '#b0b0b0',
+    color: '#505050FF',
     lineHeight: 22,
     marginBottom: 8,
     textAlign: 'right',

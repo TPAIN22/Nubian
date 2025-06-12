@@ -12,13 +12,10 @@ const useItemStore = create((set , get) => ({
   signInModelVisible: false,
 
   setSignInModelVisible: (visible) => set(() => ({ signInModelVisible: visible })),
-
   setIsTabBarVisible: (visible) => set(() => ({ isTabBarVisible: visible })),
   setProduct: (product) => set(() => ({ product })),
   setError: (error) => set(() => ({ error })),
   
-
-
  getProducts: async () => {
     const { page, hasMore, isProductsLoading } = get();
     if (!hasMore || isProductsLoading) {

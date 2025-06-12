@@ -1,429 +1,276 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import {
-  View,
-  Text,
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Image as RNImage, // Import from react-native for getSize
-} from "react-native";
-import { Image } from "expo-image"; // Expo Image for optimized loading
-import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
-import { useHeaderHeight } from "@react-navigation/elements";
-import { StatusBar } from "expo-status-bar";
-import useItemStore from "@/store/useItemStore"; // تأكد من استيرادها بشكل صحيح
+import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
+import React, { useState, useEffect } from "react";
 import AddToCartButton from "./components/AddToCartButton";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import {
-  BottomSheetModal,
-  BottomSheetModalProvider,
-  BottomSheetView,
-} from "@gorhom/bottom-sheet";
-import GoogleSignInSheet from "./(auth)/signin";
-
-const { width: screenWidth } = Dimensions.get("window");
-const IMAGE_HORIZONTAL_MARGIN = 20;
-const SLIDER_IMAGE_WIDTH = screenWidth - IMAGE_HORIZONTAL_MARGIN;
-const DEFAULT_IMAGE_HEIGHT = 250;
-
-const PLACEHOLDER_IMAGE_URI =
-  "https://via.placeholder.com/400x250?text=No+Image";
+import useItemStore from "@/store/useItemStore";
+import { Image } from "expo-image";
+import Swiper from "react-native-swiper";
 
 export default function Details() {
-  const { product, signInModelVisible, setSignInModelVisible } = useItemStore(); // <--- إضافة signInModelVisible و setSignInModelVisible
-  const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [calculatedImageHeight, setCalculatedImageHeight] =
-    useState(DEFAULT_IMAGE_HEIGHT);
-  const headerHeight = useHeaderHeight();
-  const router = useRouter();
-
-  // Handle case where product might be null (e.g., direct navigation without product set)
-  useEffect(() => {
-    if (!product || !product._id) {
-      router.back();
-    }
-  }, [product, router]);
-
-  const productImages = useMemo(() => {
-    if (product?.images?.length) {
-      return product.images;
-    }
-    if (product?.image) {
-      return [product.image];
-    }
-    return [PLACEHOLDER_IMAGE_URI];
-  }, [product?.images, product?.image]);
+  const { product } = useItemStore();
+  const [selectedSize, setSelectedSize] = useState<string | null>(null); 
 
   useEffect(() => {
-    const uri = productImages[0];
-    if (!uri || uri === PLACEHOLDER_IMAGE_URI) {
-      setCalculatedImageHeight(DEFAULT_IMAGE_HEIGHT);
-      return;
+    if (product?.sizes && product.sizes.length > 0) {
+      setSelectedSize(product.sizes[0]); 
     }
-
-    RNImage.getSize(
-      uri,
-      (imgWidth, imgHeight) => {
-        if (imgWidth === 0) {
-          setCalculatedImageHeight(DEFAULT_IMAGE_HEIGHT);
-          return;
-        }
-        const aspectRatio = imgHeight / imgWidth;
-        const newHeight = aspectRatio * SLIDER_IMAGE_WIDTH;
-        setCalculatedImageHeight(Math.min(newHeight, 400));
-      },
-      (error) => {
-        console.warn("Failed to get image size:", error);
-        setCalculatedImageHeight(DEFAULT_IMAGE_HEIGHT);
-      }
-    );
-  }, [productImages]);
-
-  const handleSizeSelection = useCallback((size: string) => {
-    setSelectedSize(size);
-  }, []);
-
-  const handleIncrementQuantity = useCallback(() => {
-    setQuantity((prevQuantity) => prevQuantity + 1);
-  }, []);
-
-  const handleDecrementQuantity = useCallback(() => {
-    setQuantity((prevQuantity) => (prevQuantity > 1 ? prevQuantity - 1 : 1));
-  }, []);
-
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-
-  const handlePresentModalPress = useCallback(() => {
-    bottomSheetModalRef.current?.present();
-  }, []);
-
-  const handleSheetChanges = useCallback((index: number) => {
-    // يمكنك إضافة منطق هنا عند تغيير حالة الـ Bottom Sheet
-    // مثلاً، إذا تم إغلاقه، يمكنك إعادة تعيين signInModelVisible إلى false
-    if (index === -1) {
-      setSignInModelVisible(false);
-    }
-  }, [setSignInModelVisible]); // <--- إضافة setSignInModelVisible إلى dependencies
-
-  // NEW: useEffect to open BottomSheetModal when signInModelVisible changes
-  useEffect(() => {
-    if (signInModelVisible) {
-      handlePresentModalPress();
-    } else {
-      bottomSheetModalRef.current?.dismiss(); // أغلق الـ modal إذا كانت signInModelVisible false
-    }
-  }, [signInModelVisible, handlePresentModalPress]);
-
-  if (!product || !product.name) {
+  }, [product]);
+  if (!product) {
     return (
-      <View style={styles.loadingContainer}>
-        <StatusBar style="dark" />
-        <Text style={styles.loadingText}>جاري تحميل تفاصيل المنتج...</Text>
+      <View style={styles.container}>
+        <Text style={styles.errorText}>لا يوجد منتج للعرض</Text>
       </View>
     );
   }
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("ar-SDG", {
+      style: "currency",
+      currency: "SDG",
+    }).format(price);
+  };
 
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: "تفاصيل المنتج",
-          headerTitleAlign: "center",
-          headerShadowVisible: false,
-          headerTransparent: false,
-          headerStyle: {
-            backgroundColor: "#F8F8F8",
-          },
-          headerTintColor: "#A37E2C",
-          headerTitleStyle: styles.headerTitle,
-          headerRight: () => (
-            <Image
-              source={require("../assets/images/icon.png")}
-              style={styles.headerIcon}
-              accessibilityLabel="شعار المتجر"
-            />
-          ),
-        }}
-      />
-      <GestureHandlerRootView style={styles.loadingContainer}>
-        <BottomSheetModalProvider>
-          <ScrollView style={styles.scrollViewContent}>
-            {/* Image Slider */}
-            <View style={styles.imageSliderContainer}>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                style={{ width: screenWidth }}
-              >
-                {productImages.map((imgUri: string, index: number) => (
-                  <Image
-                    key={index}
-                    source={{ uri: imgUri }}
-                    style={[
-                      styles.productImage,
-                      { height: calculatedImageHeight },
-                    ]}
-                    contentFit="cover"
-                    accessibilityLabel={`صورة المنتج ${index + 1} من ${
-                      productImages.length
-                    }`}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Product Details */}
-            <View style={styles.detailsContainer}>
-              <Text style={styles.productName} accessibilityRole="header">
-                {product.name}
-              </Text>
-
-              {/* Quantity and Price */}
-              <View style={styles.quantityPriceContainer}>
-                <View style={styles.quantityControl}>
-                  <TouchableOpacity
-                    onPress={handleIncrementQuantity}
-                    accessibilityLabel="زيادة الكمية"
-                    accessibilityRole="button"
-                  >
-                    <Ionicons name="add-circle" size={38} color="#A37E2C" />
-                  </TouchableOpacity>
-                  <Text
-                    style={styles.quantityText}
-                    accessibilityLabel={`الكمية المختارة: ${quantity}`}
-                  >
-                    {quantity}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={handleDecrementQuantity}
-                    accessibilityLabel="تقليل الكمية"
-                    accessibilityRole="button"
-                  >
-                    <Ionicons name="remove-circle" size={38} color="#000" />
-                  </TouchableOpacity>
-                </View>
-                <Text
-                  style={styles.productPrice}
-                  accessibilityLabel={`سعر المنتج: ${product.price} جنيه سوداني`}
-                >
-                  {`SDG ${product.price}`}
-                </Text>
-              </View>
-
-              {/* Size Selection */}
-              {product.sizes?.length > 0 && (
-                <View style={styles.sizeSelectionContainer}>
-                  {product.sizes.map((size: string, index: number) => {
-                    const isSelected = selectedSize === size;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        onPress={() => handleSizeSelection(size)}
-                        style={[
-                          styles.sizeOption,
-                          isSelected && styles.selectedSize,
-                        ]}
-                        accessibilityLabel={`اختيار المقاس ${size}`}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: isSelected }}
-                      >
-                        <Text
-                          style={[
-                            styles.sizeText,
-                            isSelected && styles.selectedSizeText,
-                          ]}
-                        >
-                          {size}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* Product Description */}
-              {product.description && (
-                <View style={styles.descriptionContainer}>
-                  <Text style={styles.descriptionLabel}>الوصف:</Text>
-                  <Text
-                    style={styles.descriptionText}
-                    accessibilityLabel={`وصف المنتج: ${product.description}`}
-                  >
-                    {product.description}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.bottomSpacer} />
-          </ScrollView>
-
-          {/* Add to Cart Button */}
-          <AddToCartButton
-            product={{ ...product, size: selectedSize || undefined, quantity }}
-            title="اضافة الى السلة"
-            textStyle={styles.addToCartText}
-            buttonStyle={styles.addToCartButton}
-          />
-          <BottomSheetModal
-            ref={bottomSheetModalRef}
-            snapPoints={["50%"]} 
-            onChange={handleSheetChanges}
-            enablePanDownToClose={true} // تسمح بسحب الشيت للأسفل لإغلاقه
-            backdropComponent={({ style }) => ( // إضافة خلفية معتمة
-              <View style={[style, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]} />
-            )}
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.imageContainer}>
+          <Swiper
+            loop={true}
+            showsPagination={true}
+            paginationStyle={styles.pagination}
+            dotStyle={styles.dot}
+            activeDotStyle={styles.activeDot}
+            style={styles.swiper}
+            height={400}
           >
-            <BottomSheetView style={styles.contentContainer}>
-              <GoogleSignInSheet />
-            </BottomSheetView>
-          </BottomSheetModal>
-        </BottomSheetModalProvider>
-      </GestureHandlerRootView>
-    </>
+            {product.images?.map((uri: string, index: number) => (
+              <View key={index} style={styles.imageWrapper}>
+                <Image
+                  source={{ uri }}
+                  alt={`صورة المنتج ${index + 1}`}
+                  contentFit="cover"
+                  style={styles.productImage}
+                />
+              </View>
+            ))}
+          </Swiper>
+        </View>
+
+        <View style={styles.productDetails}>
+          <Text style={styles.productName}>{product.name}</Text>
+
+          <View style={styles.priceContainer}>
+            <Text style={styles.price}>{formatPrice(product.price)}</Text>
+            {product.discountPrice > 0 && (
+              <Text style={styles.originalPrice}>
+                {formatPrice(product.discountPrice)}
+              </Text>
+            )}
+          </View>
+
+          {product.sizes && product.sizes.length > 0 && (
+            <View style={styles.sizesContainer}>
+              <Text style={styles.sectionTitle}>المقاسات المتاحة:</Text>
+              <View style={styles.sizesRow}>
+                {product.sizes.map((size: string, index: number) => (
+                  <Pressable
+                    key={index}
+                    style={[
+                      styles.sizeBox,
+                      // Correctly apply background based on selectedSize state
+                      { backgroundColor: size === selectedSize ? "#30a1a7" : "#fff" },
+                      // Optionally, add a border for unselected items to differentiate
+                      size !== selectedSize && { borderColor: '#ddd' }
+                    ]}
+                    onPress={() => {
+                      setSelectedSize(size); // Correctly update the state
+                    }}
+                  >
+                    {/* Optionally change text color based on selection */}
+                    <Text
+                      style={[
+                        styles.sizeText,
+                        { color: size === selectedSize ? '#fff' : '#333' }
+                      ]}
+                    >
+                      {size}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+          {product.description && (
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.sectionTitle}>الوصف:</Text>
+              <Text numberOfLines={3} style={styles.description}>
+                {product.description}
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+      <View style={styles.buttonContainer}>
+        <AddToCartButton
+          product={product}
+          selectedSize={selectedSize??""}
+          //@ts-ignore
+          buttonStyle={[
+            styles.addToCartButton,
+            product.stock === 0 && styles.disabledButton,
+          ]}
+          disabled={product.stock === 0}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
   },
-  loadingText: {
+  scrollView: {
+    flex: 1,
+  },
+  errorText: {
+    textAlign: "center",
     fontSize: 18,
-    color: "#A37E2C",
+    color: "#666",
+    marginTop: 50,
   },
-  scrollViewContent: {
+  imageContainer: {
+    height: 400, // Matched with Swiper height
+    backgroundColor: "#f5f5f5",
+  },
+  swiper: {
+    height: 400, // Explicitly set height for Swiper
+  },
+  imageWrapper: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#A37E2C",
-  },
-  contentContainer: {
-    flex: 1,
-    padding: 36,
-    alignItems: "center",
-    paddingBottom: 40,
-  },
-  headerIcon: {
-    marginTop: 10,
-    width: 40,
-    height: 40,
-  },
-  imageSliderContainer: {
-    alignItems: "center", // Center the slider content
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   productImage: {
-    width: SLIDER_IMAGE_WIDTH, // Use calculated width
-    marginHorizontal: IMAGE_HORIZONTAL_MARGIN / 2, // Half margin on each side
-    borderRadius: 20,
+    width: "100%",
+    height: "100%",
+    borderRadius: 0,
   },
-  detailsContainer: {
-    gap: 20, // Reduced gap for tighter spacing
-    paddingHorizontal: 20,
-    paddingTop: 20, // Add some padding at the top of details section
+  pagination: {
+    bottom: 20,
+  },
+  dot: {
+    backgroundColor: "rgba(0,0,0,0.2)", // Changed for better contrast
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 3,
+    marginRight: 3,
+  },
+  activeDot: {
+    backgroundColor: "#30a1a7",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 3,
+    marginRight: 3,
+  },
+  productDetails: {
+    padding: 20,
   },
   productName: {
-    fontSize: 30, // Slightly reduced font size
+    fontSize: 24,
     fontWeight: "bold",
+    color: "#333",
     textAlign: "right",
-    color: "#2D3748", // Darker text for readability
+    marginBottom: 15,
   },
-  quantityPriceContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  quantityControl: {
+  priceContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 15, // Increased gap for better touch targets
+    justifyContent: "flex-end",
+    marginBottom: 20,
   },
-  quantityText: {
-    fontSize: 18, // Slightly larger font size
-    fontWeight: "600",
+  price: {
+    fontSize: 22,
+    fontWeight: "bold",
     color: "#30a1a7",
   },
-  productPrice: {
-    fontSize: 24, // Larger font size for price
-    fontWeight: "bold",
-    color: "#38A169", // Green for price
+  originalPrice: {
+    fontSize: 18,
+    color: "#999",
+    textDecorationLine: "line-through",
+    marginLeft: 10,
   },
-  sizeSelectionContainer: {
+  sizesContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "right",
+    marginBottom: 10,
+  },
+  sizesRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    justifyContent: "flex-end", // Align sizes to the right
+    justifyContent: "flex-end",
   },
-  sizeOption: {
-    paddingHorizontal: 16, // Increased padding
-    paddingVertical: 10,
-    borderRadius: 25, // More rounded corners
+  sizeBox: {
+    backgroundColor: "#f0f0f0", // Default background for unselected
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 8, // Use marginLeft for spacing in LTR. For RTL, consider marginEnd or adjust based on layout.
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#E2E8F0", // Lighter border color
-    backgroundColor: "#F7FAFC", // Light background
+    borderColor: "#ddd",
   },
   sizeText: {
-    color: "#4A5568", // Darker gray text
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "500",
+    color: "#333", // Default text color for unselected
   },
-  selectedSize: {
-    borderColor: "#A37E2C", // Accent color border
-    backgroundColor: "#A37E2C", // Accent color background
+  stockContainer: {
+    marginBottom: 20,
   },
-  selectedSizeText: {
-    color: "#FFFFFF", // White text for selected
+  stockText: {
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: "right",
+  },
+  inStock: {
+    color: "#4CAF50",
+  },
+  outOfStock: {
+    color: "#F44336",
   },
   descriptionContainer: {
-    alignSelf: "flex-end", // Align text to the right
-    marginTop: 10, // Add some top margin
+    marginBottom: 20,
   },
-  descriptionLabel: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#2D3748",
-    marginBottom: 5,
-    textAlign: "right", // Align label to the right
-  },
-  descriptionText: {
+  description: {
     fontSize: 16,
-    color: "#4A5568", // Slightly darker gray for description
-    textAlign: "right", // Ensure description text is right-aligned
-    lineHeight: 24, // Improve readability
+    lineHeight: 24,
+    color: "#666",
+    textAlign: "right",
   },
-  bottomSpacer: {
-    height: 20,
+  buttonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
   },
   addToCartButton: {
-    backgroundColor: "#A37E2C",
-    borderRadius: 30, 
-    width: "90%",
-    alignSelf: "center",
-    paddingVertical: 15, 
-    position: "sticky", 
-    bottom: 20,
-    shadowColor: "#000", 
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    marginBottom: 30,
-    marginTop: 10,
+    backgroundColor: "#30a1a7",
+    borderRadius: 12,
+    paddingVertical: 15,
+    width: "100%",
   },
-  addToCartText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+  disabledButton: {
+    backgroundColor: "#ccc",
   },
 });

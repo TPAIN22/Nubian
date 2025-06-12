@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import useItemStore from "@/store/useItemStore";
-import styles from "./styles";
+import styles from "../components/styles";
 
 interface Product {
   _id: string;
@@ -29,7 +29,6 @@ const SearchPage = () => {
       if(refreshing || isLoading) return;
       await getProducts();
     } catch (error) {
-      console.error("Error searching products:", error);
     }
   };
 
@@ -38,7 +37,6 @@ const SearchPage = () => {
     try {
       await getProducts();
     } catch (error) {
-      console.error("Error refreshing products:", error);
     } finally {
       setRefreshing(false);
     }
@@ -52,7 +50,6 @@ const SearchPage = () => {
       try {
         await getProducts();
       } catch (error) {
-        console.error("Error loading products:", error);
       } finally {
         if (isMounted) {
           setIsLoading(false);

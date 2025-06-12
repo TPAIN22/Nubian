@@ -114,7 +114,7 @@ export default function Profile() {
       <GestureHandlerRootView style={styles.loadingContainer}>
         <BottomSheetModalProvider>
           <Image
-            source={require("../../../assets/images/profilelogin.svg")}
+            source={require("../../assets/images/profilelogin.svg")}
             style={{ width: "80%", height: 300 }}
           />
           <Text

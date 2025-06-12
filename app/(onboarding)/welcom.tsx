@@ -54,7 +54,7 @@ export default function welcom() {
             onPress={() => {
         
   
-              router.push(`../../(tabs)/home`);
+              router.push(`../../(tabs)`);
             }}
             style={{
               backgroundColor: "#e98c22",

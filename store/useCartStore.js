@@ -1,217 +1,172 @@
 import { create } from "zustand";
 import axiosInstance from "@/utils/axiosInstans";
 
-const useCartStore = create((set, get) => ({
-  cartItems: [],
-  totalQuantity: 0,
-  totalPrice: 0,
-  isCartLoading: false,
-  errorMessage: null,
-  setCartItems: (items) => set({ cartItems: items }),
+const useCartStore = create((set, get) => {
+  const updateCartState = (data) => {
+    set({
+      cartItems: data.products || [],
+      totalQuantity: data.totalQuantity || 0,
+      totalPrice: data.totalPrice || 0,
+      isCartLoading: false,
+    });
+  };
 
-  clearError: () => set({ errorMessage: null }),
+  const validateToken = (token) => {
+    if (!token) throw new Error("لم يتم توفير رمز المصادقة");
+  };
 
-  getCart: async (token) => {
-    if (!token) {
-      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
-      return;
-    }
+  const validateProduct = (product) => {
+    if (!product || !product._id) throw new Error("بيانات المنتج غير صحيحة");
+  };
 
-    try {
-      set({ isCartLoading: true, errorMessage: null });
-      const response = await axiosInstance.get("/carts", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  return {
+    cartItems: [],
+    totalQuantity: 0,
+    totalPrice: 0,
+    isCartLoading: false,
+    errorMessage: null,
 
-      if (!response.data) {
-        throw new Error("لم يتم استلام بيانات من الخادم");
+    clearError: () => set({ errorMessage: null }),
+
+    getCart: async (token) => {
+      try {
+        validateToken(token);
+        set({ isCartLoading: true, errorMessage: null });
+
+        const response = await axiosInstance.get("/carts", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.data) throw new Error("لم يتم استلام بيانات من الخادم");
+        updateCartState(response.data);
+      } catch (error) {
+        set({
+          isCartLoading: false,
+          errorMessage: error.response?.data?.message || error.message || "فشل في تحميل السلة",
+        });
       }
+    },
 
-      set({ 
-        cartItems: response.data.products || [], 
-        totalQuantity: response.data.totalQuantity || 0,
-        totalPrice: response.data.totalPrice || 0,
-        isCartLoading: false 
-      });
-    } catch (error) {
-      set({
-        isCartLoading: false,
-        errorMessage:
-          error.response?.data?.message || error.message || "فشل في تحميل السلة",
-      });
-    }
-  },
+    addToCart: async (product, token, selectedSize) => {
+      try {
+        validateToken(token);
+        validateProduct(product);
 
-  addToCart: async (product, token) => {
-    if (!token) {
-      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
-      return;
-    }
-
-    try {
-      set({ isCartLoading: true, errorMessage: null });
-      if (!product || !product._id) {
-        throw new Error("بيانات المنتج غير صحيحة");
-      }
-      const response = await axiosInstance.post(
-        "/carts/add",
-        { productId: product._id, quantity: 1 },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const response = await axiosInstance.post(
+          "/carts/add",
+          {
+            productId: product._id,
+            quantity: 1,
+            size: selectedSize,
           },
-        }
-      );
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
-      if (!response.data) {
-        throw new Error("لم يتم استلام بيانات من الخادم");
+        if (!response.data) throw new Error("لم يتم استلام بيانات من الخادم");
+        updateCartState(response.data);
+      } catch (error) {
+        set({
+          errorMessage:
+            error.response?.data?.message || error.message || "حدث خطأ أثناء إضافة المنتج إلى السلة.",
+        });
       }
+    },
 
-      set({ 
-        cartItems: response.data.products || [], 
-        totalQuantity: response.data.totalQuantity || 0,
-        totalPrice: response.data.totalPrice || 0,
-        isCartLoading: false 
-      });
-    } catch (error) {
-      let message = "حدث خطأ أثناء إضافة المنتج إلى السلة.";
-      if (error.response?.status === 401) {
-        message = "غير مصرح لك بإجراء هذه العملية";
-      } else if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.message) {
-        message = error.message;
-      }
-      set({ isCartLoading: false, errorMessage: message });
-    }
-  },
+    updateCartItem: async (product, token, quantity) => {
+      try {
+        validateToken(token);
+        validateProduct(product);
+        const normalizedQuantity = quantity > 0 ? 1 : -1;
 
-  updateCartItem: async (product, token, quantity) => {
-    if (!token) {
-      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
-      return;
-    }
-
-    if (!product || !product._id) {
-      set({ errorMessage: "بيانات المنتج غير صحيحة" });
-      return;
-    }
-
-    try {
-      set({ isCartLoading: true, errorMessage: null });
-      const normalizedQuantity = quantity > 0 ? 1 : -1;
-      
-      const response = await axiosInstance.put(
-        "/carts/update",
-        { productId: product._id, quantity: normalizedQuantity },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        await axiosInstance.put(
+          "/carts/update",
+          {
+            productId: product._id,
+            quantity: normalizedQuantity,
+            size: product.size,
           },
-        }
-      );
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      if (!response.data) {
-        throw new Error("لم يتم استلام بيانات من الخادم");
+        const updatedItems = get().cartItems.map((item) => {
+          if (
+            item.product._id === product._id &&
+            item.size === product.size
+          ) {
+            const newQty = item.quantity + normalizedQuantity;
+            return { ...item, quantity: newQty > 0 ? newQty : 1 };
+          }
+          return item;
+        });
+
+        const totalQuantity = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
+        const totalPrice = updatedItems.reduce(
+          (sum, item) => sum + item.quantity * item.product.price,
+          0
+        );
+
+        set({ cartItems: updatedItems, totalQuantity, totalPrice });
+      } catch (error) {
+        set({
+          errorMessage:
+            error.response?.data?.message || error.message || "فشل في تحديث المنتج",
+        });
       }
+    },
 
-      set({ 
-        cartItems: response.data.products || [], 
-        totalQuantity: response.data.totalQuantity || 0,
-        totalPrice: response.data.totalPrice || 0,
-        isCartLoading: false 
-      });
-    } catch (error) {
-      set({
-        isCartLoading: false,
-        errorMessage:
-          error.response?.data?.message || error.message || "فشل في تحديث المنتج",
-      });
-    }
-  },
+    removeFromCart: async (productId, size, token) => {
+      try {
+        validateToken(token);
+        if (!productId || !size) throw new Error("بيانات الحذف غير مكتملة");
 
-  removeFromCart: async (productId, token) => {
-    if (!token) {
-      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
-      return;
-    }
+        await axiosInstance.put(
+          "/carts/update",
+          { productId, quantity: 0, size },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-    if (!productId) {
-      set({ errorMessage: "معرف المنتج غير صحيح" });
-      return;
-    }
+        const updatedItems = get().cartItems.filter(
+          (item) =>
+            !(item.product._id === productId && item.size === size)
+        );
 
-    try {
-      set({ isCartLoading: true, errorMessage: null });
+        const totalQuantity = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
+        const totalPrice = updatedItems.reduce(
+          (sum, item) => sum + item.quantity * item.product.price,
+          0
+        );
 
-      const response = await axiosInstance.put(
-        "/carts/update",
-        { productId, quantity: 0 },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.data) {
-        throw new Error("لم يتم استلام بيانات من الخادم");
+        set({ cartItems: updatedItems, totalQuantity, totalPrice });
+      } catch (error) {
+        set({
+          errorMessage:
+            error.response?.data?.message || error.message || "فشل في إزالة المنتج من السلة",
+        });
       }
+    },
 
-      set({ 
-        cartItems: response.data.products || [], 
-        totalQuantity: response.data.totalQuantity || 0,
-        totalPrice: response.data.totalPrice || 0,
-        isCartLoading: false 
-      });
-    } catch (error) {
-      set({
-        isCartLoading: false,
-        errorMessage:
-          error.response?.data?.message || error.message || "فشل في إزالة المنتج من السلة",
-      });
-    }
-  },
+    clearCart: async (token) => {
+      try {
+        validateToken(token);
 
-  clearCart: async (token) => {
-    if (!token) {
-      set({ errorMessage: "لم يتم توفير رمز المصادقة" });
-      return;
-    }
+        await axiosInstance.delete("/carts/delete", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-    try {
-      set({ isCartLoading: true, errorMessage: null });
+        set({ cartItems: [], totalQuantity: 0, totalPrice: 0 });
+      } catch (error) {
+        set({
+          errorMessage:
+            error.response?.data?.message || error.message || "فشل في حذف السلة",
+        });
+      }
+    },
 
-      await axiosInstance.delete("/carts/delete", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      set({ 
-        cartItems: [], 
-        totalQuantity: 0,
-        totalPrice: 0,
-        isCartLoading: false 
-      });
-    } catch (error) {
-      set({
-        isCartLoading: false,
-        errorMessage:
-          error.response?.data?.message || error.message || "فشل في حذف السلة",
-      });
-    }
-  },
-
-  getItemCount: () => {
-    return get().totalQuantity;
-  },
-
-  getCartTotal: () => {
-    return get().totalPrice;
-  }
-}));
+    getItemCount: () => get().totalQuantity,
+    getCartTotal: () => get().totalPrice,
+  };
+});
 
 export default useCartStore;

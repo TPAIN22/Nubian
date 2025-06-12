@@ -1,10 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-export default function viewOrders() {
+export default function categories() {
   return (
     <View>
-      <Text>viewOrders</Text>
+      <Text>categories</Text>
     </View>
   )
 }

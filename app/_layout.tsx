@@ -1,4 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+// app/RootLayout.tsx (أو app/_layout.tsx إذا كان هو ملف الروت)
+
+import React, { useState, useEffect, useCallback } from "react";
+import "@/app\\global.css";
+import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { Stack } from "expo-router";
 import "./global.css";
 import ClerkProvider from "@/providers/Clerck";
@@ -9,12 +13,13 @@ import * as Notifications from "expo-notifications";
 import Toast from "react-native-toast-message";
 import * as SplashScreen from "expo-splash-screen";
 import GifLoadingScreen from "./GifLoadingScreen";
-import * as Network from "expo-network";
 import NoNetworkScreen from "./NoNetworkScreen";
 import { Alert, Platform } from 'react-native';
-import { EventSubscription } from 'expo-modules-core';
 
 import * as Updates from 'expo-updates';
+
+// === استيراد NetworkProvider و useNetwork ===
+import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider"; // تأكد من المسار الصحيح
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -28,34 +33,16 @@ SplashScreen.preventAutoHideAsync();
 
 function AppLoaderWithClerk() {
   const { isLoaded } = useAuth();
-  const [gifAnimationFinished, setGifAnimationFinished] = useState(false);
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
-  const [isUpdateChecking, setIsUpdateChecking] = useState(true);
-  const isShowingNoNetworkAlert = useRef(false);
+  const [gifAnimationFinished, setGifAnimationFinished] = useState<boolean>(false);
+  const [isUpdateChecking, setIsUpdateChecking] = useState<boolean>(true);
+  const [hasGifStartedDisplaying, setHasGifStartedDisplaying] = useState<boolean>(false);
 
-  const [hasGifStartedDisplaying, setHasGifStartedDisplaying] = useState(false);
+  const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
 
-
-  const checkNetworkStatus = useCallback(async () => {
-    try {
-      const networkState = await Network.getNetworkStateAsync();
-      const connected = Boolean(networkState.isConnected && networkState.isInternetReachable);
-      setIsConnected(connected);
-    } catch (error) {
-      console.error("NETWORK_CHECK_ERROR: Failed to get network state", error);
-      setIsConnected(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isConnected === null) {
-      checkNetworkStatus();
-    }
-  }, [isConnected, checkNetworkStatus]);
 
   useEffect(() => {
     async function onFetchUpdateAsync() {
-      if (!__DEV__) {
+      if (!__DEV__ && isConnected === true) {
         try {
           setIsUpdateChecking(true);
           const update = await Updates.checkForUpdateAsync();
@@ -77,7 +64,7 @@ function AppLoaderWithClerk() {
                 {
                   text: "نعم",
                   onPress: () => {
-                    Updates.reloadAsync(); 
+                    Updates.reloadAsync();
                   }
                 }
               ],
@@ -87,43 +74,20 @@ function AppLoaderWithClerk() {
             setIsUpdateChecking(false);
           }
         } catch (error) {
-          console.error('OTA_UPDATE_ERROR: Failed to check for updates', error);
           Toast.show({ type: 'info', text1: 'خطأ في التحديث', text2: 'لم نتمكن من التحقق من التحديثات حالياَ.', visibilityTime: 3000 });
           setIsUpdateChecking(false);
         }
+      } else if (isConnected === false) {
+        setIsUpdateChecking(false);
       } else {
         setIsUpdateChecking(false);
       }
     }
 
-    if (isConnected === true && isConnected !== null) {
+    if (!isNetworkChecking) { // انتظر حتى ينتهي NetworkProvider من التحقق الأولي
       onFetchUpdateAsync();
-    } else if (isConnected === false) {
-      setIsUpdateChecking(false);
     }
-  }, [isConnected]);
-
-  useEffect(() => {
-    let unsubscribe: EventSubscription | undefined;
-    if (isLoaded && gifAnimationFinished && isConnected === true && !isUpdateChecking) {
-      const startListening = async () => {
-        unsubscribe = Network.addNetworkStateListener((status) => {
-          const newConnected = Boolean(status.isConnected && status.isInternetReachable);
-
-          if (newConnected === false && !isShowingNoNetworkAlert.current) {
-            isShowingNoNetworkAlert.current = true;
-            Toast.show({ type: 'error', text1: 'فقدان الاتصال بالإنترنت!', text2: 'يرجى التحقق من اتصالك وإعادة المحاولة.', visibilityTime: 4000, onHide: () => { isShowingNoNetworkAlert.current = false; } });
-          } else if (newConnected === true && isShowingNoNetworkAlert.current) {
-            Toast.hide();
-            Toast.show({ type: 'success', text1: 'تم استعادة الاتصال!', text2: 'أنت متصل بالإنترنت الآن.', visibilityTime: 2000, });
-            isShowingNoNetworkAlert.current = false;
-          }
-        });
-      };
-      startListening();
-    }
-    return () => { if (unsubscribe) { unsubscribe.remove(); } };
-  }, [isLoaded, gifAnimationFinished, isConnected, isUpdateChecking]);
+  }, [isConnected, isNetworkChecking]); // يعتمد على isConnected و isNetworkChecking
 
   const onGifFinish = useCallback(() => {
     setGifAnimationFinished(true);
@@ -136,59 +100,74 @@ function AppLoaderWithClerk() {
 
   useEffect(() => {
     async function hideSplash() {
+      // إذا بدأ عرض GIF، أخفِ شاشة البداية
       if (hasGifStartedDisplaying) {
         await SplashScreen.hideAsync();
       }
+      // إذا كان كل شيء جاهزاً (متصل، Clerk محمل، GIF انتهى، لا يوجد تحديث)
       else if (isConnected === true && isLoaded && gifAnimationFinished && !isUpdateChecking) {
         await SplashScreen.hideAsync();
-      } else if (isConnected === false) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      // إذا لم يكن هناك اتصال، أخفِ شاشة البداية بسرعة بعد التأكد من عدم وجود GIF
+      else if (isConnected === false) {
+        await new Promise(resolve => setTimeout(resolve, 50)); // تأخير بسيط للتأكد من الرندر
         await SplashScreen.hideAsync();
       }
     }
+    // يجب أن تكون هذه الدالة هي الوحيدة المسؤولة عن إخفاء شاشة البداية
+    // و تتتبع كل المتغيرات لضمان التوقيت الصحيح.
     hideSplash();
   }, [isConnected, isLoaded, gifAnimationFinished, isUpdateChecking, hasGifStartedDisplaying]);
 
 
-  const onRetryNetwork = useCallback(() => {
-    setIsConnected(null);
+  const handleRetryNetwork = useCallback(() => {
+    // استخدم الدالة من الـ provider لإعادة محاولة الاتصال
+    retryNetworkCheck();
+    // إعادة تعيين حالة التحقق من التحديثات لإعادة تشغيلها
     setIsUpdateChecking(true);
-  }, []);
+  }, [retryNetworkCheck]);
 
 
-  if (isConnected === null) {
-    return <GifLoadingScreen onAnimationFinish={() => {}} onMount={onGifComponentMounted} />;
+  // === شاشات التحميل وحالة الشبكة ===
+  // 1. إذا كنا ما زلنا نتحقق من الشبكة
+  if (isNetworkChecking) {
+    return <GluestackUIProvider mode="light"><GifLoadingScreen onAnimationFinish={() => {}} onMount={onGifComponentMounted} /></GluestackUIProvider>;
   }
 
+  // 2. إذا لم يكن هناك اتصال بالإنترنت
   if (isConnected === false) {
-    return <NoNetworkScreen onRetry={onRetryNetwork} />;
+    return <GluestackUIProvider mode="light"><NoNetworkScreen onRetry={handleRetryNetwork} /></GluestackUIProvider>;
   }
 
+  // 3. إذا كان الاتصال موجوداً ولكن باقي شروط التحميل لم تتحقق بعد
   if (!gifAnimationFinished || !isLoaded || isUpdateChecking) {
-    return <GifLoadingScreen onAnimationFinish={onGifFinish} onMount={onGifComponentMounted} />;
+    return <GluestackUIProvider mode="light"><GifLoadingScreen onAnimationFinish={onGifFinish} onMount={onGifComponentMounted} /></GluestackUIProvider>;
   }
 
+  // 4. كل شيء جاهز، اعرض التطبيق
   return (
-    <NotificationProvider>
-      <>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }} initialRouteName="(onboarding)">
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(onboarding)" />
-          <Stack.Screen name="[details]" />
-          <Stack.Screen name="notification" />
-        </Stack>
-        <Toast />
-      </>
-    </NotificationProvider>
+    <GluestackUIProvider mode="light"><NotificationProvider>
+        <>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="[details]" />
+            <Stack.Screen name="notification" />
+          </Stack>
+          <Toast />
+        </>
+      </NotificationProvider></GluestackUIProvider>
   );
 }
 
 export default function RootLayout() {
   return (
-    <ClerkProvider>
-      <AppLoaderWithClerk />
-    </ClerkProvider>
+    <GluestackUIProvider mode="light"><ClerkProvider>
+        <NetworkProvider>
+          <AppLoaderWithClerk />
+        </NetworkProvider>
+      </ClerkProvider></GluestackUIProvider>
   );
 }
