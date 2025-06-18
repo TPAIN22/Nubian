@@ -1,172 +1,111 @@
+// src/store/useCartStore.js
 import { create } from "zustand";
-import axiosInstance from "@/utils/axiosInstans";
+import axiosInstance from "@/utils/axiosInstans"; // تأكد من المسار الصحيح لـ axiosInstance
 
-const useCartStore = create((set, get) => {
-  const updateCartState = (data) => {
-    set({
-      cartItems: data.products || [],
-      totalQuantity: data.totalQuantity || 0,
-      totalPrice: data.totalPrice || 0,
-      isCartLoading: false,
-    });
-  };
+export const useCartStore = create((set, get) => ({
+  cart: null, // سلة التسوق، ستكون null أو كائن السلة من الـ backend
+  isLoading: false,
+  error: null,
+  isUpdating: false,
+  clearError: () => set({ error: null }),
 
-  const validateToken = (token) => {
-    if (!token) throw new Error("لم يتم توفير رمز المصادقة");
-  };
+  clearCart: () => set({ cart: null }),
+  // لجلب السلة من الـ backend
+  fetchCart: async (token) => {
+    if (!token) {
+      set({ cart: null, isLoading: false, error: null }); 
+      return;
+    }
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.get("/carts", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      // الـ backend يرسل السلة مباشرة في response.data
+      set({ cart: response.data, isLoading: false });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "An error occurred while fetching the cart.";
+      set({
+        cart: null, // مسح السلة عند الخطأ
+        error: errorMessage,
+        isLoading: false,
+      });
+      throw error; // إعادة رمي الخطأ للسماح للمكونات بمعالجته إذا لزم الأمر
+    }
+  },
 
-  const validateProduct = (product) => {
-    if (!product || !product._id) throw new Error("بيانات المنتج غير صحيحة");
-  };
+  // لإضافة منتج إلى السلة
+  addToCart: async (token, productId, quantity, size = '') => {
+    if (!token) {
+      return;
+    }
+    set({ isUpdating: true, error: null });
+    try {
+      const response = await axiosInstance.post("/carts/add", { productId, quantity, size }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      set({ cart: response.data, isUpdating: false });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "An error occurred while adding the product to the cart.";
+      set({
+        error: errorMessage,
+        isUpdating: false,
+      });
+      throw error;
+    }
+  },
 
-  return {
-    cartItems: [],
-    totalQuantity: 0,
-    totalPrice: 0,
-    isCartLoading: false,
-    errorMessage: null,
+  updateCartItemQuantity: async (token, productId, quantity, size = '') => {
+    if (!token) {
+      return;
+    }
+    if (typeof quantity !== 'number' || quantity === 0) {
+        set({ error: "Invalid quantity  value." });
+        return;
+    }
+    set({ isUpdating: true, error: null });
+    try {
+      const response = await axiosInstance.put("/carts/update", { productId, quantity, size }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      set({ cart: response.data, isUpdating: false });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "An error occurred while updating the cart.";
+      set({
+        error: errorMessage,
+        isUpdating: false,
+      });
+      throw error;
+    }
+  },
 
-    clearError: () => set({ errorMessage: null }),
-
-    getCart: async (token) => {
-      try {
-        validateToken(token);
-        set({ isCartLoading: true, errorMessage: null });
-
-        const response = await axiosInstance.get("/carts", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.data) throw new Error("لم يتم استلام بيانات من الخادم");
-        updateCartState(response.data);
-      } catch (error) {
-        set({
-          isCartLoading: false,
-          errorMessage: error.response?.data?.message || error.message || "فشل في تحميل السلة",
-        });
-      }
-    },
-
-    addToCart: async (product, token, selectedSize) => {
-      try {
-        validateToken(token);
-        validateProduct(product);
-
-        const response = await axiosInstance.post(
-          "/carts/add",
-          {
-            productId: product._id,
-            quantity: 1,
-            size: selectedSize,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (!response.data) throw new Error("لم يتم استلام بيانات من الخادم");
-        updateCartState(response.data);
-      } catch (error) {
-        set({
-          errorMessage:
-            error.response?.data?.message || error.message || "حدث خطأ أثناء إضافة المنتج إلى السلة.",
-        });
-      }
-    },
-
-    updateCartItem: async (product, token, quantity) => {
-      try {
-        validateToken(token);
-        validateProduct(product);
-        const normalizedQuantity = quantity > 0 ? 1 : -1;
-
-        await axiosInstance.put(
-          "/carts/update",
-          {
-            productId: product._id,
-            quantity: normalizedQuantity,
-            size: product.size,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        const updatedItems = get().cartItems.map((item) => {
-          if (
-            item.product._id === product._id &&
-            item.size === product.size
-          ) {
-            const newQty = item.quantity + normalizedQuantity;
-            return { ...item, quantity: newQty > 0 ? newQty : 1 };
-          }
-          return item;
-        });
-
-        const totalQuantity = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-        const totalPrice = updatedItems.reduce(
-          (sum, item) => sum + item.quantity * item.product.price,
-          0
-        );
-
-        set({ cartItems: updatedItems, totalQuantity, totalPrice });
-      } catch (error) {
-        set({
-          errorMessage:
-            error.response?.data?.message || error.message || "فشل في تحديث المنتج",
-        });
-      }
-    },
-
-    removeFromCart: async (productId, size, token) => {
-      try {
-        validateToken(token);
-        if (!productId || !size) throw new Error("بيانات الحذف غير مكتملة");
-
-        await axiosInstance.put(
-          "/carts/update",
-          { productId, quantity: 0, size },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        const updatedItems = get().cartItems.filter(
-          (item) =>
-            !(item.product._id === productId && item.size === size)
-        );
-
-        const totalQuantity = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-        const totalPrice = updatedItems.reduce(
-          (sum, item) => sum + item.quantity * item.product.price,
-          0
-        );
-
-        set({ cartItems: updatedItems, totalQuantity, totalPrice });
-      } catch (error) {
-        set({
-          errorMessage:
-            error.response?.data?.message || error.message || "فشل في إزالة المنتج من السلة",
-        });
-      }
-    },
-
-    clearCart: async (token) => {
-      try {
-        validateToken(token);
-
-        await axiosInstance.delete("/carts/delete", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        set({ cartItems: [], totalQuantity: 0, totalPrice: 0 });
-      } catch (error) {
-        set({
-          errorMessage:
-            error.response?.data?.message || error.message || "فشل في حذف السلة",
-        });
-      }
-    },
-
-    getItemCount: () => get().totalQuantity,
-    getCartTotal: () => get().totalPrice,
-  };
-});
-
-export default useCartStore;
+  removeFromCart: async (token, productId, size = '') => {
+    if (!token) {
+      return;
+    }
+    set({ isUpdating: true, error: null });
+    try {
+      // استخدام نقطة نهاية DELETE المخصصة للحذف
+      const response = await axiosInstance.delete("/carts/remove", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: { productId, size } // لطلبات DELETE مع body
+      });
+      set({ cart: response.data, isUpdating: false });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "An error occurred while removing the product from the cart.";
+      set({
+        error: errorMessage,
+        isUpdating: false,
+      });
+      throw error;
+    }
+  },
+}));

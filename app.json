@@ -29,6 +29,7 @@
         "foregroundImage": "./assets/images/screen.png",
         "backgroundColor": "#ffffff"
       },
+      "softwareKeyboardLayoutMode": "pan",
       "package": "dev.expo.nubian",
       "googleServicesFile": "./google-services.json",
       "intentFilters": [

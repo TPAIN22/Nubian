@@ -10,7 +10,7 @@ const images = [
   require('../../assets/images/download.jpeg'),
 ];
 
-export default function ImageSlider() {
+ function ImageSlider() {
   return (
     <View style={{ height: 200, overflow: 'hidden'}}>
       <Swiper autoplay={true} showsPagination={true} loop={true}  activeDotColor='#e98c22'>
@@ -28,3 +28,5 @@ const styles = StyleSheet.create({
     objectFit: 'cover',
   },
 });
+
+export default React.memo(ImageSlider);

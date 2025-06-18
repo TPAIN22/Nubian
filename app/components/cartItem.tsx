@@ -1,13 +1,14 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import React from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 
-const CartItem = React.memo(function CartItem({
+ const CartItem = React.memo(function CartItem({
   item,
   increment,
   decrement,
   deleteItem,
+  isUpdating,
 }: any) {
   const PLACEHOLDER_IMAGE =
     "https://placehold.co/80x100/eeeeee/aaaaaa?text=No+Image";
@@ -27,7 +28,7 @@ const CartItem = React.memo(function CartItem({
           <Text style={styles.productName}>
             {item?.product?.name || "Product Name"}
           </Text>
-          <Text style={styles.productSize}>الحجم: {item?.size || "N/A"}</Text>
+          <Text style={styles.productSize}>المقاس : {item?.size || "N/A"}</Text>
         </View>
         <View style={styles.priceAndQuantity}>
           <View style={styles.quantity}>
@@ -53,14 +54,21 @@ const CartItem = React.memo(function CartItem({
       <TouchableOpacity
         style={styles.trashContainer}
         onPress={() => deleteItem(item)}
+        disabled={isUpdating}
       >
-        <Ionicons name="trash-outline" size={20} color="#ff4444" />
+        {
+          isUpdating ? (
+            <ActivityIndicator size="small" color="#ff4444" />
+          ) :(
+            <Ionicons name="trash-outline" size={20} color="#ff4444" />
+          )
+        }
       </TouchableOpacity>
     </View>
   );
 });
 
-export default CartItem;
+export default CartItem;  
 
 const styles = StyleSheet.create({
   container: {
@@ -108,7 +116,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   quantity: {
     flexDirection: "row",
     alignItems: "center",
@@ -126,17 +133,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     margin: 2,
   },
-
   quantityText: {
     fontSize: 16,
     fontWeight: "600",
     marginHorizontal: 12,
     color: "#333",
   },
-
   price: {
-    marginLeft: 20,
-    fontSize: 18,
+    marginLeft: 22,
+    fontSize: 14,
     fontWeight: "700",
     color: "#2c5530",
   },

@@ -18,8 +18,8 @@ interface item {
   images?: string[];
   discountPrice?: number;
 }
-function ItemCard({ item , handleSheetChanges , handlePresentModalPress }: any) {
-  const { setProduct ,setIsTabBarVisible } = useItemStore();
+function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
+  const { setProduct, setIsTabBarVisible } = useItemStore();
   const screenWidth = Dimensions.get("window").width;
   const cardWidth = screenWidth / 2 - 10;
   const router = useRouter();
@@ -57,7 +57,7 @@ function ItemCard({ item , handleSheetChanges , handlePresentModalPress }: any) 
 
   const handleClick = (item: item) => {
     setProduct(item);
-    router.push(`/${item._id}`);
+    router.push(`/details/${item._id}`);
   };
 
   return (
@@ -69,30 +69,30 @@ function ItemCard({ item , handleSheetChanges , handlePresentModalPress }: any) 
       >
         {item.images?.map((uri: string, index: number) => (
           <Pressable key={index} onPress={() => handleClick(item)}>
-          <Image
-            key={index}
-            source={uri}
-            alt="product image"
-            style={{
-              height: 200,
-              width: cardWidth,
-              borderTopLeftRadius: 8,
-              borderTopRightRadius: 8,
-            }}
-          />
+            <Image
+              key={index}
+              source={uri}
+              alt="product image"
+              style={{
+                height: 200,
+                width: cardWidth,
+                borderTopLeftRadius: 8,
+                borderTopRightRadius: 8,
+              }}
+            />
           </Pressable>
         ))}
       </Swiper>
       <View className="p-4">
         <VStack className="">
-          <Heading size="md" className="text-right">
+          <Heading size="md" className="text-right text-[#969c9c]">
             {item.name}
           </Heading>
-          {item.discountPrice > 0 &&
+          {item.discountPrice > 0 && (
             <Text className="text-right line-through text-[#e98c22]">
-            {item.discountPrice > 0 && formatPrice(item.discountPrice)}
-          </Text>
-          }
+              {item.discountPrice > 0 && formatPrice(item.discountPrice)}
+            </Text>
+          )}
           <Text className="text-right text-[#30a1a7] font-bold text-lg">
             {formatPrice(item.price)} SDG
           </Text>
@@ -101,18 +101,31 @@ function ItemCard({ item , handleSheetChanges , handlePresentModalPress }: any) 
 
       <Box className="flex-col sm:flex-row">
         <Button
-          className="px-4 py-2 mr-0 sm:mr-3 sm:mb-0 sm:flex-1"
+          className="px-4 py-2 mr-0 sm:mr-3 sm:mb-0 sm:flex-1 bg-[#30a1a7] text-white"
           onPress={() => {
             setProduct(item);
             setIsTabBarVisible(false);
             handlePresentModalPress();
           }}
         >
-          <ButtonText size="sm">اضافة للسلة</ButtonText>
+          <ButtonText size="sm" className="text-white text-lg">
+            اضافة للسلة
+          </ButtonText>
         </Button>
       </Box>
       {discountPercentage > 0 && (
-        <View style={styles.discountBadge}>
+        <View
+          style={[
+            styles.discountBadge,
+            discountPercentage > 50
+              ? { backgroundColor: "green" }
+              : discountPercentage > 25
+              ? { backgroundColor: "orange" }
+              : discountPercentage > 10
+              ? { backgroundColor: "red" }
+              : { backgroundColor: "blue" },
+          ]}
+        >
           <Text style={styles.discountText}>{discountPercentage}% OFF </Text>
         </View>
       )}
@@ -142,4 +155,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default React.memo(ItemCard)
+export default React.memo(ItemCard);

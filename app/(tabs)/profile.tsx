@@ -43,20 +43,26 @@ export default function Profile() {
 
   // callbacks
   const handlePresentModalPress = useCallback(() => {
-  
     bottomSheetModalRef.current?.present();
   }, []);
-  const handleSheetChanges = useCallback((index: number) => {
-  }, []);
+  const handleSheetChanges = useCallback((index: number) => {}, []);
 
   const settingsOptions = [
-    { title: "Edit Profile", action: () => ({}), icon: "pencil" as const },
+    {
+      title: "Edit Profile",
+      action: () => {
+        router.push("/editProfile");
+      },
+      icon: "pencil" as const,
+    },
     {
       title: "Notifications",
-      action: () => {router.push("/notification")},
+      action: () => {
+        router.push("/notification");
+      },
       icon: "notifications" as const,
     },
-    { title: "Language", action: () => ({}), icon: "globe" as const },
+    { title: "Language", action: () => {router.push("/order")}, icon: "globe" as const },
   ];
   const privacyPolicyOptions = [
     { title: "Privacy Terms", action: () => ({}), icon: "eye" as const },

@@ -1,9 +1,10 @@
 import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
 import React, { useState, useEffect } from "react";
-import AddToCartButton from "./components/AddToCartButton";
+import AddToCartButton from "../../components/AddToCartButton";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import Swiper from "react-native-swiper";
+import { useRouter } from "expo-router";
 
 export default function Details() {
   const { product } = useItemStore();
@@ -15,9 +16,13 @@ export default function Details() {
     }
   }, [product]);
   if (!product) {
+    const router = useRouter();
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>لا يوجد منتج للعرض</Text>
+        <Pressable onPress={() => {router.replace("/(screens)")}}>
+          <Text>العودة للرئيسية</Text>
+        </Pressable>
       </View>
     );
   }

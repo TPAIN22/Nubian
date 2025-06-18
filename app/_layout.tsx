@@ -1,5 +1,3 @@
-// app/RootLayout.tsx (أو app/_layout.tsx إذا كان هو ملف الروت)
-
 import React, { useState, useEffect, useCallback } from "react";
 import "@/app\\global.css";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
@@ -14,12 +12,13 @@ import Toast from "react-native-toast-message";
 import * as SplashScreen from "expo-splash-screen";
 import GifLoadingScreen from "./GifLoadingScreen";
 import NoNetworkScreen from "./NoNetworkScreen";
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
+import { KeyboardProvider } from "react-native-keyboard-controller";
+
 
 import * as Updates from 'expo-updates';
 
-// === استيراد NetworkProvider و useNetwork ===
-import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider"; // تأكد من المسار الصحيح
+import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -121,40 +120,33 @@ function AppLoaderWithClerk() {
 
 
   const handleRetryNetwork = useCallback(() => {
-    // استخدم الدالة من الـ provider لإعادة محاولة الاتصال
     retryNetworkCheck();
-    // إعادة تعيين حالة التحقق من التحديثات لإعادة تشغيلها
     setIsUpdateChecking(true);
   }, [retryNetworkCheck]);
 
 
-  // === شاشات التحميل وحالة الشبكة ===
-  // 1. إذا كنا ما زلنا نتحقق من الشبكة
   if (isNetworkChecking) {
     return <GluestackUIProvider mode="light"><GifLoadingScreen onAnimationFinish={() => {}} onMount={onGifComponentMounted} /></GluestackUIProvider>;
   }
 
-  // 2. إذا لم يكن هناك اتصال بالإنترنت
   if (isConnected === false) {
     return <GluestackUIProvider mode="light"><NoNetworkScreen onRetry={handleRetryNetwork} /></GluestackUIProvider>;
   }
 
-  // 3. إذا كان الاتصال موجوداً ولكن باقي شروط التحميل لم تتحقق بعد
   if (!gifAnimationFinished || !isLoaded || isUpdateChecking) {
     return <GluestackUIProvider mode="light"><GifLoadingScreen onAnimationFinish={onGifFinish} onMount={onGifComponentMounted} /></GluestackUIProvider>;
   }
 
-  // 4. كل شيء جاهز، اعرض التطبيق
   return (
     <GluestackUIProvider mode="light"><NotificationProvider>
         <>
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(onboarding)" />
-            <Stack.Screen name="[details]" />
-            <Stack.Screen name="notification" />
+            <Stack.Screen name="(tabs)"/>
+            <Stack.Screen name="(auth)"/>
+            <Stack.Screen name="(onboarding)"/>
+            <Stack.Screen name="[details]"/>
+            <Stack.Screen name="(screens)"/>
           </Stack>
           <Toast />
         </>
@@ -164,10 +156,14 @@ function AppLoaderWithClerk() {
 
 export default function RootLayout() {
   return (
-    <GluestackUIProvider mode="light"><ClerkProvider>
+    <GluestackUIProvider mode="light">
+      <KeyboardProvider>
+      <ClerkProvider>
         <NetworkProvider>
           <AppLoaderWithClerk />
         </NetworkProvider>
-      </ClerkProvider></GluestackUIProvider>
+      </ClerkProvider>
+      </KeyboardProvider>
+    </GluestackUIProvider>
   );
 }

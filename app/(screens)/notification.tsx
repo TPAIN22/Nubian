@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl, SafeAreaView, } from "react-native";
 import { useUser } from "@clerk/clerk-expo";
 import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 interface NotificationItem {
   _id: string;
@@ -71,8 +72,8 @@ const NotificationsScreen = () => {
   }
 
   return (
-    <>
-    <Stack.Screen options={{ title: "الإشعارات" , headerShown: true ,headerShadowVisible: false}} />
+    <SafeAreaProvider >
+    <SafeAreaView style={{ flex: 1}}>
     <View style={styles.container}>
       <FlatList
         data={notifications}
@@ -88,13 +89,14 @@ const NotificationsScreen = () => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
     </View>
-        </>
+    </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  container: { flex: 1, padding: 12 , backgroundColor: "#F8F6F6FF"},
+  container: { flex: 1, padding: 12 , backgroundColor: "#F8F6F6FF" , paddingTop:32},
   notificationItem: {
     backgroundColor: "#fff",
     padding: 15,

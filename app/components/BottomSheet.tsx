@@ -114,7 +114,6 @@ const BottomSheet = () => {
 
       {/* Add to Cart Button */}
       <View style={styles.buttonContainer}>
-        {/* Pass the selectedSize to the AddToCartButton component */}
         <AddToCartButton product={product} selectedSize={selectedSize??""} />
       </View>
     </View>
