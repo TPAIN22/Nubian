@@ -10,22 +10,39 @@ import {
   Platform,
   RefreshControl,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import ImageSlider from "../components/ImageSlide";
 import { LinearGradient } from "expo-linear-gradient";
 import ItemCard from "../components/Card";
+import { BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import BottomSheet from "../components/BottomSheet";
 
 const { width, height } = Dimensions.get("window");
 const ITEM_WIDTH = width * 0.46;
 const ITEM_HEIGHT = ITEM_WIDTH * 1.2;
 
 export default function index() {
-  const { getCategories, categories, products, getAllProducts } = useItemStore();
+  const { getCategories, categories, products, getAllProducts , setIsTabBarVisible} = useItemStore();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+
+  const handlePresentModalPress = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+  }, []);
+
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        setIsTabBarVisible(true);
+      }
+    },
+    [setIsTabBarVisible]
+  );
 
   const handleGetCategories = async () => {
     setRefreshing(true);
@@ -61,7 +78,7 @@ export default function index() {
   }, []);
 
   const renderProductItem = ({ item }: any) => {
-    return <ItemCard item={item} />;
+    return <ItemCard item={item} handlePresentModalPress={handlePresentModalPress} handleSheetChanges={handleSheetChanges} />;
   };
 
   const renderCategoryItem = ({ item, index }: any) => {
@@ -154,6 +171,8 @@ export default function index() {
   );
 
   return (
+    <GestureHandlerRootView style={styles.container}>
+      <BottomSheetModalProvider>
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fafafa" />
 
@@ -227,6 +246,18 @@ export default function index() {
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </View>
+    <BottomSheetModal
+          ref={bottomSheetModalRef}
+          onChange={handleSheetChanges}
+          snapPoints={["70%"]}
+          index={0}
+        >
+          <BottomSheetView style={styles.contentContainer}>
+            <BottomSheet />
+          </BottomSheetView>
+        </BottomSheetModal>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -234,6 +265,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fafafa",
+  },
+  contentContainer: {
+    flex: 1,
+    padding: 10,
+    alignItems: "center",
+    paddingBottom: 40,
   },
   scrollView: {
     flex: 1,

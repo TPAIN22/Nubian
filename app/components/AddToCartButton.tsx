@@ -24,7 +24,7 @@ type Product = {
 type Props = {
   product: Product;
   title?: string;
-  buttonStyle?: ViewStyle;
+  buttonStyle?: ViewStyle | any;
   textStyle?: TextStyle;
   disabled?: boolean;
   selectedSize?: string
@@ -94,7 +94,6 @@ const AddToCartButton = ({
         type: "success",
         text1: "تمت إضافة المنتج إلى السلة",
       });
-      router.push("/(tabs)/cart");
     } catch (err) {
       Toast.show({
         type: "error",

@@ -16,6 +16,7 @@ export const useCartStore = create((set, get) => ({
       set({ cart: null, isLoading: false, error: null }); 
       return;
     }
+    if (get().isLoading) return;
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.get("/carts", {
@@ -23,16 +24,15 @@ export const useCartStore = create((set, get) => ({
           Authorization: `Bearer ${token}`,
         },
       });
-      // الـ backend يرسل السلة مباشرة في response.data
-      set({ cart: response.data, isLoading: false });
+      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isLoading: false });
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "An error occurred while fetching the cart.";
+      const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء جلب السلة.";
       set({
-        cart: null, // مسح السلة عند الخطأ
+        cart: null,
         error: errorMessage,
         isLoading: false,
       });
-      throw error; // إعادة رمي الخطأ للسماح للمكونات بمعالجته إذا لزم الأمر
+      throw error;
     }
   },
 
@@ -41,6 +41,7 @@ export const useCartStore = create((set, get) => ({
     if (!token) {
       return;
     }
+    if (get().isUpdating) return;
     set({ isUpdating: true, error: null });
     try {
       const response = await axiosInstance.post("/carts/add", { productId, quantity, size }, {
@@ -48,9 +49,9 @@ export const useCartStore = create((set, get) => ({
           Authorization: `Bearer ${token}`,
         },
       });
-      set({ cart: response.data, isUpdating: false });
+      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "An error occurred while adding the product to the cart.";
+      const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء إضافة المنتج للسلة.";
       set({
         error: errorMessage,
         isUpdating: false,
@@ -64,9 +65,10 @@ export const useCartStore = create((set, get) => ({
       return;
     }
     if (typeof quantity !== 'number' || quantity === 0) {
-        set({ error: "Invalid quantity  value." });
+        set({ error: "قيمة الكمية غير صحيحة." });
         return;
     }
+    if (get().isUpdating) return;
     set({ isUpdating: true, error: null });
     try {
       const response = await axiosInstance.put("/carts/update", { productId, quantity, size }, {
@@ -74,9 +76,9 @@ export const useCartStore = create((set, get) => ({
           Authorization: `Bearer ${token}`,
         },
       });
-      set({ cart: response.data, isUpdating: false });
+      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "An error occurred while updating the cart.";
+      const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء تحديث السلة.";
       set({
         error: errorMessage,
         isUpdating: false,
@@ -89,18 +91,18 @@ export const useCartStore = create((set, get) => ({
     if (!token) {
       return;
     }
+    if (get().isUpdating) return;
     set({ isUpdating: true, error: null });
     try {
-      // استخدام نقطة نهاية DELETE المخصصة للحذف
       const response = await axiosInstance.delete("/carts/remove", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        data: { productId, size } // لطلبات DELETE مع body
+        data: { productId, size }
       });
-      set({ cart: response.data, isUpdating: false });
+      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "An error occurred while removing the product from the cart.";
+      const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء حذف المنتج من السلة.";
       set({
         error: errorMessage,
         isUpdating: false,

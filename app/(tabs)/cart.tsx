@@ -83,8 +83,10 @@ export default function cart() {
     router.replace("/");
   };
 
-  // حالة التحميل
-  if (isLoading ) {
+  // Move early returns after all hooks
+  const isCartEmpty = !cart?.products || cart.products.length === 0;
+
+  if (isLoading) {
     return (
       <View style={styles.centeredContainer}>
         <ActivityIndicator size="large" color="#30a1a7" />
@@ -92,9 +94,6 @@ export default function cart() {
       </View>
     );
   }
-
-  // حالة السلة الفارغة
-  const isCartEmpty = !cart?.products || cart.products.length === 0;
 
   if (isCartEmpty) {
     return (

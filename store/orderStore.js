@@ -17,6 +17,9 @@ const useOrderStore = create((set, get) => ({
           Authorization: `Bearer ${token}`,
         },
       });
+      if (!Array.isArray(response.data)) {
+        throw new Error("البيانات المستلمة غير صحيحة");
+      }
       set({ 
         orders: response.data, 
         isLoading: false,
@@ -24,7 +27,9 @@ const useOrderStore = create((set, get) => ({
       });
       return response.data;
     } catch (error) {
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to load orders";
+      if (process.env.NODE_ENV !== 'production') {
+      }
+      const errorMessage = error?.response?.data?.message || error?.message || "تعذر تحميل الطلبات";
       set({
         error: errorMessage,
         isLoading: false,

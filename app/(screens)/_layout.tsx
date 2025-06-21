@@ -14,6 +14,8 @@ export default function _layout() {
         <Stack screenOptions={{ header: HeaderComponent }}>
           <Stack.Screen name="editProfile" options={{ headerShown: false }} />
           <Stack.Screen name="notification" options={{ headerShown: false }} />
+          <Stack.Screen name="details/[details]" options={{ headerShown: false }} />
+          <Stack.Screen name="order" options={{ headerShown: false }} />
         </Stack>
         </SafeAreaView>
     </SafeAreaProvider>

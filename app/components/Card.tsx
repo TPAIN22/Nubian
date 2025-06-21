@@ -104,7 +104,6 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
           className="px-4 py-2 mr-0 sm:mr-3 sm:mb-0 sm:flex-1 bg-[#30a1a7] text-white"
           onPress={() => {
             setProduct(item);
-            setIsTabBarVisible(false);
             handlePresentModalPress();
           }}
         >

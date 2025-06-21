@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { useOrderStore } from "@/store/orderStore";
+import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";
 import { useCartStore } from "@/store/useCartStore";
 
@@ -26,8 +26,7 @@ export default function CheckOutModal({
   const [isLoading, setIsLoading] = useState(false);
   const { createOrder } = useOrderStore();
   const { getToken } = useAuth();
-  const {clearCart} = useCartStore();
-
+  const { clearCart } = useCartStore();
 
   const cities = ["الخرطوم", "مدني", "القضارف", "بورتسودان", "عطبرة"];
 
@@ -61,14 +60,20 @@ export default function CheckOutModal({
     setIsLoading(true);
     try {
       const token = await getToken();
-      const deliveryAddress = {
-        city: selectedCity,
-        address: address.trim(),
-        phone: phone.trim(),
+
+      // *** MODIFIED: Construct the orderPayload to match backend's req.body structure ***
+      const orderPayload = {
+        deliveryAddress: {
+          // Backend expects this nested structure
+          city: selectedCity,
+          address: address.trim(),
+          phone: phone.trim(),
+        },
+        paymentMethod: "cash", // Assuming cash on delivery, or add state for selection
       };
 
       if (token) {
-        await createOrder(token, deliveryAddress);
+        await createOrder(orderPayload, token); // Pass the correctly structured payload
         await clearCart();
         Alert.alert("نجح", "تم تأكيد الطلب بنجاح!");
         handleClose();
@@ -76,10 +81,10 @@ export default function CheckOutModal({
         Alert.alert("خطأ", "حدث خطأ في المصادقة");
       }
     } catch (error) {
-      console.log(error);
 
-      Alert.alert("خطأ", "حدث خطأ أثناء إرسال الطلب");
-      handleClose();
+      const errorMessage =  "حدث خطأ أثناء إرسال الطلب";
+      Alert.alert("خطأ", errorMessage); 
+      handleClose(); 
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 
@@ -13,7 +13,9 @@ export default function GifLoadingScreen({ onAnimationFinish, onMount }) {
       onAnimationFinish();
     }, 5000); 
 
-    return () => clearTimeout(fallbackTimer);
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
   }, [onAnimationFinish, onMount]);
 
   return (
@@ -23,13 +25,15 @@ export default function GifLoadingScreen({ onAnimationFinish, onMount }) {
         <Image
           source={require('../assets/images/logo.gif')}
           style={styles.gif}
-          contentFit="contain"
+          contentFit="cover"
           onAnimationEnd={onAnimationFinish}
         />
       </View>
     </>
   );
 }
+
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -39,7 +43,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   gif: {
-    width: 300,
-    height: 300,
   },
 });

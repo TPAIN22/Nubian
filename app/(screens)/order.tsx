@@ -1,13 +1,14 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Image } from "react-native";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity } from "react-native";
 import React, { useEffect, useState } from "react";
 import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";
+import { Image } from "expo-image";
 
 export default function Order() {
   const { getUserOrders, orders, error, isLoading } = useOrderStore();
   const { getToken } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedOrders, setExpandedOrders] = useState({});
+  const [expandedOrders, setExpandedOrders] = useState<{ [key: string]: boolean }>({});
 
   const fetchOrders = async () => {
     try {
@@ -23,7 +24,6 @@ export default function Order() {
     fetchOrders();
   }, []);
 
-  console.log(orders);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -32,14 +32,14 @@ export default function Order() {
   };
 
 
-  const toggleOrderExpansion = (orderId) => {
+  const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrders(prev => ({
       ...prev,
       [orderId]: !prev[orderId]
     }));
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -50,11 +50,11 @@ export default function Order() {
     });
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number) => {
     return `${amount.toLocaleString()} ج.س`;
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
         return '#f39c12';
@@ -69,7 +69,7 @@ export default function Order() {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status: string) => {
     switch (status) {
       case 'pending':
         return 'في الانتظار';
@@ -84,7 +84,7 @@ export default function Order() {
     }
   };
 
-  const getPaymentStatusText = (paymentStatus) => {
+  const getPaymentStatusText = (paymentStatus: string) => {
     switch (paymentStatus) {
       case 'pending':
         return 'في الانتظار';
@@ -97,7 +97,7 @@ export default function Order() {
     }
   };
 
-  const getPaymentMethodText = (method) => {
+  const getPaymentMethodText = (method: string) => {
     switch (method) {
       case 'cash':
         return 'نقدي';
@@ -111,7 +111,7 @@ export default function Order() {
   };
 
   // حساب عدد المنتجات من المصفوفة
-  const getProductsCount = (products) => {
+  const getProductsCount = (products: any[]) => {
     if (!products || !Array.isArray(products)) return 0;
     return products.reduce((total, product) => total + (product.quantity || 1), 0);
   };
@@ -150,7 +150,7 @@ export default function Order() {
     >
       <Text style={styles.title}>طلباتي ({orders.length})</Text>
       
-      {orders.map((order) => (
+      {orders.map((order: any) => (
         <View key={order._id} style={styles.orderCard}>
           {/* رأس البطاقة */}
           <TouchableOpacity 
@@ -176,7 +176,7 @@ export default function Order() {
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>المنتجات:</Text>
-              <Text style={styles.infoValue}>{getProductsCount(order.products)} منتج</Text>
+              <Text style={styles.infoValue}>{getProductsCount(order.productsDetails)} منتج</Text>
             </View>
           </View>
 
@@ -220,26 +220,23 @@ export default function Order() {
 
               {/* تفاصيل المنتجات */}
               <View style={styles.productsSection}>
-                <Text style={styles.sectionTitle}>المنتجات ({getProductsCount(order.products)})</Text>
-                {order.products && order.products.length > 0 ? (
-                  order.products.map((product, index) => (
-                    <View key={`${product.productId || product._id || index}`} style={styles.productCard}>
+                <Text style={styles.sectionTitle}>المنتجات ({getProductsCount(order.productsDetails)})</Text>
+                {order.productsDetails && order.productsDetails.length > 0 ? (
+                  order.productsDetails.map((product: any, index: number) => (
+                    <View key={product._id || index} style={styles.productCard}>
                       <View style={styles.productInfo}>
                         {/* صورة المنتج - إذا كانت متوفرة */}
-                        {product.image && (
+                        {product.images && Array.isArray(product.images) && product.images[0] && (
                           <Image 
-                            source={{ uri: product.image }} 
+                            source={{ uri: product.images[0] }} 
                             style={styles.productImage}
-                            resizeMode="cover"
+                            contentFit="cover"
                           />
                         )}
                         <View style={styles.productDetails}>
                           <Text style={styles.productName} numberOfLines={2}>
                             {product.name || product.productName || 'منتج غير محدد'}
                           </Text>
-                          {product.category && (
-                            <Text style={styles.productCategory}>{product.category}</Text>
-                          )}
                           <View style={styles.productPricing}>
                             <Text style={styles.productPrice}>
                               {product.price ? formatCurrency(product.price) : 'السعر غير محدد'} × {product.quantity || 1}
@@ -248,11 +245,6 @@ export default function Order() {
                               = {formatCurrency((product.price || 0) * (product.quantity || 1))}
                             </Text>
                           </View>
-                          {product.description && (
-                            <Text style={styles.productDescription} numberOfLines={2}>
-                              {product.description}
-                            </Text>
-                          )}
                         </View>
                       </View>
                     </View>
@@ -279,6 +271,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
     padding: 16,
+    marginTop: 30,
   },
   centerContainer: {
     flex: 1,
@@ -476,11 +469,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#27ae60',
-  },
-  productDescription: {
-    fontSize: 12,
-    color: '#6c757d',
-    fontStyle: 'italic',
   },
   noProductsText: {
     fontSize: 14,

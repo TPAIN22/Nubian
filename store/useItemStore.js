@@ -25,7 +25,7 @@ const useItemStore = create((set, get) => ({
     const { page, hasMore, isProductsLoading, selectedCategory } = get();
 
     if (!selectedCategory) {
-      set({ error: "Please select a category first." });
+      set({ error: "يرجى اختيار قسم أولاً." });
       return;
     }
     if (!hasMore || isProductsLoading) return;
@@ -37,8 +37,8 @@ const useItemStore = create((set, get) => ({
         params: { page, limit: 6, category: selectedCategory },
       });
 
-      const newProducts = response.data.products;
-      const totalPages = response.data.totalPages;
+      const newProducts = Array.isArray(response.data.products) ? response.data.products : [];
+      const totalPages = Number(response.data.totalPages) || 1;
 
       set((state) => {
         const nextHasMore = state.page + 1 <= totalPages;
@@ -52,30 +52,27 @@ const useItemStore = create((set, get) => ({
         };
       });
     } catch (error) {
-      set({ isProductsLoading: false, error: error?.message || "Failed to load products" });
+      set({ isProductsLoading: false, error: error?.response?.data?.message || error?.message || "تعذر تحميل المنتجات" });
     }
   },
 
   // New function to get all products without category filter (for home screen)
   getAllProducts: async () => {
     set({ isProductsLoading: true, error: null });
-    
     try {
       const response = await axiosInstance.get("/products", {
-        params: { page: 1, limit: 20 }, // Get more products for home screen
+        params: { page: 1, limit: 20 },
       });
-
-      const products = response.data.products || response.data; // Handle different response structures
-      
-      set({ 
-        products, 
-        isProductsLoading: false, 
-        error: null 
+      const products = Array.isArray(response.data.products) ? response.data.products : (Array.isArray(response.data) ? response.data : []);
+      set({
+        products,
+        isProductsLoading: false,
+        error: null,
       });
     } catch (error) {
-      set({ 
-        isProductsLoading: false, 
-        error: error?.message || "Failed to load products" 
+      set({
+        isProductsLoading: false,
+        error: error?.response?.data?.message || error?.message || "تعذر تحميل المنتجات"
       });
     }
   },

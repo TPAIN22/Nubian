@@ -141,11 +141,10 @@ function AppLoaderWithClerk() {
     <GluestackUIProvider mode="light"><NotificationProvider>
         <>
           <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
+          <Stack screenOptions={{ headerShown: false }} initialRouteName="(onboarding)">
             <Stack.Screen name="(tabs)"/>
             <Stack.Screen name="(auth)"/>
             <Stack.Screen name="(onboarding)"/>
-            <Stack.Screen name="[details]"/>
             <Stack.Screen name="(screens)"/>
           </Stack>
           <Toast />

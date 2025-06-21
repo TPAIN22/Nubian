@@ -49,25 +49,25 @@ export default function Profile() {
 
   const settingsOptions = [
     {
-      title: "Edit Profile",
+      title: "تعديل الملف الشخصي",
       action: () => {
         router.push("/editProfile");
       },
       icon: "pencil" as const,
     },
     {
-      title: "Notifications",
+      title: "الاشعارات",
       action: () => {
         router.push("/notification");
       },
       icon: "notifications" as const,
     },
-    { title: "Language", action: () => {router.push("/order")}, icon: "globe" as const },
+    { title: "الطلبات", action: () => {router.push("/order")}, icon: "file-tray" as const },
   ];
   const privacyPolicyOptions = [
-    { title: "Privacy Terms", action: () => ({}), icon: "eye" as const },
-    { title: "Security", action: () => ({}), icon: "lock-closed" as const },
-    { title: "Cookies", action: () => ({}), icon: "" as never },
+    { title: "سياسة الخصوصية", action: () => ({}), icon: "eye" as const },
+    { title: "الامان", action: () => ({}), icon: "lock-closed" as const },
+    { title: "الدعم", action: () => ({}), icon: "" as never },
   ];
 
   useEffect(() => {
@@ -107,6 +107,7 @@ export default function Profile() {
       setIsUserLoaded(false);
     }
   }, [loaded, isSignedIn, user]);
+
   if (!loaded) {
     return (
       <View style={styles.loadingContainer}>
@@ -196,7 +197,7 @@ export default function Profile() {
         </View>
 
         <Text className="text-2xl font-bold text-[#333333cb] mb-2">
-          General
+          الملف الشخصي
         </Text>
         {settingsOptions.map((option, index) => (
           <TouchableOpacity
@@ -215,7 +216,7 @@ export default function Profile() {
         ))}
 
         <Text className="text-2xl font-bold text-[#333333cb] mb-2 mt-4">
-          Privacy Policy
+          انظر ايضا
         </Text>
         {privacyPolicyOptions.map((option, index) => (
           <TouchableOpacity
@@ -245,12 +246,6 @@ export default function Profile() {
       </ScrollView>
     );
   }
-
-  return (
-    <View style={styles.loadingContainer}>
-      <Text>خطأ في تحميل البيانات</Text>
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
