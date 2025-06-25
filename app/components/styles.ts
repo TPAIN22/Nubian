@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { Dimensions } from "react-native";
+import { I18nManager } from 'react-native';
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width / 2 - 15;
@@ -7,10 +8,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f8f8",
-    marginTop: 20,
   },
   header: {
-    paddingTop: 50,
     paddingBottom: 10,
     backgroundColor: "#fff",
     alignItems: "center",
@@ -43,7 +42,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: "#333",
-    textAlign: "right",
+    textAlign: "left",
   },
   filterContainer: {
     flexDirection: "row",
@@ -118,7 +117,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
     marginBottom: 8,
-    textAlign: "right",
+    textAlign: "left",
   },
   cardBottom: {
     flexDirection: "row",
@@ -156,7 +155,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 50,
   },
   noResults: {
     marginTop: 10,

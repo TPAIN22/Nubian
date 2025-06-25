@@ -14,12 +14,17 @@
       "android": {
         "buildType": "apk"
       },
-      "channel": "preview"
-     
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubnViaWFuLXNkLnN0b3JlJA"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubnViaWFuLXNkLnN0b3JlJA"
+      }
     }
   },
   "submit": {

@@ -15,12 +15,10 @@ import {
     return (
       <SafeAreaProvider>
         <SafeAreaView>
-          <StatusBar style="dark" backgroundColor="#fff" />
           <View
             style={{
               backgroundColor: "#fff",
               alignItems: "center",
-              paddingHorizontal: 20,
               height: "100%",
               zIndex: 0,
               justifyContent: "space-between",

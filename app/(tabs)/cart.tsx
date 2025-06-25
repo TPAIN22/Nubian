@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useRef, useEffect } from "react";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuth } from "@clerk/clerk-expo";
 import CartItem from "../components/cartItem";
@@ -20,13 +20,16 @@ import {
 } from "@gorhom/bottom-sheet";
 import CheckOutModal from "../components/checkOutModal";
 import { useRouter } from "expo-router";
+import i18n from "@/utils/i18n";
 
-export default function cart() {
+export default function CartScreen() {
   const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart } =
     useCartStore();
   const { getToken } = useAuth();
   const router = useRouter();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+
+  // Debug
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -84,13 +87,13 @@ export default function cart() {
   };
 
   // Move early returns after all hooks
-  const isCartEmpty = !cart?.products || cart.products.length === 0;
+  const isCartEmpty = !cart?.products || !Array.isArray(cart.products) || cart.products.length === 0;
 
   if (isLoading) {
     return (
       <View style={styles.centeredContainer}>
         <ActivityIndicator size="large" color="#30a1a7" />
-        <Text style={styles.loadingText}>جاري تحميل السلة...</Text>
+        <Text style={styles.loadingText}>{i18n.t('loadingCart')}</Text>
       </View>
     );
   }
@@ -103,9 +106,9 @@ export default function cart() {
           <Text style={styles.emptyIcon}>🛒</Text>
         </View>
 
-        <Text style={styles.emptyTitle}>السلة فارغة</Text>
+        <Text style={styles.emptyTitle}>{i18n.t('cartEmpty')}</Text>
         <Text style={styles.emptySubtitle}>
-          لم تقم بإضافة أي منتجات إلى السلة بعد
+          {i18n.t('cartEmptySubtitle')}
         </Text>
 
         <TouchableOpacity
@@ -113,7 +116,7 @@ export default function cart() {
           onPress={handleContinueShopping}
           activeOpacity={0.8}
         >
-          <Text style={styles.continueShoppingText}>ابدأ التسوق</Text>
+          <Text style={styles.continueShoppingText}>{i18n.t('startShopping')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -126,26 +129,27 @@ export default function cart() {
         <View style={styles.cartContent}>
           {/* عنوان السلة */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>سلة التسوق</Text>
+            <Text style={styles.headerTitle}>{i18n.t('cartTitle')}</Text>
             <Text style={styles.itemCount}>
-              {cart.products.length}{" "}
-              {cart.products.length === 1 ? "منتج" : "منتجات"}
+              {cart.products.length} {cart.products.length === 1 ? i18n.t('product') : i18n.t('products')}
             </Text>
           </View>
 
           {/* قائمة المنتجات */}
           <FlatList
-            data={cart.products}
+            data={Array.isArray(cart.products) ? cart.products : []}
             renderItem={({ item }) => (
-              <CartItem
-                isUpdating={isUpdating}
-                item={item}
-                deleteItem={deleteItem}
-                increment={increment}
-                decrement={decrement}
-              />
+              item && item.product && item.product._id ? (
+                <CartItem
+                  isUpdating={isUpdating}
+                  item={item}
+                  deleteItem={deleteItem}
+                  increment={increment}
+                  decrement={decrement}
+                />
+              ) : null
             )}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item, idx) => (item && item.product && item.product._id) ? item.product._id : String(idx)}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContainer}
           />
@@ -188,7 +192,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F8F8FF",
   },
   loadingText: {
-    marginTop: 16,
     fontSize: 16,
     color: "#666",
     textAlign: "center",
@@ -237,14 +240,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: "#30a1a7",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    elevation: 2,
   },
   continueShoppingText: {
     color: "#ffffff",
@@ -254,7 +250,6 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    marginTop: 20,
     flex: 1,
     backgroundColor: "#F8F8F8FF",
   },

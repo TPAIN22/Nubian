@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import i18n from "@/utils/i18n";
 
 const { width, height } = Dimensions.get('window');
 
 export default function NoNetworkScreen({ onRetry }: { onRetry: () => void }) {
   return (
     <>
-      <StatusBar style="light" />
       <View style={styles.container}>
         <View style={styles.content}>
           <View style={styles.iconContainer}>
@@ -19,13 +19,11 @@ export default function NoNetworkScreen({ onRetry }: { onRetry: () => void }) {
             </View>
           </View>
 
-          <Text style={styles.title}>لا يوجد اتصال بالإنترنت</Text>
-          <Text style={styles.message}>
-            تأكد من اتصالك بشبكة Wi-Fi أو تفعيل البيانات الخلوية، ثم حاول مرة أخرى
-          </Text>
+          <Text style={styles.title}>{i18n.t('noInternetTitle')}</Text>
+          <Text style={styles.message}>{i18n.t('noInternetMessage')}</Text>
 
           <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-            <Text style={styles.retryButtonText}>إعادة المحاولة</Text>
+            <Text style={styles.retryButtonText}>{i18n.t('retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>

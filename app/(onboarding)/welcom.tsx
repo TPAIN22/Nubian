@@ -12,6 +12,7 @@ import { Image, ImageBackground } from "expo-image";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Link, useRouter } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
+import i18n from '../../utils/i18n';
 
 export default function welcom() {
 
@@ -19,37 +20,33 @@ export default function welcom() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-        <StatusBar style="dark" backgroundColor="#fff" />
 
         {/* المحتوى الرئيسي */}
         <View
           style={{
             flex: 1,
             alignItems: "center",
-            paddingHorizontal: 20,
             justifyContent: "space-between",
           }}
         >
           <View style={{ width: "100%", alignItems: "center" }}>
             <Text className="text-5xl text-[#e98c22] my-5 mt-5 font-extrabold text-center">
-              نـــوبيــــان{" "}
+              {i18n.t('brandName')}
             </Text>
             <Image
               source={require("../../assets/images/Online-shopping.gif")}
               style={{ width: 350, height: 300 }}
             />
             <Text className="text-2xl text-[#e98c22] my-5 mt-5 font-extrabold">
-              جبنا ليك السوق كامل بين ايديك
+              {i18n.t('welcomeSlogan')}
             </Text>
             <Text className="text-xl text-[#30a1a7] font-medium text-right">
-              منتظر شنو!!🤔 
-              {"\n"}
-              اختار المدينة المتواجد فيها واستمتع بالعروض والتخفيضات
+              {i18n.t('welcomeSubText')}
             </Text>
           </View>
         </View>
 
-        <View style={{ padding: 20 }}>
+        <View>
           <TouchableOpacity
             onPress={() => {
         
@@ -59,12 +56,11 @@ export default function welcom() {
             style={{
               backgroundColor: "#e98c22",
               padding: 15,
-              marginBottom: 60,
               borderRadius: 10,
             }}
           >
             <Text className="text-xl text-[#fff] font-bold text-center">
-              إبــدا التسـوق
+              {i18n.t('startShopping')}
             </Text>
           </TouchableOpacity>
         </View>

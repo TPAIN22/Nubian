@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
+  I18nManager,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import useItemStore from "@/store/useItemStore";
@@ -16,7 +17,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useCartStore } from "@/store/useCartStore";
 import HeaderComponent from "../components/costomHeader";
-
+import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
+import i18n from "@/utils/i18n";
 
 const CONSTANTS = {
   iconSize: 24,
@@ -33,13 +35,6 @@ const CONSTANTS = {
     notification: "#EF4444",
   },
 };
-// Enable layout animations on Android
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 interface TabIconProps {
   source: any;
@@ -66,17 +61,17 @@ const TabIcon: React.FC<TabIconProps> = ({ source, focused, label }) => (
   </View>
 );
 
-const CustomTabButton: React.FC<any> = (props) => (
-  <Pressable
-    {...props}
-    android_ripple={{ color: "transparent" }}
-    style={styles.tabButton}
-  >
-    {props.children}
-  </Pressable>
-);
-
-
+function CustomTabButton(props: BottomTabBarButtonProps) {
+  return (
+    <Pressable
+      {...props}
+      android_ripple={{ color: "transparent" }}
+      style={styles.tabButton}
+    >
+      {props.children}
+    </Pressable>
+  );
+}
 
 export default function TabsLayout() {
   const { isTabBarVisible } = useItemStore();
@@ -95,92 +90,87 @@ export default function TabsLayout() {
   }, [isTabBarVisible]);
 
   return (
-    <>
-      <StatusBar style="dark" backgroundColor={CONSTANTS.colors.background} />
-      <Tabs
-        screenOptions={{
+    <Tabs
+      screenOptions={{
+        tabBarHideOnKeyboard: true,
+        tabBarShowLabel: false,
+        tabBarStyle: styles.tabBar,
+        tabBarButton: CustomTabButton,
+        tabBarActiveTintColor: CONSTANTS.colors.focused,
+        tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
+        headerShadowVisible: false,
+        headerStyle: styles.header,
+      }}
+      initialRouteName="index"
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
           tabBarHideOnKeyboard: true,
-          tabBarShowLabel: false,
-          tabBarStyle: styles.tabBar,
-          tabBarButton: CustomTabButton,
-          tabBarActiveTintColor: CONSTANTS.colors.focused,
-          tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
           headerShadowVisible: false,
-          headerStyle: styles.header,
+          header: () => <HeaderComponent />,
+          headerTitleContainerStyle: styles.headerTitleContainer,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              source={require("../../assets/images/house-solid.svg")}
+              focused={focused}
+              label={i18n.t("home")}
+            />
+          ),
         }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            tabBarHideOnKeyboard: true,
-            header: HeaderComponent,
-            headerTitleContainerStyle: styles.headerTitleContainer,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                source={require("../../assets/images/house-solid.svg")}
-                focused={focused}
-                label="الرئيسية"
-              />
-            ),
-          }}
-        />
+      />
+    
+      <Tabs.Screen
+        name="cart"
+        options={{
+          headerShown: false,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              source={require("../../assets/images/cart-shopping-solid.svg")}
+              focused={focused}
+              label={i18n.t("cart")}
+            />
+          ),
+        }}
+      />
 
-        <Tabs.Screen
-          name="cart"
-          options={{
-            headerShown: false,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                source={require("../../assets/images/cart-shopping-solid.svg")}
-                focused={focused}
-                label="السلة"
-              />
-            ),
-          }}
-        />
-
-        <Tabs.Screen
-          name="explor"
-          options={{
-            headerShown: false,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                source={require("../../assets/images/search-solid.svg")}
-                focused={focused}
-                label="استكشاف"
-              />
-            ),
-          }}
-        />
-
-        <Tabs.Screen
-          name="profile"
-          options={{
-            headerShown: true,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                source={require("../../assets/images/user-solid.svg")}
-                focused={focused}
-                label="الملف الشخصي"
-              />
-            ),
-          }}
-        />
-      </Tabs>
-    </>
+      <Tabs.Screen
+        name="explor"
+        options={{
+          headerShown: false,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              source={require("../../assets/images/search-solid.svg")}
+              focused={focused}
+              label={i18n.t("explore")}
+            />
+          ),
+        }}
+      />
+       <Tabs.Screen
+        name="profile"
+        options={{
+          headerShown: true,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              source={require("../../assets/images/user-solid.svg")}
+              focused={focused}
+              label={i18n.t("profile")}
+            />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
-    bottom: Platform.OS === "ios" ? 20 : 10,
-    left: CONSTANTS.tabBarMargin,
-    right: CONSTANTS.tabBarMargin,
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: CONSTANTS.colors.background,
-    borderRadius: CONSTANTS.tabBarRadius,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
     shadowColor: CONSTANTS.colors.shadow,
     shadowOffset: {
       width: 0,
@@ -189,15 +179,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
-    borderWidth: 1,
-    borderColor: CONSTANTS.colors.border,
+    borderTopWidth: 1,
+    borderTopColor: CONSTANTS.colors.border,
   },
 
   tabButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
     borderRadius: 16,
   },
 
@@ -207,7 +196,6 @@ const styles = StyleSheet.create({
   },
 
   iconWrapper: {
-    padding: 12,
     borderRadius: 20,
   },
 
@@ -248,16 +236,14 @@ const styles = StyleSheet.create({
 
   searchInput: {
     flex: 1,
-    marginHorizontal: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
     borderWidth: 1,
     borderColor: CONSTANTS.colors.border,
     borderRadius: 20,
     backgroundColor: "#F9FAFB",
     fontSize: 14,
-    textAlign: "right",
+    textAlign: "left",
     color: "#111827",
+    padding: 10,
   },
 
   headerIcons: {
@@ -271,6 +257,16 @@ const styles = StyleSheet.create({
   },
 
   notificationBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    backgroundColor: CONSTANTS.colors.notification,
+    borderRadius: 4,
+  },
+
+  cartBadge: {
     position: "absolute",
     top: -2,
     right: -2,

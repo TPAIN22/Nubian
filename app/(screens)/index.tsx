@@ -21,10 +21,11 @@ import {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import BottomSheet from "../components/BottomSheet";
+import i18n from "@/utils/i18n";
 
 export default function Index() {
   const {
-    getProducts,
+    getAllProducts,
     isProductsLoading,
     products = [], 
     hasMore,
@@ -48,14 +49,14 @@ export default function Index() {
 
   useEffect(() => {
     if (products.length === 0)
-    getProducts();
+    getAllProducts();
   }, []);
 
   const onRefresh = useCallback(async () => {
-    await getProducts();
+    await getAllProducts();
     setIsTabBarVisible(true);
     handleSheetChanges(-1);
-  }, [getProducts, setIsTabBarVisible, handleSheetChanges]);
+  }, [getAllProducts, setIsTabBarVisible, handleSheetChanges]);
 
   if (!isConnected && !isNetworkChecking) {
     return <NoNetworkScreen onRetry={retryNetworkCheck} />;
@@ -63,9 +64,9 @@ export default function Index() {
 
   const onEndReachedHandler = useCallback(() => {
     if (!isProductsLoading && hasMore) {
-      getProducts();
+      getAllProducts();
     }
-  }, [getProducts, hasMore, isProductsLoading]);
+  }, [getAllProducts, hasMore, isProductsLoading]);
 
   return (
     <GestureHandlerRootView style={styles.loadingContainer}>
@@ -113,7 +114,7 @@ export default function Index() {
               ListFooterComponent={
                 !hasMore ? (
                   <Text style={{ textAlign: "center", marginVertical: 10 }}>
-                    No more products
+                    {i18n.t('noMoreProducts')}
                   </Text>
                 ) : isProductsLoading ? (
                   <ActivityIndicator size="large" color="#e98c22" />
@@ -124,7 +125,7 @@ export default function Index() {
               columnWrapperStyle={{
                 justifyContent: "space-around",
                 alignItems: "center",
-                gap: 10,
+                gap: 15,
               }}
             />
           )}
@@ -153,7 +154,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    padding: 10,
     alignItems: "center",
     paddingBottom: 40,
   },

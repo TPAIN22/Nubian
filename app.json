@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nubian",
     "slug": "Nubian",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/screen.png",
     "scheme": "sdnubian",
@@ -62,7 +62,7 @@
           "imageWidth": 200,
           "resizeMode": "cover",
           "backgroundColor": "#ffffff",
-          "duration": 0 
+          "duration": 0
         }
       ],
       "expo-secure-store",
@@ -74,7 +74,10 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-notifications",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

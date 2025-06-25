@@ -2,9 +2,11 @@ import { create } from "zustand";
 import axiosInstance from "../utils/axiosInstans";
 
 const useItemStore = create((set, get) => ({
+  // State
   products: [],
   product: null,
   isProductsLoading: false,
+  isCategoriesLoading: false,
   error: null,
   page: 1,
   hasMore: true,
@@ -13,14 +15,26 @@ const useItemStore = create((set, get) => ({
   signInModelVisible: false,
   selectedCategory: null,
 
-  setSelectedCategory: (categoryId) => set({ selectedCategory: categoryId }),
+  // Actions
+  setSelectedCategory: (categoryId) => 
+    set({ selectedCategory: categoryId }),
 
-  setSignInModelVisible: (visible) => set({ signInModelVisible: visible }),
-  setIsTabBarVisible: (visible) => set({ isTabBarVisible: visible }),
-  setProduct: (product) => set({ product }),
-  setError: (error) => set({ error }),
+  setSignInModelVisible: (visible) => 
+    set({ signInModelVisible: visible }),
 
-  // Original getProducts function for category-specific products
+  setIsTabBarVisible: (visible) => 
+    set({ isTabBarVisible: visible }),
+
+  setProduct: (product) => 
+    set({ product }),
+
+  setError: (error) => 
+    set({ error }),
+
+  clearError: () => 
+    set({ error: null }),
+
+  // Get products with pagination and category filter
   getProducts: async () => {
     const { page, hasMore, isProductsLoading, selectedCategory } = get();
 
@@ -28,72 +42,236 @@ const useItemStore = create((set, get) => ({
       set({ error: "يرجى اختيار قسم أولاً." });
       return;
     }
+
     if (!hasMore || isProductsLoading) return;
 
     set({ isProductsLoading: true, error: null });
 
     try {
       const response = await axiosInstance.get("/products", {
-        params: { page, limit: 6, category: selectedCategory },
+        params: { 
+          page, 
+          limit: 6, 
+          category: selectedCategory 
+        },
       });
 
-      const newProducts = Array.isArray(response.data.products) ? response.data.products : [];
+      const newProducts = Array.isArray(response.data.products) 
+        ? response.data.products 
+        : [];
       const totalPages = Number(response.data.totalPages) || 1;
+      const currentPage = Number(response.data.currentPage) || page;
 
       set((state) => {
-        const nextHasMore = state.page + 1 <= totalPages;
-        const products = page === 1 ? newProducts : [...state.products, ...newProducts];
+        const nextPage = currentPage + 1;
+        const nextHasMore = nextPage <= totalPages;
+        const updatedProducts = page === 1 
+          ? newProducts 
+          : [...state.products, ...newProducts];
+
         return {
-          products,
-          page: state.page + 1,
+          products: updatedProducts,
+          page: nextPage,
           hasMore: nextHasMore,
           isProductsLoading: false,
           error: null,
         };
       });
     } catch (error) {
-      set({ isProductsLoading: false, error: error?.response?.data?.message || error?.message || "تعذر تحميل المنتجات" });
+      const errorMessage = error?.response?.data?.message 
+        || error?.message 
+        || "تعذر تحميل المنتجات";
+      
+      set({ 
+        isProductsLoading: false, 
+        error: errorMessage 
+      });
     }
   },
 
-  // New function to get all products without category filter (for home screen)
-  getAllProducts: async () => {
+  // Get all products without pagination
+  getAllProducts: async (limit = 10) => {
     set({ isProductsLoading: true, error: null });
+    
     try {
       const response = await axiosInstance.get("/products", {
-        params: { page: 1, limit: 20 },
+        params: { page: 1, limit },
       });
-      const products = Array.isArray(response.data.products) ? response.data.products : (Array.isArray(response.data) ? response.data : []);
+
+      const products = Array.isArray(response.data.products) 
+        ? response.data.products 
+        : Array.isArray(response.data) 
+        ? response.data 
+        : [];
+
       set({
         products,
         isProductsLoading: false,
         error: null,
+        // Reset pagination for getAllProducts
+        page: 1,
+        hasMore: false,
+        selectedCategory: null,
       });
     } catch (error) {
+      const errorMessage = error?.response?.data?.message 
+        || error?.message 
+        || "تعذر تحميل المنتجات";
+      
       set({
         isProductsLoading: false,
-        error: error?.response?.data?.message || error?.message || "تعذر تحميل المنتجات"
+        error: errorMessage,
       });
     }
   },
 
+  // Get single product by ID
+  getProductById: async (productId) => {
+    set({ isProductsLoading: true, error: null });
+    
+    try {
+      const response = await axiosInstance.get(`/products/${productId}`);
+      set({
+        product: response.data,
+        isProductsLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message 
+        || error?.message 
+        || "تعذر تحميل المنتج";
+      
+      set({
+        isProductsLoading: false,
+        error: errorMessage,
+        product: null,
+      });
+    }
+  },
+
+  // Select category and load its products
   selectCategoryAndLoadProducts: async (categoryId) => {
-    set({ selectedCategory: categoryId, page: 1, products: [], hasMore: true, error: null });
+    set({ 
+      selectedCategory: categoryId, 
+      page: 1, 
+      products: [], 
+      hasMore: true, 
+      error: null 
+    });
+    
     await get().getProducts();
   },
 
-  getCategories: async () => {
-    set({ isProductsLoading: true, error: null });
-    try {
-      const response = await axiosInstance.get("/categories");
-      set({ categories: response.data, isProductsLoading: false });
-    } catch (error) {
-      set({ error: error?.message || "Failed to load categories", isProductsLoading: false });
+  // Load more products for current category
+  loadMoreProducts: async () => {
+    const { hasMore, isProductsLoading } = get();
+    
+    if (hasMore && !isProductsLoading) {
+      await get().getProducts();
     }
   },
 
-  // Reset products state when needed
-  resetProducts: () => set({ products: [], page: 1, hasMore: true, selectedCategory: null }),
+  // Get categories
+  getCategories: async () => {
+    set({ isCategoriesLoading: true, error: null });
+    
+    try {
+      const response = await axiosInstance.get("/categories");
+      const categories = Array.isArray(response.data) 
+        ? response.data 
+        : [];
+        
+      set({ 
+        categories, 
+        isCategoriesLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message 
+        || error?.message 
+        || "فشل في تحميل الأقسام";
+      
+      set({ 
+        error: errorMessage, 
+        isCategoriesLoading: false,
+        categories: [],
+      });
+    }
+  },
+
+  // Search products
+  searchProducts: async (searchTerm, limit = 10) => {
+    if (!searchTerm || searchTerm.trim() === '') {
+      set({ error: "يرجى إدخال كلمة للبحث" });
+      return;
+    }
+
+    set({ isProductsLoading: true, error: null });
+    
+    try {
+      const response = await axiosInstance.get("/products/search", {
+        params: { 
+          q: searchTerm.trim(), 
+          limit 
+        },
+      });
+
+      const products = Array.isArray(response.data.products) 
+        ? response.data.products 
+        : Array.isArray(response.data) 
+        ? response.data 
+        : [];
+
+      set({
+        products,
+        isProductsLoading: false,
+        error: null,
+        // Reset pagination for search results
+        page: 1,
+        hasMore: false,
+        selectedCategory: null,
+      });
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message 
+        || error?.message 
+        || "تعذر البحث عن المنتجات";
+      
+      set({
+        isProductsLoading: false,
+        error: errorMessage,
+      });
+    }
+  },
+
+  // Reset all products state
+  resetProducts: () => 
+    set({ 
+      products: [], 
+      page: 1, 
+      hasMore: true, 
+      selectedCategory: null,
+      error: null,
+    }),
+
+  // Reset single product state
+  resetProduct: () => 
+    set({ product: null }),
+
+  // Reset entire store
+  resetStore: () => 
+    set({
+      products: [],
+      product: null,
+      isProductsLoading: false,
+      isCategoriesLoading: false,
+      error: null,
+      page: 1,
+      hasMore: true,
+      isTabBarVisible: true,
+      categories: [],
+      signInModelVisible: false,
+      selectedCategory: null,
+    }),
 }));
 
 export default useItemStore;

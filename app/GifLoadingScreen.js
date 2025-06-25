@@ -20,7 +20,6 @@ export default function GifLoadingScreen({ onAnimationFinish, onMount }) {
 
   return (
     <>
-      <StatusBar style="dark" />
       <View style={styles.container}>
         <Image
           source={require('../assets/images/logo.gif')}
@@ -43,5 +42,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   gif: {
+    width: width,
+    height: height,
   },
 });

@@ -1,145 +1,139 @@
-import { useCartStore } from "@/store/useCartStore";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Dimensions,
+  I18nManager,
+} from "react-native";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
-import { Pressable, TextInput } from "react-native";
-import { StyleSheet, View } from "react-native";
-const CONSTANTS = {
-  iconSize: 24,
-  headerIconSize: 20,
-  logoSize: 36,
-  tabBarRadius: 20,
-  tabBarMargin: 12,
-  colors: {
-    focused: "#e98c22",
-    unfocused: "#6B7280",
-    background: "#FFFFFF",
-    shadow: "rgba(0, 0, 0, 0.1)",
-    border: "#E5E7EB",
-    notification: "#EF4444",
-    darkGray: "#374151",
-    lightGrayBackground: "#F9FAFB",
-    textDark: "#111827",
-  },
-};
-const HeaderComponent: React.FC = () => {
+import { Image } from "expo-image";
+import React from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import i18n from "@/utils/i18n";
+import { useCartStore } from "@/store/useCartStore";
+
+const { width } = Dimensions.get('window');
+
+export default function HeaderComponent() {
   const router = useRouter();
   const { cart } = useCartStore();
 
-  // استخدام useMemo للتوفير في الريندَر
-  const hasProductsInCart = useMemo(() => {
-    return cart?.products && cart.products.length > 0;
-  }, [cart]);
+  const cartItemCount = cart?.products?.reduce((total: number, item: any) => {
+    return total + (item.quantity || 1);
+  }, 0) || 0;
 
   return (
-    <View style={[styles.headerContainer, styles.header]}>
-      <Image
-        source={require("../../assets/images/icon.png")} 
-        style={styles.headerLogo} 
-        contentFit="contain" 
-      />
+    <View style={styles.header}>
+      {/* Logo */}
+      <View style={styles.logoSection}>
+        <Image
+          source={require("../../assets/images/nubianLogo.png")}
+          style={styles.logo}
+          contentFit="contain"
+        />
+      </View>
 
-      <TextInput
-        placeholder="ابحث عن منتج"
-        style={styles.searchInput}
-        placeholderTextColor={CONSTANTS.colors.unfocused}
-      />
+      {/* Search Bar */}
+      <TouchableOpacity
+        style={styles.searchBar}
+        onPress={() => router.push("/(tabs)/explor")}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="search" size={20} color="#666" />
+        <Text style={styles.searchPlaceholder}>
+          {i18n.t('searchPlaceholder')}
+        </Text>
+      </TouchableOpacity>
 
-      <View style={styles.headerIcons}>
-        <Pressable
-          style={styles.iconWithBadge}
-          onPress={() => router.push("/notification")} 
+      {/* User Actions */}
+      <View style={styles.userActions}>
+        {/* Notifications */}
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => router.push("/(screens)/notification")}
         >
-          <Ionicons
-            name="notifications-outline"
-            size={CONSTANTS.headerIconSize + 4}
-            color={CONSTANTS.colors.darkGray}
-          />
-          <View style={styles.notificationBadge} />
-        </Pressable>
+          <Ionicons name="notifications-outline" size={24} color="#666" />
+        </TouchableOpacity>
 
-        {/* أيقونة سلة التسوق */}
-        <Pressable onPress={() => router.push("/cart")}>
-          <Ionicons
-            name="cart-outline"
-            size={CONSTANTS.headerIconSize + 4}
-            color={CONSTANTS.colors.darkGray}
-          />
-          {/* عرض الشارة فقط إذا كان هناك المنتجات في السلة */}
-          {hasProductsInCart && <View style={styles.notificationBadge} />}
-        </Pressable>
+        {/* Cart with Badge */}
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => router.push("/(tabs)/cart")}
+        >
+          <Ionicons name="cart-outline" size={24} color="#666" />
+          {cartItemCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {cartItemCount > 99 ? '99+' : cartItemCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
-  )
-};
+  );
+}
 
-export default HeaderComponent;
 const styles = StyleSheet.create({
   header: {
-    marginTop: 24,
-    backgroundColor: CONSTANTS.colors.background,
-    elevation: 0, // إزالة الظل في Android
-    shadowOpacity: 0, // إزالة الظل في iOS
-    borderBottomWidth: 1,
-    borderBottomColor: CONSTANTS.colors.border,
-    paddingHorizontal: 16, // إضافة مسافة أفقية للرأس
-    paddingVertical: 10, // إضافة مسافة رأسية للرأس
-  },
-
-  // حاوية الرأس التي تحتوي على الشعار، شريط البحث والأيقونات
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    height: 80,
-  },
-
-  // أنماط شعار الرأس
-  headerLogo: {
-    width: CONSTANTS.logoSize,
-    height: CONSTANTS.logoSize,
-    borderRadius: 8,
-  },
-
-  // أنماط شريط البحث
-  searchInput: {
-    flex: 1, // السماح لشريط البحث بالتوسع ليملأ المساحة المتاحة
-    marginHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: CONSTANTS.colors.border,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  logoSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 32,
+    height: 32,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
     borderRadius: 20,
-    backgroundColor: CONSTANTS.colors.lightGrayBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 12,
+  },
+  searchPlaceholder: {
+    marginLeft: 8,
+    color: '#666',
     fontSize: 14,
-    textAlign: "right", // محاذاة النص لليمين للغة العربية
-    color: CONSTANTS.colors.textDark,
   },
-
-  // حاوية أيقونات الرأس (الإشعارات وسلة التسوق)
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16, // مسافة بين الأيقونات
+  userActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-
-  // نمط لأيقونة تحتوي على شارة
-  iconWithBadge: {
-    position: "relative",
+  iconButton: {
+    position: 'relative',
+    padding: 4,
   },
-
-  // نمط الشارة (النقطة الحمراء للإشعارات أو عدد المنتجات في السلة)
-  notificationBadge: {
-    position: "absolute",
+  badge: {
+    position: 'absolute',
     top: -2,
     right: -2,
-    width: 8,
-    height: 8,
-    backgroundColor: CONSTANTS.colors.notification,
-    borderRadius: 4,
-    borderWidth: 1.5, // إضافة حد للشارة لجعلها أكثر وضوحًا
-    borderColor: CONSTANTS.colors.background,
+    backgroundColor: '#e98c22',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

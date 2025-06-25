@@ -14,7 +14,9 @@ import GifLoadingScreen from "./GifLoadingScreen";
 import NoNetworkScreen from "./NoNetworkScreen";
 import { Alert } from 'react-native';
 import { KeyboardProvider } from "react-native-keyboard-controller";
-
+import { I18nManager } from 'react-native';
+import i18n from '@/utils/i18n';
+import { setInitialLanguage } from '@/utils/i18n';
 
 import * as Updates from 'expo-updates';
 
@@ -25,6 +27,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true, // Add this property
+    shouldShowList: true, // Add this property
   }),
 });
 
@@ -50,18 +54,18 @@ function AppLoaderWithClerk() {
             await Updates.fetchUpdateAsync();
 
             Alert.alert(
-              "تحديث متاح!",
-              "يوجد تحديث جديد للتطبيق. هل تريد إعادة تشغيل التطبيق لتطبيق التحديث؟",
+              i18n.t('updateAvailableTitle'),
+              i18n.t('updateAvailableMessage'),
               [
                 {
-                  text: "لا",
+                  text: i18n.t('no'),
                   style: "cancel",
                   onPress: () => {
                     setIsUpdateChecking(false);
                   }
                 },
                 {
-                  text: "نعم",
+                  text: i18n.t('yes'),
                   onPress: () => {
                     Updates.reloadAsync();
                   }
@@ -73,7 +77,7 @@ function AppLoaderWithClerk() {
             setIsUpdateChecking(false);
           }
         } catch (error) {
-          Toast.show({ type: 'info', text1: 'خطأ في التحديث', text2: 'لم نتمكن من التحقق من التحديثات حالياَ.', visibilityTime: 3000 });
+          Toast.show({ type: 'info', text1: i18n.t('updateErrorTitle'), text2: i18n.t('updateErrorMessage'), visibilityTime: 3000 });
           setIsUpdateChecking(false);
         }
       } else if (isConnected === false) {
@@ -99,22 +103,17 @@ function AppLoaderWithClerk() {
 
   useEffect(() => {
     async function hideSplash() {
-      // إذا بدأ عرض GIF، أخفِ شاشة البداية
       if (hasGifStartedDisplaying) {
         await SplashScreen.hideAsync();
       }
-      // إذا كان كل شيء جاهزاً (متصل، Clerk محمل، GIF انتهى، لا يوجد تحديث)
       else if (isConnected === true && isLoaded && gifAnimationFinished && !isUpdateChecking) {
         await SplashScreen.hideAsync();
       }
-      // إذا لم يكن هناك اتصال، أخفِ شاشة البداية بسرعة بعد التأكد من عدم وجود GIF
       else if (isConnected === false) {
-        await new Promise(resolve => setTimeout(resolve, 50)); // تأخير بسيط للتأكد من الرندر
+        await new Promise(resolve => setTimeout(resolve, 50)); 
         await SplashScreen.hideAsync();
       }
     }
-    // يجب أن تكون هذه الدالة هي الوحيدة المسؤولة عن إخفاء شاشة البداية
-    // و تتتبع كل المتغيرات لضمان التوقيت الصحيح.
     hideSplash();
   }, [isConnected, isLoaded, gifAnimationFinished, isUpdateChecking, hasGifStartedDisplaying]);
 
@@ -124,6 +123,9 @@ function AppLoaderWithClerk() {
     setIsUpdateChecking(true);
   }, [retryNetworkCheck]);
 
+  useEffect(() => {
+    setInitialLanguage();
+  }, []);
 
   if (isNetworkChecking) {
     return <GluestackUIProvider mode="light"><GifLoadingScreen onAnimationFinish={() => {}} onMount={onGifComponentMounted} /></GluestackUIProvider>;
@@ -140,8 +142,7 @@ function AppLoaderWithClerk() {
   return (
     <GluestackUIProvider mode="light"><NotificationProvider>
         <>
-          <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }} initialRouteName="(onboarding)">
+          <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
             <Stack.Screen name="(tabs)"/>
             <Stack.Screen name="(auth)"/>
             <Stack.Screen name="(onboarding)"/>

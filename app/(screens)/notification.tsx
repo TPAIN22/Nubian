@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl, SafeAreaView, } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl, SafeAreaView } from "react-native";
 import { useUser } from "@clerk/clerk-expo";
 import * as Notifications from "expo-notifications";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 interface NotificationItem {
@@ -17,6 +17,7 @@ const NotificationsScreen = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
 
   const fetchNotifications = async () => {
   try {
@@ -56,7 +57,6 @@ const NotificationsScreen = () => {
     setRefreshing(false);
   }
 };
-
 
   useEffect(() => {
     fetchNotifications();

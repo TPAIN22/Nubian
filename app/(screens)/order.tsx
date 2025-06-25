@@ -1,36 +1,32 @@
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function Order() {
   const { getUserOrders, orders, error, isLoading } = useOrderStore();
   const { getToken } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<{ [key: string]: boolean }>({});
+  const router = useRouter();
 
   const fetchOrders = async () => {
     try {
       const token = await getToken();
       await getUserOrders(token);
     } catch (err) {
-      console.error("Error fetching orders:", err);
       Alert.alert("خطأ", "فشل في تحميل الطلبات");
     }
   };
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchOrders();
     setRefreshing(false);
   };
-
 
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrders(prev => ({
@@ -271,7 +267,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
     padding: 16,
-    marginTop: 30,
   },
   centerContainer: {
     flex: 1,

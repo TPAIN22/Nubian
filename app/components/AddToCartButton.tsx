@@ -13,6 +13,7 @@ import { useUser, useAuth } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
 import { router } from "expo-router";
 import useItemStore from "@/store/useItemStore";
+import i18n from "@/utils/i18n";
 
 type Product = {
   _id: string;
@@ -32,7 +33,7 @@ type Props = {
 
 const AddToCartButton = ({
   product,
-  title = "Add to cart",
+  title = i18n.t('addToCart'),
   buttonStyle,
   textStyle,
   disabled,
@@ -52,7 +53,7 @@ const AddToCartButton = ({
     if (!product?.size && product?.category?.includes("ملابس")) {
       Toast.show({
         type: 'info',
-        text1: 'يرجى اختيار المقاس أولاً',
+        text1: i18n.t('selectSizeFirst'),
       });
       return;
     }
@@ -61,7 +62,7 @@ const AddToCartButton = ({
       if (!product || !product._id) {
         Toast.show({
           type: "error",
-          text1: "المنتج غير متوفر أو البيانات ناقصة",
+          text1: i18n.t('productUnavailable'),
         });
         return;
       }
@@ -73,7 +74,7 @@ const AddToCartButton = ({
         setSignInModelVisible(true);
         Toast.show({
           type: "error",
-          text1: "يرجى تسجيل الدخول أولاً",
+          text1: i18n.t('pleaseSignInFirst'),
         });
         setIsLoading(false);
         return;
@@ -83,7 +84,7 @@ const AddToCartButton = ({
       if (!token) {
         Toast.show({
           type: "error",
-          text1: "حدث خطأ في المصادقة",
+          text1: i18n.t('authError'),
         });
         setIsLoading(false);
         return;
@@ -92,12 +93,12 @@ const AddToCartButton = ({
       await addToCart(token , product._id , 1 , selectedSize || '');
       Toast.show({
         type: "success",
-        text1: "تمت إضافة المنتج إلى السلة",
+        text1: i18n.t('addedToCart'),
       });
     } catch (err) {
       Toast.show({
         type: "error",
-        text1: "حدث خطأ أثناء إضافة المنتج للسلة",
+        text1: i18n.t('addToCartError'),
       });
     } finally {
       setIsLoading(false);

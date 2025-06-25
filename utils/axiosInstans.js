@@ -16,7 +16,6 @@ axiosInstance.interceptors.response.use(
     response => response,
     error => {
         if (process.env.NODE_ENV !== 'production') {
-            console.error('Axios error:', error);
         }
         return Promise.reject(error);
     }

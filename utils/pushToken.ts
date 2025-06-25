@@ -1,11 +1,12 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import i18n from "@/utils/i18n";
 
 export async function registerForPushNotificationsAsync() {
   try {
     if (!Device.isDevice) {
-      alert('الإشعارات تعمل فقط على الأجهزة الحقيقية.');
+      alert(i18n.t('pushNotificationsDeviceOnly'));
       return null;
     }
 
@@ -18,7 +19,7 @@ export async function registerForPushNotificationsAsync() {
     }
 
     if (finalStatus !== 'granted') {
-      alert('لم يتم منح صلاحيات الإشعارات.');
+      alert(i18n.t('pushNotificationsPermissionDenied'));
       return null;
     }
 

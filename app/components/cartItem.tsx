@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, I18nManager } from "react-native";
 import React from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
@@ -47,7 +47,7 @@ import { Image } from "expo-image";
             </TouchableOpacity>
           </View>
           <Text style={styles.price}>
-            {(item?.product?.price * item?.quantity || 0).toFixed(2)} ر.س
+            {(item?.product?.price * item?.quantity || 0).toFixed(2)} SDG
           </Text>
         </View>
       </View>

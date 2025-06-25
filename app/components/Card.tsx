@@ -9,8 +9,10 @@ import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Dimensions, Pressable, StyleSheet, View } from "react-native";
+import { Dimensions, Pressable, StyleSheet, View, I18nManager } from "react-native";
 import Swiper from "react-native-swiper";
+import i18n from "@/utils/i18n";
+
 interface item {
   _id: string;
   name: string;
@@ -21,7 +23,7 @@ interface item {
 function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   const { setProduct, setIsTabBarVisible } = useItemStore();
   const screenWidth = Dimensions.get("window").width;
-  const cardWidth = screenWidth / 2 - 10;
+  const cardWidth = screenWidth / 2 - 20;
   const router = useRouter();
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ar-SDG", {
@@ -65,7 +67,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
       <Swiper
         loop={true}
         showsPagination={false}
-        style={{ height: 200, overflow: "hidden" }}
+        style={{ height: 160, overflow: "hidden" }}
       >
         {item.images?.map((uri: string, index: number) => (
           <Pressable key={index} onPress={() => handleClick(item)}>
@@ -74,44 +76,31 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
               source={uri}
               alt="product image"
               style={{
-                height: 200,
+                height: 160,
                 width: cardWidth,
                 borderTopLeftRadius: 8,
                 borderTopRightRadius: 8,
               }}
+              contentFit="cover"
             />
           </Pressable>
         ))}
       </Swiper>
-      <View className="p-4">
+      <View className="px-4">
         <VStack className="">
-          <Heading size="md" className="text-right text-[#969c9c]">
+          <Heading size="sm" className=" text-[#646767]">
             {item.name}
           </Heading>
           {item.discountPrice > 0 && (
-            <Text className="text-right line-through text-[#e98c22]">
+            <Text className=" line-through text-[#e98c22]">
               {item.discountPrice > 0 && formatPrice(item.discountPrice)}
             </Text>
           )}
-          <Text className="text-right text-[#30a1a7] font-bold text-lg">
-            {formatPrice(item.price)} SDG
+          <Text className=" text-[#30a1a7] font-bold text-md">
+            {formatPrice(item.price)} {i18n.t('currencySDG')}
           </Text>
         </VStack>
       </View>
-
-      <Box className="flex-col sm:flex-row">
-        <Button
-          className="px-4 py-2 mr-0 sm:mr-3 sm:mb-0 sm:flex-1 bg-[#30a1a7] text-white"
-          onPress={() => {
-            setProduct(item);
-            handlePresentModalPress();
-          }}
-        >
-          <ButtonText size="sm" className="text-white text-lg">
-            اضافة للسلة
-          </ButtonText>
-        </Button>
-      </Box>
       {discountPercentage > 0 && (
         <View
           style={[
@@ -125,7 +114,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
               : { backgroundColor: "blue" },
           ]}
         >
-          <Text style={styles.discountText}>{discountPercentage}% OFF </Text>
+          <Text style={styles.discountText}>{discountPercentage}% {i18n.t('off')}</Text>
         </View>
       )}
     </Card>
@@ -147,9 +136,9 @@ const styles = StyleSheet.create({
 
   discountText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
-    textAlign: "center",
+    textAlign: "left",
     fontFamily: "System",
   },
 });

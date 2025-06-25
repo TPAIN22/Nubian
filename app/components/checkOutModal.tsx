@@ -7,6 +7,7 @@ import {
   Modal,
   FlatList,
   Alert,
+  I18nManager,
 } from "react-native";
 import React, { useState } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -247,7 +248,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#2c3e50",
     marginBottom: 6,
-    textAlign: "right",
   },
   citySelector: {
     backgroundColor: "#ffffff",
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   citySelectorText: {
     fontSize: 16,
     color: "#2c3e50",
-    textAlign: "right",
+    textAlign: "center",
     flex: 1,
   },
   placeholder: {
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 12,
-    textAlign: "right",
+    textAlign: "left",
     color: "#2c3e50",
     shadowColor: "#000",
     shadowOffset: {
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   cityOptionText: {
     fontSize: 16,
     color: "#2c3e50",
-    textAlign: "right",
+    textAlign: "left",
     flex: 1,
   },
   selectedCityOptionText: {

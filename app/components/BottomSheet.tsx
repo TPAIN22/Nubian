@@ -1,4 +1,4 @@
-import { View, Text, Dimensions, StyleSheet, Pressable } from "react-native";
+import { View, Text, Dimensions, StyleSheet, Pressable, I18nManager } from "react-native";
 import React, { useState, useEffect } from "react"; 
 import { ScrollView } from "react-native-gesture-handler";
 import useItemStore from "@/store/useItemStore";
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 10,
     color: "#333",
-    textAlign: "right",
+    textAlign: "left",
   },
   sectionTitle: {
     fontSize: 16,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 5,
     color: "#555",
-    textAlign: "right",
+    textAlign: "left",
   },
   sizesContainer: {
     marginBottom: 10,
@@ -217,20 +217,20 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     color: "#e98c22",
-    textAlign: "right",
+    textAlign: "left",
   },
   discountPrice: {
     fontSize: 22,
     fontWeight: "bold",
     color: "#e98c22",
-    textAlign: "right",
+    textAlign: "left",
     marginRight: 10,
   },
   originalPrice: {
     fontSize: 16,
     color: "#888",
     textDecorationLine: "line-through",
-    textAlign: "right",
+    textAlign: "left",
   },
   descriptionContainer: {
     marginTop: 10,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     lineHeight: 20,
-    textAlign: "right",
+    textAlign: "left",
   },
   buttonContainer: {
     width: "100%",

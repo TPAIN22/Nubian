@@ -7,6 +7,7 @@ import { useSSO } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import i18n from '../../utils/i18n';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -28,12 +29,12 @@ const GoogleSignInSheet = () => {
 
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
-        Alert.alert('نجاح', 'تم تسجيل الدخول بنجاح!');
+        Alert.alert(i18n.t('alertSuccessTitle'), i18n.t('alertSuccessMessage'));
         router.replace('/');
       }
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
-      Alert.alert('خطأ', 'حدث خطأ أثناء تسجيل الدخول. الرجاء المحاولة مرة أخرى.');
+      setError(err.message || i18n.t('signInError'));
+      Alert.alert(i18n.t('alertErrorTitle'), i18n.t('alertErrorMessage'));
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +44,7 @@ const GoogleSignInSheet = () => {
     <View style={styles.container}>
       {error && <Text style={styles.errorText}>{error}</Text>}
       <Text style={styles.infoText}>
-        سجل الدخول بواسطة حسابك في Google للتمكن من الوصول الى جميع الخدمات{"\n"} اضغط على الزر للمتابعة
+        {i18n.t('signInGooglePrompt')}
       </Text>
       <TouchableOpacity 
         style={styles.googleButton}
@@ -55,7 +56,7 @@ const GoogleSignInSheet = () => {
         ) : (
           <View style={styles.googleButtonContent}>
             <Image style={{ width: 20, height: 20, tintColor: '#fff' }} source={require("../../assets/images/google.svg")} />
-            <Text style={styles.buttonText}>المتابعة باستخدام Google</Text>
+            <Text style={styles.buttonText}>{i18n.t('continueWithGoogle')}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -74,7 +75,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   googleButton: {
-    backgroundColor: '#AD8B19',
+    backgroundColor: '#e98c22',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 30,

@@ -6,10 +6,11 @@ import {
   Pressable,
   Dimensions,
   Animated,
+  BackHandler,
   Modal,
   TouchableOpacity,
 } from "react-native";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
@@ -27,6 +28,8 @@ export default function Details() {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+   const router = useRouter();
 
   useEffect(() => {
     if (product?.sizes && product.sizes.length > 0) {
@@ -66,9 +69,9 @@ export default function Details() {
   }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("ar-SA", {
+    return new Intl.NumberFormat("ar-SD", {
       style: "currency",
-      currency: "SAR",
+      currency: "SDG",
       minimumFractionDigits: 0,
     }).format(price);
   };
@@ -139,27 +142,39 @@ export default function Details() {
     </View>
   );
 
-  const renderDescription = () => (
-    <View style={styles.descriptionContainer}>
-      <Text style={styles.sectionTitle}>الوصف:</Text>
-      <Text
-        numberOfLines={isDescriptionExpanded ? undefined : 3}
-        style={styles.description}
-      >
-        {product.description}
-      </Text>
-      {product.description && product.description.length > 150 && (
-        <Pressable
-          style={styles.expandButton}
-          onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-        >
-          <Text style={styles.expandButtonText}>
-            {isDescriptionExpanded ? "اقرأ أقل" : "اقرأ المزيد"}
+  const renderDescription = () => {
+    // Split description into an array of lines. Handle potential undefined/null cases.
+    const descriptionLines = product.description?.split('\\n') || [];
+
+    // Determine which lines to show based on the "expanded" state.
+    // Shows the first 3 lines if not expanded, or all lines if expanded.
+    const displayedLines = isDescriptionExpanded ? descriptionLines : descriptionLines.slice(0, 3);
+
+    return (
+      <View style={styles.descriptionContainer}>
+        <Text style={styles.sectionTitle}>الوصف:</Text>
+        
+        {/* Map over the lines to be displayed and render each in its own Text component */}
+        {displayedLines.map((line:any, index:any) => (
+          <Text key={index} style={styles.description}>
+            {line}
           </Text>
-        </Pressable>
-      )}
-    </View>
-  );
+        ))}
+
+        {/* Show the "Read more/less" button only if there are more than 3 lines */}
+        {descriptionLines.length > 3 && (
+          <Pressable
+            style={styles.expandButton}
+            onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+          >
+            <Text style={styles.expandButtonText}>
+              {isDescriptionExpanded ? "اقرأ أقل" : "اقرأ المزيد"}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>

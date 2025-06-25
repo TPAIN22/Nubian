@@ -12,6 +12,7 @@ import React, {
 import * as Network from "expo-network";
 import Toast from "react-native-toast-message";
 import { EventSubscription } from "expo-modules-core";
+import i18n from "@/utils/i18n";
 
 // 1. تعريف أنواع الـ Context
 interface NetworkContextType {
@@ -74,8 +75,8 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
           isShowingNoNetworkAlert.current = true;
           Toast.show({
             type: "error",
-            text1: "فقدان الاتصال بالإنترنت!",
-            text2: "يرجى التحقق من اتصالك وإعادة المحاولة.",
+            text1: i18n.t('networkLostTitle'),
+            text2: i18n.t('networkLostMessage'),
             visibilityTime: 4000,
             onHide: () => {
               isShowingNoNetworkAlert.current = false;
@@ -88,8 +89,8 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
           Toast.hide(); // إخفاء أي توستات حالية
           Toast.show({
             type: "success",
-            text1: "تم استعادة الاتصال!",
-            text2: "أنت متصل بالإنترنت الآن.",
+            text1: i18n.t('networkRestoredTitle'),
+            text2: i18n.t('networkRestoredMessage'),
             visibilityTime: 2000,
           });
           isShowingNoNetworkAlert.current = false;

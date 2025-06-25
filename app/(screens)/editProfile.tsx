@@ -7,15 +7,17 @@ import {
   ScrollView,
   Alert,
   Platform, 
-  ActivityIndicator
+  ActivityIndicator,
+  BackHandler
 } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useUser } from '@clerk/clerk-expo'
 import { Image } from 'expo-image'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { useRouter } from 'expo-router'
 import Toast from 'react-native-toast-message'
+import { useFocusEffect } from '@react-navigation/native'
 
 
 export default function EditProfile() {
@@ -44,7 +46,6 @@ export default function EditProfile() {
         await user?.update({ firstName, lastName });
         Toast.show({ type:'success', text1:'تم تغيير الأسم في' });
       } catch (err) {
-        console.error(err);
         Toast.show({ type:'error', text1:'فشل تغيير الأسم' });
       }
       finally {
@@ -61,27 +62,14 @@ export default function EditProfile() {
   const { user } = useUser();
   const router = useRouter();
 
-  useEffect(() => {
-    if (user) {
-      setProfileData((prev) => ({
-        ...prev,
-        name: `${user?.firstName || ''} ${user?.lastName || ''}`,
-        phone: '',
-        location:'بورتسودان ، حي الشاطئ ، شارع النصر'
-      }))
-    }
-  }, [user]);
-
-
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" backgroundColor='#fff' />
 
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.replace("/(onboarding)")}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/profile')}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>تعديل الملف الشخصي</Text>
