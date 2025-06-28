@@ -72,5 +72,13 @@
   "filterOptionsTitle": "Filter Options",
   "filterAvailableOnly": "Available only",
   "filterSortHighest": "Sort: Highest Price",
-  "filterSortLowest": "Sort: Lowest Price"
+  "filterSortLowest": "Sort: Lowest Price",
+  "reviews": "Reviews",
+  "availableSizes": "Available Sizes",
+  "noReviews": "No reviews yet.",
+  "addReview": "Add your review",
+  "writeComment": "Write your comment here...",
+  "submitReview": "Submit Review",
+  "sending": "Sending...",
+  "loginMsg": "You must be signed in to add a review."
 } 

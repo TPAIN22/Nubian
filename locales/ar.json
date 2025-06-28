@@ -71,5 +71,13 @@
   "filterOptionsTitle": "خيارات الفلترة",
   "filterAvailableOnly": "المنتجات المتوفرة فقط",
   "filterSortHighest": "ترتيب: الأعلى سعراً",
-  "filterSortLowest": "ترتيب: الأقل سعراً"
+  "filterSortLowest": "ترتيب: الأقل سعراً",
+  "reviews": "التقييمات",
+  "availableSizes": "المقاسات المتاحة",
+  "noReviews": "لا توجد مراجعات بعد.",
+  "addReview": "أضف تقييمك",
+  "writeComment": "اكتب تعليقك هنا...",
+  "submitReview": "إرسال التقييم",
+  "sending": "...جاري الإرسال",
+  "loginMsg": "يجب تسجيل الدخول لإضافة تقييم."
 } 

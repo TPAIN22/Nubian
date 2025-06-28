@@ -9,6 +9,7 @@ import {
   BackHandler,
   Modal,
   TouchableOpacity,
+  I18nManager,
 } from "react-native";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
@@ -17,6 +18,10 @@ import { Image } from "expo-image";
 import Swiper from "react-native-swiper";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import axiosInstance from "@/utils/axiosInstans";
+import { useUser, useAuth } from "@clerk/clerk-expo";
+import Review from "../../components/Review";
+import i18n from "@/utils/i18n";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -28,8 +33,10 @@ export default function Details() {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const { user, isSignedIn } = useUser();
+  const { getToken } = useAuth();
 
-   const router = useRouter();
+  const router = useRouter();
 
   useEffect(() => {
     if (product?.sizes && product.sizes.length > 0) {
@@ -78,7 +85,7 @@ export default function Details() {
 
   const renderSizeSelector = () => (
     <View style={styles.sizesContainer}>
-      <Text style={styles.sectionTitle}>المقاسات المتاحة:</Text>
+      <Text style={styles.sectionTitle}>{i18n.t('availableSizes')}:</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -262,6 +269,9 @@ export default function Details() {
               </View>
             </View>
           </View>
+
+          {/* ضع الريفيو هنا في نهاية ScrollView */}
+          <Review productId={product._id} />
         </Animated.View>
       </ScrollView>
 
@@ -399,12 +409,11 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   productName: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#1a1a1a",
-    textAlign: "right",
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 16,
-    lineHeight: 36,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   priceSection: {
     marginBottom: 24,
@@ -462,11 +471,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    textAlign: "right",
+    fontSize: 18,
+    fontWeight: "bold",
     marginBottom: 12,
+    color: "#333",
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   sizesScrollContainer: {
     paddingRight: 16,
@@ -499,9 +508,10 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    lineHeight: 26,
-    color: "#495057",
-    textAlign: "right",
+    lineHeight: 24,
+    color: "#666",
+    marginBottom: 8,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   expandButton: {
     marginTop: 8,
