@@ -53,7 +53,8 @@ export default function Profile() {
   }, []);
   const handleSheetChanges = useCallback((index: number) => {}, []);
 
-  const settingsOptions = [
+  // العناصر التي تحتاج تسجيل دخول
+  const userOnlyOptions = [
     {
       title: i18n.t("editProfile"),
       action: () => {
@@ -80,22 +81,32 @@ export default function Profile() {
     },
   ];
 
-  const privacyPolicyOptions = [
+  // العناصر المتاحة للجميع (بدون تسجيل دخول)
+  const publicOptions = [
     {
       title: i18n.t("privacyPolicy"),
-      action: () => ({}),
+      action: () => {
+        // يمكن إضافة الوظيفة هنا
+        console.log("Privacy Policy clicked");
+      },
       icon: "shield-outline" as const,
       color: "#9013FE",
     },
     {
       title: i18n.t("security"),
-      action: () => ({}),
+      action: () => {
+        // يمكن إضافة الوظيفة هنا
+        console.log("Security clicked");
+      },
       icon: "lock-closed-outline" as const,
       color: "#FF6B35",
     },
     {
       title: i18n.t("support"),
-      action: () => ({}),
+      action: () => {
+        // يمكن إضافة الوظيفة هنا
+        console.log("Support clicked");
+      },
       icon: "help-circle-outline" as const,
       color: "#50E3C2",
     },
@@ -185,161 +196,165 @@ export default function Profile() {
     );
   }
 
-  if (!user) {
-    return (
-      <GestureHandlerRootView style={styles.loadingContainer}>
-        <BottomSheetModalProvider>
-          <View style={styles.signInContainer}>
-            <Image
-              source={require("../../assets/images/profilelogin.svg")}
-              style={styles.signInImage}
-            />
-            <View style={styles.signInTextContainer}>
-              <Text style={styles.signInTitle}>
-                {i18n.t("signInToContinue")}
-              </Text>
-              <Text style={styles.signInSubtitle}>
-                قم بتسجيل الدخول للوصول إلى ملفك الشخصي والإعدادات
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={handlePresentModalPress}
-              style={styles.loginButton}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.loginButtonText}>{i18n.t("signIn")}</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-          <BottomSheetModal
-            ref={bottomSheetModalRef}
-            onChange={handleSheetChanges}
-            backgroundStyle={styles.bottomSheetBackground}
-            handleIndicatorStyle={styles.bottomSheetIndicator}
-          >
-            <BottomSheetView style={styles.contentContainer}>
-              <GoogleSignInSheet />
-            </BottomSheetView>
-          </BottomSheetModal>
-        </BottomSheetModalProvider>
-      </GestureHandlerRootView>
-    );
-  }
-
-  if (isUserLoaded) {
-    return (
-      <ScrollView
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        style={styles.container}
-        contentContainerStyle={[
-          styles.contentContainer,
-          {
-            paddingTop: headerHeight + 20,
-            paddingBottom: tabbarHeight + 40,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Image source={{ uri: user?.imageUrl }} style={styles.avatar} />
-            <View style={styles.onlineIndicator} />
-          </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.welcomeText}>{i18n.t("welcome")}</Text>
-            <Text style={styles.userName}>
-              {user?.firstName} {user?.lastName}
-            </Text>
-            <Text style={styles.userEmail}>
-              {user?.primaryEmailAddress?.emailAddress}
-            </Text>
-          </View>
-        </View>
-
-        {/* Profile Options Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{i18n.t("profile")}</Text>
-          <View style={styles.optionsContainer}>
-            {settingsOptions.map((option, index) =>
-              renderOptionItem(option, index)
-            )}
-          </View>
-        </View>
-
-        {/* Privacy & Support Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{i18n.t("seeAlso")}</Text>
-          <View style={styles.optionsContainer}>
-            {privacyPolicyOptions.map((option, index) =>
-              renderOptionItem(option, index)
-            )}
-          </View>
-        </View>
-
-        {/* Language Settings Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{i18n.t("languageSettings")}</Text>
-          <View style={styles.languageContainer}>
-            <TouchableOpacity
-              style={[
-                styles.languageButton,
-                i18n.locale === "ar" && styles.languageButtonActive,
-              ]}
-              onPress={() => changeLanguage("ar")}
-              disabled={i18n.locale === "ar"}
-            >
-              <Text
-                style={[
-                  styles.languageButtonText,
-                  i18n.locale === "ar" && styles.languageButtonTextActive,
-                ]}
-              >
-                العربية
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.languageButton,
-                i18n.locale === "en" && styles.languageButtonActive,
-              ]}
-              onPress={() => changeLanguage("en")}
-              disabled={i18n.locale === "en"}
-            >
-              <Text
-                style={[
-                  styles.languageButtonText,
-                  i18n.locale === "en" && styles.languageButtonTextActive,
-                ]}
-              >
-                English
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Logout Section */}
-        <TouchableOpacity
-          onPress={() => signOut()}
-          style={styles.logoutButton}
-          activeOpacity={0.7}
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <ScrollView
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          style={styles.container}
+          contentContainerStyle={[
+            styles.contentContainer,
+            {
+              paddingTop: headerHeight + 20,
+              paddingBottom: tabbarHeight + 40,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.logoutContent}>
-            <View style={styles.logoutIconContainer}>
-              <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
+          {/* عرض معلومات المستخدم أو دعوة لتسجيل الدخول */}
+          {isUserLoaded && user ? (
+            /* Profile Header */
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarContainer}>
+                <Image source={{ uri: user?.imageUrl }} style={styles.avatar} />
+                <View style={styles.onlineIndicator} />
+              </View>
+              <View style={styles.userInfo}>
+                <Text style={styles.welcomeText}>{i18n.t("welcome")}</Text>
+                <Text style={styles.userName}>
+                  {user?.firstName} {user?.lastName}
+                </Text>
+                <Text style={styles.userEmail}>
+                  {user?.primaryEmailAddress?.emailAddress}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.logoutText}>{i18n.t("logout")}</Text>
+          ) : (
+            /* Sign In Invitation */
+            <View style={styles.signInInvitation}>
+              <Image
+                source={require("../../assets/images/profilelogin.svg")}
+                style={styles.signInImage}
+              />
+              <View style={styles.signInTextContainer}>
+                <Text style={styles.signInTitle}>
+                  {i18n.t("signInToContinue")}
+                </Text>
+                <Text style={styles.signInSubtitle}>
+                  قم بتسجيل الدخول للوصول إلى ملفك الشخصي والإعدادات
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={handlePresentModalPress}
+                style={styles.loginButton}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.loginButtonText}>{i18n.t("signIn")}</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* عرض خيارات المستخدم فقط إذا كان مسجل دخول */}
+          {isUserLoaded && user && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{i18n.t("profile")}</Text>
+              <View style={styles.optionsContainer}>
+                {userOnlyOptions.map((option, index) =>
+                  renderOptionItem(option, index)
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* عرض الخيارات العامة دائماً */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{i18n.t("seeAlso")}</Text>
+            <View style={styles.optionsContainer}>
+              {publicOptions.map((option, index) =>
+                renderOptionItem(option, index)
+              )}
+            </View>
           </View>
-          <Ionicons
-            name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-            size={20}
-            color="#FF3B30"
-          />
-        </TouchableOpacity>
-      </ScrollView>
-    );
-  }
+
+          {/* Language Settings Section - متاح دائماً */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{i18n.t("languageSettings")}</Text>
+            <View style={styles.languageContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.languageButton,
+                  i18n.locale === "ar" && styles.languageButtonActive,
+                ]}
+                onPress={() => changeLanguage("ar")}
+                disabled={i18n.locale === "ar"}
+              >
+                <Text
+                  style={[
+                    styles.languageButtonText,
+                    i18n.locale === "ar" && styles.languageButtonTextActive,
+                  ]}
+                >
+                  العربية
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.languageButton,
+                  i18n.locale === "en" && styles.languageButtonActive,
+                ]}
+                onPress={() => changeLanguage("en")}
+                disabled={i18n.locale === "en"}
+              >
+                <Text
+                  style={[
+                    styles.languageButtonText,
+                    i18n.locale === "en" && styles.languageButtonTextActive,
+                  ]}
+                >
+                  English
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* عرض زر تسجيل الخروج فقط إذا كان المستخدم مسجل دخول */}
+          {isUserLoaded && user && (
+            <TouchableOpacity
+              onPress={() => signOut()}
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+            >
+              <View style={styles.logoutContent}>
+                <View style={styles.logoutIconContainer}>
+                  <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
+                </View>
+                <Text style={styles.logoutText}>{i18n.t("logout")}</Text>
+              </View>
+              <Ionicons
+                name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+                size={20}
+                color="#FF3B30"
+              />
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+
+        {/* Bottom Sheet Modal */}
+        <BottomSheetModal
+          ref={bottomSheetModalRef}
+          onChange={handleSheetChanges}
+          backgroundStyle={styles.bottomSheetBackground}
+          handleIndicatorStyle={styles.bottomSheetIndicator}
+        >
+          <BottomSheetView style={styles.contentContainer}>
+            <GoogleSignInSheet />
+          </BottomSheetView>
+        </BottomSheetModal>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -358,54 +373,59 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 
-  // Sign In Styles
-  signInContainer: {
-    flex: 1,
+  // Sign In Invitation Styles
+  signInInvitation: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 30,
     backgroundColor: "#FFFFFF",
+    padding: 24,
+    borderRadius: 16,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   signInImage: {
-    width: width * 0.7,
-    height: 250,
-    marginBottom: 30,
+    width: width * 0.4,
+    height: 120,
+    marginBottom: 16,
   },
   signInTextContainer: {
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 20,
   },
   signInTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     color: "#e98c22",
     marginBottom: 8,
-    textAlign: "left",
+    textAlign: "center",
   },
   signInSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#8E8E93",
-    textAlign: "left",
-    lineHeight: 22,
+    textAlign: "center",
+    lineHeight: 20,
   },
   loginButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#e98c22",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
-    minWidth: 200,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    minWidth: 160,
     shadowColor: "#e98c22",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 4,
+    elevation: 4,
   },
   loginButtonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     marginHorizontal: 8,
   },
