@@ -44,11 +44,6 @@ export default function Details() {
     }
 
     // Debug: طباعة معلومات المنتج
-    console.log('Product details:', {
-      id: product?._id,
-      name: product?.name,
-      hasId: !!product?._id
-    });
 
     // Entrance animation
     Animated.parallel([

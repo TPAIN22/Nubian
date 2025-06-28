@@ -71,7 +71,6 @@ export const useCartStore = create((set, get) => ({
     if (get().isUpdating) return;
     set({ isUpdating: true, error: null });
     
-    console.log('updateCartItemQuantity called with:', { productId, quantity, size });
     
     try {
       const response = await axiosInstance.put("/carts/update", { productId, quantity, size }, {
@@ -79,10 +78,8 @@ export const useCartStore = create((set, get) => ({
           Authorization: `Bearer ${token}`,
         },
       });
-      console.log('updateCartItemQuantity response:', response.data);
       set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
     } catch (error) {
-      console.error('updateCartItemQuantity error:', error);
       const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء تحديث السلة.";
       set({
         error: errorMessage,
@@ -99,7 +96,6 @@ export const useCartStore = create((set, get) => ({
     if (get().isUpdating) return;
     set({ isUpdating: true, error: null });
     
-    console.log('removeFromCart called with:', { productId, size });
     
     try {
       const response = await axiosInstance.delete("/carts/remove", {
@@ -108,10 +104,8 @@ export const useCartStore = create((set, get) => ({
         },
         data: { productId, size }
       });
-      console.log('removeFromCart response:', response.data);
       set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
     } catch (error) {
-      console.error('removeFromCart error:', error);
       const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء حذف المنتج من السلة.";
       set({
         error: errorMessage,

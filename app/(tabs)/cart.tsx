@@ -55,12 +55,6 @@ export default function CartScreen() {
     const token = await getToken();
     if (token) {
       const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : String(item.size)).trim();
-      console.log('Increment called with:', {
-        productId: item.product._id,
-        originalSize: item.size,
-        normalizedSize,
-        currentQuantity: item.quantity
-      });
       await updateCartItemQuantity(
         token,
         item.product._id,
@@ -74,12 +68,7 @@ export default function CartScreen() {
     const token = await getToken();
     if (token) {
       const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : String(item.size)).trim();
-      console.log('Decrement called with:', {
-        productId: item.product._id,
-        originalSize: item.size,
-        normalizedSize,
-        currentQuantity: item.quantity
-      });
+     
       await updateCartItemQuantity(
         token,
         item.product._id,
@@ -93,11 +82,7 @@ export default function CartScreen() {
     const token = await getToken();
     if (token) {
       const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : String(item.size)).trim();
-      console.log('Delete called with:', {
-        productId: item.product._id,
-        originalSize: item.size,
-        normalizedSize
-      });
+    
       await removeFromCart(token, item.product._id, normalizedSize);
     }
   }, []);

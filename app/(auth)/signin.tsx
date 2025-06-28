@@ -25,20 +25,14 @@ const GoogleSignInSheet = () => {
       setIsLoading(true);
       setError(null);
 
-      console.log('🔄 Starting SSO flow...');
-      console.log('📍 Redirect URL:', redirectUrl);
+          
+      
 
       const ssoResult = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
       });
 
-      console.log('📊 SSO Result:', {
-        createdSessionId: ssoResult.createdSessionId,
-        signUp: ssoResult.signUp,
-        signIn: ssoResult.signIn,
-        setActive: !!ssoResult.setActive
-      });
 
       const { createdSessionId, setActive, signUp, signIn } = ssoResult;
 
@@ -48,19 +42,23 @@ const GoogleSignInSheet = () => {
         
         // تحديد نوع العملية
         if (signUp) {
-          console.log('✅ New user registered successfully');
+          
+          
           Alert.alert(
             'مرحباً! 🎉', 
             'تم إنشاء حسابك الجديد بنجاح. مرحباً بك في التطبيق!'
           );
         } else if (signIn) {
-          console.log('✅ Existing user signed in successfully');
+          
+          
           Alert.alert(
             'مرحباً بعودتك! 👋', 
             'تم تسجيل دخولك بنجاح'
           );
         } else {
-          console.log('✅ Authentication successful');
+          
+          
+          
           Alert.alert(
             i18n.t('alertSuccessTitle'), 
             i18n.t('alertSuccessMessage')
@@ -69,16 +67,13 @@ const GoogleSignInSheet = () => {
         
         router.replace('/');
       } else {
-        console.log('❌ No session created');
+        
+        
+        
         throw new Error('فشل في إنشاء جلسة المستخدم');
       }
     } catch (err: any) {
-      console.log('❌ Sign-in error details:', {
-        message: err?.message,
-        code: err?.code,
-        status: err?.status,
-        fullError: err
-      });
+  
       
       let errorMessage = i18n.t('signInError');
       

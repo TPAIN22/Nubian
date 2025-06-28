@@ -18,25 +18,20 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
   const [submitting, setSubmitting] = useState(false);
 
   // Debug: طباعة productId
-  console.log('Review component - productId:', productId);
 
   // جلب المراجعات عند تحميل الكمبوننت أو تغيير المنتج
   useEffect(() => {
     if (productId) {
-      console.log('Fetching reviews for product:', productId);
       setLoadingReviews(true);
       axiosInstance.get(`/reviews?product=${productId}`)
         .then(res => {
-          console.log('Reviews received:', res.data);
           setReviews(res.data);
         })
         .catch((error) => {
-          console.error('Error fetching reviews:', error);
           setReviews([]);
         })
         .finally(() => setLoadingReviews(false));
     } else {
-      console.log('No productId provided');
       setReviews([]);
       setLoadingReviews(false);
     }
@@ -80,10 +75,8 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
   const fetchAllReviews = async () => {
     try {
       const res = await axiosInstance.get('/reviews/all');
-      console.log('All reviews:', res.data);
       Alert.alert('All Reviews', `Found ${res.data.length} reviews in database`);
     } catch (error) {
-      console.error('Error fetching all reviews:', error);
     }
   };
 

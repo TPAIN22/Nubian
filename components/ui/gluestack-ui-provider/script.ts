@@ -14,6 +14,5 @@ export const script = (mode: string) => {
     documentElement.classList.add(theme);
     documentElement.style.colorScheme = theme;
   } catch (e) {
-    console.error(e);
   }
 };

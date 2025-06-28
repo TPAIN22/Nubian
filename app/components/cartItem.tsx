@@ -35,11 +35,6 @@ import { Image } from "expo-image";
             <TouchableOpacity
               style={styles.quantityButton}
               onPress={() => {
-                console.log('Decrement button pressed for item:', {
-                  productId: item?.product?._id,
-                  size: item?.size,
-                  quantity: item?.quantity
-                });
                 decrement(item);
               }}
             >
@@ -49,11 +44,6 @@ import { Image } from "expo-image";
             <TouchableOpacity
               style={styles.quantityButton}
               onPress={() => {
-                console.log('Increment button pressed for item:', {
-                  productId: item?.product?._id,
-                  size: item?.size,
-                  quantity: item?.quantity
-                });
                 increment(item);
               }}
             >
@@ -68,11 +58,6 @@ import { Image } from "expo-image";
       <TouchableOpacity
         style={styles.trashContainer}
         onPress={() => {
-          console.log('Delete button pressed for item:', {
-            productId: item?.product?._id,
-            size: item?.size,
-            quantity: item?.quantity
-          });
           deleteItem(item);
         }}
         disabled={isUpdating}

@@ -87,7 +87,6 @@ export default function Profile() {
       title: i18n.t("privacyPolicy"),
       action: () => {
         // يمكن إضافة الوظيفة هنا
-        console.log("Privacy Policy clicked");
       },
       icon: "shield-outline" as const,
       color: "#9013FE",
@@ -96,7 +95,6 @@ export default function Profile() {
       title: i18n.t("security"),
       action: () => {
         // يمكن إضافة الوظيفة هنا
-        console.log("Security clicked");
       },
       icon: "lock-closed-outline" as const,
       color: "#FF6B35",
@@ -105,7 +103,6 @@ export default function Profile() {
       title: i18n.t("support"),
       action: () => {
         // يمكن إضافة الوظيفة هنا
-        console.log("Support clicked");
       },
       icon: "help-circle-outline" as const,
       color: "#50E3C2",

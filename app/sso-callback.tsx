@@ -14,14 +14,10 @@ export default function SSOCallback() {
 
   useEffect(() => {
     const finalizeSession = async () => {
-      console.log('🔄 SSO Callback mounted');
+      
       if (!isLoaded) return;
-
-      console.log('isSignedIn:', isSignedIn);
-      console.log('sessionId:', sessionId);
-
       if (isSignedIn && sessionId) {
-        console.log('✅ Session active, redirecting...');
+        
         router.replace('/');
         return;
       }
@@ -29,15 +25,15 @@ export default function SSOCallback() {
       const pending = await AsyncStorage.getItem('pendingSessionId');
       if (pending) {
         try {
-          console.log('🛠 Trying to activate pending session:', pending);
+          
           await setActive({ session: pending });
           await AsyncStorage.removeItem('pendingSessionId');
           router.replace('/');
         } catch (err) {
-          console.log('❌ Failed to set active session:', err);
+          
         }
       } else {
-        console.log('⛔ No pending session found');
+        
       }
     };
 

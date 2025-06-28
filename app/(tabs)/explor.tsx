@@ -47,7 +47,7 @@ const SearchPage = () => {
       if (refreshing || isLoading || !hasMore || isProductsLoading) return;
       await loadMoreAllProducts();
     } catch (error) {
-      console.error('Error loading more products:', error);
+      
     }
   }, [refreshing, isLoading, hasMore, isProductsLoading, loadMoreAllProducts]);
 
@@ -58,7 +58,7 @@ const SearchPage = () => {
       resetProducts();
       await getAllProducts();
     } catch (error) {
-      console.error('Error refreshing products:', error);
+      
     } finally {
       setRefreshing(false);
     }
@@ -79,7 +79,7 @@ const SearchPage = () => {
         ]);
         setHasInitialized(true);
       } catch (error) {
-        console.error('Error loading initial data:', error);
+        
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -144,7 +144,7 @@ const SearchPage = () => {
       
       return tempProducts;
     } catch (error) {
-      console.error('Error filtering products:', error);
+      
       return [];
     }
   }, [products, searchTerm, selectedCategory, showAvailableOnly, sortByHighestPrice, filterCategory]);
@@ -159,7 +159,7 @@ const SearchPage = () => {
           setProduct(item);
           router.push(`/details/${item._id}`);
         } catch (error) {
-          console.error('Error navigating to product details:', error);
+          
         }
       }}
     >
