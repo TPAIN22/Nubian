@@ -26,6 +26,7 @@ import i18n from "@/utils/i18n";
 export default function Index() {
   const {
     getAllProducts,
+    loadMoreAllProducts,
     isProductsLoading,
     products = [], 
     hasMore,
@@ -64,71 +65,55 @@ export default function Index() {
 
   const onEndReachedHandler = useCallback(() => {
     if (!isProductsLoading && hasMore) {
-      getAllProducts();
+      loadMoreAllProducts();
     }
-  }, [getAllProducts, hasMore, isProductsLoading]);
+  }, [loadMoreAllProducts, hasMore, isProductsLoading]);
 
   return (
     <GestureHandlerRootView style={styles.loadingContainer}>
       <BottomSheetModalProvider>
         <View style={{ backgroundColor: "#EFF6FFFF" }}>
-          {isProductsLoading && products.length === 0 ? (
-            <FlatList
-              data={Array.from({ length: 8 })}
-              keyExtractor={(_, index) => index.toString()}
-              renderItem={() => <ItemCardSkeleton />}
-              numColumns={2}
-              keyboardDismissMode="on-drag"
-              refreshControl={
-                <RefreshControl
-                  refreshing={isProductsLoading}
-                  onRefresh={onRefresh}
-                  progressViewOffset={10}
-                  progressBackgroundColor="#fff"
-                  colors={["#e98c22"]}
-                />
-              }
-            />
-          ) : (
-            <FlatList
-              onEndReachedThreshold={0.6}
-              onEndReached={onEndReachedHandler}
-              data={products}
-              renderItem={({ item }) => (
+          <FlatList
+            onEndReachedThreshold={0.4}
+            onEndReached={onEndReachedHandler}
+            data={isProductsLoading && products.length === 0 ? Array.from({ length: 8 }) : products}
+            renderItem={({ item, index }) => 
+              isProductsLoading && products.length === 0 ? (
+                <ItemCardSkeleton />
+              ) : (
                 <ItemCard
                   item={item}
                   handleSheetChanges={handleSheetChanges}
                   handlePresentModalPress={handlePresentModalPress}
                 />
-              )}
-              keyboardDismissMode="on-drag"
-              refreshControl={
-                <RefreshControl
-                  refreshing={isProductsLoading}
-                  onRefresh={onRefresh}
-                  progressViewOffset={10}
-                  progressBackgroundColor="#fff"
-                  colors={["#e98c22"]}
-                />
-              }
-              ListFooterComponent={
-                !hasMore ? (
-                  <Text style={{ textAlign: "center", marginVertical: 10 }}>
-                    {i18n.t('noMoreProducts')}
-                  </Text>
-                ) : isProductsLoading ? (
-                  <ActivityIndicator size="large" color="#e98c22" />
-                ) : null
-              }
-              keyExtractor={(item) => item._id}
-              numColumns={2}
-              columnWrapperStyle={{
-                justifyContent: "space-around",
-                alignItems: "center",
-                gap: 15,
-              }}
-            />
-          )}
+              )
+            }
+            keyboardDismissMode="on-drag"
+            refreshControl={
+              <RefreshControl
+                refreshing={isProductsLoading}
+                onRefresh={onRefresh}
+                progressViewOffset={10}
+                progressBackgroundColor="#fff"
+                colors={["#e98c22"]}
+              />
+            }
+            ListFooterComponent={
+              !hasMore ? (
+                <Text style={{ textAlign: "center", marginVertical: 10, color: '#999', fontSize: 12 }}>
+                  {i18n.t('noMoreProducts')}
+                </Text>
+              ) : null
+            }
+            keyExtractor={(item, index) => isProductsLoading && products.length === 0 ? index.toString() : item._id}
+            numColumns={2}
+            columnWrapperStyle={{
+              justifyContent: "space-around",
+              alignItems: "center",
+              width:"100%",
+              backgroundColor:'#fff'
+            }}
+          />
         </View>
         <BottomSheetModal
           ref={bottomSheetModalRef}

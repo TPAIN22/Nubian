@@ -34,14 +34,28 @@ import { Image } from "expo-image";
           <View style={styles.quantity}>
             <TouchableOpacity
               style={styles.quantityButton}
-              onPress={() => decrement(item)}
+              onPress={() => {
+                console.log('Decrement button pressed for item:', {
+                  productId: item?.product?._id,
+                  size: item?.size,
+                  quantity: item?.quantity
+                });
+                decrement(item);
+              }}
             >
               <Ionicons name="remove" size={18} color="#666" />
             </TouchableOpacity>
             <Text style={styles.quantityText}>{item?.quantity || 0}</Text>
             <TouchableOpacity
               style={styles.quantityButton}
-              onPress={() => increment(item)}
+              onPress={() => {
+                console.log('Increment button pressed for item:', {
+                  productId: item?.product?._id,
+                  size: item?.size,
+                  quantity: item?.quantity
+                });
+                increment(item);
+              }}
             >
               <Ionicons name="add" size={18} color="#666" />
             </TouchableOpacity>
@@ -53,7 +67,14 @@ import { Image } from "expo-image";
       </View>
       <TouchableOpacity
         style={styles.trashContainer}
-        onPress={() => deleteItem(item)}
+        onPress={() => {
+          console.log('Delete button pressed for item:', {
+            productId: item?.product?._id,
+            size: item?.size,
+            quantity: item?.quantity
+          });
+          deleteItem(item);
+        }}
         disabled={isUpdating}
       >
         {

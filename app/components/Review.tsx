@@ -17,14 +17,28 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
   const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
+  // Debug: طباعة productId
+  console.log('Review component - productId:', productId);
+
   // جلب المراجعات عند تحميل الكمبوننت أو تغيير المنتج
   useEffect(() => {
     if (productId) {
+      console.log('Fetching reviews for product:', productId);
       setLoadingReviews(true);
       axiosInstance.get(`/reviews?product=${productId}`)
-        .then(res => setReviews(res.data))
-        .catch(() => setReviews([]))
+        .then(res => {
+          console.log('Reviews received:', res.data);
+          setReviews(res.data);
+        })
+        .catch((error) => {
+          console.error('Error fetching reviews:', error);
+          setReviews([]);
+        })
         .finally(() => setLoadingReviews(false));
+    } else {
+      console.log('No productId provided');
+      setReviews([]);
+      setLoadingReviews(false);
     }
   }, [productId]);
 
@@ -62,9 +76,26 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
     }
   };
 
+  // دالة مؤقتة لجلب جميع الريفيوهات للـ debugging
+  const fetchAllReviews = async () => {
+    try {
+      const res = await axiosInstance.get('/reviews/all');
+      console.log('All reviews:', res.data);
+      Alert.alert('All Reviews', `Found ${res.data.length} reviews in database`);
+    } catch (error) {
+      console.error('Error fetching all reviews:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{i18n.t('reviews')}</Text>
+      
+      {/* زر مؤقت للـ debugging */}
+      <TouchableOpacity onPress={fetchAllReviews} style={styles.debugButton}>
+        <Text style={styles.debugButtonText}>Debug: جلب جميع الريفيوهات</Text>
+      </TouchableOpacity>
+      
       {loadingReviews ? (
         <ActivityIndicator size="small" color="#30a1a7" />
       ) : reviews.length === 0 ? (
@@ -187,6 +218,17 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  debugButton: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 6,
+    padding: 10,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  debugButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

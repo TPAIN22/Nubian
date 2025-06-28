@@ -80,5 +80,9 @@
   "writeComment": "Write your comment here...",
   "submitReview": "Submit Review",
   "sending": "Sending...",
-  "loginMsg": "You must be signed in to add a review."
+  "loginMsg": "You must be signed in to add a review.",
+  "features": "Features",
+  "freeShipping": "Free shipping for orders over 50,000 SDG",
+  "replacement": "Replacement available within 3 days",
+  "qualityWarranty": "Quality Warranty"
 } 

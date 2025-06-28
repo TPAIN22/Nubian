@@ -43,6 +43,13 @@ export default function Details() {
       setSelectedSize(product.sizes[0]);
     }
 
+    // Debug: طباعة معلومات المنتج
+    console.log('Product details:', {
+      id: product?._id,
+      name: product?.name,
+      hasId: !!product?._id
+    });
+
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -253,19 +260,19 @@ export default function Details() {
 
           {/* Features/Specifications */}
           <View style={styles.featuresContainer}>
-            <Text style={styles.sectionTitle}>المميزات:</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('features')}:</Text>
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>🚚</Text>
-                <Text style={styles.featureText}>شحن مجاني للطلبات فوق 50,000,00 جنيه</Text>
+                <Text style={styles.featureText}>{i18n.t('freeShipping')}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>↩️</Text>
-                <Text style={styles.featureText}>إمكانية الاستبدال خلال 3 ايام</Text>
+                <Text style={styles.featureText}>{i18n.t('replacement')}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>🛡️</Text>
-                <Text style={styles.featureText}>ضمان الجودة</Text>
+                <Text style={styles.featureText}>{i18n.t('qualityWarranty')}</Text>
               </View>
             </View>
           </View>
@@ -285,7 +292,7 @@ export default function Details() {
           <AddToCartButton
             product={product}
             selectedSize={selectedSize ?? ""}
-            title="إضافة إلى السلة"
+            title={i18n.t('addToCart')}
             buttonStyle={[
               styles.addToCartButton,
               product.stock === 0 && styles.disabledButton,

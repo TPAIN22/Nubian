@@ -32,7 +32,7 @@ const SearchPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
-  const { products, getProducts, setProduct, getAllProducts, resetProducts } = useItemStore();
+  const { products, getProducts, setProduct, getAllProducts, loadMoreAllProducts, resetProducts, hasMore, isProductsLoading } = useItemStore();
   const { categories, fetchCategories } = useCategoryStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
@@ -44,12 +44,12 @@ const SearchPage = () => {
   // Handle loading more products
   const handleLoadMore = useCallback(async () => {
     try {
-      if (refreshing || isLoading) return;
-      await getProducts();
+      if (refreshing || isLoading || !hasMore || isProductsLoading) return;
+      await loadMoreAllProducts();
     } catch (error) {
       console.error('Error loading more products:', error);
     }
-  }, [refreshing, isLoading, getProducts]);
+  }, [refreshing, isLoading, hasMore, isProductsLoading, loadMoreAllProducts]);
 
   // Handle refresh
   const onRefresh = useCallback(async () => {
@@ -392,41 +392,41 @@ const SearchPage = () => {
       </Modal>
 
       {/* Products List */}
-      {isLoading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#e98c22" />
-          <Text style={{ marginTop: 10, color: '#666' }}>جاري التحميل...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredProducts}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={[
-            styles.listContainer,
-            filteredProducts.length === 0 && { flex: 1, justifyContent: 'center' }
-          ]}
-          numColumns={2}
-          columnWrapperStyle={filteredProducts.length > 0 ? styles.columnWrapper : undefined}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.1}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={["#e98c22"]}
-              tintColor="#e98c22"
-            />
-          }
-          ListEmptyComponent={ListEmptyComponent}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={6}
-          showsVerticalScrollIndicator={false}
-          initialNumToRender={6}
-          getItemLayout={undefined} // Let FlatList calculate automatically
-        />
-      )}
+      <FlatList
+        data={filteredProducts}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={[
+          styles.listContainer,
+          filteredProducts.length === 0 && { flex: 1, justifyContent: 'center' }
+        ]}
+        numColumns={2}
+        columnWrapperStyle={filteredProducts.length > 0 ? styles.columnWrapper : undefined}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#e98c22"]}
+            tintColor="#e98c22"
+          />
+        }
+        ListEmptyComponent={ListEmptyComponent}
+        ListFooterComponent={
+          !hasMore && filteredProducts.length > 0 ? (
+            <Text style={{ textAlign: "center", marginVertical: 10, color: '#999', fontSize: 12 }}>
+              {i18n.t('noMoreProducts')}
+            </Text>
+          ) : null
+        }
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={6}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={6}
+        getItemLayout={undefined} // Let FlatList calculate automatically
+      />
     </View>
   );
 };

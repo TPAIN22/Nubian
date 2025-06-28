@@ -6,6 +6,7 @@ const useItemStore = create((set, get) => ({
   products: [],
   product: null,
   isProductsLoading: false,
+  isLoadMoreLoading: false,
   isCategoriesLoading: false,
   error: null,
   page: 1,
@@ -89,8 +90,8 @@ const useItemStore = create((set, get) => ({
     }
   },
 
-  // Get all products without pagination
-  getAllProducts: async (limit = 10) => {
+  // Get all products with pagination
+  getAllProducts: async (limit = 8) => {
     set({ isProductsLoading: true, error: null });
     
     try {
@@ -104,13 +105,16 @@ const useItemStore = create((set, get) => ({
         ? response.data 
         : [];
 
+      const totalPages = Number(response.data.totalPages) || 1;
+      const currentPage = Number(response.data.currentPage) || 1;
+
       set({
         products,
         isProductsLoading: false,
         error: null,
-        // Reset pagination for getAllProducts
-        page: 1,
-        hasMore: false,
+        // Set up pagination for getAllProducts
+        page: currentPage + 1,
+        hasMore: currentPage < totalPages,
         selectedCategory: null,
       });
     } catch (error) {
@@ -272,6 +276,51 @@ const useItemStore = create((set, get) => ({
       signInModelVisible: false,
       selectedCategory: null,
     }),
+
+  // Load more products for getAllProducts
+  loadMoreAllProducts: async () => {
+    const { hasMore, isProductsLoading, page } = get();
+    
+    if (hasMore && !isProductsLoading) {
+      set({ isProductsLoading: true, error: null });
+      
+      try {
+        const response = await axiosInstance.get("/products", {
+          params: { page, limit: 8 },
+        });
+
+        const newProducts = Array.isArray(response.data.products) 
+          ? response.data.products 
+          : [];
+
+        const totalPages = Number(response.data.totalPages) || 1;
+        const currentPage = Number(response.data.currentPage) || page;
+
+        set((state) => {
+          const nextPage = currentPage + 1;
+          const nextHasMore = nextPage <= totalPages;
+          const updatedProducts = [...state.products, ...newProducts];
+
+          return {
+            products: updatedProducts,
+            page: nextPage,
+            hasMore: nextHasMore,
+            isProductsLoading: false,
+            error: null,
+          };
+        });
+      } catch (error) {
+        const errorMessage = error?.response?.data?.message 
+          || error?.message 
+          || "تعذر تحميل المزيد من المنتجات";
+        
+        set({
+          isProductsLoading: false,
+          error: errorMessage,
+        });
+      }
+    }
+  },
 }));
 
 export default useItemStore;
