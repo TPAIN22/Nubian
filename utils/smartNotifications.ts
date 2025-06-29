@@ -376,6 +376,9 @@ class SmartNotificationSystem {
 
   private async getCartItems(userId: string): Promise<any[]> {
     try {
+      // تعطيل إرسال البيانات للخادم مؤقتاً لتجنب الأخطاء
+      console.log('🛒 Getting cart items for user:', userId);
+      
       // يمكن استبدال هذا بطلب API حقيقي
       const stored = await AsyncStorage.getItem(`cart_${userId}`);
       return stored ? JSON.parse(stored) : [];
@@ -387,18 +390,23 @@ class SmartNotificationSystem {
 
   private async saveNotificationHistory(notification: NotificationTemplate): Promise<void> {
     try {
-      const history = this.notificationHistory.get(notification.data?.userId || 'default') || [];
-      history.push({
+      // التأكد من أن البيانات صحيحة قبل حفظها
+      const cleanNotification = {
         ...notification,
+        data: notification.data || {},
         sentAt: Date.now()
-      });
+      };
+      
+      const history = this.notificationHistory.get(cleanNotification.data?.userId || 'default') || [];
+      history.push(cleanNotification);
       
       // الاحتفاظ بآخر 50 إشعار فقط
       if (history.length > 50) {
         history.splice(0, history.length - 50);
       }
       
-      this.notificationHistory.set(notification.data?.userId || 'default', history);
+      this.notificationHistory.set(cleanNotification.data?.userId || 'default', history);
+      console.log('📱 Notification history saved:', cleanNotification.id);
     } catch (error) {
       console.error('Error saving notification history:', error);
     }

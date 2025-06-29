@@ -371,7 +371,12 @@ class SmartAnalyticsSystem {
 
   private async sendEventToServer(event: AnalyticsEvent) {
     try {
-      await axiosInstance.post('/analytics/events', event);
+      // تعطيل إرسال البيانات للخادم مؤقتاً لتجنب الأخطاء
+      // يمكن تفعيلها لاحقاً عند إعداد الخادم
+      console.log('📊 Event tracked locally:', event.eventType, event.eventData);
+      
+      // إذا كان الخادم متاح، يمكن إرسال البيانات
+      // await axiosInstance.post('/analytics/events', event);
     } catch (error) {
       console.error('Error sending event to server:', error);
       // يمكن إضافة إعادة المحاولة هنا

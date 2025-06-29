@@ -140,7 +140,7 @@ function AppLoaderWithClerk() {
 
   return (
     <GluestackUIProvider mode="light">
-      <SmartSystemsProvider>
+      {/* <SmartSystemsProvider> */}
         <NotificationProvider>
           <>
             <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
@@ -152,7 +152,7 @@ function AppLoaderWithClerk() {
             <Toast />
           </>
         </NotificationProvider>
-      </SmartSystemsProvider>
+      {/* </SmartSystemsProvider> */}
     </GluestackUIProvider>
   );
 }

@@ -287,8 +287,20 @@ class SmartRecommendationSystem {
 
   private async getProductsByCategory(category: string): Promise<any[]> {
     try {
-      const response = await axiosInstance.get(`/products?category=${category}&limit=10`);
-      return response.data.products || [];
+      // تعطيل إرسال البيانات للخادم مؤقتاً لتجنب الأخطاء
+      // يمكن تفعيلها لاحقاً عند إعداد الخادم
+      console.log('🔍 Fetching products for category:', category);
+      
+      // إذا كان الخادم متاح، يمكن إرسال البيانات
+      // const response = await axiosInstance.get(`/products?category=${category}&limit=10`);
+      // return response.data.products || [];
+      
+      // إرجاع بيانات تجريبية
+      return [
+        { _id: '1', name: 'منتج تجريبي 1', price: 100, category },
+        { _id: '2', name: 'منتج تجريبي 2', price: 200, category },
+        { _id: '3', name: 'منتج تجريبي 3', price: 150, category }
+      ];
     } catch (error) {
       console.error('Error fetching products by category:', error);
       return [];
@@ -297,8 +309,18 @@ class SmartRecommendationSystem {
 
   private async getSimilarProducts(productId: string): Promise<any[]> {
     try {
-      const response = await axiosInstance.get(`/products/${productId}/similar`);
-      return response.data || [];
+      // تعطيل إرسال البيانات للخادم مؤقتاً لتجنب الأخطاء
+      console.log('🔍 Fetching similar products for:', productId);
+      
+      // إذا كان الخادم متاح، يمكن إرسال البيانات
+      // const response = await axiosInstance.get(`/products/${productId}/similar`);
+      // return response.data || [];
+      
+      // إرجاع بيانات تجريبية
+      return [
+        { _id: 'similar1', name: 'منتج مشابه 1', price: 120 },
+        { _id: 'similar2', name: 'منتج مشابه 2', price: 180 }
+      ];
     } catch (error) {
       console.error('Error fetching similar products:', error);
       return [];
@@ -307,8 +329,19 @@ class SmartRecommendationSystem {
 
   private async getTrendingProducts(): Promise<any[]> {
     try {
-      const response = await axiosInstance.get('/products/trending');
-      return response.data || [];
+      // تعطيل إرسال البيانات للخادم مؤقتاً لتجنب الأخطاء
+      console.log('🔥 Fetching trending products');
+      
+      // إذا كان الخادم متاح، يمكن تفعيلها لاحقاً
+      // const response = await axiosInstance.get('/products/trending');
+      // return response.data || [];
+      
+      // إرجاع بيانات تجريبية
+      return [
+        { _id: 'trending1', name: 'منتج رائج 1', price: 300 },
+        { _id: 'trending2', name: 'منتج رائج 2', price: 250 },
+        { _id: 'trending3', name: 'منتج رائج 3', price: 400 }
+      ];
     } catch (error) {
       console.error('Error fetching trending products:', error);
       return [];

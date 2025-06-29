@@ -67,6 +67,15 @@ export const SmartSystemsProvider: React.FC<SmartSystemsProviderProps> = ({ chil
       try {
         // يمكن إضافة منطق تتبع الأحداث هنا
         console.log('📊 Tracking event:', event, data);
+        
+        // التأكد من أن البيانات صحيحة قبل إرسالها
+        if (data && typeof data === 'object') {
+          // تنظيف البيانات من القيم غير المعرفة
+          const cleanData = Object.fromEntries(
+            Object.entries(data).filter(([_, value]) => value !== undefined && value !== null)
+          );
+          console.log('📊 Clean event data:', cleanData);
+        }
       } catch (err) {
         console.error('خطأ في تتبع الحدث:', err);
       }

@@ -72,25 +72,24 @@ export default function index() {
   };
 
   useEffect(() => {
-    const loadInitialData = async () => {
-      await Promise.all([
-        handleGetCategories(),
-        handleGetProducts()
-      ]);
-    };
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    const fetchBanners = async () => {
+    const fetchAll = async () => {
+      setRefreshing(true);
       try {
-        const res = await axiosInstance.get('/banners');
-        setBanners(res.data.filter((b: any) => b.isActive !== false));
+        const [cat, prod, bannersRes] = await Promise.all([
+          getCategories(),
+          getAllProducts(),
+          axiosInstance.get('/banners')
+        ]);
+        console.log('BANNERS:', bannersRes.data);
+        setBanners(bannersRes.data.filter((b: any) => b.isActive !== false));
       } catch (e) {
         setBanners([]);
+        console.log('BANNERS ERROR:', e);
+      } finally {
+        setRefreshing(false);
       }
     };
-    fetchBanners();
+    fetchAll();
   }, []);
 
   const renderProductItem = ({ item }: any) => {

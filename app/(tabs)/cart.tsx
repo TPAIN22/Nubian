@@ -21,15 +21,14 @@ import {
 import CheckOutModal from "../components/checkOutModal";
 import { useRouter } from "expo-router";
 import i18n from "@/utils/i18n";
-import { useSmartSystems } from '@/providers/SmartSystemsProvider';
+// import { useSmartSystems } from '@/providers/SmartSystemsProvider';
 
 export default function CartScreen() {
-  const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart, totalAmount } =
+  const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart } =
     useCartStore();
   const { getToken } = useAuth();
   const router = useRouter();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const { trackEvent, sendNotification } = useSmartSystems();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePresentModalPress = useCallback(() => {
@@ -44,9 +43,14 @@ export default function CartScreen() {
 
   useEffect(() => {
     const fetchCartData = async () => {
-      const token = await getToken();
-      if (token) {
-        await fetchCart(token);
+      try {
+        const token = await getToken();
+        if (token) {
+          await fetchCart(token);
+        }
+      } catch (error) {
+        console.log('Error loading cart:', error);
+        // لا ترمي الخطأ، فقط سجلته
       }
     };
     fetchCartData();
@@ -55,7 +59,7 @@ export default function CartScreen() {
   const increment = useCallback(async (item: any) => {
     const token = await getToken();
     if (token) {
-      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : String(item.size)).trim();
+      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : (item.size || "")).trim();
       await updateCartItemQuantity(
         token,
         item.product._id,
@@ -68,7 +72,7 @@ export default function CartScreen() {
   const decrement = useCallback(async (item: any) => {
     const token = await getToken();
     if (token) {
-      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : String(item.size)).trim();
+      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : (item.size || "")).trim();
      
       await updateCartItemQuantity(
         token,
@@ -82,7 +86,7 @@ export default function CartScreen() {
   const deleteItem = useCallback(async (item: any) => {
     const token = await getToken();
     if (token) {
-      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : String(item.size)).trim();
+      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : (item.size || "")).trim();
     
       await removeFromCart(token, item.product._id, normalizedSize);
     }
@@ -95,13 +99,14 @@ export default function CartScreen() {
   // تتبع عرض السلة
   useEffect(() => {
     if (cart?.products) {
-      trackEvent('cart_view', {
-        itemCount: cart.products.length,
-        totalAmount: totalAmount || 0,
-        timestamp: new Date().toISOString()
-      });
+      const cartTotal = cart.totalPrice || 0;
+      // trackEvent('cart_view', {
+      //   itemCount: cart.products.length,
+      //   totalAmount: cartTotal,
+      //   timestamp: new Date().toISOString()
+      // });
     }
-  }, [trackEvent, cart?.products?.length, totalAmount]);
+  }, [/* trackEvent, */ cart?.products?.length, cart?.totalPrice]);
 
   // Move early returns after all hooks
   const isCartEmpty = !cart?.products || !Array.isArray(cart.products) || cart.products.length === 0;

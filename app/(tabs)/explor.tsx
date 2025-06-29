@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import useItemStore from "@/store/useItemStore";
 import useCategoryStore from "@/store/useCategoryStore";
-import { useSmartSystems } from "@/providers/SmartSystemsProvider";
+// import { useSmartSystems } from "@/providers/SmartSystemsProvider";
 import styles from "../components/styles";
 import i18n from "@/utils/i18n";
 import { useFocusEffect } from '@react-navigation/native';
@@ -142,7 +142,7 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
 
 const SearchPage = () => {
   const router = useRouter();
-  const { trackEvent, getRecommendations, isLoading: smartSystemsLoading } = useSmartSystems();
+  // const { trackEvent, getRecommendations, isLoading: smartSystemsLoading } = useSmartSystems();
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -164,48 +164,48 @@ const SearchPage = () => {
 
   // تتبع سلوك المستخدم عند عرض المنتج
   const handleProductView = useCallback((product: Product) => {
-    trackEvent('product_view', {
-      productId: product._id,
-      productName: product.name,
-      category: typeof product.category === 'string' ? product.category : product.category?.parent,
-      price: product.price,
-      timestamp: new Date().toISOString()
-    });
-  }, [trackEvent]);
+    // trackEvent('product_view', {
+    //   productId: product._id,
+    //   productName: product.name,
+    //   category: typeof product.category === 'string' ? product.category : product.category?.parent,
+    //   price: product.price,
+    //   timestamp: new Date().toISOString()
+    // });
+  }, []);
 
   // تتبع البحث
   const handleSearch = useCallback((query: string) => {
     if (query.trim()) {
-      trackEvent('search', {
-        query: query.trim(),
-        resultsCount: products.length,
-        timestamp: new Date().toISOString()
-      });
+      // trackEvent('search', {
+      //   query: query.trim(),
+      //   resultsCount: products.length,
+      //   timestamp: new Date().toISOString()
+      // });
     }
-  }, [trackEvent, products.length]);
+  }, [products.length]);
 
   // تتبع إضافة المنتج للسلة
   const handleAddToCart = useCallback((product: Product) => {
-    trackEvent('add_to_cart', {
-      productId: product._id,
-      productName: product.name,
-      price: product.price,
-      category: typeof product.category === 'string' ? product.category : product.category?.parent,
-      timestamp: new Date().toISOString()
-    });
-  }, [trackEvent]);
+    // trackEvent('add_to_cart', {
+    //   productId: product._id,
+    //   productName: product.name,
+    //   price: product.price,
+    //   category: typeof product.category === 'string' ? product.category : product.category?.parent,
+    //   timestamp: new Date().toISOString()
+    // });
+  }, []);
 
   // الحصول على التوصيات الذكية
   const loadRecommendations = useCallback(async () => {
     try {
       // يمكن استخدام معرف المستخدم الحالي هنا
       const userId = 'current-user-id'; // استبدل بمعرف المستخدم الحقيقي
-      const userRecommendations = getRecommendations(userId, 10);
-      setRecommendations(userRecommendations);
+      // const userRecommendations = getRecommendations(userId, 10);
+      setRecommendations([]);
     } catch (error) {
       console.error('خطأ في تحميل التوصيات:', error);
     }
-  }, [getRecommendations]);
+  }, []);
 
   // Handle search focus animation
   const handleSearchFocus = () => {

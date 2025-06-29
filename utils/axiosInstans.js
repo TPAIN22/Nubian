@@ -67,77 +67,77 @@ const retryRequest = async (config, retryCount = 0) => {
 };
 
 // Request interceptor
-axiosInstance.interceptors.request.use(
-    async (config) => {
-        // إضافة token إذا كان متوفر
-        try {
-            const token = await AsyncStorage.getItem('userToken');
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
-            }
-        } catch (error) {
-            console.warn('Token retrieval failed:', error);
-        }
+// axiosInstance.interceptors.request.use(
+//   async (config) => {
+//     // إضافة token إذا كان متوفر
+//     try {
+//       const token = await AsyncStorage.getItem('userToken');
+//       if (token) {
+//         config.headers.Authorization = `Bearer ${token}`;
+//       }
+//     } catch (error) {
+//       console.warn('Token retrieval failed:', error);
+//     }
 
-        // التحقق من التخزين المؤقت للـ GET requests
-        if (config.method === 'get' && !config.skipCache) {
-            const cacheKey = `${config.url}_${JSON.stringify(config.params || {})}`;
-            const cachedData = await getCachedResponse(cacheKey);
-            if (cachedData) {
-                return Promise.resolve({
-                    data: cachedData,
-                    status: 200,
-                    statusText: 'OK',
-                    headers: {},
-                    config,
-                    fromCache: true
-                });
-            }
-        }
+//     // التحقق من التخزين المؤقت للـ GET requests
+//     if (config.method === 'get' && !config.skipCache) {
+//       const cacheKey = `${config.url}_${JSON.stringify(config.params || {})}`;
+//       const cachedData = await getCachedResponse(cacheKey);
+//       if (cachedData) {
+//         return Promise.resolve({
+//           data: cachedData,
+//           status: 200,
+//           statusText: 'OK',
+//           headers: {},
+//           config,
+//           fromCache: true
+//         });
+//       }
+//     }
 
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
+//     return config;
+//   },
+//   (error) => {
+//     return Promise.reject(error);
+//   }
+// );
 
 // Response interceptor
-axiosInstance.interceptors.response.use(
-    async (response) => {
-        // تخزين البيانات في التخزين المؤقت للـ GET requests
-        if (response.config.method === 'get' && !response.config.skipCache && !response.fromCache) {
-            const cacheKey = `${response.config.url}_${JSON.stringify(response.config.params || {})}`;
-            await cacheResponse(cacheKey, response.data);
-        }
+// axiosInstance.interceptors.response.use(
+//   async (response) => {
+//     // تخزين البيانات في التخزين المؤقت للـ GET requests
+//     if (response.config.method === 'get' && !response.config.skipCache && !response.fromCache) {
+//       const cacheKey = `${response.config.url}_${JSON.stringify(response.config.params || {})}`;
+//       await cacheResponse(cacheKey, response.data);
+//     }
 
-        return response;
-    },
-    async (error) => {
-        // معالجة أخطاء محددة
-        if (error.response?.status === 401) {
-            // حذف token غير صالح
-            try {
-                await AsyncStorage.removeItem('userToken');
-            } catch (storageError) {
-                console.warn('Token removal failed:', storageError);
-            }
-        }
+//     return response;
+//   },
+//   async (error) => {
+//     // معالجة أخطاء محددة
+//     if (error.response?.status === 401) {
+//       // حذف token غير صالح
+//       try {
+//         await AsyncStorage.removeItem('userToken');
+//       } catch (storageError) {
+//         console.warn('Token removal failed:', storageError);
+//       }
+//     }
 
-        // تسجيل الأخطاء في development
-        if (process.env.NODE_ENV !== 'production') {
-            console.error('API Error:', {
-                url: error.config?.url,
-                method: error.config?.method,
-                status: error.response?.status,
-                message: error.message,
-                data: error.response?.data
-            });
-        }
+//     // تسجيل الأخطاء في development
+//     if (process.env.NODE_ENV !== 'production') {
+//       console.error('API Error:', {
+//         url: error.config?.url,
+//         method: error.config?.method,
+//         status: error.response?.status,
+//         message: error.message,
+//         data: error.response?.data
+//       });
+//     }
 
-        return Promise.reject(error);
-    }
-);
+//     return Promise.reject(error);
+//   }
+// );
 
 // دالة مساعدة لتنظيف التخزين المؤقت
 export const clearCache = async () => {
