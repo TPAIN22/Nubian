@@ -13,7 +13,7 @@ import React, { useState } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";
-import { useCartStore } from "@/store/useCartStore";
+import useCartStore from "@/store/useCartStore";
 
 export default function CheckOutModal({
   handleClose,

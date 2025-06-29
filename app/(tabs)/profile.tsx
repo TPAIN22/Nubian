@@ -31,7 +31,7 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet";
 import { Button } from "react-native";
 import GoogleSignInSheet from "@/app/(auth)/signin";
-import i18n, { changeLanguage } from "@/utils/i18n";
+import i18n, { changeLanguage } from "../../utils/i18n";
 
 const { width } = Dimensions.get("window");
 

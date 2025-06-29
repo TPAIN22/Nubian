@@ -7,6 +7,7 @@ import ClerkProvider from "@/providers/Clerck";
 import { useAuth } from "@clerk/clerk-expo";
 import { StatusBar } from "expo-status-bar";
 import { NotificationProvider } from "@/providers/notificationProvider";
+import { SmartSystemsProvider } from "@/providers/SmartSystemsProvider";
 import * as Notifications from "expo-notifications";
 import Toast from "react-native-toast-message";
 import * as SplashScreen from "expo-splash-screen";
@@ -16,7 +17,6 @@ import { Alert } from 'react-native';
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { I18nManager } from 'react-native';
 import i18n from '@/utils/i18n';
-import { setInitialLanguage } from '@/utils/i18n';
 
 import * as Updates from 'expo-updates';
 
@@ -124,7 +124,6 @@ function AppLoaderWithClerk() {
   }, [retryNetworkCheck]);
 
   useEffect(() => {
-    setInitialLanguage();
   }, []);
 
   if (isNetworkChecking) {
@@ -140,17 +139,21 @@ function AppLoaderWithClerk() {
   }
 
   return (
-    <GluestackUIProvider mode="light"><NotificationProvider>
-        <>
-          <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
-            <Stack.Screen name="(tabs)"/>
-            <Stack.Screen name="(auth)"/>
-            <Stack.Screen name="(onboarding)"/>
-            <Stack.Screen name="(screens)"/>
-          </Stack>
-          <Toast />
-        </>
-      </NotificationProvider></GluestackUIProvider>
+    <GluestackUIProvider mode="light">
+      <SmartSystemsProvider>
+        <NotificationProvider>
+          <>
+            <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
+              <Stack.Screen name="(tabs)"/>
+              <Stack.Screen name="(auth)"/>
+              <Stack.Screen name="(onboarding)"/>
+              <Stack.Screen name="(screens)"/>
+            </Stack>
+            <Toast />
+          </>
+        </NotificationProvider>
+      </SmartSystemsProvider>
+    </GluestackUIProvider>
   );
 }
 

@@ -1,6 +1,5 @@
-import React from 'react';
-import { View, Image, StyleSheet, Dimensions, Text } from 'react-native';
-import Swiper from 'react-native-swiper';
+import React, { useState, useRef } from 'react';
+import { View, Image, StyleSheet, Dimensions, Text, FlatList, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -16,21 +15,60 @@ interface ImageSliderProps {
 }
 
 function ImageSlider({ banners }: ImageSliderProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+
+  const renderItem = ({ item }: { item: Banner }) => (
+    <View style={{ width, height: 200 }}>
+      <Image source={{ uri: item.image }} style={styles.image} />
+      {(item.title || item.description) && (
+        <View style={styles.overlay}>
+          {item.title && <Text style={styles.title}>{item.title}</Text>}
+          {item.description && <Text style={styles.description}>{item.description}</Text>}
+        </View>
+      )}
+    </View>
+  );
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setCurrentIndex(viewableItems[0].index);
+    }
+  }).current;
+
+  const renderPagination = () => (
+    <View style={styles.pagination}>
+      {banners.map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.paginationDot,
+            index === currentIndex && styles.paginationDotActive
+          ]}
+        />
+      ))}
+    </View>
+  );
+
   return (
     <View style={{ height: 200, overflow: 'hidden'}}>
-      <Swiper autoplay={true} showsPagination={true} loop={true} activeDotColor='#fff'>
-        {banners.map((banner) => (
-          <View key={banner._id} style={{ flex: 1 }}>
-            <Image source={{ uri: banner.image }} style={styles.image} />
-            {(banner.title || banner.description) && (
-              <View style={styles.overlay}>
-                {banner.title && <Text style={styles.title}>{banner.title}</Text>}
-                {banner.description && <Text style={styles.description}>{banner.description}</Text>}
-              </View>
-            )}
-          </View>
-        ))}
-      </Swiper>
+      <FlatList
+        ref={flatListRef}
+        data={banners}
+        renderItem={renderItem}
+        keyExtractor={(item) => item._id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+        getItemLayout={(_, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
+      />
+      {renderPagination()}
     </View>
   );
 }
@@ -57,6 +95,25 @@ const styles = StyleSheet.create({
   description: {
     color: '#fff',
     fontSize: 13,
+  },
+  pagination: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    marginHorizontal: 4,
+  },
+  paginationDotActive: {
+    backgroundColor: '#fff',
   },
 });
 

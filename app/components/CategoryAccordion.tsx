@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation, Platform, UIManager, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -43,15 +43,17 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({ categories, selec
     const isSelected = selectedCategory === item._id;
 
     return (
-      <View key={item._id} style={{ marginLeft: level * 20 }}>
+      <View key={item._id} style={{ marginLeft: level * 12 }}>
         <TouchableOpacity
           style={[styles.row, isSelected && styles.selectedRow]}
           onPress={() => handleSelectCategory(item._id)}
           onLongPress={() => item.children && item.children.length > 0 && toggleExpand(item._id)}
         >
-          <Text style={styles.title}>{item.name}</Text>
+          <Text style={[styles.title, isSelected && styles.selectedTitle]} numberOfLines={1}>
+            {item.name}
+          </Text>
           {item.children && item.children.length > 0 && (
-            <Ionicons name={isExpanded ? 'chevron-down' : 'chevron-back'} size={24} color="#e98c22" />
+            <Ionicons name={isExpanded ? 'chevron-down' : 'chevron-back'} size={18} color="#e98c22" />
           )}
         </TouchableOpacity>
         {isExpanded && item.children && item.children.length > 0 && (
@@ -65,25 +67,77 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({ categories, selec
 
   return (
     <View style={styles.container}>
-      {categories.map(category => renderItem(category))}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <TouchableOpacity
+          style={[styles.categoryChip, !selectedCategory && styles.selectedChip]}
+          onPress={() => onSelectCategory(null)}
+        >
+          <Text style={[styles.chipText, !selectedCategory && styles.selectedChipText]}>
+            الكل
+          </Text>
+        </TouchableOpacity>
+        
+        {categories.map(category => (
+          <TouchableOpacity
+            key={category._id}
+            style={[styles.categoryChip, selectedCategory === category._id && styles.selectedChip]}
+            onPress={() => handleSelectCategory(category._id)}
+          >
+            <Text style={[styles.chipText, selectedCategory === category._id && styles.selectedChipText]}>
+              {category.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 10,
-    marginVertical: 10,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    overflow: 'hidden',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  selectedChip: {
+    backgroundColor: '#e98c22',
+    borderColor: '#e98c22',
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666',
+    textAlign: 'center',
+  },
+  selectedChipText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    height: 50,
-    paddingHorizontal: 15,
+    height: 40,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -91,9 +145,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fdf3e8',
   },
   title: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '500',
     color: '#333',
+    flex: 1,
+  },
+  selectedTitle: {
+    color: '#e98c22',
+    fontWeight: '600',
   },
   childContainer: {
     backgroundColor: '#fafafa',

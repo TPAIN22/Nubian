@@ -5,10 +5,10 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Image,
+  Alert,
 } from "react-native";
-import React, { useCallback, useRef, useEffect } from "react";
-import { useCartStore } from "@/store/useCartStore";
+import { useCallback, useRef, useEffect, useState } from "react";
+import useCartStore from "@/store/useCartStore";
 import { useAuth } from "@clerk/clerk-expo";
 import CartItem from "../components/cartItem";
 import Chekout from "../components/chekoutBotton";
@@ -21,15 +21,16 @@ import {
 import CheckOutModal from "../components/checkOutModal";
 import { useRouter } from "expo-router";
 import i18n from "@/utils/i18n";
+import { useSmartSystems } from '@/providers/SmartSystemsProvider';
 
 export default function CartScreen() {
-  const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart } =
+  const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart, totalAmount } =
     useCartStore();
   const { getToken } = useAuth();
   const router = useRouter();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-
-  // Debug
+  const { trackEvent, sendNotification } = useSmartSystems();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -91,6 +92,17 @@ export default function CartScreen() {
     router.replace("/");
   };
 
+  // تتبع عرض السلة
+  useEffect(() => {
+    if (cart?.products) {
+      trackEvent('cart_view', {
+        itemCount: cart.products.length,
+        totalAmount: totalAmount || 0,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [trackEvent, cart?.products?.length, totalAmount]);
+
   // Move early returns after all hooks
   const isCartEmpty = !cart?.products || !Array.isArray(cart.products) || cart.products.length === 0;
 
@@ -123,6 +135,15 @@ export default function CartScreen() {
         >
           <Text style={styles.continueShoppingText}>{i18n.t('startShopping')}</Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (isProcessing) {
+    return (
+      <View style={styles.centeredContainer}>
+        <ActivityIndicator size="large" color="#e98c22" />
+        <Text style={styles.loadingText}>جاري إتمام عملية الشراء...</Text>
       </View>
     );
   }

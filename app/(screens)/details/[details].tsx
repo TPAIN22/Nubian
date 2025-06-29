@@ -6,19 +6,17 @@ import {
   Pressable,
   Dimensions,
   Animated,
-  BackHandler,
   Modal,
   TouchableOpacity,
   I18nManager,
+  FlatList,
 } from "react-native";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import  { useState, useEffect, useRef } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
-import Swiper from "react-native-swiper";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import axiosInstance from "@/utils/axiosInstans";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import Review from "../../components/Review";
 import i18n from "@/utils/i18n";
@@ -29,12 +27,12 @@ export default function Details() {
   const { product } = useItemStore();
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const { user, isSignedIn } = useUser();
-  const { getToken } = useAuth();
+  const flatListRef = useRef<FlatList>(null);
 
   const router = useRouter();
 
@@ -59,6 +57,30 @@ export default function Details() {
       }),
     ]).start();
   }, [product]);
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setCurrentImageIndex(viewableItems[0].index);
+    }
+  }).current;
+
+  const renderPagination = () => {
+    if (!product.images || product.images.length <= 1) return null;
+    
+    return (
+      <View style={styles.pagination}>
+        {product.images.map((image: string, index: number) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              index === currentImageIndex && styles.activeDot
+            ]}
+          />
+        ))}
+      </View>
+    );
+  };
 
   if (!product) {
     const router = useRouter();
@@ -195,17 +217,14 @@ export default function Details() {
         {/* Hero Image Section */}
         <View style={styles.heroSection}>
           <View style={styles.imageContainer}>
-            <Swiper
-              loop={false}
-              showsPagination={true}
-              paginationStyle={styles.pagination}
-              dotStyle={styles.dot}
-              activeDotStyle={styles.activeDot}
-              style={styles.swiper}
-            >
-              {product.images?.map((uri: string, index: number) => (
+            <FlatList
+              data={product.images}
+              keyExtractor={(item) => item}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.imageScrollContent}
+              renderItem={({ item: uri }) => (
                 <TouchableOpacity
-                  key={index}
                   style={styles.imageWrapper}
                   onPress={() => {
                     setSelectedImage(uri);
@@ -215,13 +234,18 @@ export default function Details() {
                 >
                   <Image
                     source={{ uri }}
-                    alt={`صورة المنتج ${index + 1}`}
+                    alt={`صورة المنتج`}
                     contentFit="contain"
                     style={styles.productImage}
                   />
                 </TouchableOpacity>
-              ))}
-            </Swiper>
+              )}
+              ref={flatListRef}
+              onViewableItemsChanged={onViewableItemsChanged}
+              viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+              pagingEnabled
+            />
+            {renderPagination()}
           </View>
 
           {/* Gradient overlay for better text readability */}

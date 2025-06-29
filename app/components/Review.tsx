@@ -24,10 +24,10 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
     if (productId) {
       setLoadingReviews(true);
       axiosInstance.get(`/reviews?product=${productId}`)
-        .then(res => {
+        .then((res:any) => {
           setReviews(res.data);
         })
-        .catch((error) => {
+        .catch((error:any) => {
           setReviews([]);
         })
         .finally(() => setLoadingReviews(false));
@@ -83,12 +83,6 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{i18n.t('reviews')}</Text>
-      
-      {/* زر مؤقت للـ debugging */}
-      <TouchableOpacity onPress={fetchAllReviews} style={styles.debugButton}>
-        <Text style={styles.debugButtonText}>Debug: جلب جميع الريفيوهات</Text>
-      </TouchableOpacity>
-      
       {loadingReviews ? (
         <ActivityIndicator size="small" color="#30a1a7" />
       ) : reviews.length === 0 ? (
@@ -211,17 +205,6 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
-  },
-  debugButton: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 6,
-    padding: 10,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  debugButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
 });
 

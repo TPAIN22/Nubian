@@ -11,11 +11,7 @@ import {
   TextInput,
   I18nManager,
 } from "react-native";
-import { StatusBar } from "expo-status-bar";
 import useItemStore from "@/store/useItemStore";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth, useUser } from "@clerk/clerk-expo";
-import { useCartStore } from "@/store/useCartStore";
 import HeaderComponent from "../components/costomHeader";
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";

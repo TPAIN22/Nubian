@@ -8,7 +8,7 @@ import {
   View,
   ActivityIndicator,
 } from "react-native";
-import {useCartStore} from "@/store/useCartStore";
+import useCartStore from "@/store/useCartStore";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
 import { router } from "expo-router";
@@ -39,7 +39,7 @@ const AddToCartButton = ({
   disabled,
   selectedSize
 }: Props) => {
-  const { addToCart, clearError } = useCartStore();
+  const { addToCart, clearError, fetchCart } = useCartStore();
   const { isSignedIn } = useUser();
   const { getToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +90,17 @@ const AddToCartButton = ({
         return;
       }
 
-      await addToCart(token , product._id , 1 , selectedSize || '');
+      await addToCart(token, product._id, 1, selectedSize || '');
+      
+      // تحديث السلة لضمان تحديث الـ badge
+      setTimeout(async () => {
+        try {
+          await fetchCart(token);
+        } catch (error) {
+          console.log('Error refreshing cart:', error);
+        }
+      }, 100);
+
       Toast.show({
         type: "success",
         text1: i18n.t('addedToCart'),

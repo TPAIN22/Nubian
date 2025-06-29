@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import axiosInstance from "@/utils/axiosInstans"; // تأكد من المسار الصحيح لـ axiosInstance
 
-export const useCartStore = create((set, get) => ({
+const useCartStore = create((set, get) => ({
   cart: null, // سلة التسوق، ستكون null أو كائن السلة من الـ backend
   isLoading: false,
   error: null,
@@ -115,3 +115,5 @@ export const useCartStore = create((set, get) => ({
     }
   },
 }));
+
+export default useCartStore;

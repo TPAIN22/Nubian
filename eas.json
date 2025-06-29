@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.3.3",
+    "version": ">= 12.0.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -20,10 +20,22 @@
       }
     },
     "production": {
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease",
+        "env": {
+          "ENABLE_PROGUARD": "true",
+          "ENABLE_SHRINK_RESOURCES": "true"
+        }
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      },
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubnViaWFuLXNkLnN0b3JlJA"
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubnViaWFuLXNkLnN0b3JlJA",
+        "EXPO_PUBLIC_ENABLE_OPTIMIZATION": "true"
       }
     }
   },

@@ -8,9 +8,8 @@ import { VStack } from "@/components/ui/vstack";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React from "react";
-import { Dimensions, Pressable, StyleSheet, View, I18nManager } from "react-native";
-import Swiper from "react-native-swiper";
+import React, { useState, useRef } from "react";
+import { Dimensions, Pressable, StyleSheet, View, I18nManager, FlatList } from "react-native";
 import i18n from "@/utils/i18n";
 
 interface item {
@@ -20,11 +19,15 @@ interface item {
   images?: string[];
   discountPrice?: number;
 }
+
 function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   const { setProduct, setIsTabBarVisible } = useItemStore();
   const screenWidth = Dimensions.get("window").width;
   const cardWidth = screenWidth / 2 - 20;
   const router = useRouter();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ar-SDG", {
       style: "currency",
@@ -62,30 +65,67 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     router.push(`/details/${item._id}`);
   };
 
+  const renderImage = ({ item: imageUri }: { item: string }) => (
+    <Pressable onPress={() => handleClick(item)}>
+      <Image
+        source={imageUri}
+        alt="product image"
+        style={{
+          height: 160,
+          width: cardWidth,
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
+        }}
+        contentFit="cover"
+      />
+    </Pressable>
+  );
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setCurrentImageIndex(viewableItems[0].index);
+    }
+  }).current;
+
+  const renderPagination = () => {
+    if (!item.images || item.images.length <= 1) return null;
+    
+    return (
+      <View style={styles.pagination}>
+        {item.images.map((image: string, index: number) => (
+          <View
+            key={index}
+            style={[
+              styles.paginationDot,
+              index === currentImageIndex && styles.paginationDotActive
+            ]}
+          />
+        ))}
+      </View>
+    );
+  };
+
   return (
     <Card className="p-0 rounded-lg bg-white my-2" style={{ width: cardWidth }}>
-      <Swiper
-        loop={true}
-        showsPagination={false}
-        style={{ height: 160, overflow: "hidden" }}
-      >
-        {item.images?.map((uri: string, index: number) => (
-          <Pressable key={index} onPress={() => handleClick(item)}>
-            <Image
-              key={index}
-              source={uri}
-              alt="product image"
-              style={{
-                height: 160,
-                width: cardWidth,
-                borderTopLeftRadius: 8,
-                borderTopRightRadius: 8,
-              }}
-              contentFit="cover"
-            />
-          </Pressable>
-        ))}
-      </Swiper>
+      <View style={{ height: 160, overflow: "hidden" }}>
+        <FlatList
+          ref={flatListRef}
+          data={item.images || []}
+          renderItem={renderImage}
+          keyExtractor={(item: string, index: number) => index.toString()}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+          getItemLayout={(data: any, index: number) => ({
+            length: cardWidth,
+            offset: cardWidth * index,
+            index,
+          })}
+        />
+        {renderPagination()}
+      </View>
       <View className="px-4">
         <VStack className="">
           <Heading size="sm" className=" text-[#646767]">
@@ -120,6 +160,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     </Card>
   );
 }
+
 const styles = StyleSheet.create({
   discountBadge: {
     backgroundColor: "#e98c22",
@@ -133,13 +174,31 @@ const styles = StyleSheet.create({
     top: 5,
     right: 5,
   },
-
   discountText: {
     color: "#FFFFFF",
     fontSize: 10,
     fontWeight: "bold",
     textAlign: "left",
     fontFamily: "System",
+  },
+  pagination: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paginationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    marginHorizontal: 2,
+  },
+  paginationDotActive: {
+    backgroundColor: '#fff',
   },
 });
 

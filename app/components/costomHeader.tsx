@@ -9,20 +9,52 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from "@/utils/i18n";
-import { useCartStore } from "@/store/useCartStore";
+import useCartStore from "@/store/useCartStore";
+import { useAuth } from "@clerk/clerk-expo";
+import CartBadge from "./CartBadge";
 
 const { width } = Dimensions.get('window');
 
 export default function HeaderComponent() {
   const router = useRouter();
-  const { cart } = useCartStore();
+  const { cart, fetchCart } = useCartStore();
+  const { getToken } = useAuth();
+  const [cartItemCount, setCartItemCount] = useState(0);
 
-  const cartItemCount = cart?.products?.reduce((total: number, item: any) => {
-    return total + (item.quantity || 1);
-  }, 0) || 0;
+  // حساب عدد العناصر في السلة
+  useEffect(() => {
+    const calculateCartCount = () => {
+      if (cart?.products && Array.isArray(cart.products)) {
+        const count = cart.products.reduce((total: number, item: any) => {
+          return total + (item.quantity || 1);
+        }, 0);
+        setCartItemCount(count);
+      } else {
+        setCartItemCount(0);
+      }
+    };
+
+    calculateCartCount();
+  }, [cart]);
+
+  // جلب بيانات السلة عند تحميل المكون
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const token = await getToken();
+        if (token) {
+          await fetchCart(token);
+        }
+      } catch (error) {
+        console.log('Error loading cart:', error);
+      }
+    };
+
+    loadCart();
+  }, []);
 
   return (
     <View style={styles.header}>
@@ -61,15 +93,12 @@ export default function HeaderComponent() {
         <TouchableOpacity
           style={styles.iconButton}
           onPress={() => router.push("/(tabs)/cart")}
+          activeOpacity={0.7}
         >
-          <Ionicons name="cart-outline" size={24} color="#666" />
-          {cartItemCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {cartItemCount > 99 ? '99+' : cartItemCount}
-              </Text>
-            </View>
-          )}
+          <View style={styles.cartContainer}>
+            <Ionicons name="cart-outline" size={24} color="#666" />
+            <CartBadge size={20} fontSize={10} />
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -86,6 +115,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   logoSection: {
     alignItems: 'center',
@@ -104,6 +138,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
   },
   searchPlaceholder: {
     marginLeft: 8,
@@ -119,21 +158,9 @@ const styles = StyleSheet.create({
     position: 'relative',
     padding: 4,
   },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: '#e98c22',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
+  cartContainer: {
+    position: 'relative',
     alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    justifyContent: 'center',
   },
 });
