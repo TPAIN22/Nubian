@@ -11,6 +11,9 @@ import { useRouter } from "expo-router";
 import React, { useState, useRef } from "react";
 import { Dimensions, Pressable, StyleSheet, View, I18nManager, FlatList } from "react-native";
 import i18n from "@/utils/i18n";
+import useWishlistStore from '@/store/wishlistStore';
+import { useAuth } from '@clerk/clerk-expo';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface item {
   _id: string;
@@ -27,6 +30,9 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   const router = useRouter();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
+  const { getToken } = useAuth();
+  const inWishlist = isInWishlist(item._id);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ar-SDG", {
@@ -63,6 +69,15 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   const handleClick = (item: item) => {
     setProduct(item);
     router.push(`/details/${item._id}`);
+  };
+
+  const handleWishlistPress = async () => {
+    const token = await getToken();
+    if (inWishlist) {
+      removeFromWishlist(item._id, token);
+    } else {
+      addToWishlist(item, token);
+    }
   };
 
   const renderImage = ({ item: imageUri }: { item: string }) => (
@@ -108,6 +123,16 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   return (
     <Card className="p-0 rounded-lg bg-white my-2" style={{ width: cardWidth }}>
       <View style={{ height: 160, overflow: "hidden" }}>
+        <Pressable
+          onPress={handleWishlistPress}
+          style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
+        >
+          <Ionicons
+            name={inWishlist ? 'heart' : 'heart-outline'}
+            size={24}
+            color="#e74c3c"
+          />
+        </Pressable>
         <FlatList
           ref={flatListRef}
           data={item.images || []}

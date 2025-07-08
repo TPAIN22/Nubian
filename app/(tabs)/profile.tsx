@@ -79,6 +79,14 @@ export default function Profile() {
       icon: "receipt-outline" as const,
       color: "#7ED321",
     },
+    {
+      title: 'عناوين الشحن',
+      action: () => {
+        router.push("/addresses");
+      },
+      icon: "location-outline" as const,
+      color: "#30a1a7",
+    },
   ];
 
   // العناصر المتاحة للجميع (بدون تسجيل دخول)
@@ -432,22 +440,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    padding: 24,
+    padding: 16,
     borderRadius: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
   },
   avatarContainer: {
     position: "relative",
     marginHorizontal: 16,
   },
   avatar: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     borderRadius: 40,
     borderWidth: 3,
     borderColor: "#e98c22",

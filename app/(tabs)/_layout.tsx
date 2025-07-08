@@ -1,15 +1,11 @@
 import React, { useEffect } from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import { Image } from "expo-image";
 import {
   View,
   LayoutAnimation,
-  Platform,
-  UIManager,
   Pressable,
   StyleSheet,
-  TextInput,
-  I18nManager,
 } from "react-native";
 import useItemStore from "@/store/useItemStore";
 import HeaderComponent from "../components/costomHeader";
@@ -57,17 +53,15 @@ const TabIcon: React.FC<TabIconProps> = ({ source, focused, label }) => (
   </View>
 );
 
-function CustomTabButton(props: BottomTabBarButtonProps) {
-  return (
-    <Pressable
-      {...props}
-      android_ripple={{ color: "transparent" }}
-      style={styles.tabButton}
-    >
-      {props.children}
-    </Pressable>
-  );
-}
+const CustomTabButton = (props: BottomTabBarButtonProps) => (
+  <Pressable
+    onPress={props.onPress}
+    style={[styles.tabButton, props.style]}
+    android_ripple={{ color: "transparent" }}
+  >
+    {props.children}
+  </Pressable>
+);
 
 export default function TabsLayout() {
   const { isTabBarVisible } = useItemStore();
@@ -91,7 +85,7 @@ export default function TabsLayout() {
         tabBarHideOnKeyboard: true,
         tabBarShowLabel: false,
         tabBarStyle: styles.tabBar,
-        tabBarButton: CustomTabButton,
+        tabBarButton: (props) => <CustomTabButton {...props} />,
         tabBarActiveTintColor: CONSTANTS.colors.focused,
         tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
         headerShadowVisible: false,
@@ -156,6 +150,19 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="wishlist"
+        options={{
+          headerShown: true,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              source={require("../../assets/images/heart-solid.svg")}
+              focused={focused}
+              label={i18n.t("wishlist") || "Wishlist"}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
@@ -211,6 +218,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     borderBottomWidth: 1,
     borderBottomColor: CONSTANTS.colors.border,
+    marginTop: 20,
   },
 
   headerTitleContainer: {

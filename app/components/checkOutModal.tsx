@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,73 +9,76 @@ import {
   FlatList,
   Alert,
   I18nManager,
+  ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";
 import useCartStore from "@/store/useCartStore";
+import useAddressStore from "@/store/addressStore";
+import AddressForm, { Address } from "./AddressForm";
 
 export default function CheckOutModal({
   handleClose,
 }: {
   handleClose: () => void;
 }) {
-  const [selectedCity, setSelectedCity] = useState("");
-  const [showCityModal, setShowCityModal] = useState(false);
-  const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { createOrder } = useOrderStore();
+  const { addresses, fetchAddresses, addAddress, isLoading: isAddressesLoading } = useAddressStore();
   const { getToken } = useAuth();
+  const { createOrder } = useOrderStore();
   const { clearCart } = useCartStore();
 
-  const cities = ["الخرطوم", "مدني", "القضارف", "بورتسودان", "عطبرة"];
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressFormInitial, setAddressFormInitial] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const selectCity = (city: string) => {
-    setSelectedCity(city);
-    setShowCityModal(false);
+  useEffect(() => {
+    getToken().then(token => fetchAddresses(token));
+  }, []);
+
+  useEffect(() => {
+    if (addresses.length > 0) {
+      const def = addresses.find((a: Address) => a.isDefault) || addresses[0];
+      setSelectedAddressId(def && def._id ? def._id! : null);
+    }
+  }, [addresses.length]);
+
+  const handleAddAddress = async (form: Omit<Address, '_id'>) => {
+    const token = await getToken();
+    console.log('Submitting new address:', form);
+    try {
+      await addAddress(form, token);
+      console.log('Address added, fetching addresses...');
+      await fetchAddresses(token);
+      setShowAddressForm(false);
+      setTimeout(() => {
+        const latest = addresses.find((a: Address) => a.isDefault) || addresses[addresses.length - 1];
+        setSelectedAddressId(latest && latest._id ? latest._id : null);
+      }, 300);
+      Alert.alert('تمت الإضافة', 'تم إضافة العنوان بنجاح');
+    } catch (err) {
+      console.log('Error adding address:', err);
+      Alert.alert('خطأ', 'حدث خطأ أثناء إضافة العنوان');
+    }
   };
 
-  const validateForm = () => {
-    if (!selectedCity.trim()) {
-      Alert.alert("خطأ", "يرجى اختيار المدينة");
-      return false;
+  const handleCheckout = async () => {
+    if (!selectedAddressId) {
+      Alert.alert("خطأ", "يرجى اختيار عنوان للتوصيل");
+      return;
     }
-    if (!address.trim()) {
-      Alert.alert("خطأ", "يرجى إدخال العنوان");
-      return false;
-    }
-    if (!phone.trim()) {
-      Alert.alert("خطأ", "يرجى إدخال رقم الهاتف");
-      return false;
-    }
-    if (phone.length < 10) {
-      Alert.alert("خطأ", "رقم الهاتف غير صحيح");
-      return false;
-    }
-    return true;
-  };
-
-  const handlePressCheckout = async () => {
-    if (!validateForm()) return;
     setIsLoading(true);
     try {
       const token = await getToken();
-
-      // *** MODIFIED: Construct the orderPayload to match backend's req.body structure ***
+      const selectedAddress = addresses.find((a: Address) => a._id === selectedAddressId);
+      if (!selectedAddress) throw new Error("العنوان غير موجود");
       const orderPayload = {
-        deliveryAddress: {
-          // Backend expects this nested structure
-          city: selectedCity,
-          address: address.trim(),
-          phone: phone.trim(),
-        },
-        paymentMethod: "cash", // Assuming cash on delivery, or add state for selection
+        deliveryAddress: selectedAddress,
+        paymentMethod: "cash",
       };
-
       if (token) {
-        await createOrder(orderPayload, token); // Pass the correctly structured payload
+        await createOrder(orderPayload, token);
         await clearCart();
         Alert.alert("نجح", "تم تأكيد الطلب بنجاح!");
         handleClose();
@@ -82,137 +86,74 @@ export default function CheckOutModal({
         Alert.alert("خطأ", "حدث خطأ في المصادقة");
       }
     } catch (error) {
-
-      const errorMessage =  "حدث خطأ أثناء إرسال الطلب";
-      Alert.alert("خطأ", errorMessage); 
-      handleClose(); 
+      Alert.alert("خطأ", "حدث خطأ أثناء إرسال الطلب");
+      handleClose();
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isAddressesLoading) return <ActivityIndicator size="large" color="#30a1a7" style={{ marginTop: 40 }} />;
+  if (showAddressForm) {
+    return (
+      <AddressForm
+        visible={true}
+        onClose={() => {
+          setShowAddressForm(false);
+          Alert.alert('تم الإلغاء', 'لم يتم إضافة أي عنوان');
+        }}
+        onSubmit={handleAddAddress}
+        initialValues={addressFormInitial}
+      />
+    );
+  }
+
+  if (addresses.length === 0) {
+    return (
+      <View style={[styles.innerContainer, { justifyContent: 'center', alignItems: 'center', flex: 1 }]}> 
+        <Text style={styles.emptyText}>لا توجد عناوين محفوظة</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => { setAddressFormInitial(null); setShowAddressForm(true); }}>
+          <Text style={styles.addButtonText}>+ إضافة عنوان جديد</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <KeyboardAwareScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
       <View style={styles.innerContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>العنوان والتوصيل</Text>
+          <Text style={styles.title}>اختر عنوان التوصيل</Text>
         </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>المدينة *</Text>
+        <FlatList
+          data={addresses}
+          keyExtractor={(item: Address) => item._id as string}
+          renderItem={({ item }: { item: Address }) => (
             <TouchableOpacity
-              style={[styles.citySelector, selectedCity && styles.filledInput]}
-              onPress={() => setShowCityModal(true)}
-              activeOpacity={0.7}
+              style={[styles.addressCard, selectedAddressId === item._id && styles.selectedCard]}
+              onPress={() => setSelectedAddressId(item._id || null)}
             >
-              <Text
-                style={[
-                  styles.citySelectorText,
-                  !selectedCity && styles.placeholder,
-                ]}
-              >
-                {selectedCity || "اختر المدينة"}
-              </Text>
-              <Text style={styles.arrow}>▼</Text>
+              <Text style={styles.addressName}>{item.name} {item.isDefault && <Text style={styles.defaultText}>(افتراضي)</Text>}</Text>
+              <Text>{item.city}، {item.area}، {item.street}، {item.building}</Text>
+              <Text>📞 {item.phone}</Text>
+              {item.notes ? <Text>ملاحظات إضافية: {item.notes}</Text> : null}
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>العنوان *</Text>
-            <TextInput
-              style={[styles.input, address && styles.filledInput]}
-              placeholder="ادخل اسم المحلية والحي"
-              placeholderTextColor="#999"
-              value={address}
-              onChangeText={setAddress}
-              multiline={true}
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>رقم الهاتف *</Text>
-            <TextInput
-              style={[styles.input, phone && styles.filledInput]}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="ادخل رقم الهاتف"
-              placeholderTextColor="#999"
-              keyboardType="phone-pad"
-              maxLength={15}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handlePressCheckout}
-            disabled={isLoading}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>
-              {isLoading ? "جاري التأكيد..." : "تأكيد الطلب"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <Modal
-          visible={showCityModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowCityModal(false)}
+          )}
+          ListEmptyComponent={<Text style={styles.emptyText}>لا توجد عناوين محفوظة</Text>}
+        />
+        <TouchableOpacity style={styles.addButton} onPress={() => { setAddressFormInitial(null); setShowAddressForm(true); }}>
+          <Text style={styles.addButtonText}>+ إضافة عنوان جديد</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleCheckout}
+          disabled={isLoading}
+          activeOpacity={0.8}
         >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowCityModal(false)}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>اختر المدينة</Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setShowCityModal(false)}
-                >
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={cities}
-                keyExtractor={(item) => item}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.cityOption,
-                      selectedCity === item && styles.selectedCityOption,
-                    ]}
-                    onPress={() => selectCity(item)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.cityOptionText,
-                        selectedCity === item && styles.selectedCityOptionText,
-                      ]}
-                    >
-                      {item}
-                    </Text>
-                    {selectedCity === item && (
-                      <Text style={styles.checkMark}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          </TouchableOpacity>
-        </Modal>
+          <Text style={styles.buttonText}>{isLoading ? "جاري التأكيد..." : "تأكيد الطلب"}</Text>
+        </TouchableOpacity>
       </View>
-    </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -397,5 +338,53 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#30a1a7",
     fontWeight: "bold",
+  },
+  addressCard: {
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  selectedCard: {
+    borderColor: '#30a1a7',
+    borderWidth: 2,
+    backgroundColor: '#e3f7fa',
+  },
+  addressName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#2c3e50",
+    marginBottom: 6,
+  },
+  defaultText: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "bold",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+  },
+  addButton: {
+    backgroundColor: "#30a1a7",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 20,
+    shadowColor: "#30a1a7",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  addButtonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#ffffff",
   },
 });

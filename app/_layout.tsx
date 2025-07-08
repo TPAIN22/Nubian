@@ -143,6 +143,7 @@ function AppLoaderWithClerk() {
       {/* <SmartSystemsProvider> */}
         <NotificationProvider>
           <>
+          <StatusBar style="auto" />
             <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
               <Stack.Screen name="(tabs)"/>
               <Stack.Screen name="(auth)"/>

@@ -5,19 +5,16 @@ import {
   TextInput, 
   TouchableOpacity, 
   ScrollView,
-  Alert,
   Platform, 
   ActivityIndicator,
-  BackHandler
+  
 } from 'react-native'
-import React, { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useUser } from '@clerk/clerk-expo'
 import { Image } from 'expo-image'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import { StatusBar } from 'expo-status-bar'
 import { useRouter } from 'expo-router'
 import Toast from 'react-native-toast-message'
-import { useFocusEffect } from '@react-navigation/native'
 
 
 export default function EditProfile() {
@@ -38,12 +35,14 @@ export default function EditProfile() {
 
    const handleSave = async () => {
     if (user && profileData.name) {
-      // split into first and last
       const [firstName, ...rest] = profileData.name.split(' ');
       const lastName = rest.length > 0 ? rest.join(' ') : '';
       try {
         setIsEditing(true);
-        await user?.update({ firstName, lastName });
+        await user?.update({ 
+          firstName: firstName ?? null, 
+          lastName: lastName ?? null 
+        });
         Toast.show({ type:'success', text1:'تم تغيير الأسم في' });
       } catch (err) {
         Toast.show({ type:'error', text1:'فشل تغيير الأسم' });
@@ -53,10 +52,6 @@ export default function EditProfile() {
       }
     }
 
-  }
-
-  const handleImagePicker = () => {
-   
   }
 
   const { user } = useUser();
@@ -80,10 +75,13 @@ export default function EditProfile() {
       <View style={styles.imageSection}>
         <TouchableOpacity onPress={()=>{}} style={styles.imageContainer}>
           <Image
-            source={user?.imageUrl}
+            source={
+              user?.imageUrl
+                ? { uri: user.imageUrl }
+                : require('../../assets/images/google.svg')
+            }
             style={styles.profileImage}
           />
-         
         </TouchableOpacity>
       </View>
 

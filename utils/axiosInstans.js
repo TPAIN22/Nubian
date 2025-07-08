@@ -33,7 +33,6 @@ const cacheResponse = async (key, data) => {
     }
 };
 
-// دالة لاسترجاع البيانات من التخزين المؤقت
 const getCachedResponse = async (key) => {
     try {
         const cached = await AsyncStorage.getItem(`cache_${key}`);
