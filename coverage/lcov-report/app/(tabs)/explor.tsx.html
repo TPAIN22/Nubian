@@ -2575,7 +2575,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
 <span class="cstat-no" title="statement not covered" >    if (isLoading || categoriesLoading) {</span>
 <span class="cstat-no" title="statement not covered" >      return (</span>
         &lt;View style={enhancedStyles.emptyContainer}&gt;
-          &lt;ActivityIndicator size="large" color="#e98c22" /&gt;
+          &lt;ActivityIndicator size="large" color="#f0b745" /&gt;
           &lt;Text style={enhancedStyles.loadingText}&gt;جاري التحميل...&lt;/Text&gt;
         &lt;/View&gt;
       );
@@ -2584,7 +2584,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
 <span class="cstat-no" title="statement not covered" >    return (</span>
       &lt;View style={enhancedStyles.emptyContainer}&gt;
         &lt;View style={enhancedStyles.emptyIconContainer}&gt;
-          &lt;Ionicons name="search-outline" size={60} color="#e98c22" /&gt;
+          &lt;Ionicons name="search-outline" size={60} color="#f0b745" /&gt;
         &lt;/View&gt;
         &lt;Text style={enhancedStyles.emptyTitle}&gt;
           {searchTerm ? 'لا توجد نتائج' : 'لا توجد منتجات'}
@@ -2628,7 +2628,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
             {
               borderColor: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['#e0e0e0', '#e98c22'],
+                outputRange: ['#e0e0e0', '#f0b745'],
               }),
               shadowOpacity: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
@@ -2663,7 +2663,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
             style={enhancedStyles.filterButton}
             onPress={showFilterModal}
           &gt;
-            &lt;Ionicons name="funnel-outline" size={18} color="#e98c22" /&gt;
+            &lt;Ionicons name="funnel-outline" size={18} color="#f0b745" /&gt;
             &lt;Text style={enhancedStyles.filterText}&gt;تصفية&lt;/Text&gt;
             {(showAvailableOnly || sortByHighestPrice || sortByLowestPrice || filterCategory) &amp;&amp; (
               &lt;View style={enhancedStyles.filterBadge} /&gt;
@@ -2686,7 +2686,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
             &lt;Ionicons 
               name={sortByHighestPrice ? "arrow-down" : "arrow-up"} 
               size={18} 
-              color="#e98c22" 
+              color="#f0b745" 
             /&gt;
             &lt;Text style={enhancedStyles.sortText}&gt;
               {sortByHighestPrice ? "الأعلى سعراً" : sortByLowestPrice ? "الأقل سعراً" : "ترتيب"}
@@ -2738,7 +2738,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
                     onPress={<span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >setShowAvailableOnly(<span class="fstat-no" title="function not covered" >pr</span>ev =&gt; <span class="cstat-no" title="statement not covered" >!prev)</span>}</span>
                   &gt;
                     &lt;View style={enhancedStyles.filterOptionLeft}&gt;
-                      &lt;Ionicons name="checkmark-circle-outline" size={20} color="#e98c22" /&gt;
+                      &lt;Ionicons name="checkmark-circle-outline" size={20} color="#f0b745" /&gt;
                       &lt;Text style={enhancedStyles.filterOptionText}&gt;المنتجات المتوفرة فقط&lt;/Text&gt;
                     &lt;/View&gt;
                     &lt;View style={[
@@ -2763,7 +2763,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
                       }}
                     &gt;
                       &lt;View style={enhancedStyles.filterOptionLeft}&gt;
-                        &lt;Ionicons name="arrow-down-outline" size={20} color="#e98c22" /&gt;
+                        &lt;Ionicons name="arrow-down-outline" size={20} color="#f0b745" /&gt;
                         &lt;Text style={enhancedStyles.filterOptionText}&gt;من الأعلى للأقل&lt;/Text&gt;
                       &lt;/View&gt;
                       &lt;View style={[
@@ -2784,7 +2784,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
                       }}
                     &gt;
                       &lt;View style={enhancedStyles.filterOptionLeft}&gt;
-                        &lt;Ionicons name="arrow-up-outline" size={20} color="#e98c22" /&gt;
+                        &lt;Ionicons name="arrow-up-outline" size={20} color="#f0b745" /&gt;
                         &lt;Text style={enhancedStyles.filterOptionText}&gt;من الأقل للأعلى&lt;/Text&gt;
                       &lt;/View&gt;
                       &lt;View style={[
@@ -2843,7 +2843,7 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
                   style={enhancedStyles.applyButton}
                 &gt;
                   &lt;LinearGradient
-                    colors={['#e98c22', '#d67b1a']}
+                    colors={['#f0b745', '#d67b1a']}
                     style={enhancedStyles.applyButtonGradient}
                   &gt;
                     &lt;Text style={enhancedStyles.applyButtonText}&gt;تطبيق الفلاتر&lt;/Text&gt;
@@ -2872,8 +2872,8 @@ const SearchPage = <span class="cstat-no" title="statement not covered" ><span c
           &lt;RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#e98c22"]}
-            tintColor="#e98c22"
+            colors={["#f0b745"]}
+            tintColor="#f0b745"
           /&gt;
         }
         ListEmptyComponent={ListEmptyComponent}
@@ -2963,7 +2963,7 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
     paddingVertical: 2,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e98c22',
+    borderColor: '#f0b745',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -2973,7 +2973,7 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
   },
   filterText: {
     marginLeft: 6,
-    color: '#e98c22',
+    color: '#f0b745',
     fontWeight: '600',
     fontSize: 12,
   },
@@ -2994,7 +2994,7 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e98c22',
+    borderColor: '#f0b745',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -3003,7 +3003,7 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
   },
   sortText: {
     marginLeft: 4,
-    color: '#e98c22',
+    color: '#f0b745',
     fontWeight: '600',
     fontSize: 12,
   },
@@ -3112,16 +3112,16 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
   price: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#e98c22',
+    color: '#f0b745',
   },
   addButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#e98c22',
+    shadowColor: '#f0b745',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -3265,8 +3265,8 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
     alignItems: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#e98c22',
-    borderColor: '#e98c22',
+    backgroundColor: '#f0b745',
+    borderColor: '#f0b745',
   },
   categoryScroll: {
     maxHeight: 150,
@@ -3281,7 +3281,7 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
     borderColor: 'transparent',
   },
   categoryOptionActive: {
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     borderColor: '#d67b1a',
   },
   categoryOptionText: {
@@ -3297,7 +3297,7 @@ const enhancedStyles = <span class="cstat-no" title="statement not covered" >Sty
     margin: 20,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#e98c22',
+    shadowColor: '#f0b745',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

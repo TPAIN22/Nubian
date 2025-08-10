@@ -3,6 +3,7 @@ import { View, FlatList, Text, ActivityIndicator, StyleSheet } from 'react-nativ
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import ProductCard from '../components/Card';
+import i18n from '@/utils/i18n';
 
 export default function WishlistTab() {
   const { wishlist, fetchWishlist, isLoading } = useWishlistStore();
@@ -13,7 +14,12 @@ export default function WishlistTab() {
   }, []);
 
   if (isLoading) return <ActivityIndicator size="large" color="#30a1a7" style={{ marginTop: 40 }} />;
-  if (!wishlist.length) return <Text style={styles.emptyText}>لا توجد منتجات في المفضلة</Text>;
+  if (!wishlist.length) return (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyTitle}>{i18n.t('wishlistEmpty')}</Text>
+      <Text style={styles.emptySubtitle}>{i18n.t('wishlistEmptySubtitle')}</Text>
+    </View>
+  );
 
   return (
     <FlatList
@@ -26,6 +32,23 @@ export default function WishlistTab() {
 }
 
 const styles = StyleSheet.create({
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    color: '#888',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#bbb',
+    textAlign: 'center',
+    marginTop: 5,
+  },
   emptyText: {
     textAlign: 'center',
     marginTop: 40,

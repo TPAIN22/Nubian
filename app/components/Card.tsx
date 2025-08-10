@@ -86,12 +86,11 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
         source={imageUri}
         alt="product image"
         style={{
-          height: 160,
+          height: 260,
           width: cardWidth,
-          borderTopLeftRadius: 8,
-          borderTopRightRadius: 8,
+          borderRadius: 8,
         }}
-        contentFit="cover"
+        contentFit="fill"
       />
     </Pressable>
   );
@@ -119,10 +118,9 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
       </View>
     );
   };
-
   return (
     <Card className="p-0 rounded-lg bg-white my-2" style={{ width: cardWidth }}>
-      <View style={{ height: 160, overflow: "hidden" }}>
+      <View style={{ height: 260, overflow: "hidden" }}>
         <Pressable
           onPress={handleWishlistPress}
           style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
@@ -157,12 +155,12 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
             {item.name}
           </Heading>
           {item.discountPrice > 0 && (
-            <Text className=" line-through text-[#e98c22]">
+            <Text className=" line-through text-[#f0b745]">
               {item.discountPrice > 0 && formatPrice(item.discountPrice)}
             </Text>
           )}
           <Text className=" text-[#30a1a7] font-bold text-md">
-            {formatPrice(item.price)} {i18n.t('currencySDG')}
+            {formatPrice(item.price)}
           </Text>
         </VStack>
       </View>
@@ -188,7 +186,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
 
 const styles = StyleSheet.create({
   discountBadge: {
-    backgroundColor: "#e98c22",
+    backgroundColor: "#f0b745",
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 2,

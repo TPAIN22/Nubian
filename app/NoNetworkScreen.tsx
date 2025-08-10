@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   },
   wifiBar: {
     position: 'absolute',
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     borderRadius: 4,
   },
   bar1: {
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 3,
     height: 70,
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     transform: [{ rotate: '45deg' }],
   },
   title: {
@@ -99,12 +99,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   retryButton: {
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     paddingVertical: 10,
     paddingHorizontal: 40,
     borderRadius: 25,
     elevation: 3,
-    shadowColor: '#e98c22',
+    shadowColor: '#f0b745',
     shadowOffset: {
       width: 0,
       height: 4,

@@ -90,14 +90,14 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
           {(item.stock || 0) <= 5 && (item.stock || 0) > 0 && (
             <View style={enhancedStyles.stockBadge}>
               <Text style={enhancedStyles.stockText}>
-                {item.stock} متبقي
+                {i18n.t('remainingStock', { count: item.stock })}
               </Text>
             </View>
           )}
           {/* Out of stock overlay */}
           {(item.stock || 0) === 0 && (
             <View style={enhancedStyles.outOfStockOverlay}>
-              <Text style={enhancedStyles.outOfStockText}>نفد المخزون</Text>
+              <Text style={enhancedStyles.outOfStockText}>{i18n.t('outOfStock')}</Text>
             </View>
           )}
           {/* Favorite button */}
@@ -108,12 +108,12 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
         
         <View style={enhancedStyles.cardInfo}>
           <Text style={enhancedStyles.cardName} numberOfLines={2}>
-            {item.name || 'منتج غير محدد'}
+            {item.name || i18n.t('undefinedProduct')}
           </Text>
           
           <View style={enhancedStyles.cardBottom}>
             <View style={enhancedStyles.priceContainer}>
-              <Text style={enhancedStyles.currency}>SDG</Text>
+              <Text style={enhancedStyles.currency}>{i18n.t('currency')}</Text>
               <Text style={enhancedStyles.price}>
                 {typeof item.price === 'number' ? item.price.toFixed(2) : '0.00'}
               </Text>
@@ -403,8 +403,8 @@ const SearchPage = () => {
     if (isLoading || categoriesLoading) {
       return (
         <View style={enhancedStyles.emptyContainer}>
-          <ActivityIndicator size="large" color="#e98c22" />
-          <Text style={enhancedStyles.loadingText}>جاري التحميل...</Text>
+          <ActivityIndicator size="large" color="#f0b745" />
+          <Text style={enhancedStyles.loadingText}>{i18n.t('loading')}</Text>
         </View>
       );
     }
@@ -412,15 +412,15 @@ const SearchPage = () => {
     return (
       <View style={enhancedStyles.emptyContainer}>
         <View style={enhancedStyles.emptyIconContainer}>
-          <Ionicons name="search-outline" size={60} color="#e98c22" />
+          <Ionicons name="search-outline" size={60} color="#f0b745" />
         </View>
         <Text style={enhancedStyles.emptyTitle}>
-          {searchTerm ? 'لا توجد نتائج' : 'لا توجد منتجات'}
+          {searchTerm ? i18n.t('noResults') : i18n.t('noProducts')}
         </Text>
         <Text style={enhancedStyles.emptySubtitle}>
           {searchTerm 
-            ? 'جرب البحث بكلمات أخرى أو تغيير الفلاتر' 
-            : 'لم يتم العثور على منتجات في الوقت الحالي'
+            ? i18n.t('tryNewSearch') 
+            : i18n.t('noProductsFound')
           }
         </Text>
       </View>
@@ -456,7 +456,7 @@ const SearchPage = () => {
             {
               borderColor: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['#e0e0e0', '#e98c22'],
+                outputRange: ['#e0e0e0', '#f0b745'],
               }),
               shadowOpacity: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
@@ -467,7 +467,7 @@ const SearchPage = () => {
         >
           <Ionicons name="search" size={20} color="#666" style={enhancedStyles.searchIcon} />
           <TextInput
-            placeholder="ابحث عن المنتجات..."
+            placeholder={i18n.t('searchProducts')}
             style={enhancedStyles.searchInput}
             value={searchTerm}
             onChangeText={setSearchTerm}
@@ -491,8 +491,8 @@ const SearchPage = () => {
             style={enhancedStyles.filterButton}
             onPress={showFilterModal}
           >
-            <Ionicons name="funnel-outline" size={18} color="#e98c22" />
-            <Text style={enhancedStyles.filterText}>تصفية</Text>
+            <Ionicons name="funnel-outline" size={18} color="#f0b745" />
+            <Text style={enhancedStyles.filterText}>{i18n.t('filter')}</Text>
             {(showAvailableOnly || sortByHighestPrice || sortByLowestPrice || filterCategory) && (
               <View style={enhancedStyles.filterBadge} />
             )}
@@ -514,10 +514,10 @@ const SearchPage = () => {
             <Ionicons 
               name={sortByHighestPrice ? "arrow-down" : "arrow-up"} 
               size={18} 
-              color="#e98c22" 
+              color="#f0b745" 
             />
             <Text style={enhancedStyles.sortText}>
-              {sortByHighestPrice ? "الأعلى سعراً" : sortByLowestPrice ? "الأقل سعراً" : "ترتيب"}
+              {sortByHighestPrice ? i18n.t('highestPrice') : sortByLowestPrice ? i18n.t('lowestPrice') : i18n.t('sort')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -553,7 +553,7 @@ const SearchPage = () => {
             >
               <TouchableOpacity activeOpacity={1}>
                 <View style={enhancedStyles.modalHeader}>
-                  <Text style={enhancedStyles.modalTitle}>خيارات التصفية</Text>
+                  <Text style={enhancedStyles.modalTitle}>{i18n.t('filterOptions')}</Text>
                   <TouchableOpacity onPress={hideFilterModal}>
                     <Ionicons name="close" size={24} color="#666" />
                   </TouchableOpacity>
@@ -566,8 +566,8 @@ const SearchPage = () => {
                     onPress={() => setShowAvailableOnly(prev => !prev)}
                   >
                     <View style={enhancedStyles.filterOptionLeft}>
-                      <Ionicons name="checkmark-circle-outline" size={20} color="#e98c22" />
-                      <Text style={enhancedStyles.filterOptionText}>المنتجات المتوفرة فقط</Text>
+                      <Ionicons name="checkmark-circle-outline" size={20} color="#f0b745" />
+                      <Text style={enhancedStyles.filterOptionText}>{i18n.t('availableOnly')}</Text>
                     </View>
                     <View style={[
                       enhancedStyles.checkbox,
@@ -581,7 +581,7 @@ const SearchPage = () => {
 
                   {/* Sort Options */}
                   <View style={enhancedStyles.filterSection}>
-                    <Text style={enhancedStyles.sectionTitle}>ترتيب حسب السعر</Text>
+                    <Text style={enhancedStyles.sectionTitle}>{i18n.t('sortByPrice')}</Text>
                     
                     <TouchableOpacity
                       style={enhancedStyles.filterOption}
@@ -591,8 +591,8 @@ const SearchPage = () => {
                       }}
                     >
                       <View style={enhancedStyles.filterOptionLeft}>
-                        <Ionicons name="arrow-down-outline" size={20} color="#e98c22" />
-                        <Text style={enhancedStyles.filterOptionText}>من الأعلى للأقل</Text>
+                        <Ionicons name="arrow-down-outline" size={20} color="#f0b745" />
+                        <Text style={enhancedStyles.filterOptionText}>{i18n.t('highestPrice')}</Text>
                       </View>
                       <View style={[
                         enhancedStyles.checkbox,
@@ -612,8 +612,8 @@ const SearchPage = () => {
                       }}
                     >
                       <View style={enhancedStyles.filterOptionLeft}>
-                        <Ionicons name="arrow-up-outline" size={20} color="#e98c22" />
-                        <Text style={enhancedStyles.filterOptionText}>من الأقل للأعلى</Text>
+                        <Ionicons name="arrow-up-outline" size={20} color="#f0b745" />
+                        <Text style={enhancedStyles.filterOptionText}>{i18n.t('lowestPrice')}</Text>
                       </View>
                       <View style={[
                         enhancedStyles.checkbox,
@@ -628,7 +628,7 @@ const SearchPage = () => {
 
                   {/* Category Filter */}
                   <View style={enhancedStyles.filterSection}>
-                    <Text style={enhancedStyles.sectionTitle}>تصفية حسب التصنيف</Text>
+                    <Text style={enhancedStyles.sectionTitle}>{i18n.t('filterByCategory')}</Text>
                     <ScrollView style={enhancedStyles.categoryScroll} nestedScrollEnabled>
                       <TouchableOpacity
                         style={[
@@ -641,7 +641,7 @@ const SearchPage = () => {
                           enhancedStyles.categoryOptionText,
                           !filterCategory && enhancedStyles.categoryOptionTextActive
                         ]}>
-                          كل التصنيفات
+                          {i18n.t('allCategories')}
                         </Text>
                       </TouchableOpacity>
                       {flatCategories.map((cat: any) => (
@@ -671,10 +671,10 @@ const SearchPage = () => {
                   style={enhancedStyles.applyButton}
                 >
                   <LinearGradient
-                    colors={['#e98c22', '#d67b1a']}
+                    colors={['#f0b745', '#d67b1a']}
                     style={enhancedStyles.applyButtonGradient}
                   >
-                    <Text style={enhancedStyles.applyButtonText}>تطبيق الفلاتر</Text>
+                    <Text style={enhancedStyles.applyButtonText}>{i18n.t('applyFilters')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -700,8 +700,8 @@ const SearchPage = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#e98c22"]}
-            tintColor="#e98c22"
+            colors={["#f0b745"]}
+            tintColor="#f0b745"
           />
         }
         ListEmptyComponent={ListEmptyComponent}
@@ -709,7 +709,7 @@ const SearchPage = () => {
           !hasMore && filteredProducts.length > 0 ? (
             <View style={enhancedStyles.footerContainer}>
               <View style={enhancedStyles.footerLine} />
-              <Text style={enhancedStyles.footerText}>تم عرض جميع المنتجات</Text>
+              <Text style={enhancedStyles.footerText}>{i18n.t('allProductsShown')}</Text>
               <View style={enhancedStyles.footerLine} />
             </View>
           ) : null
@@ -729,10 +729,10 @@ const enhancedStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingTop: 40,
   },
   header: {
     backgroundColor: '#fff',
-    paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: 2,
     borderBottomWidth: 1,
@@ -791,7 +791,7 @@ const enhancedStyles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e98c22',
+    borderColor: '#f0b745',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -801,7 +801,7 @@ const enhancedStyles = StyleSheet.create({
   },
   filterText: {
     marginLeft: 6,
-    color: '#e98c22',
+    color: '#f0b745',
     fontWeight: '600',
     fontSize: 12,
   },
@@ -822,7 +822,7 @@ const enhancedStyles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e98c22',
+    borderColor: '#f0b745',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -831,7 +831,7 @@ const enhancedStyles = StyleSheet.create({
   },
   sortText: {
     marginLeft: 4,
-    color: '#e98c22',
+    color: '#f0b745',
     fontWeight: '600',
     fontSize: 12,
   },
@@ -940,16 +940,16 @@ const enhancedStyles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#e98c22',
+    color: '#f0b745',
   },
   addButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#e98c22',
+    shadowColor: '#f0b745',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1093,8 +1093,8 @@ const enhancedStyles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#e98c22',
-    borderColor: '#e98c22',
+    backgroundColor: '#f0b745',
+    borderColor: '#f0b745',
   },
   categoryScroll: {
     maxHeight: 150,
@@ -1109,7 +1109,7 @@ const enhancedStyles = StyleSheet.create({
     borderColor: 'transparent',
   },
   categoryOptionActive: {
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     borderColor: '#d67b1a',
   },
   categoryOptionText: {
@@ -1125,7 +1125,7 @@ const enhancedStyles = StyleSheet.create({
     margin: 20,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#e98c22',
+    shadowColor: '#f0b745',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

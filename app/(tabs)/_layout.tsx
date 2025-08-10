@@ -6,6 +6,7 @@ import {
   LayoutAnimation,
   Pressable,
   StyleSheet,
+  I18nManager,
 } from "react-native";
 import useItemStore from "@/store/useItemStore";
 import HeaderComponent from "../components/costomHeader";
@@ -19,7 +20,7 @@ const CONSTANTS = {
   tabBarRadius: 20,
   tabBarMargin: 12,
   colors: {
-    focused: "#e98c22",
+    focused: "#f0b745",
     unfocused: "#6B7280",
     background: "#FFFFFF",
     shadow: "rgba(0, 0, 0, 0.1)",
@@ -80,90 +81,93 @@ export default function TabsLayout() {
   }, [isTabBarVisible]);
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarHideOnKeyboard: true,
-        tabBarShowLabel: false,
-        tabBarStyle: styles.tabBar,
-        tabBarButton: (props) => <CustomTabButton {...props} />,
-        tabBarActiveTintColor: CONSTANTS.colors.focused,
-        tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
-        headerShadowVisible: false,
-        headerStyle: styles.header,
-      }}
-      initialRouteName="index"
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
+    <View style={{ flex: 1, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}>
+      <Tabs
+        detachInactiveScreens={false}
+        screenOptions={{
           tabBarHideOnKeyboard: true,
+          tabBarShowLabel: false,
+          tabBarStyle: styles.tabBar,
+          tabBarButton: (props) => <CustomTabButton {...props} />,
+          tabBarActiveTintColor: CONSTANTS.colors.focused,
+          tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
           headerShadowVisible: false,
-          header: () => <HeaderComponent />,
-          headerTitleContainerStyle: styles.headerTitleContainer,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              source={require("../../assets/images/house-solid.svg")}
-              focused={focused}
-              label={i18n.t("home")}
-            />
-          ),
+          headerStyle: styles.header,
         }}
-      />
-    
-      <Tabs.Screen
-        name="cart"
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              source={require("../../assets/images/cart-shopping-solid.svg")}
-              focused={focused}
-              label={i18n.t("cart")}
-            />
-          ),
-        }}
-      />
+        initialRouteName="index"
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            tabBarHideOnKeyboard: true,
+            headerShadowVisible: false,
+            header: () => <HeaderComponent />,
+            headerTitleContainerStyle: styles.headerTitleContainer,
+            tabBarIcon: ({ focused }) => (
+              <TabIcon
+                source={require("../../assets/images/house-solid.svg")}
+                focused={focused}
+                label={i18n.t("home")}
+              />
+            ),
+          }}
+        />
+      
+        <Tabs.Screen
+          name="cart"
+          options={{
+            headerShown: false,
+            tabBarIcon: ({ focused }) => (
+              <TabIcon
+                source={require("../../assets/images/cart-shopping-solid.svg")}
+                focused={focused}
+                label={i18n.t("cart")}
+              />
+            ),
+          }}
+        />
 
-      <Tabs.Screen
-        name="explor"
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              source={require("../../assets/images/search-solid.svg")}
-              focused={focused}
-              label={i18n.t("explore")}
-            />
-          ),
-        }}
-      />
-       <Tabs.Screen
-        name="profile"
-        options={{
-          headerShown: true,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              source={require("../../assets/images/user-solid.svg")}
-              focused={focused}
-              label={i18n.t("profile")}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="wishlist"
-        options={{
-          headerShown: true,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              source={require("../../assets/images/heart-solid.svg")}
-              focused={focused}
-              label={i18n.t("wishlist") || "Wishlist"}
-            />
-          ),
-        }}
-      />
-    </Tabs>
+        <Tabs.Screen
+          name="explor"
+          options={{
+            headerShown: false,
+            tabBarIcon: ({ focused }) => (
+              <TabIcon
+                source={require("../../assets/images/search-solid.svg")}
+                focused={focused}
+                label={i18n.t("explore")}
+              />
+            ),
+          }}
+        />
+         <Tabs.Screen
+          name="profile"
+          options={{
+            headerShown: false,
+            tabBarIcon: ({ focused }) => (
+              <TabIcon
+                source={require("../../assets/images/user-solid.svg")}
+                focused={focused}
+                label={i18n.t("profile")}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="wishlist"
+          options={{
+            headerShown: true,
+            tabBarIcon: ({ focused }) => (
+              <TabIcon
+                source={require("../../assets/images/heart-solid.svg")}
+                focused={focused}
+                label={i18n.t("wishlist") || "Wishlist"}
+              />
+            ),
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }
 
@@ -212,13 +216,12 @@ const styles = StyleSheet.create({
   },
 
   // Header Styles
-  header: {
+  header: { 
     backgroundColor: CONSTANTS.colors.background,
     elevation: 0,
     shadowOpacity: 0,
     borderBottomWidth: 1,
     borderBottomColor: CONSTANTS.colors.border,
-    marginTop: 20,
   },
 
   headerTitleContainer: {

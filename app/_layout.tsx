@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import  { useState, useEffect, useCallback } from "react";
 import "@/app\\global.css";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { Stack } from "expo-router";
@@ -7,7 +7,6 @@ import ClerkProvider from "@/providers/Clerck";
 import { useAuth } from "@clerk/clerk-expo";
 import { StatusBar } from "expo-status-bar";
 import { NotificationProvider } from "@/providers/notificationProvider";
-import { SmartSystemsProvider } from "@/providers/SmartSystemsProvider";
 import * as Notifications from "expo-notifications";
 import Toast from "react-native-toast-message";
 import * as SplashScreen from "expo-splash-screen";
@@ -15,20 +14,22 @@ import GifLoadingScreen from "./GifLoadingScreen";
 import NoNetworkScreen from "./NoNetworkScreen";
 import { Alert } from 'react-native';
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { I18nManager } from 'react-native';
 import i18n from '@/utils/i18n';
 
 import * as Updates from 'expo-updates';
 
 import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
+import { View } from "react-native";
+import { I18nManager } from 'react-native';
+import { LanguageProvider } from '@/utils/LanguageContext';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true, // Add this property
-    shouldShowList: true, // Add this property
+    shouldShowBanner: true, 
+    shouldShowList: true, 
   }),
 });
 
@@ -140,11 +141,10 @@ function AppLoaderWithClerk() {
 
   return (
     <GluestackUIProvider mode="light">
-      {/* <SmartSystemsProvider> */}
         <NotificationProvider>
           <>
           <StatusBar style="auto" />
-            <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
+            <Stack screenOptions={{ headerShown: false }} initialRouteName="(onboarding)">
               <Stack.Screen name="(tabs)"/>
               <Stack.Screen name="(auth)"/>
               <Stack.Screen name="(onboarding)"/>
@@ -153,21 +153,24 @@ function AppLoaderWithClerk() {
             <Toast />
           </>
         </NotificationProvider>
-      {/* </SmartSystemsProvider> */}
     </GluestackUIProvider>
   );
 }
 
 export default function RootLayout() {
   return (
-    <GluestackUIProvider mode="light">
-      <KeyboardProvider>
-      <ClerkProvider>
-        <NetworkProvider>
-          <AppLoaderWithClerk />
-        </NetworkProvider>
-      </ClerkProvider>
-      </KeyboardProvider>
-    </GluestackUIProvider>
+    <LanguageProvider>
+      <GluestackUIProvider mode="light">
+        <KeyboardProvider>
+        <ClerkProvider>
+          <NetworkProvider>
+            <View style={{ direction: I18nManager.isRTL ? 'rtl' : 'ltr', flex: 1 }}>
+              <AppLoaderWithClerk />
+            </View>
+          </NetworkProvider>
+        </ClerkProvider>
+        </KeyboardProvider>
+      </GluestackUIProvider>
+    </LanguageProvider>
   );
 }

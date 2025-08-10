@@ -9,6 +9,7 @@ import {
   NativeScrollEvent,
   Dimensions,
   I18nManager,
+  Linking,
 } from "react-native";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { useNavigation, useRouter } from "expo-router";
@@ -80,7 +81,7 @@ export default function Profile() {
       color: "#7ED321",
     },
     {
-      title: 'عناوين الشحن',
+      title: i18n.t("shippingAddresses"),
       action: () => {
         router.push("/addresses");
       },
@@ -93,8 +94,9 @@ export default function Profile() {
   const publicOptions = [
     {
       title: i18n.t("privacyPolicy"),
+
       action: () => {
-        // يمكن إضافة الوظيفة هنا
+         Linking.openURL('https://nubian-sd.store/privacy-policy')
       },
       icon: "shield-outline" as const,
       color: "#9013FE",
@@ -110,10 +112,18 @@ export default function Profile() {
     {
       title: i18n.t("support"),
       action: () => {
-        // يمكن إضافة الوظيفة هنا
+        Linking.openURL('https://nubian-sd.store')
       },
       icon: "help-circle-outline" as const,
       color: "#50E3C2",
+    },
+    {
+      title: i18n.t("exchange"),
+      action: () => {
+        Linking.openURL('https://nubian-sd.store/exchange-policy')
+      },
+      icon: "return-up-back" as const,
+      color: "#B7E350FF",
     },
   ];
 
@@ -195,8 +205,8 @@ export default function Profile() {
 
   if (!loaded) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#e98c22" />
+      <View style={[styles.loadingContainer, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+        <ActivityIndicator size="large" color="#f0b745" />
       </View>
     );
   }
@@ -247,7 +257,7 @@ export default function Profile() {
                   {i18n.t("signInToContinue")}
                 </Text>
                 <Text style={styles.signInSubtitle}>
-                  قم بتسجيل الدخول للوصول إلى ملفك الشخصي والإعدادات
+                  {i18n.t('profile_signInSubtitle')}
                 </Text>
               </View>
               <TouchableOpacity
@@ -301,7 +311,7 @@ export default function Profile() {
                     i18n.locale === "ar" && styles.languageButtonTextActive,
                   ]}
                 >
-                  العربية
+                  {i18n.t('profile_arabic')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -318,7 +328,7 @@ export default function Profile() {
                     i18n.locale === "en" && styles.languageButtonTextActive,
                   ]}
                 >
-                  English
+                  {i18n.t('profile_english')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -366,6 +376,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8F9FA",
+    paddingTop: 30,
   },
   loadingContainer: {
     flex: 1,
@@ -385,11 +396,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 16,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    
   },
   signInImage: {
     width: width * 0.4,
@@ -403,7 +410,7 @@ const styles = StyleSheet.create({
   signInTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#e98c22",
+    color: "#f0b745",
     marginBottom: 8,
     textAlign: "center",
   },
@@ -417,16 +424,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e98c22",
+    backgroundColor: "#f0b745",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
     minWidth: 160,
-    shadowColor: "#e98c22",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    
   },
   loginButtonText: {
     color: "#FFFFFF",
@@ -443,10 +446,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    
   },
   avatarContainer: {
     position: "relative",
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: "#e98c22",
+    borderColor: "#f0b745",
   },
   onlineIndicator: {
     position: "absolute",
@@ -506,11 +506,7 @@ const styles = StyleSheet.create({
   optionsContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  
   },
 
   // Option Item Styles
@@ -548,11 +544,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+   
   },
   languageButton: {
     flex: 1,
@@ -563,7 +555,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   languageButtonActive: {
-    backgroundColor: "#e98c22",
+    backgroundColor: "#f0b745",
   },
   languageButtonText: {
     fontSize: 16,
@@ -584,11 +576,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     marginTop: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   logoutContent: {
     flexDirection: "row",

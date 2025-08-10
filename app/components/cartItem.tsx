@@ -51,7 +51,7 @@ import { Image } from "expo-image";
             </TouchableOpacity>
           </View>
           <Text style={styles.price}>
-            {(item?.product?.price * item?.quantity || 0).toFixed(2)} SDG
+            {(item?.product?.price * item?.quantity || 0).toFixed(2)}
           </Text>
         </View>
       </View>

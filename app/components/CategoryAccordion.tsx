@@ -53,7 +53,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({ categories, selec
             {item.name}
           </Text>
           {item.children && item.children.length > 0 && (
-            <Ionicons name={isExpanded ? 'chevron-down' : 'chevron-back'} size={18} color="#e98c22" />
+            <Ionicons name={isExpanded ? 'chevron-down' : 'chevron-back'} size={18} color="#f0b745" />
           )}
         </TouchableOpacity>
         {isExpanded && item.children && item.children.length > 0 && (
@@ -119,8 +119,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedChip: {
-    backgroundColor: '#e98c22',
-    borderColor: '#e98c22',
+    backgroundColor: '#f0b745',
+    borderColor: '#f0b745',
   },
   chipText: {
     fontSize: 12,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectedTitle: {
-    color: '#e98c22',
+    color: '#f0b745',
     fontWeight: '600',
   },
   childContainer: {

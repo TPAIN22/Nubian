@@ -440,7 +440,7 @@ const CategoryAccordion: React.FC&lt;CategoryAccordionProps&gt; = <span class="c
             {item.name}
           &lt;/Text&gt;
           {item.children &amp;&amp; item.children.length &gt; 0 &amp;&amp; (
-            &lt;Ionicons name={isExpanded ? 'chevron-down' : 'chevron-back'} size={18} color="#e98c22" /&gt;
+            &lt;Ionicons name={isExpanded ? 'chevron-down' : 'chevron-back'} size={18} color="#f0b745" /&gt;
           )}
         &lt;/TouchableOpacity&gt;
         {isExpanded &amp;&amp; item.children &amp;&amp; item.children.length &gt; 0 &amp;&amp; (
@@ -506,8 +506,8 @@ const styles = <span class="cstat-no" title="statement not covered" >StyleSheet.
     alignItems: 'center',
   },
   selectedChip: {
-    backgroundColor: '#e98c22',
-    borderColor: '#e98c22',
+    backgroundColor: '#f0b745',
+    borderColor: '#f0b745',
   },
   chipText: {
     fontSize: 12,
@@ -538,7 +538,7 @@ const styles = <span class="cstat-no" title="statement not covered" >StyleSheet.
     flex: 1,
   },
   selectedTitle: {
-    color: '#e98c22',
+    color: '#f0b745',
     fontWeight: '600',
   },
   childContainer: {

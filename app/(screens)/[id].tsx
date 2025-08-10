@@ -85,7 +85,7 @@ export default function CategoriesScreen() {
           {isProductsLoading && products.length === 0 ? (
             <ActivityIndicator
               size="large"
-              color="#e98c22"
+              color="#f0b745"
               style={[{ width: width }, styles.loading]}
             />
           ) : (
@@ -107,7 +107,7 @@ export default function CategoriesScreen() {
                   onRefresh={onRefresh}
                   progressViewOffset={10}
                   progressBackgroundColor="#fff"
-                  colors={["#e98c22"]}
+                  colors={["#f0b745"]}
                 />
               }
               ListFooterComponent={
@@ -118,7 +118,7 @@ export default function CategoriesScreen() {
                 ) : isProductsLoading ? (
                   <ActivityIndicator
                     size="large"
-                    color="#e98c22"
+                    color="#f0b745"
                     style={{ width: width }}
                   />
                 ) : null

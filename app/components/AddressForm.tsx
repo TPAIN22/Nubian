@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, TextInput, Button, TouchableOpacity, StyleSheet, ScrollView, Platform, Dimensions,I18nManager } from 'react-native';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import i18n from '../../utils/i18n';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -70,7 +71,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
 
   const handleSubmit = () => {
     if (!form.name || !form.city || !form.area || !form.street || !form.phone) {
-      alert('الرجاء ملء جميع الحقول المطلوبة.');
+      alert(i18n.t('addressForm_fillRequiredFields'));
       return;
     }
     onSubmit(form);
@@ -95,15 +96,15 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
             <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="إغلاق النافذة">
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>{initialValues ? 'تعديل العنوان' : 'إضافة عنوان جديد'}</Text>
+            <Text style={styles.modalTitle}>{initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}</Text>
             <ScrollView style={{flex: 1}} contentContainerStyle={styles.scrollViewContent} showsVerticalScrollIndicator={false}>
               <View style={styles.formFieldsWrapper}>
                 {/* اسم المستلم */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>اسم المستلم *</Text>
+                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_recipientName')} *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="أدخل اسم المستلم"
+                    placeholder={i18n.t('addressForm_recipientNamePlaceholder')}
                     value={form.name}
                     onChangeText={text => setForm((f) => ({ ...f, name: text }))}
                     textAlign="right"
@@ -112,25 +113,25 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* المدينة */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>المدينة *</Text>
+                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_city')} *</Text>
                   <TouchableOpacity
                     style={styles.selectButton}
                     onPress={() => setShowCityPicker(true)}
                     activeOpacity={0.7}
-                    accessibilityLabel="اختر المدينة"
+                    accessibilityLabel={i18n.t('addressForm_selectCity')}
                   >
                     <Text style={styles.dropdownIcon}>▼</Text>
                     <Text style={[styles.selectText, !form.city && styles.placeholderText]}>
-                      {form.city || 'اختر المدينة'}
+                      {form.city || i18n.t('addressForm_selectCity')}
                     </Text>
                   </TouchableOpacity>
                 </View>
                 {/* المنطقة/الحي */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>المنطقة/الحي *</Text>
+                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_area')} *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="أدخل المنطقة أو الحي"
+                    placeholder={i18n.t('addressForm_areaPlaceholder')}
                     value={form.area}
                     onChangeText={text => setForm((f) => ({ ...f, area: text }))}
                     textAlign="right"
@@ -139,10 +140,10 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* الشارع */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>الشارع *</Text>
+                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_street')} *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="أدخل اسم الشارع"
+                    placeholder={i18n.t('addressForm_streetPlaceholder')}
                     value={form.street}
                     onChangeText={text => setForm((f) => ({ ...f, street: text }))}
                     textAlign="right"
@@ -151,10 +152,10 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* المبنى/الشقة */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>المبنى/الشقة</Text>
+                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_building')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="رقم المبنى أو الشقة (اختياري)"
+                    placeholder={i18n.t('addressForm_buildingPlaceholder')}
                     value={form.building}
                     onChangeText={text => setForm((f) => ({ ...f, building: text }))}
                     textAlign="right"
@@ -163,10 +164,10 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* رقم الهاتف */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>رقم الهاتف *</Text>
+                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_phone')} *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="أدخل رقم الهاتف"
+                    placeholder={i18n.t('addressForm_phonePlaceholder')}
                     value={form.phone}
                     onChangeText={text => setForm((f) => ({ ...f, phone: text }))}
                     keyboardType="phone-pad"
@@ -176,10 +177,10 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* ملاحظات */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>ملاحظات</Text>
+                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_notes')}</Text>
                   <TextInput
                     style={[styles.input, styles.notesInput]}
-                    placeholder="ملاحظات إضافية (اختياري)"
+                    placeholder={i18n.t('addressForm_notesPlaceholder')}
                     value={form.notes}
                     onChangeText={text => setForm((f) => ({ ...f, notes: text }))}
                     multiline
@@ -195,7 +196,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                   activeOpacity={0.7}
                   accessibilityLabel="اجعل هذا العنوان افتراضيًا"
                 >
-                  <Text style={styles.checkboxLabel}>اجعله العنوان الافتراضي</Text>
+                  <Text style={styles.checkboxLabel}>{i18n.t('addressForm_makeDefault')}</Text>
                   <View style={[styles.checkboxBox, form.isDefault && styles.checkboxChecked]}>
                     {form.isDefault && <Text style={styles.checkMark}>✓</Text>}
                   </View>
@@ -204,12 +205,12 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
             </ScrollView>
             {/* أزرار الأكشن */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.8} accessibilityLabel="إلغاء">
-                <Text style={styles.cancelButtonText}>إلغاء</Text>
+              <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.8} accessibilityLabel={i18n.t('addressForm_cancel')}>
+                <Text style={styles.cancelButtonText}>{i18n.t('addressForm_cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8} accessibilityLabel={initialValues ? 'تعديل العنوان' : 'إضافة عنوان'}>
+              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8} accessibilityLabel={initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}>
                 <Text style={styles.submitButtonText}>
-                  {initialValues ? 'تعديل' : 'إضافة'}
+                  {initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -231,7 +232,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
               <TouchableOpacity onPress={() => setShowCityPicker(false)} style={styles.pickerCloseButtonContainer} accessibilityLabel="إغلاق محدد المدينة">
                 <Text style={styles.pickerCloseButton}>✕</Text>
               </TouchableOpacity>
-              <Text style={styles.pickerTitle}>اختر المدينة</Text>
+              <Text style={styles.pickerTitle}>{i18n.t('addressForm_selectCity')}</Text>
             </View>
             <ScrollView style={styles.pickerList}>
               {SUDANESE_CITIES.map((city) => (
@@ -246,7 +247,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                     setShowCityPicker(false);
                   }}
                   activeOpacity={0.7}
-                  accessibilityLabel={`اختر مدينة ${city}`}
+                  accessibilityLabel={`${i18n.t('addressForm_selectCity')} ${city}`}
                 >
                   <Text style={[
                     styles.pickerItemText,
@@ -384,7 +385,6 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    marginTop: 20,
   },
   cancelButton: {
     flex: 1,

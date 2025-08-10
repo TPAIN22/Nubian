@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   googleButton: {
-    backgroundColor: '#e98c22',
+    backgroundColor: '#f0b745',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 30,
@@ -157,7 +157,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '90%',
-    marginTop: 20,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -165,7 +164,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   googleButtonDisabled: {
-    backgroundColor: '#e98c2280',
+    backgroundColor: '#f0b74580',
   },
   googleButtonContent: {
     flexDirection: 'row',

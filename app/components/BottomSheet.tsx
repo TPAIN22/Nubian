@@ -216,13 +216,13 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#e98c22",
+    color: "#f0b745",
     textAlign: "left",
   },
   discountPrice: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#e98c22",
+    color: "#f0b745",
     textAlign: "left",
     marginRight: 10,
   },

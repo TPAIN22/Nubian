@@ -25,7 +25,6 @@ import BottomSheet from "../components/BottomSheet";
 import i18n from "@/utils/i18n";
 import { useNavigationState } from '@react-navigation/native';
 import axiosInstance from "@/utils/axiosInstans";
-
 const { width, height } = Dimensions.get("window");
 const ITEM_WIDTH = width * 0.44;
 const ITEM_HEIGHT = ITEM_WIDTH * 1.3;
@@ -80,11 +79,9 @@ export default function index() {
           getAllProducts(),
           axiosInstance.get('/banners')
         ]);
-        console.log('BANNERS:', bannersRes.data);
         setBanners(bannersRes.data.filter((b: any) => b.isActive !== false));
       } catch (e) {
         setBanners([]);
-        console.log('BANNERS ERROR:', e);
       } finally {
         setRefreshing(false);
       }
@@ -165,7 +162,7 @@ export default function index() {
   );
 
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={[styles.container, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
       <BottomSheetModalProvider>
         <View style={styles.container}>
           <ScrollView
@@ -182,8 +179,8 @@ export default function index() {
                     handleGetProducts()
                   ]);
                 }}
-                colors={["#e98c22"]}
-                tintColor="#e98c22"
+                colors={["#f0b745"]}
+                tintColor="#f0b745"
               />
             }
           >
@@ -192,35 +189,13 @@ export default function index() {
                 { _id: 'placeholder', image: 'https://placehold.co/600x200?text=No+Banners', title: '', description: '' }
               ]} />
             </View>
-
-            <View style={styles.welcomeSection}>
-              <LinearGradient
-                colors={["#e98c22", "#f4a261"]}
-                style={styles.welcomeGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.welcomeContent}>
-                  <Text style={styles.welcomeTitle}>{i18n.t('welcome')}</Text>
-                  <Text style={styles.welcomeSubtitle}>
-                    {i18n.t('welcomeSubtitle')}
-                  </Text>
-                </View>
-                <View style={styles.welcomeDecoration}>
-                  <View style={styles.decorationCircle} />
-                  <View style={[styles.decorationCircle, styles.decorationCircle2]} />
-                </View>
-              </LinearGradient>
-            </View>
-
             <View style={styles.categoriesSection}>
               <SectionHeader
-                title={i18n.t('productCategories')}
-                subtitle="اكتشف مجموعتنا المتنوعة"
-                showViewMore={false}
+                title={i18n.t('discoverOurCollection')}
+                onViewMore={() => router.push(`/(screens)`)}
               />
               <FlatList
-                data={categories}
+                data={categories?.slice(0, 5) || []}
                 renderItem={renderCategoryItem}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -235,7 +210,7 @@ export default function index() {
             <View style={styles.latestProductsSection}>
               <SectionHeader
                 title={i18n.t('latestProducts')}
-                subtitle="أحدث المنتجات المضافة"
+                subtitle={i18n.t('latestAddedProducts')}
                 onViewMore={() => router.push(`/(screens)`)}
               />
               <View style={styles.productsGrid}>
@@ -275,7 +250,6 @@ export default function index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
   },
   contentContainer: {
     flex: 1,
@@ -291,66 +265,13 @@ const styles = StyleSheet.create({
   
   // Hero Section
   heroSection: {
-    height: height * 0.238,
-    marginBottom: 14,
+    height: height * 0.200,
+    marginBottom: 6,
     marginHorizontal: 10,
     marginTop: 12,
     overflow: "hidden",
   },
   
-  // Welcome Section
-  welcomeSection: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    marginBottom: 28,
-    overflow: "hidden",
-  },
-  welcomeGradient: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    position: "relative",
-    overflow: "hidden",
-  },
-  welcomeContent: {
-    flex: 1,
-  },
-  welcomeTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginBottom: 6,
-    textAlign: "left",
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: "rgba(255,255,255,0.9)",
-    textAlign: "left",
-    lineHeight: 22,
-    fontWeight: "500",
-  },
-  welcomeDecoration: {
-    position: "absolute",
-    right: -20,
-    top: -10,
-  },
-  decorationCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    position: "absolute",
-  },
-  decorationCircle2: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    right: 30,
-    top: 40,
-    backgroundColor: "rgba(255,255,255,0.15)",
-  },
   
   // Categories Section
   categoriesSection: {
@@ -364,7 +285,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   productsGrid: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 20,
   },
   productsRow: {
@@ -377,11 +297,12 @@ const styles = StyleSheet.create({
   
   // Section Headers
   sectionHeader: {
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 20,
-    paddingHorizontal: 20,
+    borderRadius:6,
   },
   titleContainer: {
     flex: 1,
@@ -411,7 +332,7 @@ const styles = StyleSheet.create({
   },
   viewMoreText: {
     fontSize: 14,
-    color: "#e98c22",
+    color: "#f0b745",
     fontWeight: "600",
     marginLeft: 6,
   },
@@ -423,7 +344,7 @@ const styles = StyleSheet.create({
   },
   viewMoreArrow: {
     fontSize: 14,
-    color: "#e98c22",
+    color: "#f0b745",
     fontWeight: "bold",
   },
   
@@ -447,7 +368,6 @@ const styles = StyleSheet.create({
   imageContainer: {
     flex: 1,
     position: "relative",
-    backgroundColor: "#F3F4F6",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: "hidden",
@@ -467,7 +387,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     right: 12,
-    backgroundColor: "#e98c22",
+    backgroundColor: "#f0b745",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 15,
@@ -482,7 +402,6 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: "space-between",
     minHeight: 80,
-    backgroundColor: "#FFFFFF",
   },
   categoryName: {
     fontSize: 16,
@@ -506,26 +425,22 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#F9FAFB",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   arrowIcon: {
     fontSize: 14,
-    color: "#e98c22",
+    color: "#f0b745",
     fontWeight: "bold",
   },
   
   // Bottom Sheet
   bottomSheetBackground: {
-    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
   },
   bottomSheetIndicator: {
-    backgroundColor: "#D1D5DB",
     width: 48,
     height: 4,
     borderRadius: 2,

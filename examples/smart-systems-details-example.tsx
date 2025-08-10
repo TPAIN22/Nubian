@@ -147,7 +147,7 @@ const ProductDetailsWithSmartSystems = () => {
           {product.name}
         </Text>
         
-        <Text style={{ fontSize: 18, color: '#e98c22', marginBottom: 16 }}>
+        <Text style={{ fontSize: 18, color: '#f0b745', marginBottom: 16 }}>
           SDG {product.price?.toFixed(2)}
         </Text>
 
@@ -155,7 +155,7 @@ const ProductDetailsWithSmartSystems = () => {
         <View style={{ flexDirection: 'row', marginBottom: 16 }}>
           <TouchableOpacity 
             style={{ 
-              backgroundColor: '#e98c22', 
+              backgroundColor: '#f0b745', 
               padding: 12, 
               borderRadius: 8, 
               marginRight: 8,
@@ -211,7 +211,7 @@ const ProductDetailsWithSmartSystems = () => {
             onPress={() => handleDescriptionExpand(true)}
             style={{ marginTop: 8 }}
           >
-            <Text style={{ color: '#e98c22' }}>اقرأ المزيد</Text>
+            <Text style={{ color: '#f0b745' }}>اقرأ المزيد</Text>
           </TouchableOpacity>
         </View>
 
@@ -233,7 +233,7 @@ const ProductDetailsWithSmartSystems = () => {
                 onPress={() => handleRelatedProductClick(relatedProduct)}
               >
                 <Text style={{ fontWeight: 'bold' }}>{relatedProduct.name}</Text>
-                <Text style={{ color: '#e98c22' }}>
+                <Text style={{ color: '#f0b745' }}>
                   SDG {relatedProduct.price?.toFixed(2)}
                 </Text>
               </TouchableOpacity>

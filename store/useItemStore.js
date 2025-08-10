@@ -91,7 +91,7 @@ const useItemStore = create((set, get) => ({
   },
 
   // Get all products with pagination
-  getAllProducts: async (limit = 8) => {
+  getAllProducts: async (limit = 90) => {
     set({ isProductsLoading: true, error: null });
     
     try {

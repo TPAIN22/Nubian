@@ -5,6 +5,7 @@ import {
   RefreshControl,
   StyleSheet,
   ActivityIndicator,
+  I18nManager,
 } from "react-native";
 import React, { useCallback, useEffect, useRef } from "react";
 import useItemStore from "@/store/useItemStore";
@@ -70,7 +71,7 @@ export default function Index() {
   }, [loadMoreAllProducts, hasMore, isProductsLoading]);
 
   return (
-    <GestureHandlerRootView style={styles.loadingContainer}>
+    <GestureHandlerRootView style={[styles.loadingContainer, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
       <BottomSheetModalProvider>
         <View style={{ backgroundColor: "#EFF6FFFF" }}>
           <FlatList
@@ -95,7 +96,7 @@ export default function Index() {
                 onRefresh={onRefresh}
                 progressViewOffset={10}
                 progressBackgroundColor="#fff"
-                colors={["#e98c22"]}
+                colors={["#f0b745"]}
               />
             }
             ListFooterComponent={

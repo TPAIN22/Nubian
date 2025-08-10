@@ -4,24 +4,23 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import i18n from '../../utils/i18n';
 
-export default function Welcom() {
+export default function Starting() {
   const router = useRouter();
 
   const handleStart = () => {
     //router.push(`../../(tabs)`);
-    router.push(`./starting`);
+    router.push(`./onboard`);
 
   };
 
   const handleSkip = () => {
    // router.push(`../../(tabs)`);
-    router.push(`./starting`);
+    router.push(`./onboard`);
   };
 
   return (
@@ -29,17 +28,17 @@ export default function Welcom() {
       <SafeAreaView style={styles.container}>
         <View style={styles.contentContainer}>
             <Image
-              source={require("../../assets/images/address.svg")}
+              source={require("../../assets/images/ordering.svg")}
               style={{ width: 350, height: 300, marginBottom: 20 , position: 'absolute' ,top: 170 }}
             />
 
           <View style={styles.textContainer}>
             <Text style={styles.mainTitle}>
-              {i18n.t('onboarding_subtitle2')}
+              {i18n.t('onboarding_subtitle3')}
             </Text>
             
             <Text style={styles.description}>
-              {i18n.t('onboarding_description2')}
+              {i18n.t('onboarding_description3')}
             </Text>
           </View>
 
@@ -53,10 +52,10 @@ export default function Welcom() {
               </Text>
             </TouchableOpacity>
             <View style={styles.underline} >
-                         <View style={styles.dot} />
-                         <View style={styles.dotActive} />
-                         <View style={styles.dot} />
-                       </View>
+             <View style={styles.dot} />
+             <View style={styles.dot} />
+            <View style={styles.dotActive} />
+            </View>
           </View>
         </View>
       </SafeAreaView>

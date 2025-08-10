@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity } from "react-native";
-import React, { useState } from "react";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable } from "react-native";
+import React, { useState, useEffect } from "react";
 import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import i18n from "@/utils/i18n";
 
 export default function Order() {
   const { getUserOrders, orders, error, isLoading } = useOrderStore();
@@ -13,12 +14,25 @@ export default function Order() {
   const [expandedOrders, setExpandedOrders] = useState<{ [key: string]: boolean }>({});
   const router = useRouter();
 
+  // جلب الطلبات تلقائيًا عند فتح الصفحة
+  useEffect(() => {
+    const fetchInitialOrders = async () => {
+      try {
+        const token = await getToken();
+        await getUserOrders(token);
+      } catch (err) {
+        // يمكن عرض رسالة خطأ إذا لزم الأمر
+      }
+    };
+    fetchInitialOrders();
+  }, []);
+
   const fetchOrders = async () => {
     try {
       const token = await getToken();
       await getUserOrders(token);
     } catch (err) {
-      Alert.alert("خطأ", "فشل في تحميل الطلبات");
+      Alert.alert(i18n.t('error'), i18n.t('failedToLoadOrders'));
     }
   };
 
@@ -37,7 +51,7 @@ export default function Order() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
+    return date.toLocaleDateString('ar-SD', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -47,7 +61,7 @@ export default function Order() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `${amount.toLocaleString()} ج.س`;
+    return `${amount.toLocaleString()} ${i18n.t('currency')}`;
   };
 
   const getStatusColor = (status: string) => {
@@ -56,6 +70,8 @@ export default function Order() {
         return '#f39c12';
       case 'confirmed':
         return '#27ae60';
+      case 'shipped':
+        return '#3498db';
       case 'delivered':
         return '#2ecc71';
       case 'cancelled':
@@ -68,13 +84,15 @@ export default function Order() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'في الانتظار';
+        return i18n.t('orderStatusPending');
       case 'confirmed':
-        return 'مؤكد';
+        return i18n.t('orderStatusConfirmed');
+      case 'shipped':
+        return i18n.t('orderStatusShipped');
       case 'delivered':
-        return 'تم التسليم';
+        return i18n.t('orderStatusDelivered');
       case 'cancelled':
-        return 'ملغي';
+        return i18n.t('orderStatusCancelled');
       default:
         return status;
     }
@@ -83,11 +101,11 @@ export default function Order() {
   const getPaymentStatusText = (paymentStatus: string) => {
     switch (paymentStatus) {
       case 'pending':
-        return 'في الانتظار';
+        return i18n.t('paymentStatusPending');
       case 'paid':
-        return 'مدفوع';
+        return i18n.t('paymentStatusPaid');
       case 'failed':
-        return 'فشل';
+        return i18n.t('paymentStatusFailed');
       default:
         return paymentStatus;
     }
@@ -96,11 +114,11 @@ export default function Order() {
   const getPaymentMethodText = (method: string) => {
     switch (method) {
       case 'cash':
-        return 'نقدي';
+        return i18n.t('paymentMethodCash');
       case 'card':
-        return 'بطاقة';
+        return i18n.t('paymentMethodCard');
       case 'bank':
-        return 'تحويل بنكي';
+        return i18n.t('paymentMethodBank');
       default:
         return method;
     }
@@ -116,7 +134,7 @@ export default function Order() {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#3498db" />
-        <Text style={styles.loadingText}>جاري تحميل الطلبات...</Text>
+        <Text style={styles.loadingText}>{i18n.t('loadingOrders')}</Text>
       </View>
     );
   }
@@ -124,7 +142,7 @@ export default function Order() {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>حدث خطأ: {error}</Text>
+        <Text style={styles.errorText}>{i18n.t('errorOccurred')}: {error}</Text>
       </View>
     );
   }
@@ -132,7 +150,7 @@ export default function Order() {
   if (orders.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>لا توجد طلبات</Text>
+        <Text style={styles.emptyText}>{i18n.t('noOrders')}</Text>
       </View>
     );
   }
@@ -144,7 +162,7 @@ export default function Order() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <Text style={styles.title}>طلباتي ({orders.length})</Text>
+      <Text style={styles.title}>{i18n.t('myOrders')} ({orders.length})</Text>
       
       {orders.map((order: any) => (
         <View key={order._id} style={styles.orderCard}>
@@ -160,19 +178,28 @@ export default function Order() {
               </View>
             </View>
             <Text style={styles.expandText}>
-              {expandedOrders[order._id] ? "إخفاء التفاصيل" : "عرض التفاصيل"}
+              {expandedOrders[order._id] ? i18n.t('hideDetails') : i18n.t('showDetails')}
             </Text>
           </TouchableOpacity>
+
+          {/* زر تتبع الطلب */}
+          <Pressable
+            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, alignSelf: 'flex-end' }}
+            onPress={() => router.push(`/order-tracking/${order._id}`)}
+          >
+            <Ionicons name="location-outline" size={18} color="#3498db" />
+            <Text style={{ color: '#3498db', marginLeft: 4 }}>{i18n.t('trackOrder')}</Text>
+          </Pressable>
 
           {/* معلومات سريعة */}
           <View style={styles.quickInfo}>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>التاريخ:</Text>
+              <Text style={styles.infoLabel}>{i18n.t('date')}:</Text>
               <Text style={styles.infoValue}>{formatDate(order.orderDate)}</Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>المنتجات:</Text>
-              <Text style={styles.infoValue}>{getProductsCount(order.productsDetails)} منتج</Text>
+              <Text style={styles.infoLabel}>{i18n.t('products')}:</Text>
+              <Text style={styles.infoValue}>{getProductsCount(order.productsDetails)} {i18n.t('productUnit')}</Text>
             </View>
           </View>
 

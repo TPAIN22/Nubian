@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     marginLeft: 5,
-    color: "#e98c22",
+    color: "#f0b745",
     fontWeight: "500",
   },
   listContainer: {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#e98c22",
+    backgroundColor: "#f0b745",
     justifyContent: "center",
     alignItems: "center",
   },

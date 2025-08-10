@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button } from 'react-native';
+import { View, FlatList, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button, I18nManager, ScrollView } from 'react-native';
 import useAddressStore from '@/store/addressStore';
 import { useAuth } from '@clerk/clerk-expo';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import i18n from '../components/../../utils/i18n';
 
 interface Address {
   _id: string;
@@ -40,7 +41,14 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
   const validate = () => {
     const newErrors: {[key: string]: string} = {};
     ['name','city','area','street','building','phone'].forEach(field => {
-      if (!(form as any)[field]) newErrors[field] = 'هذا الحقل مطلوب';
+      if (!(form as any)[field]) newErrors[field] = i18n.t(
+        field === 'name' ? 'addressForm_recipientName' :
+        field === 'city' ? 'addressForm_city' :
+        field === 'area' ? 'addressForm_area' :
+        field === 'street' ? 'addressForm_street' :
+        field === 'building' ? 'addressForm_building' :
+        field === 'phone' ? 'addressForm_phone' :
+        'addressForm_notesRequired');
     });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -53,29 +61,35 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={true}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{initialValues ? 'تعديل العنوان' : 'إضافة عنوان جديد'}</Text>
+            <Text style={styles.modalTitle}>{initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>×</Text>
+              <Text style={styles.closeButtonText}>{i18n.t('icon_close')}</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.formContainer}>
+          <ScrollView style={styles.formContainer}>
             {(['name','city','area','street','building','phone','notes'] as const).map((field, idx, arr) => (
               <View key={field} style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>
-                  {field === 'name' ? 'اسم المستلم' : 
-                    field === 'city' ? 'المدينة' : 
-                    field === 'area' ? 'المنطقة/الحي' : 
-                    field === 'street' ? 'الشارع' : 
-                    field === 'building' ? 'المبنى/الشقة' : 
-                    field === 'phone' ? 'رقم الهاتف' : 'ملاحظات'}
+                  {field === 'name' ? i18n.t('addressForm_recipientName') :
+                    field === 'city' ? i18n.t('addressForm_city') :
+                    field === 'area' ? i18n.t('addressForm_area') :
+                    field === 'street' ? i18n.t('addressForm_street') :
+                    field === 'building' ? i18n.t('addressForm_building') :
+                    field === 'phone' ? i18n.t('addressForm_phone') : i18n.t('addressForm_notes')}
                   {field !== 'notes' && <Text style={styles.required}>*</Text>}
                 </Text>
                 <TextInput
                   ref={ref => { inputRefs.current[field] = ref; }}
                   style={[styles.input, errors[field] && styles.inputError]}
-                  placeholder={field === 'name' ? 'اسم المستلم' : field === 'city' ? 'المدينة' : field === 'area' ? 'المنطقة/الحي' : field === 'street' ? 'الشارع' : field === 'building' ? 'المبنى/الشقة' : field === 'phone' ? 'رقم الهاتف' : 'ملاحظات إضافية (اختياري)'}
+                  placeholder={field === 'name' ? i18n.t('addressForm_recipientNamePlaceholder') :
+                    field === 'city' ? i18n.t('addressForm_selectCity') :
+                    field === 'area' ? i18n.t('addressForm_areaPlaceholder') :
+                    field === 'street' ? i18n.t('addressForm_streetPlaceholder') :
+                    field === 'building' ? i18n.t('addressForm_buildingPlaceholder') :
+                    field === 'phone' ? i18n.t('addressForm_phonePlaceholder') :
+                    i18n.t('addressForm_notesPlaceholder')}
                   value={form[field] as string}
                   onChangeText={text => setForm((f) => ({ ...f, [field]: text }))}
                   keyboardType={field === 'phone' ? 'phone-pad' : 'default'}
@@ -100,19 +114,19 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
               style={styles.checkboxContainer}
             >
               <View style={[styles.checkboxBox, form.isDefault && styles.checkboxChecked]}>
-                {form.isDefault && <Text style={styles.checkboxTick}>✓</Text>}
+                {form.isDefault && <Text style={styles.checkboxTick}>{i18n.t('icon_tick')}</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>اجعله العنوان الافتراضي</Text>
+              <Text style={styles.checkboxLabel}>{i18n.t('addressForm_makeDefault')}</Text>
             </TouchableOpacity>
             <View style={styles.buttonContainer}>
               <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-                <Text style={styles.cancelButtonText}>إلغاء</Text>
+                <Text style={styles.cancelButtonText}>{i18n.t('addressForm_cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
-                <Text style={styles.submitButtonText}>{initialValues ? 'حفظ التعديل' : 'إضافة العنوان'}</Text>
+                <Text style={styles.submitButtonText}>{initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add')}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -144,9 +158,9 @@ export default function AddressesTab() {
   };
   
   const handleDelete = async (id: string) => {
-    Alert.alert('تأكيد الحذف', 'هل أنت متأكد من حذف هذا العنوان؟', [
-      { text: 'إلغاء', style: 'cancel' },
-      { text: 'حذف', style: 'destructive', onPress: async () => {
+    Alert.alert(i18n.t('deleteConfirm'), i18n.t('deleteAddressConfirm'), [
+      { text: i18n.t('cancel'), style: 'cancel' },
+      { text: i18n.t('delete'), style: 'destructive', onPress: async () => {
         const token = await getToken();
         await deleteAddress(id, token);
       }}
@@ -162,23 +176,23 @@ export default function AddressesTab() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#30a1a7" />
-        <Text style={styles.loadingText}>جاري تحميل العناوين...</Text>
+        <Text style={styles.loadingText}>{i18n.t('loadingAddresses')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>عناويني</Text>
-        <Text style={styles.headerSubtitle}>إدارة عناوين التوصيل الخاصة بك</Text>
+        <Text style={styles.headerTitle}>{i18n.t('myAddresses')}</Text>
+        <Text style={styles.headerSubtitle}>{i18n.t('manageDeliveryAddresses')}</Text>
       </View>
 
       {error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity onPress={clearError} style={styles.errorCloseButton}>
-            <Text style={styles.errorCloseText}>إغلاق</Text>
+            <Text style={styles.errorCloseText}>{i18n.t('close')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -187,8 +201,8 @@ export default function AddressesTab() {
         style={styles.addButton} 
         onPress={() => { setEditAddress(null); setModalVisible(true); }}
       >
-        <Text style={styles.addButtonIcon}>+</Text>
-        <Text style={styles.addButtonText}>إضافة عنوان جديد</Text>
+        <Text style={styles.addButtonIcon}>{i18n.t('icon_add')}</Text>
+        <Text style={styles.addButtonText}>{i18n.t('addNewAddress')}</Text>
       </TouchableOpacity>
 
       <FlatList
@@ -199,22 +213,22 @@ export default function AddressesTab() {
           <View style={[styles.addressCard, item.isDefault && styles.defaultCard]}>
             {item.isDefault && (
               <View style={styles.defaultBadge}>
-                <Text style={styles.defaultBadgeText}>افتراضي</Text>
+                <Text style={styles.defaultBadgeText}>{i18n.t('default')}</Text>
               </View>
             )}
             
             <View style={styles.addressHeader}>
               <Text style={styles.addressName}>{item.name}</Text>
-              <Text style={styles.addressPhone}>📞 {item.phone}</Text>
+              <Text style={styles.addressPhone}>{i18n.t('icon_phone')} {item.phone}</Text>
             </View>
             
             <View style={styles.addressDetails}>
               <Text style={styles.addressLocation}>
-                📍 {item.city}، {item.area}، {item.street}، {item.building}
+                {i18n.t('icon_location')} {item.city}، {item.area}، {item.street}، {item.building}
               </Text>
               {item.notes && (
                 <Text style={styles.addressNotes}>
-                  📝 {item.notes}
+                  {i18n.t('icon_note')} {item.notes}
                 </Text>
               )}
             </View>
@@ -224,14 +238,14 @@ export default function AddressesTab() {
                 onPress={() => { setEditAddress(item); setModalVisible(true); }}
                 style={styles.actionButton}
               >
-                <Text style={styles.actionEdit}>✏️ تعديل</Text>
+                <Text style={styles.actionEdit}>{i18n.t('icon_edit')} {i18n.t('edit')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 onPress={() => handleDelete(item._id)}
                 style={styles.actionButton}
               >
-                <Text style={styles.actionDelete}>🗑️ حذف</Text>
+                <Text style={styles.actionDelete}>{i18n.t('icon_delete')} {i18n.t('delete')}</Text>
               </TouchableOpacity>
               
               {!item.isDefault && (
@@ -239,7 +253,7 @@ export default function AddressesTab() {
                   onPress={() => handleSetDefault(item._id)}
                   style={styles.actionButton}
                 >
-                  <Text style={styles.actionDefault}>⭐ تعيين كافتراضي</Text>
+                  <Text style={styles.actionDefault}>{i18n.t('icon_star')} {i18n.t('setAsDefault')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -247,9 +261,9 @@ export default function AddressesTab() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📍</Text>
-            <Text style={styles.emptyTitle}>لا توجد عناوين محفوظة</Text>
-            <Text style={styles.emptySubtitle}>أضف عنوانك الأول لتسهيل عملية التوصيل</Text>
+            <Text style={styles.emptyIcon}>{i18n.t('icon_location')}</Text>
+            <Text style={styles.emptyTitle}>{i18n.t('noAddressesSaved')}</Text>
+            <Text style={styles.emptySubtitle}>{i18n.t('addYourFirstAddressToFacilitateDelivery')}</Text>
           </View>
         }
       />
@@ -422,7 +436,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   actionEdit: {
-    color: '#e98c22',
+    color: '#f0b745',
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -455,13 +469,12 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 16,
     color: '#888',
-    textAlign: 'center',
     lineHeight: 24,
   },
   
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalContent: {
     backgroundColor: '#fff',
@@ -485,7 +498,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#30a1a7',
     flex: 1,
-    textAlign: 'center',
   },
   closeButton: {
     width: 30, // Slightly smaller
@@ -501,7 +513,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   formContainer: {
-    // No changes needed here, as spacing is handled by inputContainer marginBottom
+    maxHeight: '90%',
   },
   inputContainer: {
     marginBottom: 16, // Reduced margin between inputs
@@ -571,7 +583,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10, // Slightly reduced gap
-    marginTop: 20, // Slightly reduced margin top
   },
   cancelButton: {
     flex: 1,

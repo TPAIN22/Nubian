@@ -1,22 +1,20 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  Modal,
   FlatList,
   Alert,
-  I18nManager,
   ActivityIndicator,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import useOrderStore from "@/store/orderStore";
+import CouponInput, { CouponValidationResult } from './CouponInput';
 import { useAuth } from "@clerk/clerk-expo";
 import useCartStore from "@/store/useCartStore";
 import useAddressStore from "@/store/addressStore";
 import AddressForm, { Address } from "./AddressForm";
+import { useUser } from "@clerk/clerk-expo";
 
 export default function CheckOutModal({
   handleClose,
@@ -25,8 +23,10 @@ export default function CheckOutModal({
 }) {
   const { addresses, fetchAddresses, addAddress, isLoading: isAddressesLoading } = useAddressStore();
   const { getToken } = useAuth();
+  const { user } = useUser();
   const { createOrder } = useOrderStore();
-  const { clearCart } = useCartStore();
+  const { clearCart, cart } = useCartStore();
+  const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null);
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -76,6 +76,7 @@ export default function CheckOutModal({
       const orderPayload = {
         deliveryAddress: selectedAddress,
         paymentMethod: "cash",
+        ...(couponResult && couponResult.valid ? { couponCode: couponResult.code } : {})
       };
       if (token) {
         await createOrder(orderPayload, token);
@@ -144,6 +145,19 @@ export default function CheckOutModal({
         <TouchableOpacity style={styles.addButton} onPress={() => { setAddressFormInitial(null); setShowAddressForm(true); }}>
           <Text style={styles.addButtonText}>+ إضافة عنوان جديد</Text>
         </TouchableOpacity>
+        {/* مكون الكوبون */}
+        <CouponInput
+          products={cart.products.map((item: any) => ({ productId: item.product._id, categoryId: item.product.category }))}
+          userId={user?.id || ""}
+          onValidate={setCouponResult}
+        />
+        {/* عرض الخصم والمجموع النهائي */}
+        {couponResult && couponResult.valid && (
+          <View style={{ alignItems: 'center', marginVertical: 8 }}>
+            <Text style={{ color: 'green', fontWeight: 'bold' }}>خصم: {couponResult.discountValue} {couponResult.discountType === 'percentage' ? '%' : 'ج.س'}</Text>
+            <Text style={{ color: '#2c3e50', fontWeight: 'bold' }}>المجموع بعد الخصم: {Math.max(0, cart.totalPrice - (couponResult.discountType === 'percentage' ? (cart.totalPrice * couponResult.discountValue / 100) : couponResult.discountValue))} ج.س</Text>
+          </View>
+        )}
         <TouchableOpacity
           style={[styles.button, isLoading && styles.buttonDisabled]}
           onPress={handleCheckout}
@@ -372,7 +386,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
-    marginTop: 20,
     shadowColor: "#30a1a7",
     shadowOffset: {
       width: 0,
