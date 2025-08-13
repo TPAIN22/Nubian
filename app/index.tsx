@@ -16,7 +16,6 @@ export default function Index() {
     });
   }, []);
 
-  if (isFirstLaunch === null) return null; // شاشة فاضية مؤقتًا أثناء الفحص
-
-  return <Redirect href={isFirstLaunch ? "/(onboarding)" : "/(onboarding)"} />;
+  if (isFirstLaunch === null) return null; 
+  return <Redirect href={isFirstLaunch ? "/(onboarding)" : "/(tabs)"}/>;
 }

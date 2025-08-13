@@ -3,177 +3,197 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Dimensions,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import i18n from '../../utils/i18n';
+import i18n from "../../utils/i18n";
+
+const { width, height } = Dimensions.get("window");
 
 export default function Welcom() {
   const router = useRouter();
-
   const handleStart = () => {
-    //router.push(`../../(tabs)`);
+    router.push(`./onboard`);
     router.push(`./starting`);
-
   };
-
   const handleSkip = () => {
-   // router.push(`../../(tabs)`);
+    router.push(`./onboard`);
     router.push(`./starting`);
   };
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.contentContainer}>
+          <View style={styles.skipContainer}>
+            <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
+              <Text style={styles.skipText}>{i18n.t("onboarding_skip")}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Image - Center */}
+          <View style={styles.imageContainer}>
             <Image
               source={require("../../assets/images/address.svg")}
-              style={{ width: 350, height: 300, marginBottom: 20 , position: 'absolute' ,top: 170 }}
+              style={styles.onboardImage}
             />
+          </View>
 
+          {/* Text Content - Below Image */}
           <View style={styles.textContainer}>
             <Text style={styles.mainTitle}>
-              {i18n.t('onboarding_subtitle2')}
+              {i18n.t("onboarding_subtitle2")}
             </Text>
-            
+
             <Text style={styles.description}>
-              {i18n.t('onboarding_description2')}
+              {i18n.t("onboarding_description2")}
             </Text>
           </View>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              onPress={handleStart}
-              style={styles.startButton}
-            >
-              <Text style={styles.startButtonText}>
-                {i18n.t('onboarding_start')}
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.underline} >
-                         <View style={styles.dot} />
-                         <View style={styles.dotActive} />
-                         <View style={styles.dot} />
-                       </View>
+          {/* Bottom Section - Button and Dots */}
+          <View style={styles.bottomSection}>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                onPress={handleStart}
+                style={styles.startButton}
+              >
+                <Text style={styles.startButtonText}>
+                  {i18n.t("onboarding_start")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dotsContainer}>
+              <View style={styles.dot} />
+              <View style={styles.dotActive} />
+              <View style={styles.dot} />
+            </View>
           </View>
         </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+        <StatusBar style="auto" />
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#fff",
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: "space-between",
     paddingHorizontal: 20,
   },
-  underline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    bottom: 24,
-    position: 'absolute',
-    right: 20
+  skipContainer: {
+    position: "absolute",
+    top: height * 0.05,
+    right: 20,
+    zIndex: 10,
+  },
+  skipButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  skipText: {
+    color: "#000",
+    fontSize: 24,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  imageContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: height * 0.1,
+    marginBottom: height * 0.005,
+  },
+  onboardImage: {
+    width: Math.min(350, width * 0.8),
+    height: 300,
+  },
+  textContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    marginBottom: height * 0.1,
+  },
+  mainTitle: {
+    fontSize: Math.min(42, width * 0.105),
+    color: "#000",
+    fontWeight: "800",
+    textAlign: "center",
+    lineHeight: Math.min(50, width * 0.125),
+    marginBottom: 20,
+  },
+  description: {
+    fontSize: 18,
+    color: "#666B75FF",
+    fontWeight: "400",
+    textAlign: "center",
+    lineHeight: 28,
+    paddingHorizontal: 10,
+  },
+  bottomSection: {
+    alignItems: "center",
+    marginBottom: height * 0.08,
+  },
+  buttonContainer: {
+    marginBottom: 30,
+  },
+  startButton: {
+    backgroundColor: "#f0b745",
+    paddingVertical: 15,
+    paddingHorizontal: width * 0.3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#000",
+  },
+  startButtonText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    letterSpacing: 2,
+  },
+  dotsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#CCCCCCFF',
+    backgroundColor: "#CCCCCCFF",
     marginHorizontal: 4,
   },
   dotActive: {
     width: 30,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     marginHorizontal: 4,
-    color: '#0000004D',
-
   },
+  // أنماط غير مستخدمة - محتفظ بها في حال الحاجة
   logoContainer: {
-    alignItems: 'center',
-  },
-  textContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    position: 'absolute',
-    bottom: 200,    
-  },
-  mainTitle: {
-    fontSize: 42,
-    color: '#000',
-    fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 50,
+    alignItems: "center",
   },
   subTitle: {
     fontSize: 24,
-    color: '#f0b745',
-    fontWeight: '700',
-    textAlign: 'center',
+    color: "#f0b745",
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: 30,
     lineHeight: 30,
   },
-  description: {
-    fontSize: 18,
-    color: '#4a5568',
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 28,
-    marginBottom: 20,
-    paddingHorizontal: 10,
-  },
-  buttonContainer: {
-    flex: 1,
-    justifyContent: 'space-between',
-    position: 'absolute',
-    bottom: 50,
-    flexDirection: 'row',
-  },
-  startButton: {
-     backgroundColor: '#f0b745',
-    padding: 10,
-    paddingHorizontal: 40,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#000',
-    position: 'absolute',
-    bottom: 0,
-    left:50,
-  },
-  startButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
   skipButtonSecondary: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 10,
     paddingHorizontal: 40,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#f0b745',
-    position: 'absolute',
-    bottom: 0,
-    right: 50
-  },
-  skipText: {
-     color: '#CFCFCFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    letterSpacing: 2,
+    borderColor: "#f0b745",
   },
 });

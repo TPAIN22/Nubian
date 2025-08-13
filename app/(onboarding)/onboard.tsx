@@ -7,11 +7,13 @@ import { useRouter } from "expo-router";
 export default function onboard() {
   const deviceWidth = Math.round(Dimensions.get("window").width);
   const deviceHeight = Math.round(Dimensions.get("window").height);
+  const { width } = Dimensions.get("window");
+
   const router = useRouter();
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <Image
-        source={require("../../assets/images/onboard.png")}
+        source={require("../../assets/images/onboard4.png")}
         style={{ width: deviceWidth, height: deviceHeight, zIndex: -1 }}
       />
 
@@ -44,7 +46,7 @@ export default function onboard() {
           style={{
             backgroundColor: "#fff",
             padding: 15,
-            paddingHorizontal: 75,
+            paddingHorizontal: width * 0.3,
             borderRadius: 6,
           }}
           

@@ -68,7 +68,7 @@
   "noProductsAvailable": "No products available",
   "new": "New",
   "exploreNow": "Explore Now",
-  "viewAll": "View All",
+  "viewAll": "View all",
   "welcomeSubtitle": "Discover the best products specially selected for you",
   "productCategories": "Product Categories",
   "latestProducts": "Latest Products",
@@ -164,14 +164,15 @@
   "icon_star": "⭐",
   "shippingAddresses": "Shipping Addresses",
   "onboarding_skip": "Skip",
+  "whishlistEmpty": "Your wishlist is empty",
   "onboarding_brand": "Nubian",
   "onboarding_title": "A Thousand Welcomes",
   "onboarding_subtitle": "Choose Product",
   "onboarding_subtitle2": "Select Address",
   "onboarding_description1": "Pick what you love from our wide collection — we’ve got something for every style.",
-  "onboarding_description2": "Enter your address and we’ll deliver your items anywhere in Sudan, right to your doorstep with ease. Our goal is to make your experience with Nubian Easy Walkers smooth and hassle-free from start to finish.",
+  "onboarding_description2": "Enter your address and we’ll deliver your items anywhere in Sudan, right to your doorstep with ease",
   "onboarding_start": "Start the Experience",
   "onboarding_subtitle3":   "Get Your Order",
-"onboarding_description3": "Complete your order with ease and rest assured your items will be delivered right to your doorstep anywhere in Sudan, quickly and without any hassle."
+"onboarding_description3": "Complete your order with ease and rest assured your items will be delivered right to your doorstep fast and without any hassle."
 
 } 

@@ -8,11 +8,10 @@ import { BlurView } from 'expo-blur';
 import useItemStore from "@/store/useItemStore";
 import useCategoryStore from "@/store/useCategoryStore";
 // import { useSmartSystems } from "@/providers/SmartSystemsProvider";
-import styles from "../components/styles";
 import i18n from "@/utils/i18n";
-import { useFocusEffect } from '@react-navigation/native';
-import CategoryAccordion from "../components/CategoryAccordion";
 import React from "react";
+import useWishlistStore from '@/store/wishlistStore';
+import { useAuth } from '@clerk/clerk-expo';
 
 interface Product {
   _id: string;
@@ -46,6 +45,17 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
     
     return () => clearTimeout(timer);
   }, [item._id, index, animateCard]);
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
+  const { getToken } = useAuth();
+  const inWishlist = isInWishlist(item._id);
+  const handleWishlistPress = async () => {
+    const token = await getToken();
+    if (inWishlist) {
+      removeFromWishlist(item._id, token);
+    } else {
+      addToWishlist(item, token);
+    }
+  };
 
   return (
     <Animated.View
@@ -101,8 +111,8 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
             </View>
           )}
           {/* Favorite button */}
-          <TouchableOpacity style={enhancedStyles.favoriteButton}>
-            <Ionicons name="heart-outline" size={18} color="#fff" />
+          <TouchableOpacity style={enhancedStyles.favoriteButton} onPress={handleWishlistPress} >
+            <Ionicons name={inWishlist ? 'heart' : 'heart-outline'} size={18} color="#fff" />
           </TouchableOpacity>
         </View>
         

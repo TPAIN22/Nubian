@@ -19,22 +19,33 @@ import { Image } from "expo-image";
 import ImageSlider from "../components/ImageSlide";
 import { LinearGradient } from "expo-linear-gradient";
 import ItemCard from "../components/Card";
-import { BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetModal,
+  BottomSheetModalProvider,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import BottomSheet from "../components/BottomSheet";
 import i18n from "@/utils/i18n";
-import { useNavigationState } from '@react-navigation/native';
+import { useNavigationState } from "@react-navigation/native";
 import axiosInstance from "@/utils/axiosInstans";
+import { Ionicons } from "@expo/vector-icons";
 const { width, height } = Dimensions.get("window");
 const ITEM_WIDTH = width * 0.44;
 const ITEM_HEIGHT = ITEM_WIDTH * 1.3;
 
 export default function index() {
-  const { getCategories, categories, products, getAllProducts, setIsTabBarVisible } = useItemStore();
+  const {
+    getCategories,
+    categories,
+    products,
+    getAllProducts,
+    setIsTabBarVisible,
+  } = useItemStore();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const navState = useNavigationState(state => state);
+  const navState = useNavigationState((state) => state);
   const [banners, setBanners] = useState([]);
 
   const handlePresentModalPress = useCallback(() => {
@@ -77,7 +88,7 @@ export default function index() {
         const [cat, prod, bannersRes] = await Promise.all([
           getCategories(),
           getAllProducts(),
-          axiosInstance.get('/banners')
+          axiosInstance.get("/banners"),
         ]);
         setBanners(bannersRes.data.filter((b: any) => b.isActive !== false));
       } catch (e) {
@@ -90,8 +101,33 @@ export default function index() {
   }, []);
 
   const renderProductItem = ({ item }: any) => {
-    return <ItemCard item={item} handlePresentModalPress={handlePresentModalPress} handleSheetChanges={handleSheetChanges} />;
+    return (
+      <ItemCard
+        item={item}
+        handlePresentModalPress={handlePresentModalPress}
+        handleSheetChanges={handleSheetChanges}
+      />
+    );
   };
+
+  const renderCatigoryCircle = ({ item }: any) => {
+    return (
+      <View className="my-4">
+        <View style={styles.categoryCircle}>
+          <Image
+            source={{ uri: item.image }}
+            style={styles.categoryCircleImage}
+            contentFit="cover"
+            transition={400}
+            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+          />
+        </View>
+      </View>
+    );
+  };
+  const now = new Date();
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(now.getDate() - 10);
 
   const renderCategoryItem = ({ item, index }: any) => {
     return (
@@ -118,9 +154,12 @@ export default function index() {
               colors={["transparent", "rgba(0,0,0,0.7)"]}
               style={styles.imageOverlay}
             />
-            <View style={styles.categoryBadge}>
-              <Text style={styles.badgeText}>{i18n.t('new')}</Text>
-            </View>
+
+            {new Date(item.createdAt) > threeDaysAgo && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.badgeText}>{i18n.t("new")}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.textContent}>
@@ -128,9 +167,13 @@ export default function index() {
               {item.name}
             </Text>
             <View style={styles.actionRow}>
-              <Text style={styles.exploreText}>{i18n.t('exploreNow')}</Text>
+              <Text style={styles.exploreText}>{i18n.t("exploreNow")}</Text>
               <View style={styles.arrowContainer}>
-                <Text style={styles.arrowIcon}>←</Text>
+                {I18nManager.isRTL ? (
+                  <Ionicons name="arrow-back" size={10} color="#000" />
+                ) : (
+                  <Ionicons name="arrow-forward" size={10} color="#000" />
+                )}
               </View>
             </View>
           </View>
@@ -139,22 +182,20 @@ export default function index() {
     );
   };
 
-  const SectionHeader = ({
-    title,
-    subtitle,
-    onViewMore,
-    showViewMore = true,
-  }: any) => (
+  const SectionHeader = ({ title, onViewMore, showViewMore = true }: any) => (
     <View style={styles.sectionHeader}>
       <View style={styles.titleContainer}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
       </View>
       {showViewMore && (
         <Pressable style={styles.viewMoreButton} onPress={onViewMore}>
-          <Text style={styles.viewMoreText}>{i18n.t('viewAll')}</Text>
+          <Text style={styles.viewMoreText}>{i18n.t("viewAll")}</Text>
           <View style={styles.viewMoreIcon}>
-            <Text style={styles.viewMoreArrow}>←</Text>
+            {I18nManager.isRTL ? (
+              <Ionicons name="arrow-back" size={20} color="#fff" />
+            ) : (
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            )}
           </View>
         </Pressable>
       )}
@@ -162,7 +203,12 @@ export default function index() {
   );
 
   return (
-    <GestureHandlerRootView style={[styles.container, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+    <GestureHandlerRootView
+      style={[
+        styles.container,
+        { direction: I18nManager.isRTL ? "rtl" : "ltr" },
+      ]}
+    >
       <BottomSheetModalProvider>
         <View style={styles.container}>
           <ScrollView
@@ -176,7 +222,7 @@ export default function index() {
                 onRefresh={async () => {
                   await Promise.all([
                     handleGetCategories(),
-                    handleGetProducts()
+                    handleGetProducts(),
                   ]);
                 }}
                 colors={["#f0b745"]}
@@ -185,15 +231,40 @@ export default function index() {
             }
           >
             <View style={styles.heroSection}>
-              <ImageSlider banners={banners.length ? banners : [
-                { _id: 'placeholder', image: 'https://placehold.co/600x200?text=No+Banners', title: '', description: '' }
-              ]} />
+              <ImageSlider
+                banners={
+                  banners.length
+                    ? banners.slice(1, 2)
+                    : [
+                        {
+                          _id: "placeholder",
+                          image: "https://placehold.co/600x200?text=No+Banners",
+                          title: "",
+                          description: "",
+                        },
+                      ]
+                }
+              />
             </View>
+            <View style={{ height: 10 }} />
+
             <View style={styles.categoriesSection}>
               <SectionHeader
-                title={i18n.t('discoverOurCollection')}
+                title={i18n.t("discoverOurCollection")}
                 onViewMore={() => router.push(`/(screens)`)}
               />
+              <FlatList
+                data={categories?.slice(0, 20) || []}
+                renderItem={renderCatigoryCircle}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => `category-${item._id}`}
+                contentContainerStyle={styles.horizontalList}
+                snapToInterval={ITEM_WIDTH + 16}
+                decelerationRate="fast"
+                bounces={true}
+              />
+
               <FlatList
                 data={categories?.slice(0, 5) || []}
                 renderItem={renderCategoryItem}
@@ -207,10 +278,27 @@ export default function index() {
               />
             </View>
 
+            <View style={styles.heroSection}>
+              <ImageSlider
+                banners={
+                  banners.length
+                    ? banners.slice(0, 1)
+                    : [
+                        {
+                          _id: "placeholder",
+                          image: "https://placehold.co/600x200?text=No+Banners",
+                          title: "",
+                          description: "",
+                        },
+                      ]
+                }
+              />
+              <View style={{ height: 20 }} />
+            </View>
             <View style={styles.latestProductsSection}>
               <SectionHeader
-                title={i18n.t('latestProducts')}
-                subtitle={i18n.t('latestAddedProducts')}
+                title={i18n.t("latestProducts")}
+                subtitle={i18n.t("latestAddedProducts")}
                 onViewMore={() => router.push(`/(screens)`)}
               />
               <View style={styles.productsGrid}>
@@ -221,7 +309,9 @@ export default function index() {
                   numColumns={2}
                   columnWrapperStyle={styles.productsRow}
                   scrollEnabled={false}
-                  ItemSeparatorComponent={() => <View style={styles.productsSeparator} />}
+                  ItemSeparatorComponent={() => (
+                    <View style={styles.productsSeparator} />
+                  )}
                 />
               </View>
             </View>
@@ -229,7 +319,7 @@ export default function index() {
             <View style={styles.bottomSpacing} />
           </ScrollView>
         </View>
-        
+
         <BottomSheetModal
           ref={bottomSheetModalRef}
           onChange={handleSheetChanges}
@@ -262,27 +352,42 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  
+  categoryCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 40,
+    marginHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoryCircleImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 40,
+    marginHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   // Hero Section
   heroSection: {
-    height: height * 0.200,
+    height: height * 0.2,
     marginBottom: 6,
     marginHorizontal: 10,
     marginTop: 12,
     overflow: "hidden",
+    borderRadius: 16,
   },
-  
-  
+
   // Categories Section
   categoriesSection: {
-    marginBottom: 32,
-    paddingHorizontal: 20,
+    marginBottom: 10,
+    paddingHorizontal: 6,
   },
-  
+
   // Products Section
   latestProductsSection: {
-    marginHorizontal: 10,
-    marginBottom: 24,
+    marginHorizontal: 8,
+    marginBottom: 14,
   },
   productsGrid: {
     borderRadius: 20,
@@ -292,73 +397,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   productsSeparator: {
-    height: 16,
+    height: 8,
   },
-  
+
   // Section Headers
   sectionHeader: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#30a8a7",
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
-    borderRadius:6,
+    alignItems: "center",
+    marginBottom: 10,
+    borderRadius: 10,
+    paddingHorizontal: 10,
   },
   titleContainer: {
     flex: 1,
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 12,
     fontWeight: "800",
-    color: "#1A1A1A",
-    marginBottom: 4,
+    color: "#FFFFFFFF",
     textAlign: "left",
-  },
-  sectionSubtitle: {
-    fontSize: 15,
-    color: "#6B7280",
-    textAlign: "left",
-    fontWeight: "500",
   },
   viewMoreButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
+    paddingVertical: 4,
+    justifyContent: "center",
+    gap: 4,
+    borderWidth: 0.5,
+    borderRadius: 8,
+    borderColor: "#FFFFFFFF",
+    margin: 6,
+    paddingHorizontal: 10,
   },
   viewMoreText: {
-    fontSize: 14,
-    color: "#f0b745",
-    fontWeight: "600",
-    marginLeft: 6,
+    fontSize: 13,
+    color: "#fff",
+    fontWeight: "400",
   },
   viewMoreIcon: {
-    width: 16,
-    height: 16,
     justifyContent: "center",
     alignItems: "center",
   },
   viewMoreArrow: {
     fontSize: 14,
-    color: "#f0b745",
+    color: "#fff",
     fontWeight: "bold",
   },
-  
   // Horizontal Lists
   horizontalList: {
     paddingRight: 4,
   },
-  
   // Category Cards
   categoryCard: {
     width: ITEM_WIDTH,
     height: ITEM_HEIGHT,
     marginHorizontal: 8,
-    borderRadius: 20,
+    borderRadius: 16,
     backgroundColor: "#FFFFFF",
     overflow: "hidden",
   },
@@ -422,19 +518,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   arrowContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 34,
+    height: 14,
+    borderRadius: 6,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
   },
-  arrowIcon: {
-    fontSize: 14,
-    color: "#f0b745",
-    fontWeight: "bold",
-  },
-  
   // Bottom Sheet
   bottomSheetBackground: {
     borderTopLeftRadius: 28,
@@ -445,7 +535,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-  
+
   // Spacing
   bottomSpacing: {
     height: 100,

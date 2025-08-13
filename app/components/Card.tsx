@@ -1,6 +1,4 @@
-import { Badge, BadgeText } from "@/components/ui/badge";
-import { Box } from "@/components/ui/box";
-import { Button, ButtonText } from "@/components/ui/button";
+
 import { Card } from "@/components/ui/card";
 import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
@@ -9,7 +7,7 @@ import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState, useRef } from "react";
-import { Dimensions, Pressable, StyleSheet, View, I18nManager, FlatList } from "react-native";
+import { Dimensions, Pressable, StyleSheet, View, FlatList } from "react-native";
 import i18n from "@/utils/i18n";
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
@@ -24,7 +22,7 @@ interface item {
 }
 
 function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
-  const { setProduct, setIsTabBarVisible } = useItemStore();
+  const { setProduct } = useItemStore();
   const screenWidth = Dimensions.get("window").width;
   const cardWidth = screenWidth / 2 - 20;
   const router = useRouter();
@@ -119,7 +117,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     );
   };
   return (
-    <Card className="p-0 rounded-lg bg-white my-2" style={{ width: cardWidth }}>
+    <Card className="p-0 rounded-lg " style={{ width: cardWidth }}>
       <View style={{ height: 260, overflow: "hidden" }}>
         <Pressable
           onPress={handleWishlistPress}
@@ -149,7 +147,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
         />
         {renderPagination()}
       </View>
-      <View className="px-4">
+      <View className="px-4 pb-2">
         <VStack className="">
           <Heading size="sm" className=" text-[#646767]">
             {item.name}
@@ -159,7 +157,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
               {item.discountPrice > 0 && formatPrice(item.discountPrice)}
             </Text>
           )}
-          <Text className=" text-[#30a1a7] font-bold text-md">
+          <Text className=" text-[#585858] font-bold text-md">
             {formatPrice(item.price)}
           </Text>
         </VStack>
@@ -221,7 +219,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   paginationDotActive: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f0b745',
   },
 });
 

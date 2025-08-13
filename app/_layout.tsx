@@ -1,5 +1,4 @@
-import  { useState, useEffect, useCallback } from "react";
-import "@/app\\global.css";
+import { useState, useEffect, useCallback } from "react";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { Stack } from "expo-router";
 import "./global.css";
@@ -12,24 +11,24 @@ import Toast from "react-native-toast-message";
 import * as SplashScreen from "expo-splash-screen";
 import GifLoadingScreen from "./GifLoadingScreen";
 import NoNetworkScreen from "./NoNetworkScreen";
-import { Alert } from 'react-native';
+import { Alert, Platform } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import i18n from '@/utils/i18n';
+import i18n from "@/utils/i18n";
 
-import * as Updates from 'expo-updates';
+import * as Updates from "expo-updates";
 
 import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
 import { View } from "react-native";
-import { I18nManager } from 'react-native';
-import { LanguageProvider } from '@/utils/LanguageContext';
+import { I18nManager } from "react-native";
+import { LanguageProvider } from "@/utils/LanguageContext";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true, 
-    shouldShowList: true, 
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -37,12 +36,13 @@ SplashScreen.preventAutoHideAsync();
 
 function AppLoaderWithClerk() {
   const { isLoaded } = useAuth();
-  const [gifAnimationFinished, setGifAnimationFinished] = useState<boolean>(false);
+  const [gifAnimationFinished, setGifAnimationFinished] =
+    useState<boolean>(false);
   const [isUpdateChecking, setIsUpdateChecking] = useState<boolean>(true);
-  const [hasGifStartedDisplaying, setHasGifStartedDisplaying] = useState<boolean>(false);
+  const [hasGifStartedDisplaying, setHasGifStartedDisplaying] =
+    useState<boolean>(false);
 
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
-
 
   useEffect(() => {
     async function onFetchUpdateAsync() {
@@ -55,22 +55,22 @@ function AppLoaderWithClerk() {
             await Updates.fetchUpdateAsync();
 
             Alert.alert(
-              i18n.t('updateAvailableTitle'),
-              i18n.t('updateAvailableMessage'),
+              i18n.t("updateAvailableTitle"),
+              i18n.t("updateAvailableMessage"),
               [
                 {
-                  text: i18n.t('no'),
+                  text: i18n.t("no"),
                   style: "cancel",
                   onPress: () => {
                     setIsUpdateChecking(false);
-                  }
+                  },
                 },
                 {
-                  text: i18n.t('yes'),
+                  text: i18n.t("yes"),
                   onPress: () => {
                     Updates.reloadAsync();
-                  }
-                }
+                  },
+                },
               ],
               { cancelable: false }
             );
@@ -78,7 +78,12 @@ function AppLoaderWithClerk() {
             setIsUpdateChecking(false);
           }
         } catch (error) {
-          Toast.show({ type: 'info', text1: i18n.t('updateErrorTitle'), text2: i18n.t('updateErrorMessage'), visibilityTime: 3000 });
+          Toast.show({
+            type: "info",
+            text1: i18n.t("updateErrorTitle"),
+            text2: i18n.t("updateErrorMessage"),
+            visibilityTime: 3000,
+          });
           setIsUpdateChecking(false);
         }
       } else if (isConnected === false) {
@@ -88,7 +93,8 @@ function AppLoaderWithClerk() {
       }
     }
 
-    if (!isNetworkChecking) { // انتظر حتى ينتهي NetworkProvider من التحقق الأولي
+    if (!isNetworkChecking) {
+      // انتظر حتى ينتهي NetworkProvider من التحقق الأولي
       onFetchUpdateAsync();
     }
   }, [isConnected, isNetworkChecking]); // يعتمد على isConnected و isNetworkChecking
@@ -101,58 +107,96 @@ function AppLoaderWithClerk() {
     setHasGifStartedDisplaying(true);
   }, []);
 
-
   useEffect(() => {
     async function hideSplash() {
       if (hasGifStartedDisplaying) {
         await SplashScreen.hideAsync();
-      }
-      else if (isConnected === true && isLoaded && gifAnimationFinished && !isUpdateChecking) {
+      } else if (
+        isConnected === true &&
+        isLoaded &&
+        gifAnimationFinished &&
+        !isUpdateChecking
+      ) {
         await SplashScreen.hideAsync();
-      }
-      else if (isConnected === false) {
-        await new Promise(resolve => setTimeout(resolve, 50)); 
+      } else if (isConnected === false) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
         await SplashScreen.hideAsync();
       }
     }
     hideSplash();
-  }, [isConnected, isLoaded, gifAnimationFinished, isUpdateChecking, hasGifStartedDisplaying]);
-
+  }, [
+    isConnected,
+    isLoaded,
+    gifAnimationFinished,
+    isUpdateChecking,
+    hasGifStartedDisplaying,
+  ]);
 
   const handleRetryNetwork = useCallback(() => {
     retryNetworkCheck();
     setIsUpdateChecking(true);
   }, [retryNetworkCheck]);
 
-  useEffect(() => {
-  }, []);
+  useEffect(() => {}, []);
 
   if (isNetworkChecking) {
-    return <GluestackUIProvider mode="light"><GifLoadingScreen onAnimationFinish={() => {}} onMount={onGifComponentMounted} /></GluestackUIProvider>;
+    return (
+      <GluestackUIProvider mode="light">
+        <GifLoadingScreen
+          onAnimationFinish={() => {}}
+          onMount={onGifComponentMounted}
+        />
+      </GluestackUIProvider>
+    );
   }
 
   if (isConnected === false) {
-    return <GluestackUIProvider mode="light"><NoNetworkScreen onRetry={handleRetryNetwork} /></GluestackUIProvider>;
+    return (
+      <GluestackUIProvider mode="light">
+        <NoNetworkScreen onRetry={handleRetryNetwork} />
+      </GluestackUIProvider>
+    );
   }
 
   if (!gifAnimationFinished || !isLoaded || isUpdateChecking) {
-    return <GluestackUIProvider mode="light"><GifLoadingScreen onAnimationFinish={onGifFinish} onMount={onGifComponentMounted} /></GluestackUIProvider>;
+    return (
+      <GluestackUIProvider mode="light">
+        <GifLoadingScreen
+          onAnimationFinish={onGifFinish}
+          onMount={onGifComponentMounted}
+        />
+      </GluestackUIProvider>
+    );
   }
 
   return (
     <GluestackUIProvider mode="light">
-        <NotificationProvider>
-          <>
+      <NotificationProvider>
+        <>
           <StatusBar style="auto" />
-            <Stack screenOptions={{ headerShown: false }} initialRouteName="(onboarding)">
-              <Stack.Screen name="(tabs)"/>
-              <Stack.Screen name="(auth)"/>
-              <Stack.Screen name="(onboarding)"/>
-              <Stack.Screen name="(screens)"/>
-            </Stack>
-            <Toast />
-          </>
-        </NotificationProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              gestureEnabled: true,
+              gestureDirection: "horizontal",
+              animation:
+                Platform.OS === "android"
+                  ? I18nManager.isRTL
+                    ? "slide_from_left" 
+                    : "slide_from_right" 
+                  : undefined,
+                  animationDuration: 20,
+            }}
+            initialRouteName="(onboarding)"
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="(screens)" />
+          </Stack>
+          <Toast />
+        </>
+      </NotificationProvider>
     </GluestackUIProvider>
   );
 }
@@ -162,13 +206,18 @@ export default function RootLayout() {
     <LanguageProvider>
       <GluestackUIProvider mode="light">
         <KeyboardProvider>
-        <ClerkProvider>
-          <NetworkProvider>
-            <View style={{ direction: I18nManager.isRTL ? 'rtl' : 'ltr', flex: 1 }}>
-              <AppLoaderWithClerk />
-            </View>
-          </NetworkProvider>
-        </ClerkProvider>
+          <ClerkProvider>
+            <NetworkProvider>
+              <View
+                style={{
+                  direction: I18nManager.isRTL ? "rtl" : "ltr",
+                  flex: 1,
+                }}
+              >
+                <AppLoaderWithClerk />
+              </View>
+            </NetworkProvider>
+          </ClerkProvider>
         </KeyboardProvider>
       </GluestackUIProvider>
     </LanguageProvider>

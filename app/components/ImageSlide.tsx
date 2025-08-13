@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View, Image, StyleSheet, Dimensions, Text, FlatList, TouchableOpacity } from 'react-native';
+import { View,  StyleSheet, Dimensions, Text, FlatList } from 'react-native';
+import { Image } from 'expo-image';
 
 const { width } = Dimensions.get('window');
 
@@ -20,7 +21,7 @@ function ImageSlider({ banners }: ImageSliderProps) {
 
   const renderItem = ({ item }: { item: Banner }) => (
     <View style={{ width, height: 200 }}>
-      <Image source={{ uri: item.image }} style={styles.image} />
+      <Image source={{ uri: item.image }} style={styles.image} contentFit="fill"/>
       {(item.title || item.description) && (
         <View style={styles.overlay}>
           {item.title && <Text style={styles.title}>{item.title}</Text>}
@@ -76,8 +77,7 @@ function ImageSlider({ banners }: ImageSliderProps) {
 const styles = StyleSheet.create({
   image: {
     height: 200,
-    width: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   overlay: {
     position: 'absolute',
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(0,0,0,0.3)',
-    padding: 10,
+    padding: 10 ,
   },
   title: {
     color: '#fff',
