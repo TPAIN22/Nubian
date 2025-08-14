@@ -5,25 +5,20 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  StatusBar,
   Platform,
 } from "react-native";
 import { useCallback, useRef, useEffect, useState } from "react";
 import useCartStore from "@/store/useCartStore";
 import { useAuth } from "@clerk/clerk-expo";
-import { useUser } from "@clerk/clerk-expo";
 import CartItem from "../components/cartItem";
 import Chekout from "../components/chekoutBotton";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
   BottomSheetModal,
-  BottomSheetModalProvider,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import CheckOutModal from "../components/checkOutModal";
 import { useRouter } from "expo-router";
 import i18n from "@/utils/i18n";
-import CouponInput from '../components/CouponInput';
 import type { CouponValidationResult } from '../components/CouponInput';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -31,7 +26,6 @@ export default function CartScreen() {
   const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart } =
     useCartStore();
   const { getToken } = useAuth();
-  const { user } = useUser();
   const router = useRouter();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [isProcessing] = useState(false);
@@ -111,23 +105,18 @@ export default function CartScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centeredContainerLight}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-        <View style={styles.loadingCardLight}>
-          <ActivityIndicator size="large" color="#30a1a7" />
-          <Text style={styles.loadingTextLight}>{i18n.t('loadingCart')}</Text>
-        </View>
+      <View style={{flex:1 , alignItems:"center" ,justifyContent:'center'}}>
+          <ActivityIndicator size="large" color="#f0b745" />
       </View>
+        
     );
   }
 
   if (isCartEmpty) {
     return (
-      <LinearGradient
-        colors={['#f8f9fa', '#e9ecef']}
+      <View
         style={styles.emptyContainer}
       >
-        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
         <View style={styles.emptyContent}>
           <View style={styles.emptyIconContainer}>
             <Text style={styles.emptyIcon}>🛒</Text>
@@ -144,25 +133,21 @@ export default function CartScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#30a1a7', '#268a94']}
+              colors={['#f0b745', '#f0b745']}
               style={styles.buttonGradient}
             >
               <Text style={styles.continueShoppingText}>{i18n.t('startShopping')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
     );
   }
 
   if (isProcessing) {
     return (
-      <View style={styles.centeredContainerLight}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-        <View style={styles.loadingCardLight}>
-          <ActivityIndicator size="large" color="#f0b745" />
-          <Text style={styles.loadingTextLight}>{i18n.t('processingOrder')}</Text>
-        </View>
+      <View style={{flex:1 , alignItems:"center" ,justifyContent:'center'}}>
+      <ActivityIndicator size="large" color="#f0b745" />
       </View>
     );
   }
@@ -174,23 +159,7 @@ export default function CartScreen() {
     : cart.totalPrice;
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a252f" />
-      <BottomSheetModalProvider>
-        <LinearGradient
-          colors={['#f8f9fa', '#e9ecef']}
-          style={styles.headerGradient}
-        >
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{i18n.t('cartTitle')}</Text>
-            <View style={styles.itemCountBadge}>
-              <Text style={styles.itemCount}>
-                {cart.products.length}
-              </Text>
-            </View>
-          </View>
-        </LinearGradient>
-
+    <View style={styles.container}>
         <View style={styles.cartContent}>
           <FlatList
             data={Array.isArray(cart.products) ? cart.products : []}
@@ -210,53 +179,14 @@ export default function CartScreen() {
             keyExtractor={(item, idx) => (item && item.product && item.product._id) ? item.product._id : String(idx)}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContainer}
-          />
-          
-          <View style={styles.couponSection}>
-            <CouponInput
-              products={cart.products.map((item: any) => ({ productId: item.product._id, categoryId: item.product.category }))}
-              userId={user?.id || ""}
-              onValidate={setCouponResult}
-            />
-          </View>
-          
-          {couponResult && couponResult.valid && (
-            <View style={styles.discountCard}>
-              <LinearGradient
-                colors={['#d4edda', '#c3e6cb']}
-                style={styles.discountGradient}
-              >
-                <Text style={styles.discountLabel}>
-                  💰 خصم: {couponResult.discountValue} {couponResult.discountType === 'percentage' ? '%' : 'ج.س'}
-                </Text>
-                <Text style={styles.finalTotalLabel}>
-                  المجموع بعد الخصم: {finalTotal} ج.س
-                </Text>
-              </LinearGradient>
-            </View>
-          )}
+          />  
         </View>
-
         <View style={styles.checkoutSection}>
-          <View style={styles.totalCard}>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>المجموع الكلي</Text>
-              <Text style={styles.totalAmount}>{finalTotal} ج.س</Text>
-            </View>
-            {couponResult && couponResult.valid && (
-              <View style={styles.originalPriceRow}>
-                <Text style={styles.originalPriceLabel}>السعر الأصلي</Text>
-                <Text style={styles.originalPriceAmount}>{cart.totalPrice} ج.س</Text>
-              </View>
-            )}
-          </View>
-          
           <Chekout
             total={finalTotal}
             handleCheckout={handlePresentModalPress}
           />
         </View>
-
         <BottomSheetModal
           ref={bottomSheetModalRef}
           onChange={handleSheetChanges}
@@ -271,13 +201,13 @@ export default function CartScreen() {
             />
           </BottomSheetView>
         </BottomSheetModal>
-      </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    marginTop:10,
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
@@ -285,7 +215,7 @@ const styles = StyleSheet.create({
   // Header Styles
   headerGradient: {
     paddingTop: Platform.OS === 'ios' ? 50 : 25,
-    backgroundColor: undefined, // Remove any default background
+    backgroundColor: undefined, 
   },
   header: {
     flexDirection: "row",
@@ -388,11 +318,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+   
   },
   emptyIcon: {
     fontSize: 60,
@@ -407,23 +333,18 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 16,
-    color: "#6c757d",
+    color: "#8A929AFF",
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 40,
   },
   continueShoppingButton: {
-    borderRadius: 25,
-    shadowColor: "#30a1a7",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
+    borderRadius: 6,
   },
   buttonGradient: {
-    paddingHorizontal: 40,
-    paddingVertical: 18,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 6,
   },
   continueShoppingText: {
     color: "#ffffff",
@@ -443,14 +364,10 @@ const styles = StyleSheet.create({
   },
   cartItemWrapper: {
     marginHorizontal: 15,
-    marginVertical: 5,
-    backgroundColor: "#ffffff",
-    borderRadius: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding:4,
+    borderRadius: 8,
+    margin:4
+    
   },
 
   // Coupon Section
@@ -487,17 +404,10 @@ const styles = StyleSheet.create({
 
   // Checkout Section
   checkoutSection: {
-    backgroundColor: "#ffffff",
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
+    
   },
   totalCard: {
     backgroundColor: "#f8f9fa",

@@ -13,6 +13,7 @@ import React from "react";
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 
+
 interface Product {
   _id: string;
   name: string;
@@ -111,9 +112,7 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
             </View>
           )}
           {/* Favorite button */}
-          <TouchableOpacity style={enhancedStyles.favoriteButton} onPress={handleWishlistPress} >
-            <Ionicons name={inWishlist ? 'heart' : 'heart-outline'} size={18} color="#fff" />
-          </TouchableOpacity>
+         
         </View>
         
         <View style={enhancedStyles.cardInfo}>
@@ -452,9 +451,7 @@ const SearchPage = () => {
   const flatCategories = flattenCategories(categories);
 
   return (
-    <View style={enhancedStyles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+    <View style={enhancedStyles.container}>      
       {/* Header with Search */}
       <View style={enhancedStyles.header}>
         

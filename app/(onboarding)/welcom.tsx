@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
-import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import i18n from "../../utils/i18n";
@@ -59,7 +58,7 @@ export default function Welcom() {
                 style={styles.startButton}
               >
                 <Text style={styles.startButtonText}>
-                  {i18n.t("onboarding_start")}
+                  {i18n.t("onboarding_next")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -71,7 +70,6 @@ export default function Welcom() {
             </View>
           </View>
         </View>
-        <StatusBar style="auto" />
       </View>
   );
 }
@@ -137,7 +135,7 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     alignItems: "center",
-    marginBottom: height * 0.08,
+    bottom: height * 0.03, // 8% من أسفل الشاشة
   },
   buttonContainer: {
     marginBottom: 30,

@@ -46,7 +46,7 @@ export default function onboard() {
           style={{
             backgroundColor: "#fff",
             padding: 15,
-            paddingHorizontal: width * 0.3,
+            paddingHorizontal: width * 0.2,
             borderRadius: 6,
           }}
           

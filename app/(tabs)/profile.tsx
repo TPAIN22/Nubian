@@ -14,23 +14,12 @@ import {
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { useNavigation, useRouter } from "expo-router";
 import { Image } from "expo-image";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import BottomSheet, {
-  BottomSheetModal,
-  BottomSheetView,
-  BottomSheetModalProvider,
-} from "@gorhom/bottom-sheet";
-import { Button } from "react-native";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import GoogleSignInSheet from "@/app/(auth)/signin";
 import i18n, { changeLanguage } from "../../utils/i18n";
 
@@ -96,7 +85,7 @@ export default function Profile() {
       title: i18n.t("privacyPolicy"),
 
       action: () => {
-         Linking.openURL('https://nubian-sd.store/privacy-policy')
+        Linking.openURL("https://nubian-sd.store/privacy-policy");
       },
       icon: "shield-outline" as const,
       color: "#9013FE",
@@ -112,7 +101,7 @@ export default function Profile() {
     {
       title: i18n.t("support"),
       action: () => {
-        Linking.openURL('https://nubian-sd.store')
+        Linking.openURL("https://nubian-sd.store");
       },
       icon: "help-circle-outline" as const,
       color: "#50E3C2",
@@ -120,7 +109,7 @@ export default function Profile() {
     {
       title: i18n.t("exchange"),
       action: () => {
-        Linking.openURL('https://nubian-sd.store/exchange-policy')
+        Linking.openURL("https://nubian-sd.store/exchange-policy");
       },
       icon: "return-up-back" as const,
       color: "#B7E350FF",
@@ -205,7 +194,12 @@ export default function Profile() {
 
   if (!loaded) {
     return (
-      <View style={[styles.loadingContainer, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { direction: I18nManager.isRTL ? "rtl" : "ltr" },
+        ]}
+      >
         <ActivityIndicator size="large" color="#f0b745" />
       </View>
     );
@@ -213,161 +207,159 @@ export default function Profile() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <ScrollView
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          style={styles.container}
-          contentContainerStyle={[
-            styles.contentContainer,
-            {
-              paddingTop: headerHeight + 20,
-              paddingBottom: tabbarHeight + 40,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* عرض معلومات المستخدم أو دعوة لتسجيل الدخول */}
-          {isUserLoaded && user ? (
-            /* Profile Header */
-            <View style={styles.profileHeader}>
-              <View style={styles.avatarContainer}>
-                <Image source={{ uri: user?.imageUrl }} style={styles.avatar} />
-                <View style={styles.onlineIndicator} />
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={styles.welcomeText}>{i18n.t("welcome")}</Text>
-                <Text style={styles.userName}>
-                  {user?.firstName} {user?.lastName}
-                </Text>
-                <Text style={styles.userEmail}>
-                  {user?.primaryEmailAddress?.emailAddress}
-                </Text>
-              </View>
+      <ScrollView
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        style={styles.container}
+        contentContainerStyle={[
+          styles.contentContainer,
+          {
+            paddingTop: headerHeight + 20,
+            paddingBottom: tabbarHeight + 40,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* عرض معلومات المستخدم أو دعوة لتسجيل الدخول */}
+        {isUserLoaded && user ? (
+          /* Profile Header */
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              <Image source={{ uri: user?.imageUrl }} style={styles.avatar} />
+              <View style={styles.onlineIndicator} />
             </View>
-          ) : (
-            /* Sign In Invitation */
-            <View style={styles.signInInvitation}>
-              <Image
-                source={require("../../assets/images/profilelogin.svg")}
-                style={styles.signInImage}
-              />
-              <View style={styles.signInTextContainer}>
-                <Text style={styles.signInTitle}>
-                  {i18n.t("signInToContinue")}
-                </Text>
-                <Text style={styles.signInSubtitle}>
-                  {i18n.t('profile_signInSubtitle')}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={handlePresentModalPress}
-                style={styles.loginButton}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.loginButtonText}>{i18n.t("signIn")}</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </TouchableOpacity>
+            <View style={styles.userInfo}>
+              <Text style={styles.welcomeText}>{i18n.t("welcome")}</Text>
+              <Text style={styles.userName}>
+                {user?.firstName} {user?.lastName}
+              </Text>
+              <Text style={styles.userEmail}>
+                {user?.primaryEmailAddress?.emailAddress}
+              </Text>
             </View>
-          )}
+          </View>
+        ) : (
+          /* Sign In Invitation */
+          <View style={styles.signInInvitation}>
+            <Image
+              source={require("../../assets/images/profilelogin.svg")}
+              style={styles.signInImage}
+            />
+            <View style={styles.signInTextContainer}>
+              <Text style={styles.signInTitle}>
+                {i18n.t("signInToContinue")}
+              </Text>
+              <Text style={styles.signInSubtitle}>
+                {i18n.t("profile_signInSubtitle")}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handlePresentModalPress}
+              style={styles.loginButton}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.loginButtonText}>{i18n.t("signIn")}</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
 
-          {/* عرض خيارات المستخدم فقط إذا كان مسجل دخول */}
-          {isUserLoaded && user && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{i18n.t("profile")}</Text>
-              <View style={styles.optionsContainer}>
-                {userOnlyOptions.map((option, index) =>
-                  renderOptionItem(option, index)
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* عرض الخيارات العامة دائماً */}
+        {/* عرض خيارات المستخدم فقط إذا كان مسجل دخول */}
+        {isUserLoaded && user && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{i18n.t("seeAlso")}</Text>
+            <Text style={styles.sectionTitle}>{i18n.t("profile")}</Text>
             <View style={styles.optionsContainer}>
-              {publicOptions.map((option, index) =>
+              {userOnlyOptions.map((option, index) =>
                 renderOptionItem(option, index)
               )}
             </View>
           </View>
+        )}
 
-          {/* Language Settings Section - متاح دائماً */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{i18n.t("languageSettings")}</Text>
-            <View style={styles.languageContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.languageButton,
-                  i18n.locale === "ar" && styles.languageButtonActive,
-                ]}
-                onPress={() => changeLanguage("ar")}
-                disabled={i18n.locale === "ar"}
-              >
-                <Text
-                  style={[
-                    styles.languageButtonText,
-                    i18n.locale === "ar" && styles.languageButtonTextActive,
-                  ]}
-                >
-                  {i18n.t('profile_arabic')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.languageButton,
-                  i18n.locale === "en" && styles.languageButtonActive,
-                ]}
-                onPress={() => changeLanguage("en")}
-                disabled={i18n.locale === "en"}
-              >
-                <Text
-                  style={[
-                    styles.languageButtonText,
-                    i18n.locale === "en" && styles.languageButtonTextActive,
-                  ]}
-                >
-                  {i18n.t('profile_english')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {/* عرض الخيارات العامة دائماً */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{i18n.t("seeAlso")}</Text>
+          <View style={styles.optionsContainer}>
+            {publicOptions.map((option, index) =>
+              renderOptionItem(option, index)
+            )}
           </View>
+        </View>
 
-          {/* عرض زر تسجيل الخروج فقط إذا كان المستخدم مسجل دخول */}
-          {isUserLoaded && user && (
+        {/* Language Settings Section - متاح دائماً */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{i18n.t("languageSettings")}</Text>
+          <View style={styles.languageContainer}>
             <TouchableOpacity
-              onPress={() => signOut()}
-              style={styles.logoutButton}
-              activeOpacity={0.7}
+              style={[
+                styles.languageButton,
+                i18n.locale === "ar" && styles.languageButtonActive,
+              ]}
+              onPress={() => changeLanguage("ar")}
+              disabled={i18n.locale === "ar"}
             >
-              <View style={styles.logoutContent}>
-                <View style={styles.logoutIconContainer}>
-                  <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
-                </View>
-                <Text style={styles.logoutText}>{i18n.t("logout")}</Text>
-              </View>
-              <Ionicons
-                name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-                size={20}
-                color="#FF3B30"
-              />
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  i18n.locale === "ar" && styles.languageButtonTextActive,
+                ]}
+              >
+                {i18n.t("profile_arabic")}
+              </Text>
             </TouchableOpacity>
-          )}
-        </ScrollView>
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                i18n.locale === "en" && styles.languageButtonActive,
+              ]}
+              onPress={() => changeLanguage("en")}
+              disabled={i18n.locale === "en"}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  i18n.locale === "en" && styles.languageButtonTextActive,
+                ]}
+              >
+                {i18n.t("profile_english")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        {/* Bottom Sheet Modal */}
-        <BottomSheetModal
-          ref={bottomSheetModalRef}
-          onChange={handleSheetChanges}
-          backgroundStyle={styles.bottomSheetBackground}
-          handleIndicatorStyle={styles.bottomSheetIndicator}
-        >
-          <BottomSheetView style={styles.contentContainer}>
-            <GoogleSignInSheet />
-          </BottomSheetView>
-        </BottomSheetModal>
-      </BottomSheetModalProvider>
+        {/* عرض زر تسجيل الخروج فقط إذا كان المستخدم مسجل دخول */}
+        {isUserLoaded && user && (
+          <TouchableOpacity
+            onPress={() => signOut()}
+            style={styles.logoutButton}
+            activeOpacity={0.7}
+          >
+            <View style={styles.logoutContent}>
+              <View style={styles.logoutIconContainer}>
+                <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
+              </View>
+              <Text style={styles.logoutText}>{i18n.t("logout")}</Text>
+            </View>
+            <Ionicons
+              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+              size={20}
+              color="#FF3B30"
+            />
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+
+      {/* Bottom Sheet Modal */}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        onChange={handleSheetChanges}
+        backgroundStyle={styles.bottomSheetBackground}
+        handleIndicatorStyle={styles.bottomSheetIndicator}
+      >
+        <BottomSheetView style={styles.contentContainer}>
+          <GoogleSignInSheet />
+        </BottomSheetView>
+      </BottomSheetModal>
     </GestureHandlerRootView>
   );
 }
@@ -396,7 +388,6 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 16,
     marginBottom: 24,
-    
   },
   signInImage: {
     width: width * 0.4,
@@ -429,7 +420,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 20,
     minWidth: 160,
-    
   },
   loginButtonText: {
     color: "#FFFFFF",
@@ -446,7 +436,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     marginBottom: 16,
-    
   },
   avatarContainer: {
     position: "relative",
@@ -506,7 +495,6 @@ const styles = StyleSheet.create({
   optionsContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-  
   },
 
   // Option Item Styles
@@ -544,7 +532,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 8,
-   
   },
   languageButton: {
     flex: 1,

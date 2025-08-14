@@ -86,7 +86,7 @@ export default function HeaderComponent() {
           style={styles.iconButton}
           onPress={() => router.push("/(screens)/notification")}
         >
-          <Ionicons name="notifications-outline" size={24} color="#666" />
+          <Ionicons name="notifications-outline" size={24} color="#000" />
         </TouchableOpacity>
 
         {/* Cart with Badge */}
@@ -96,7 +96,7 @@ export default function HeaderComponent() {
           activeOpacity={0.7}
         >
           <View style={styles.cartContainer}>
-            <Ionicons name="cart-outline" size={24} color="#666" />
+            <Ionicons name="cart-outline" size={24} color="#000" />
             <CartBadge size={20} fontSize={10} />
           </View>
         </TouchableOpacity>
@@ -112,15 +112,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
     paddingTop: 40,
+    backgroundColor:"transparent"
   },
   logoSection: {
     alignItems: 'center',
@@ -134,21 +127,19 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginHorizontal: 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
+    borderWidth:0.5,
+    borderColor:"#000",
+    backgroundColor:"#FFFFFFE3"
+   
   },
   searchPlaceholder: {
     marginLeft: 8,
-    color: '#666',
-    fontSize: 14,
+    color: '#000',
+    fontSize: 12,
   },
   userActions: {
     flexDirection: 'row',

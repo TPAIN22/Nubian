@@ -1,9 +1,7 @@
-import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import i18n from "@/utils/i18n";
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function NoNetworkScreen({ onRetry }: { onRetry: () => void }) {
   return (

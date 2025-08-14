@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View, FlatList, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
@@ -13,7 +13,7 @@ export default function WishlistTab() {
     getToken().then(token => fetchWishlist(token));
   }, []);
 
-  if (isLoading) return <ActivityIndicator size="large" color="#30a1a7" style={{ marginTop: 40 }} />;
+  if (isLoading) return <ActivityIndicator size="large" color="#f0b745" style={{ marginTop: 40 }} />;
   if (!wishlist.length) return (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyTitle}>{i18n.t('wishlistEmpty')}</Text>
@@ -22,12 +22,16 @@ export default function WishlistTab() {
   );
 
   return (
+    <View style = {{flex:1, marginBottom:40}}>
     <FlatList
       data={wishlist}
       keyExtractor={item => item._id}
+      numColumns={2}
       renderItem={({ item }) => <ProductCard item={item} />}
       contentContainerStyle={styles.list}
-    />
+      columnWrapperStyle={styles.colomn}
+      />
+    </View>
   );
 }
 
@@ -57,5 +61,10 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    marginBottom:30
   },
+  colomn:{
+    margin:5,
+    gap:10
+  }
 }); 

@@ -56,7 +56,7 @@ export default function Starting() {
                 style={styles.startButton}
               >
                 <Text style={styles.startButtonText}>
-                  {i18n.t('onboarding_start')}
+                  {i18n.t('onboarding_next')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     alignItems: 'center',
-    marginBottom: height * 0.08, // 8% من أسفل الشاشة
+    bottom: height * 0.03, // 8% من أسفل الشاشة
   },
   buttonContainer: {
     marginBottom: 30, // مساحة بين الزر والنقاط

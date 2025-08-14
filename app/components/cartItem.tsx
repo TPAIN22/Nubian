@@ -78,12 +78,10 @@ export default CartItem;
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor:"#fff",
     flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 16,
     borderRadius: 12,
+    padding:5
   },
 
   imgContainer: {
@@ -91,8 +89,8 @@ const styles = StyleSheet.create({
   },
 
   productImage: {
-    width: 80,
-    height: 100,
+    width: 100,
+    height: 120,
     borderRadius: 8,
   },
 
@@ -106,14 +104,14 @@ const styles = StyleSheet.create({
   },
 
   productName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: "#333",
     marginBottom: 4,
   },
 
   productSize: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
   },
 
@@ -125,7 +123,7 @@ const styles = StyleSheet.create({
   quantity: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#E8E8E8FF",
     borderRadius: 20,
     paddingHorizontal: 6,
     paddingVertical: 2,

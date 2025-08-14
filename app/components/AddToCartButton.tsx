@@ -127,7 +127,7 @@ const AddToCartButton = ({
         disabled={isLoading || disabled}
       >
         {isLoading ? (
-          <ActivityIndicator size="small" color="#FFEDD6" />
+          <ActivityIndicator size="small" color="#FFFFFFFF" />
         ) : (
           <Text style={[styles.text, textStyle]}>{title}</Text>
         )}
@@ -141,9 +141,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   button: {
-    backgroundColor: "#30a1a7",
+    backgroundColor: "#f0b745",
     padding: 14,
-    borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
@@ -153,7 +152,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   text: {
-    color: "#FFEDD6",
+    color: "#FFFFFFFF",
     fontSize: 18,
     fontWeight: "bold",
   },

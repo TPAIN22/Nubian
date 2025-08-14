@@ -41,18 +41,16 @@ export default function Details() {
       setSelectedSize(product.sizes[0]);
     }
 
-    // Debug: طباعة معلومات المنتج
-
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start();
@@ -83,7 +81,6 @@ export default function Details() {
   };
 
   if (!product) {
-    const router = useRouter();
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>لا يوجد منتج للعرض</Text>
@@ -97,24 +94,20 @@ export default function Details() {
         </Pressable>
       </View>
     );
-  }
+  };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("ar-SD", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "SDG",
+      currency: "USD",
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(price).replace('$', '$ ');
   };
 
   const renderSizeSelector = () => (
     <View style={styles.sizesContainer}>
-      <Text style={styles.sectionTitle}>{i18n.t('availableSizes')}:</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.sizesScrollContainer}
-      >
+      <Text style={styles.sectionTitle}>{i18n.t('chooseSize') || 'Choose size'}</Text>
+      <View style={styles.sizesRow}>
         {product.sizes.map((size: string, index: number) => (
           <Pressable
             key={index}
@@ -134,72 +127,30 @@ export default function Details() {
             </Text>
           </Pressable>
         ))}
-      </ScrollView>
-    </View>
-  );
-
-  const renderPriceSection = () => (
-    <View style={styles.priceSection}>
-      <View style={styles.priceContainer}>
-        <Text style={styles.price}>{formatPrice(product.price)}</Text>
-        {product.discountPrice > 0 && (
-          <View style={styles.discountContainer}>
-            <Text style={styles.originalPrice}>
-              {formatPrice(product.discountPrice)}
-            </Text>
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>خصم</Text>
-            </View>
-          </View>
-        )}
-      </View>
-      
-      <View style={styles.stockIndicator}>
-        <View
-          style={[
-            styles.stockDot,
-            { backgroundColor: product.stock > 0 ? "#4CAF50" : "#F44336" },
-          ]}
-        />
-        <Text
-          style={[
-            styles.stockText,
-            { color: product.stock > 0 ? "#4CAF50" : "#F44336" },
-          ]}
-        >
-          {product.stock > 0 ? "متوفر في المخزن" : "غير متوفر"}
-        </Text>
       </View>
     </View>
   );
 
+ 
   const renderDescription = () => {
-    // Split description into an array of lines. Handle potential undefined/null cases.
     const descriptionLines = product.description?.split('\\n') || [];
-
-    // Determine which lines to show based on the "expanded" state.
-    // Shows the first 3 lines if not expanded, or all lines if expanded.
     const displayedLines = isDescriptionExpanded ? descriptionLines : descriptionLines.slice(0, 3);
 
     return (
       <View style={styles.descriptionContainer}>
-        <Text style={styles.sectionTitle}>الوصف:</Text>
-        
-        {/* Map over the lines to be displayed and render each in its own Text component */}
-        {displayedLines.map((line:any, index:any) => (
+        {displayedLines.map((line: any, index: any) => (
           <Text key={index} style={styles.description}>
             {line}
           </Text>
         ))}
-
-        {/* Show the "Read more/less" button only if there are more than 3 lines */}
+        
         {descriptionLines.length > 3 && (
           <Pressable
             style={styles.expandButton}
             onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
           >
             <Text style={styles.expandButtonText}>
-              {isDescriptionExpanded ? "اقرأ أقل" : "اقرأ المزيد"}
+              {isDescriptionExpanded ? "Show less" : "Read more"}
             </Text>
           </Pressable>
         )}
@@ -214,15 +165,14 @@ export default function Details() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {/* Hero Image Section */}
-        <View style={styles.heroSection}>
+        {/* Image Section */}
+        <View style={styles.imageSection}>
           <View style={styles.imageContainer}>
             <FlatList
               data={product.images}
               keyExtractor={(item) => item}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.imageScrollContent}
               renderItem={({ item: uri }) => (
                 <TouchableOpacity
                   style={styles.imageWrapper}
@@ -245,14 +195,14 @@ export default function Details() {
               viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
               pagingEnabled
             />
+            
+            {/* Favorite Icon */}
+            <TouchableOpacity style={styles.favoriteButton}>
+              <Text style={styles.favoriteIcon}>♡</Text>
+            </TouchableOpacity>
+            
             {renderPagination()}
           </View>
-
-          {/* Gradient overlay for better text readability */}
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.1)"]}
-            style={styles.imageGradient}
-          />
         </View>
 
         {/* Product Details */}
@@ -265,83 +215,64 @@ export default function Details() {
             },
           ]}
         >
-          {/* Product Name */}
-          <Text style={styles.productName}>{product.name}</Text>
-
-          {/* Price Section */}
-          {renderPriceSection()}
+          {/* Product Info Card */}
+          <View style={styles.productInfoCard}>
+            <Text style={styles.productName}>{product.name}</Text>    
+            {product.description && renderDescription()}
+          </View>
 
           {/* Size Selector */}
           {product.sizes && product.sizes.length > 0 && renderSizeSelector()}
 
-          {/* Description */}
-          {product.description && renderDescription()}
-
-          {/* Features/Specifications */}
-          <View style={styles.featuresContainer}>
-            <Text style={styles.sectionTitle}>{i18n.t('features')}:</Text>
-            <View style={styles.featuresList}>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>🚚</Text>
-                <Text style={styles.featureText}>{i18n.t('freeShipping')}</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>↩️</Text>
-                <Text style={styles.featureText}>{i18n.t('replacement')}</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>🛡️</Text>
-                <Text style={styles.featureText}>{i18n.t('qualityWarranty')}</Text>
-              </View>
+          {/* Price Section */}
+          <View style={styles.priceSection}>
+            <Text style={styles.priceLabel}>Price</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.price}>{formatPrice(product.price)}</Text>
+              {product.discountPrice > 0 && (
+                <Text style={styles.originalPrice}>
+                  {formatPrice(product.discountPrice)}
+                </Text>
+              )}
             </View>
           </View>
 
-          {/* ضع الريفيو هنا في نهاية ScrollView */}
+          {/* Review Section */}
           <Review productId={product._id} />
         </Animated.View>
       </ScrollView>
 
       {/* Fixed Bottom Button */}
       <View style={styles.bottomContainer}>
-        <LinearGradient
-          colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.95)", "#ffffff"]}
-          style={styles.bottomGradient}
+        <AddToCartButton
+          product={product}
+          selectedSize={selectedSize ?? ""}
+          title={i18n.t('addToCart') || 'Add to Cart'}
+          buttonStyle={[
+            styles.addToCartButton,
+            product.stock === 0 && styles.disabledButton,
+          ].filter(Boolean)}
+          disabled={product.stock === 0}
         />
-        <View style={styles.buttonContainer}>
-          <AddToCartButton
-            product={product}
-            selectedSize={selectedSize ?? ""}
-            title={i18n.t('addToCart')}
-            buttonStyle={[
-              styles.addToCartButton,
-              product.stock === 0 && styles.disabledButton,
-            ].filter(Boolean)}
-            disabled={product.stock === 0}
-          />
-        </View>
       </View>
+
       {/* Full Screen Image Modal */}
       <Modal
         visible={modalVisible}
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.95)',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
+        <View style={styles.modalContainer}>
           <TouchableOpacity
-            style={{ position: 'absolute', top: 40, right: 20, zIndex: 2 }}
+            style={styles.modalCloseButton}
             onPress={() => setModalVisible(false)}
           >
-            <Text style={{ color: '#fff', fontSize: 30 }}>✕</Text>
+            <Text style={styles.modalCloseText}>✕</Text>
           </TouchableOpacity>
           {selectedImage && (
             <Image
               source={{ uri: selectedImage }}
-              style={{ width: '90%', height: '70%', borderRadius: 12 }}
+              style={styles.modalImage}
               contentFit="contain"
             />
           )}
@@ -375,230 +306,255 @@ const styles = StyleSheet.create({
     backgroundColor: "#30a1a7",
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 4,
   },
   backButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },
-  heroSection: {
-    backgroundColor: "#ffffff",
-    minHeight: 300,
+  
+  // Image Section
+  imageSection: {
+    backgroundColor: "#f8f9fa",
+    position: 'relative',
   },
-  imageScrollView: {
-    flex: 1,
-  },
-  imageScrollContent: {
-    alignItems: "center",
+  imageContainer: {
+    height: screenWidth * 1.1,
+    position: 'relative',
   },
   imageWrapper: {
     width: screenWidth,
+    height: '100%',
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
-    minHeight: 300,
+    padding: 20,
   },
   productImage: {
-    width: screenWidth - 32,
-    height: 400, // Fixed reasonable height
-    borderRadius: 8,
+    width: '100%',
+    height: '100%',
+    borderRadius: 4,
   },
-  imageGradient: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 50,
+  favoriteButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 40,
+    height: 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 2,
+  },
+  favoriteIcon: {
+    fontSize: 20,
+    color: '#666',
   },
   pagination: {
+    position: 'absolute',
     bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dot: {
-    backgroundColor: "rgba(255,255,255,0.5)",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginLeft: 4,
-    marginRight: 4,
-  },
-  activeDot: {
-    backgroundColor: "#30a1a7",
-    width: 24,
-    height: 10,
-    borderRadius: 5,
-    marginLeft: 4,
-    marginRight: 4,
-  },
-  productDetails: {
-    padding: 24,
-    paddingBottom: 100,
-  },
-  productName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 16,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
-  },
-  priceSection: {
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-  },
-  priceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  price: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#30a1a7",
-  },
-  discountContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  originalPrice: {
-    fontSize: 18,
-    color: "#999",
-    textDecorationLine: "line-through",
-  },
-  discountBadge: {
-    backgroundColor: "#FF6B6B",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  discountText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  stockIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  stockDot: {
+    backgroundColor: "rgba(0,0,0,0.3)",
     width: 8,
     height: 8,
     borderRadius: 4,
+    marginHorizontal: 4,
   },
-  stockText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  sizesContainer: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#333",
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
-  },
-  sizesScrollContainer: {
-    paddingRight: 16,
-  },
-  sizeBox: {
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginLeft: 8,
-    borderWidth: 2,
-    borderColor: "#e9ecef",
-    minWidth: 50,
-    alignItems: "center",
-  },
-  selectedSizeBox: {
+  activeDot: {
     backgroundColor: "#30a1a7",
-    borderColor: "#30a1a7",
+    width: 20,
+    height: 8,
   },
-  sizeText: {
+  
+  // Product Details
+  productDetails: {
+    paddingBottom: 100,
+  },
+  productInfoCard: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  productName: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 8,
+    lineHeight: 28,
+  },
+  
+  // Rating
+  ratingContainer: {
+    marginBottom: 16,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  starIcon: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#495057",
+    color: '#f0b745',
+    marginRight: 4,
   },
-  selectedSizeText: {
-    color: "#FFFFFF",
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginRight: 4,
   },
+  reviewCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  
+  // Description
   descriptionContainer: {
-    marginBottom: 24,
+    marginTop: 8,
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
     color: "#666",
-    marginBottom: 8,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
+    marginBottom: 4,
   },
   expandButton: {
     marginTop: 8,
-    alignSelf: "flex-end",
   },
   expandButtonText: {
     color: "#30a1a7",
     fontSize: 14,
     fontWeight: "600",
   },
-  featuresContainer: {
-    marginBottom: 24,
+  
+  // Size Selector
+  sizesContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  featuresList: {
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 16,
+    color: "#1a1a1a",
+  },
+  sizesRow: {
+    flexDirection: 'row',
     gap: 12,
   },
-  featureItem: {
-    flexDirection: "row",
+  sizeBox: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minWidth: 50,
     alignItems: "center",
-    gap: 12,
-    padding: 12,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 8,
   },
-  featureIcon: {
-    fontSize: 20,
+  selectedSizeBox: {
+    backgroundColor: "#1a1a1a",
+    borderColor: "#1a1a1a",
   },
-  featureText: {
+  sizeText: {
     fontSize: 14,
-    color: "#495057",
-    flex: 1,
-    textAlign: "right",
+    fontWeight: "600",
+    color: "#1a1a1a",
   },
+  selectedSizeText: {
+    color: "#FFFFFF",
+  },
+  
+  // Price Section
+  priceSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  priceLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  price: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1a1a1a",
+  },
+  originalPrice: {
+    fontSize: 16,
+    color: "#999",
+    textDecorationLine: "line-through",
+  },
+  
+  // Bottom Container
   bottomContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-  },
-  bottomGradient: {
-    height: 30,
-  },
-  buttonContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingBottom:6,
   },
   addToCartButton: {
-    backgroundColor: "#30a1a7",
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: "#f0b745",
+    borderRadius: 4,
     width: "100%",
   },
   disabledButton: {
     backgroundColor: "#B0B0B0",
   },
-  imageContainer: {
-    height: screenWidth,
-    backgroundColor: "#f8f9fa",
+  
+  // Modal
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  swiper: {
-    height: screenWidth,
+  modalCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 2,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  modalImage: {
+    width: '90%',
+    height: '70%',
+    borderRadius: 4,
   },
 });

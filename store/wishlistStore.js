@@ -50,6 +50,7 @@ const useWishlistStore = create((set, get) => {
       } catch (error) {
         set({ wishlist: prevWishlist, error: error?.response?.data?.message || error.message });
         Alert.alert('خطأ', error?.response?.data?.message || error.message);
+        console.log(error)
       }
     },
 

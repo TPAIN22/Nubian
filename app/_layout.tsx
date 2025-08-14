@@ -21,6 +21,8 @@ import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
 import { View } from "react-native";
 import { I18nManager } from "react-native";
 import { LanguageProvider } from "@/utils/LanguageContext";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -172,6 +174,8 @@ function AppLoaderWithClerk() {
   return (
     <GluestackUIProvider mode="light">
       <NotificationProvider>
+        <GestureHandlerRootView>
+          <BottomSheetModalProvider>
         <>
           <StatusBar style="auto" />
           <Stack
@@ -196,6 +200,8 @@ function AppLoaderWithClerk() {
           </Stack>
           <Toast />
         </>
+        </BottomSheetModalProvider>
+        </GestureHandlerRootView>
       </NotificationProvider>
     </GluestackUIProvider>
   );

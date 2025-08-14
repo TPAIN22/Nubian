@@ -7,12 +7,9 @@ import {
   Dimensions,
   ScrollView,
   RefreshControl,
-  BackHandler,
-  Alert,
-  Platform,
   I18nManager,
 } from "react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
@@ -201,6 +198,7 @@ export default function index() {
       )}
     </View>
   );
+  const device = Dimensions.get('window').width
 
   return (
     <GestureHandlerRootView
@@ -230,6 +228,18 @@ export default function index() {
               />
             }
           >
+            <Image source={require("../../assets/images/onboard3.png")} style={{ width: device , height: 520 }}/>
+            <FlatList
+                data={categories?.slice(0, 20) || []}
+                renderItem={renderCatigoryCircle}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => `category-${item._id}`}
+                contentContainerStyle={styles.horizontalList}
+                snapToInterval={ITEM_WIDTH + 16}
+                decelerationRate="fast"
+                bounces={true}
+              />
             <View style={styles.heroSection}>
               <ImageSlider
                 banners={
@@ -253,18 +263,6 @@ export default function index() {
                 title={i18n.t("discoverOurCollection")}
                 onViewMore={() => router.push(`/(screens)`)}
               />
-              <FlatList
-                data={categories?.slice(0, 20) || []}
-                renderItem={renderCatigoryCircle}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => `category-${item._id}`}
-                contentContainerStyle={styles.horizontalList}
-                snapToInterval={ITEM_WIDTH + 16}
-                decelerationRate="fast"
-                bounces={true}
-              />
-
               <FlatList
                 data={categories?.slice(0, 5) || []}
                 renderItem={renderCategoryItem}
@@ -293,14 +291,15 @@ export default function index() {
                       ]
                 }
               />
-              <View style={{ height: 20 }} />
             </View>
+            <View style={{ height: 20 }}/>
             <View style={styles.latestProductsSection}>
               <SectionHeader
                 title={i18n.t("latestProducts")}
                 subtitle={i18n.t("latestAddedProducts")}
                 onViewMore={() => router.push(`/(screens)`)}
               />
+              <View style={{ height: 10 }} />
               <View style={styles.productsGrid}>
                 <FlatList
                   data={products?.slice(0, 4) || []}
@@ -315,8 +314,6 @@ export default function index() {
                 />
               </View>
             </View>
-
-            <View style={styles.bottomSpacing} />
           </ScrollView>
         </View>
 
@@ -344,14 +341,11 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     alignItems: "center",
-    paddingBottom: 40,
   },
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    paddingBottom: 20,
-  },
+  scrollContent: {},
   categoryCircle: {
     width: 50,
     height: 50,
@@ -387,7 +381,6 @@ const styles = StyleSheet.create({
   // Products Section
   latestProductsSection: {
     marginHorizontal: 8,
-    marginBottom: 14,
   },
   productsGrid: {
     borderRadius: 20,

@@ -7,7 +7,6 @@ import { I18nManager } from 'react-native';
 export default function _layout() {
   return (
       <View style={{ flex: 1, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}>
-        <StatusBar style="auto" />
         <Stack screenOptions={{ header: HeaderComponent }}>
           <Stack.Screen name="editProfile" options={{ headerShown: false }} />
           <Stack.Screen name="notification" options={{ headerShown: false }} />

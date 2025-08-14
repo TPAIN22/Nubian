@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
 import { Image } from "expo-image";
 import {
@@ -7,25 +7,35 @@ import {
   Pressable,
   StyleSheet,
   I18nManager,
+  Text,
+  Animated,
+  Dimensions,
 } from "react-native";
 import useItemStore from "@/store/useItemStore";
 import HeaderComponent from "../components/costomHeader";
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
 
+const { width: screenWidth } = Dimensions.get("window");
+
 const CONSTANTS = {
-  iconSize: 24,
-  headerIconSize: 20,
-  logoSize: 36,
-  tabBarRadius: 20,
-  tabBarMargin: 12,
+  iconSize: 22,
+  activeIconSize: 24,
   colors: {
-    focused: "#f0b745",
+    primary: "#f0b745", // Modern indigo
+    secondary: "#f0b745", // Purple accent
+    tertiary: "#f0b745", // Pink accent
+    background: "#FAFAFA",
+    cardBackground: "#FFFFFF",
     unfocused: "#6B7280",
-    background: "#FFFFFF",
-    shadow: "rgba(0, 0, 0, 0.1)",
+    text: "#1F2937",
     border: "#E5E7EB",
-    notification: "#EF4444",
+    indicator: "#f0b745", // Emerald for notifications
+  },
+  gradients: {
+    primary: ["#f0b745", "#f0b745"],
+    secondary: ["#f0b745", "#f0b745"],
+    accent: ["#f0b745", "#f0b745"],
   },
 };
 
@@ -33,52 +43,178 @@ interface TabIconProps {
   source: any;
   focused: boolean;
   label: string;
+  index: number;
 }
 
-const TabIcon: React.FC<TabIconProps> = ({ source, focused, label }) => (
-  <View style={styles.tabIconContainer}>
-    <View style={[styles.iconWrapper, focused && styles.iconWrapperFocused]}>
-      <Image
-        source={source}
+const TabIcon: React.FC<TabIconProps> = ({ source, focused, label, index }) => {
+  const [scaleAnim] = useState(new Animated.Value(focused ? 1.1 : 1));
+  const [slideAnim] = useState(new Animated.Value(focused ? -2 : 0));
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: focused ? 1.1 : 1,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 8,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: focused ? -3 : 0,
+        useNativeDriver: true,
+        tension: 120,
+        friction: 8,
+      }),
+    ]).start();
+  }, [focused]);
+
+  const getGradientColor = () => {
+    const gradients = [
+      CONSTANTS.colors.primary,
+      CONSTANTS.colors.secondary,
+      CONSTANTS.colors.tertiary,
+      CONSTANTS.colors.indicator,
+      CONSTANTS.colors.secondary,
+    ];
+    return gradients[index % gradients.length];
+  };
+
+  return (
+    <Animated.View 
+      style={[
+        styles.tabIconContainer,
+        {
+          transform: [
+            { scale: scaleAnim },
+            { translateY: slideAnim }
+          ]
+        }
+      ]}
+    >
+      <View style={[
+        styles.iconWrapper, 
+        focused && [
+          styles.iconWrapperFocused,
+          { backgroundColor: getGradientColor() + "15" }
+        ]
+      ]}>
+        <View style={[
+          styles.iconCircle,
+          focused && [
+            styles.iconCircleFocused,
+            { borderColor: getGradientColor() }
+          ]
+        ]}>
+          <Image
+            source={source}
+            style={[
+              styles.tabIcon,
+              {
+                width: focused ? CONSTANTS.activeIconSize : CONSTANTS.iconSize,
+                height: focused ? CONSTANTS.activeIconSize : CONSTANTS.iconSize,
+                tintColor: focused ? getGradientColor() : CONSTANTS.colors.unfocused,
+              },
+            ]}
+            contentFit="contain"
+          />
+        </View>
+        {focused && (
+          <View style={[
+            styles.activeIndicator,
+            { backgroundColor: getGradientColor() }
+          ]} />
+        )}
+      </View>
+      <Text 
         style={[
-          styles.tabIcon,
+          styles.tabIconLabel,
           {
-            tintColor: focused
-              ? CONSTANTS.colors.focused
-              : CONSTANTS.colors.unfocused,
+            color: focused ? getGradientColor() : CONSTANTS.colors.unfocused,
+            fontWeight: focused ? "600" : "500",
+            transform: [{ scale: focused ? 1.05 : 1 }]
+          }
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </Animated.View>
+  );
+};
+
+const CustomTabButton = (props: BottomTabBarButtonProps & { index: number }) => {
+  const [rippleAnim] = useState(new Animated.Value(0));
+
+  const handlePressIn = () => {
+    Animated.timing(rippleAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.timing(rippleAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    props.onPress?.({} as any);
+  };
+
+  return (
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.tabButton, props.style]}
+    >
+      <Animated.View
+        style={[
+          styles.rippleEffect,
+          {
+            opacity: rippleAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.1],
+            }),
+            transform: [{
+              scale: rippleAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.8, 1.2],
+              }),
+            }],
           },
         ]}
-        contentFit="contain"
       />
-    </View>
-  </View>
-);
-
-const CustomTabButton = (props: BottomTabBarButtonProps) => (
-  <Pressable
-    onPress={props.onPress}
-    style={[styles.tabButton, props.style]}
-    android_ripple={{ color: "transparent" }}
-  >
-    {props.children}
-  </Pressable>
-);
+      {props.children}
+    </Pressable>
+  );
+};
 
 export default function TabsLayout() {
   const { isTabBarVisible } = useItemStore();
+  const [currentTab, setCurrentTab] = useState(0);
 
   useEffect(() => {
     LayoutAnimation.configureNext({
       duration: 300,
       create: {
-        type: LayoutAnimation.Types.easeInEaseOut,
+        type: LayoutAnimation.Types.spring,
         property: LayoutAnimation.Properties.opacity,
+        springDamping: 0.8,
       },
       update: {
-        type: LayoutAnimation.Types.easeInEaseOut,
+        type: LayoutAnimation.Types.spring,
+        springDamping: 0.8,
       },
     });
   }, [isTabBarVisible]);
+
+  const tabData = [
+    { name: "index", label: i18n.t("home"), icon: "../../assets/images/house-solid.svg" },
+    { name: "cart", label: i18n.t("cart"), icon: "../../assets/images/cart-shopping-solid.svg" },
+    { name: "explor", label: i18n.t("explore"), icon: "../../assets/images/search-solid.svg" },
+    { name: "profile", label: i18n.t("profile"), icon: "../../assets/images/user-solid.svg" },
+    { name: "wishlist", label: i18n.t("wishlist") || "Wishlist", icon: "../../assets/images/heart-solid.svg" },
+  ];
 
   return (
     <View style={{ flex: 1, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}>
@@ -87,9 +223,12 @@ export default function TabsLayout() {
         screenOptions={{
           tabBarHideOnKeyboard: true,
           tabBarShowLabel: false,
-          tabBarStyle: styles.tabBar,
-          tabBarButton: (props) => <CustomTabButton {...props} />,
-          tabBarActiveTintColor: CONSTANTS.colors.focused,
+          tabBarStyle: [
+            styles.tabBar,
+            { display: isTabBarVisible ? 'flex' : 'none' }
+          ],
+          tabBarButton: (props) => <CustomTabButton {...props} index={0} />,
+          tabBarActiveTintColor: CONSTANTS.colors.primary,
           tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
           headerShadowVisible: false,
           headerStyle: styles.header,
@@ -101,6 +240,7 @@ export default function TabsLayout() {
           options={{
             tabBarHideOnKeyboard: true,
             headerShadowVisible: false,
+            headerTransparent: true,
             header: () => <HeaderComponent />,
             headerTitleContainerStyle: styles.headerTitleContainer,
             tabBarIcon: ({ focused }) => (
@@ -108,22 +248,26 @@ export default function TabsLayout() {
                 source={require("../../assets/images/house-solid.svg")}
                 focused={focused}
                 label={i18n.t("home")}
+                index={0}
               />
             ),
+            tabBarButton: (props) => <CustomTabButton {...props} index={0} />,
           }}
         />
       
         <Tabs.Screen
           name="cart"
           options={{
-            headerShown: false,
+            headerShown: true,
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 source={require("../../assets/images/cart-shopping-solid.svg")}
                 focused={focused}
                 label={i18n.t("cart")}
+                index={1}
               />
             ),
+            tabBarButton: (props) => <CustomTabButton {...props} index={1} />,
           }}
         />
 
@@ -136,11 +280,14 @@ export default function TabsLayout() {
                 source={require("../../assets/images/search-solid.svg")}
                 focused={focused}
                 label={i18n.t("explore")}
+                index={2}
               />
             ),
+            tabBarButton: (props) => <CustomTabButton {...props} index={2} />,
           }}
         />
-         <Tabs.Screen
+
+        <Tabs.Screen
           name="profile"
           options={{
             headerShown: false,
@@ -149,10 +296,13 @@ export default function TabsLayout() {
                 source={require("../../assets/images/user-solid.svg")}
                 focused={focused}
                 label={i18n.t("profile")}
+                index={3}
               />
             ),
+            tabBarButton: (props) => <CustomTabButton {...props} index={3} />,
           }}
         />
+
         <Tabs.Screen
           name="wishlist"
           options={{
@@ -162,8 +312,10 @@ export default function TabsLayout() {
                 source={require("../../assets/images/heart-solid.svg")}
                 focused={focused}
                 label={i18n.t("wishlist") || "Wishlist"}
+                index={4}
               />
             ),
+            tabBarButton: (props) => <CustomTabButton {...props} index={4} />,
           }}
         />
       </Tabs>
@@ -173,41 +325,69 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: CONSTANTS.colors.background,
-    shadowColor: CONSTANTS.colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderTopWidth: 1,
-    borderTopColor: CONSTANTS.colors.border,
-  },
+    height: 85,
+    backgroundColor: CONSTANTS.colors.cardBackground,
+    borderTopWidth: 0,
+    paddingTop: 20,
+    paddingBottom: 10,
+    paddingHorizontal: 8,
+    elevation: 0,
+    shadowOpacity: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24, },
 
   tabButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 20,
+    minHeight: 55,
+    position: 'relative',
+  },
+
+  rippleEffect: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: CONSTANTS.colors.primary,
     borderRadius: 16,
   },
 
   tabIconContainer: {
     alignItems: "center",
     justifyContent: "center",
+    flex: 1,
+    zIndex: 1,
   },
 
   iconWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
     borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    position: 'relative',
   },
 
   iconWrapperFocused: {
-    backgroundColor: CONSTANTS.colors.focused + "15",
+    transform: [{ scale: 1.05 }],
+  },
+
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'transparent',
+  },
+
+  iconCircleFocused: {
+    borderWidth: 2,
   },
 
   tabIcon: {
@@ -215,71 +395,30 @@ const styles = StyleSheet.create({
     height: CONSTANTS.iconSize,
   },
 
+  activeIndicator: {
+    position: 'absolute',
+    bottom: -2,
+    width: 20,
+    height: 3,
+    borderRadius: 2,
+  },
+
+  tabIconLabel: {
+    fontSize: 9,
+    textAlign: "center",
+    marginTop: 2,
+    letterSpacing: 0.3,
+  },
+
   // Header Styles
   header: { 
-    backgroundColor: CONSTANTS.colors.background,
     elevation: 0,
     shadowOpacity: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: CONSTANTS.colors.border,
+    backgroundColor: CONSTANTS.colors.background,
+    borderBottomWidth: 0,
   },
 
   headerTitleContainer: {
     width: "100%",
-  },
-
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-
-  headerLogo: {
-    width: CONSTANTS.logoSize,
-    height: CONSTANTS.logoSize,
-    borderRadius: 8,
-  },
-
-  searchInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: CONSTANTS.colors.border,
-    borderRadius: 20,
-    backgroundColor: "#F9FAFB",
-    fontSize: 14,
-    textAlign: "left",
-    color: "#111827",
-    padding: 10,
-  },
-
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-
-  iconWithBadge: {
-    position: "relative",
-  },
-
-  notificationBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    backgroundColor: CONSTANTS.colors.notification,
-    borderRadius: 4,
-  },
-
-  cartBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    backgroundColor: CONSTANTS.colors.notification,
-    borderRadius: 4,
   },
 });

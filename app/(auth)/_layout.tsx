@@ -1,6 +1,5 @@
 import { Stack } from "expo-router";
 import { View } from "react-native";
-import { StatusBar } from "expo-status-bar";
 import { I18nManager } from 'react-native';
 
 export default function AuthRoutesLayout() {
