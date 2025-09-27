@@ -5,18 +5,19 @@ import {
   StyleSheet,
   Pressable,
   Dimensions,
-  Animated,
   Modal,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Review from "../../components/Review";
 import i18n from "@/utils/i18n";
+import { Image as RNImage, InteractionManager } from "react-native";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -24,48 +25,98 @@ const { width: screenWidth } = Dimensions.get("window");
 const imageHeight = screenWidth * 1.1;
 
 export default function Details() {
-  const { product } = useItemStore();
+  const { product, resetProduct } = useItemStore();
+  const { details, name, price, image } = useLocalSearchParams();
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showDeferred, setShowDeferred] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   
-  // Use refs for animations without triggering re-renders
-  const fadeAnim = useRef(new Animated.Value(1)).current; // Start visible
-  const slideAnim = useRef(new Animated.Value(0)).current; // Start in position
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
 
+  // Compose optimistic product if store not ready
+  const viewProduct = useMemo(() => {
+    if (product) return product;
+    const id = details ? String(details) : '';
+    const optimistic = {
+      _id: id,
+      name: (name as string) || '',
+      price: price ? Number(price) : 0,
+      images: image ? [String(image)] : [],
+      stock: 1,
+    } as any;
+    return optimistic;
+  }, [product, details, name, price, image]);
+
+  useEffect(() => {
+    if (typeof image === 'string' && image) {
+      RNImage.prefetch(image).catch(() => {});
+    }
+    // Prefetch next 1-2 images after first render if product exists
+    const timeout = setTimeout(() => {
+      try {
+        const rest = viewProduct?.images?.slice(1, 3) || [];
+        rest.forEach((uri: string) => {
+          if (uri) RNImage.prefetch(uri).catch(() => {});
+        });
+      } catch {}
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [image, viewProduct?.images]);
+
+  // Defer heavy UI until after transition/tap interactions
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setShowDeferred(true);
+    });
+    return () => task.cancel();
+  }, []);
+
+  // No loader overlay; keep UI snappy
+
+  // Clear selected product on unmount to avoid stale item on next visit
+  useEffect(() => {
+    return () => {
+      try { resetProduct?.(); } catch {}
+    };
+  }, [resetProduct]);
+
   // Memoize expensive calculations
   const formattedPrice = useMemo(() => {
-    if (!product?.price) return '';
+    if (!viewProduct?.price) return '';
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 0,
-    }).format(product.price).replace('$', '$ ');
-  }, [product?.price]);
+    }).format(viewProduct.price).replace('$', '$ ');
+  }, [viewProduct?.price]);
 
   const formattedDiscountPrice = useMemo(() => {
-    if (!product?.discountPrice || product.discountPrice <= 0) return '';
+    if (!viewProduct?.discountPrice || viewProduct.discountPrice <= 0) return '';
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD", 
       minimumFractionDigits: 0,
-    }).format(product.discountPrice).replace('$', '$ ');
-  }, [product?.discountPrice]);
+    }).format(viewProduct.discountPrice).replace('$', '$ ');
+  }, [viewProduct?.discountPrice]);
 
   const descriptionLines = useMemo(() => {
-    return product?.description?.split('\\n') || [];
-  }, [product?.description]);
+    return viewProduct?.description?.split('\\n') || [];
+  }, [viewProduct?.description]);
 
-  // Set initial size without animation delay
+  // Defer initial size selection to avoid blocking interaction
   useEffect(() => {
-    if (product?.sizes && product.sizes.length > 0) {
-      setSelectedSize(product.sizes[0]);
+    if (viewProduct?.sizes && viewProduct.sizes.length > 0) {
+      const task = InteractionManager.runAfterInteractions(() => {
+        setSelectedSize(viewProduct.sizes[0]);
+      });
+      return () => task.cancel();
     }
-  }, [product?.sizes]);
+  }, [viewProduct?.sizes]);
 
   // Optimize viewable items callback
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
@@ -100,29 +151,41 @@ export default function Details() {
   }, []);
 
   // Memoized components
-  const renderImageItem = useCallback(({ item: uri }: { item: string }) => (
-    <TouchableOpacity
-      style={styles.imageWrapper}
-      onPress={() => openImageModal(uri)}
-      activeOpacity={0.8}
-    >
-      <Image
-        source={{ uri }}
-        alt="صورة المنتج"
-        contentFit="contain"
-        style={styles.productImage}
-        cachePolicy="memory-disk" // Optimize caching
-        priority="high" // High priority loading
-      />
-    </TouchableOpacity>
-  ), [openImageModal]);
+  const [firstImageLoaded, setFirstImageLoaded] = useState(false);
+  const renderImageItem = useCallback(({ item: uri, index }: { item: string; index: number }) => {
+    const showOverlay = index === 0 && !firstImageLoaded;
+    return (
+      <TouchableOpacity
+        style={styles.imageWrapper}
+        onPress={() => openImageModal(uri)}
+        activeOpacity={0.8}
+      >
+        <Image
+          source={{ uri }}
+          alt="صورة المنتج"
+          contentFit="contain"
+          style={styles.productImage}
+          cachePolicy="memory-disk"
+          priority="high"
+          onLoad={() => {
+            if (index === 0) setFirstImageLoaded(true);
+          }}
+        />
+        {showOverlay && (
+          <View style={styles.imageLoaderOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color="#f0b745" />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }, [openImageModal, firstImageLoaded]);
 
   const renderPagination = useCallback(() => {
-    if (!product?.images || product.images.length <= 1) return null;
+    if (!viewProduct?.images || viewProduct.images.length <= 1) return null;
     
     return (
       <View style={styles.pagination}>
-        {product.images.map((_ : any, index: number) => (
+        {viewProduct.images.map((_ : any, index: number) => (
           <View
             key={index}
             style={[
@@ -133,16 +196,16 @@ export default function Details() {
         ))}
       </View>
     );
-  }, [product?.images, currentImageIndex]);
+  }, [viewProduct?.images, currentImageIndex]);
 
   const renderSizeSelector = useCallback(() => {
-    if (!product?.sizes || product.sizes.length === 0) return null;
+    if (!viewProduct?.sizes || viewProduct.sizes.length === 0) return null;
     
     return (
       <View style={styles.sizesContainer}>
         <Text style={styles.sectionTitle}>{i18n.t('chooseSize') || 'Choose size'}</Text>
         <View style={styles.sizesRow}>
-          {product.sizes.map((size: string, index: number) => (
+          {viewProduct.sizes.map((size: string, index: number) => (
             <Pressable
               key={index}
               style={[
@@ -164,10 +227,10 @@ export default function Details() {
         </View>
       </View>
     );
-  }, [product?.sizes, selectedSize, onSizeSelect]);
+  }, [viewProduct?.sizes, selectedSize, onSizeSelect]);
 
   const renderDescription = useCallback(() => {
-    if (!product?.description) return null;
+    if (!viewProduct?.description) return null;
     
     const displayedLines = isDescriptionExpanded 
       ? descriptionLines 
@@ -193,10 +256,10 @@ export default function Details() {
         )}
       </View>
     );
-  }, [product?.description, isDescriptionExpanded, descriptionLines, toggleDescription]);
+  }, [viewProduct?.description, isDescriptionExpanded, descriptionLines, toggleDescription]);
 
-  // Early return for no product
-  if (!product) {
+  // Early return for no product at all (no params either)
+  if (!viewProduct || !viewProduct._id) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>لا يوجد منتج للعرض</Text>
@@ -222,7 +285,7 @@ export default function Details() {
         <View style={styles.imageSection}>
           <View style={styles.imageContainer}>
             <FlatList
-              data={product.images}
+              data={viewProduct.images}
               keyExtractor={(item) => item}
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -231,6 +294,7 @@ export default function Details() {
               onViewableItemsChanged={onViewableItemsChanged}
               viewabilityConfig={viewabilityConfig}
               pagingEnabled
+              initialNumToRender={1}
               getItemLayout={(_, index) => ({
                 length: screenWidth,
                 offset: screenWidth * index,
@@ -246,7 +310,7 @@ export default function Details() {
               <Text style={styles.favoriteIcon}>♡</Text>
             </TouchableOpacity>
             
-            {renderPagination()}
+            {showDeferred ? renderPagination() : null}
           </View>
         </View>
 
@@ -254,7 +318,7 @@ export default function Details() {
         <View style={styles.productDetails}>
           {/* Product Info Card */}
           <View style={styles.productInfoCard}>
-            <Text style={styles.productName}>{product.name}</Text>    
+            <Text style={styles.productName}>{viewProduct.name}</Text>    
             {renderDescription()}
           </View>
 
@@ -274,22 +338,24 @@ export default function Details() {
             </View>
           </View>
 
-          {/* Review Section */}
-          <Review productId={product._id} />
+          {/* Review Section (deferred) */}
+          {showDeferred ? <Review productId={viewProduct._id} /> : null}
         </View>
       </ScrollView>
+
+      {/* No loader overlay to avoid blocking UI */}
 
       {/* Fixed Bottom Button */}
       <View style={styles.bottomContainer}>
         <AddToCartButton
-          product={product}
+          product={viewProduct}
           selectedSize={selectedSize ?? ""}
           title={i18n.t('addToCart') || 'Add to Cart'}
           buttonStyle={[
             styles.addToCartButton,
-            product.stock === 0 && styles.disabledButton,
+            viewProduct.stock === 0 && styles.disabledButton,
           ].filter(Boolean)}
-          disabled={product.stock === 0}
+          disabled={viewProduct.stock === 0}
         />
       </View>
 
@@ -374,6 +440,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 4,
+  },
+  imageLoaderOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.6)'
   },
   favoriteButton: {
     position: 'absolute',

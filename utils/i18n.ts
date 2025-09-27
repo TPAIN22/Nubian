@@ -33,7 +33,7 @@ export const setInitialLanguage = async () => {
         locales.length > 0 && locales[0] !== undefined
           ? (locales[0].languageCode as SupportedLanguage)
           : "en";
-      savedLang = SUPPORTED_LANGUAGES.includes(deviceLang) ? deviceLang : "en";
+      savedLang = SUPPORTED_LANGUAGES.includes(deviceLang) ? deviceLang : "ar";
       await AsyncStorage.setItem(LANGUAGE_KEY, savedLang);
     }
 

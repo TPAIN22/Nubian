@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { VStack } from "@/components/ui/vstack";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
+import { Image as RNImage } from "react-native";
 import { useRouter } from "expo-router";
 import React, { useState, useRef } from "react";
 import { Dimensions, Pressable, StyleSheet, View, FlatList } from "react-native";
@@ -65,8 +66,26 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   );
 
   const handleClick = (item: item) => {
-    setProduct(item);
-    router.push(`/details/${item._id}`);
+    router.push({
+      pathname: '/details/[details]',
+      params: {
+        details: String(item._id),
+        name: item.name || '',
+        price: String(item.price ?? ''),
+        image: item.images?.[0] || '',
+      },
+    } as any);
+    // Defer any heavy work until after interactions & frame rendered
+    requestAnimationFrame(() => {
+      setTimeout(() => setProduct(item), 0);
+      try {
+        // Prefetch up to first 2 images to improve detail load
+        const images = item.images || [];
+        images.slice(0, 2).forEach((uri) => {
+          if (typeof uri === 'string' && uri) RNImage.prefetch(uri).catch(() => {});
+        });
+      } catch {}
+    });
   };
 
   const handleWishlistPress = async () => {
@@ -79,12 +98,23 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   };
 
   const renderImage = ({ item: imageUri }: { item: string }) => (
-    <Pressable onPress={() => handleClick(item)}>
+    <Pressable
+      onPressIn={() => {
+        try {
+          // Prefetch first image (route types are strict; use object form if needed)
+          (router as any)?.prefetch?.({ pathname: '/details/[details]', params: { details: String(item._id) } });
+          if (typeof imageUri === 'string' && imageUri) {
+            RNImage.prefetch(imageUri).catch(() => {});
+          }
+        } catch {}
+      }}
+      onPress={() => handleClick(item)}
+    >
       <Image
         source={imageUri}
         alt="product image"
         style={{
-          height: 260,
+          height: 210,
           width: cardWidth,
           borderRadius: 8,
         }}
@@ -118,7 +148,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   };
   return (
     <Card className="p-0 rounded-lg " style={{ width: cardWidth }}>
-      <View style={{ height: 260, overflow: "hidden" }}>
+      <View style={{ height: 210, overflow: "hidden" }}>
         <Pressable
           onPress={handleWishlistPress}
           style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}

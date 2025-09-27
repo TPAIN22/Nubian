@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, TextInput, Button, TouchableOpacity, StyleSheet, ScrollView, Platform, Dimensions,I18nManager } from 'react-native';
+import { View, Text, Modal, TextInput, Button, TouchableOpacity, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import i18n from '../../utils/i18n';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-if (!I18nManager.isRTL) {
-  I18nManager.forceRTL(true);
-  I18nManager.allowRTL(true);
-}
+// RTL is centrally handled via LanguageProvider
 
 export interface Address {
   _id?: string;

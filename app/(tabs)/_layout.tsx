@@ -6,17 +6,13 @@ import {
   LayoutAnimation,
   Pressable,
   StyleSheet,
-  I18nManager,
   Text,
   Animated,
-  Dimensions,
 } from "react-native";
 import useItemStore from "@/store/useItemStore";
 import HeaderComponent from "../components/costomHeader";
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
-
-const { width: screenWidth } = Dimensions.get("window");
 
 const CONSTANTS = {
   iconSize: 22,
@@ -191,7 +187,6 @@ const CustomTabButton = (props: BottomTabBarButtonProps & { index: number }) => 
 
 export default function TabsLayout() {
   const { isTabBarVisible } = useItemStore();
-  const [currentTab, setCurrentTab] = useState(0);
 
   useEffect(() => {
     LayoutAnimation.configureNext({
@@ -208,18 +203,11 @@ export default function TabsLayout() {
     });
   }, [isTabBarVisible]);
 
-  const tabData = [
-    { name: "index", label: i18n.t("home"), icon: "../../assets/images/house-solid.svg" },
-    { name: "cart", label: i18n.t("cart"), icon: "../../assets/images/cart-shopping-solid.svg" },
-    { name: "explor", label: i18n.t("explore"), icon: "../../assets/images/search-solid.svg" },
-    { name: "profile", label: i18n.t("profile"), icon: "../../assets/images/user-solid.svg" },
-    { name: "wishlist", label: i18n.t("wishlist") || "Wishlist", icon: "../../assets/images/heart-solid.svg" },
-  ];
 
   return (
-    <View style={{ flex: 1, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}>
+    <View style={{ flex: 1 }}>
       <Tabs
-        detachInactiveScreens={false}
+        detachInactiveScreens
         screenOptions={{
           tabBarHideOnKeyboard: true,
           tabBarShowLabel: false,
@@ -232,6 +220,8 @@ export default function TabsLayout() {
           tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
           headerShadowVisible: false,
           headerStyle: styles.header,
+          lazy: true,
+          freezeOnBlur: true,
         }}
         initialRouteName="index"
       >

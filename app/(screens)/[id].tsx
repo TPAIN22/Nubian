@@ -1,6 +1,6 @@
 import { useNetwork } from "@/providers/NetworkProvider";
 import useItemStore from "@/store/useItemStore";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useMemo } from "react";
 import NoNetworkScreen from "../NoNetworkScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
@@ -38,6 +38,8 @@ export default function CategoriesScreen() {
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const { width, height } = Dimensions.get("window");
+  // Approximate row height based on card image (210) + text/padding (~80)
+  const ROW_HEIGHT = 300;
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -78,6 +80,25 @@ export default function CategoriesScreen() {
     }
   }, [getProducts, hasMore, isProductsLoading, selectedCategory]);
 
+  const renderItem = useCallback(({ item }: any) => (
+    <Card
+      item={item}
+      handleSheetChanges={handleSheetChanges}
+      handlePresentModalPress={handlePresentModalPress}
+    />
+  ), [handleSheetChanges, handlePresentModalPress]);
+
+  const columnWrapper = useMemo(
+    () => ({
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      // gap is not well-typed across RN versions; spacing handled by card widths
+    } as const),
+    []
+  );
+
+  const keyExtractor = useCallback((item: any) => item._id, []);
+
   return (
     <GestureHandlerRootView style={styles.loadingContainer}>
       <BottomSheetModalProvider>
@@ -93,14 +114,24 @@ export default function CategoriesScreen() {
               onEndReachedThreshold={0.6}
               onEndReached={onEndReachedHandler}
               data={products}
-              renderItem={({ item }) => (
-                <Card
-                  item={item}
-                  handleSheetChanges={handleSheetChanges}
-                  handlePresentModalPress={handlePresentModalPress}
-                />
-              )}
+              renderItem={renderItem}
               keyboardDismissMode="on-drag"
+              removeClippedSubviews={true}
+              initialNumToRender={6}
+              maxToRenderPerBatch={10}
+              windowSize={9}
+              updateCellsBatchingPeriod={50}
+              decelerationRate="fast"
+              keyExtractor={keyExtractor}
+              showsVerticalScrollIndicator={false}
+              getItemLayout={(_, index) => {
+                const row = Math.floor(index / 2);
+                return {
+                  length: ROW_HEIGHT,
+                  offset: ROW_HEIGHT * row,
+                  index,
+                };
+              }}
               refreshControl={
                 <RefreshControl
                   refreshing={isProductsLoading}
@@ -112,34 +143,21 @@ export default function CategoriesScreen() {
               }
               ListFooterComponent={
                 !hasMore ? (
-                  <Text style={{ textAlign: "center", paddingVertical: 10 }}>
+                  <Text style={styles.footerText}>
                     لا توجد منتجات اضافية
                   </Text>
                 ) : isProductsLoading ? (
                   <ActivityIndicator
                     size="large"
                     color="#f0b745"
-                    style={{ width: width }}
+                    style={styles.footerLoader}
                   />
                 ) : null
               }
               ListEmptyComponent={
                 !isProductsLoading ? (
-                  <View
-                    style={{
-                      flex: 1,
-                      width: width,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        textAlign: "center",
-                        paddingVertical: 10,
-                        fontSize: 20,
-                      }}
-                    >
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
                       المعذرة
                       {"\n"}
                       {"\n"}
@@ -149,13 +167,8 @@ export default function CategoriesScreen() {
                   </View>
                 ) : null
               }
-              keyExtractor={(item) => item._id}
               numColumns={2}
-              columnWrapperStyle={{
-                justifyContent: "space-around",
-                alignItems: "center",
-                gap: 10,
-              }}
+              columnWrapperStyle={columnWrapper}
             />
           )}
         </View>
@@ -188,4 +201,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 20,
   },
+  emptyContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    paddingVertical: 10,
+    fontSize: 20,
+  },
+  footerText: {
+    textAlign: 'center',
+    paddingVertical: 10,
+  },
+  footerLoader: {
+    width: '100%'
+  }
 });

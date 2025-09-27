@@ -143,38 +143,31 @@ function AppLoaderWithClerk() {
 
   if (isNetworkChecking) {
     return (
-      <GluestackUIProvider mode="light">
         <GifLoadingScreen
           onAnimationFinish={() => {}}
           onMount={onGifComponentMounted}
         />
-      </GluestackUIProvider>
     );
   }
 
   if (isConnected === false) {
     return (
-      <GluestackUIProvider mode="light">
         <NoNetworkScreen onRetry={handleRetryNetwork} />
-      </GluestackUIProvider>
     );
   }
 
   if (!gifAnimationFinished || !isLoaded || isUpdateChecking) {
     return (
-      <GluestackUIProvider mode="light">
         <GifLoadingScreen
           onAnimationFinish={onGifFinish}
           onMount={onGifComponentMounted}
         />
-      </GluestackUIProvider>
     );
   }
 
   return (
-    <GluestackUIProvider mode="light">
       <NotificationProvider>
-        <GestureHandlerRootView>
+        <GestureHandlerRootView style={{ flex: 1 }}>
           <BottomSheetModalProvider>
         <>
           <StatusBar style="auto" />
@@ -185,11 +178,8 @@ function AppLoaderWithClerk() {
               gestureDirection: "horizontal",
               animation:
                 Platform.OS === "android"
-                  ? I18nManager.isRTL
-                    ? "slide_from_left" 
-                    : "slide_from_right" 
-                  : undefined,
-                  animationDuration: 20,
+                  ? (I18nManager.isRTL ? "slide_from_left" : "slide_from_right")
+                  : "fade",
             }}
             initialRouteName="(onboarding)"
           >
@@ -203,7 +193,6 @@ function AppLoaderWithClerk() {
         </BottomSheetModalProvider>
         </GestureHandlerRootView>
       </NotificationProvider>
-    </GluestackUIProvider>
   );
 }
 

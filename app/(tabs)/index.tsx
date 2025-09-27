@@ -528,8 +528,6 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-
-  // Spacing
   bottomSpacing: {
     height: 100,
   },

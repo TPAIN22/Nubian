@@ -5,13 +5,14 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
-  I18nManager,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from "@/utils/i18n";
+import { useContext } from 'react';
+import { LanguageContext } from '@/utils/LanguageContext';
 import useCartStore from "@/store/useCartStore";
 import { useAuth } from "@clerk/clerk-expo";
 import CartBadge from "./CartBadge";
@@ -19,6 +20,7 @@ import CartBadge from "./CartBadge";
 const { width } = Dimensions.get('window');
 
 export default function HeaderComponent() {
+  const { language, setLanguage } = useContext(LanguageContext);
   const router = useRouter();
   const { cart, fetchCart } = useCartStore();
   const { getToken } = useAuth();
@@ -81,6 +83,14 @@ export default function HeaderComponent() {
 
       {/* User Actions */}
       <View style={styles.userActions}>
+        {/* Language Toggle */}
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => setLanguage(language.startsWith('ar') ? 'en' : 'ar')}
+          accessibilityLabel={i18n.t('changeLanguage')}
+        >
+          <Ionicons name="globe-outline" size={22} color="#000" />
+        </TouchableOpacity>
         {/* Notifications */}
         <TouchableOpacity
           style={styles.iconButton}

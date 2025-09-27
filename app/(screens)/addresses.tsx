@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button, I18nManager, ScrollView } from 'react-native';
+import { View, FlatList, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button, ScrollView } from 'react-native';
 import useAddressStore from '@/store/addressStore';
 import { useAuth } from '@clerk/clerk-expo';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -61,7 +61,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={true}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+        <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -182,7 +182,7 @@ export default function AddressesTab() {
   }
 
   return (
-    <View style={[styles.container, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{i18n.t('myAddresses')}</Text>
         <Text style={styles.headerSubtitle}>{i18n.t('manageDeliveryAddresses')}</Text>

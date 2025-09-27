@@ -1,4 +1,5 @@
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Dimensions, Modal, ScrollView, Animated, StatusBar } from "react-native";
+import { Image as RNImage } from 'react-native';
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -83,6 +84,12 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
     >
       <TouchableOpacity
         activeOpacity={0.8}
+        onPressIn={() => {
+          try {
+            const uri = item.images?.[0];
+            if (uri) RNImage.prefetch(uri).catch(() => {});
+          } catch {}
+        }}
         onPress={onPress}
       >
         <View style={enhancedStyles.cardImageContainer}>
@@ -393,8 +400,15 @@ const SearchPage = () => {
           try {
             // تتبع عرض المنتج
             handleProductView(item);
-            setProduct(item);
-            router.push(`/details/${item._id}`);
+            router.push({
+              pathname: `/details/${item._id}`,
+              params: {
+                name: item.name || '',
+                price: String(item.price ?? ''),
+                image: item.images?.[0] || '',
+              },
+            });
+            requestAnimationFrame(() => setProduct(item));
           } catch (error) {
             console.error('Error navigating to product details:', error);
           }

@@ -5,7 +5,6 @@ import {
   RefreshControl,
   StyleSheet,
   ActivityIndicator,
-  I18nManager,
 } from "react-native";
 import React, { useCallback, useEffect, useRef } from "react";
 import useItemStore from "@/store/useItemStore";
@@ -71,7 +70,7 @@ export default function Index() {
   }, [loadMoreAllProducts, hasMore, isProductsLoading]);
 
   return (
-    <GestureHandlerRootView style={[styles.loadingContainer, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+    <GestureHandlerRootView style={styles.loadingContainer}>
       <BottomSheetModalProvider>
         <View style={{ backgroundColor: "#EFF6FFFF" }}>
           <FlatList
