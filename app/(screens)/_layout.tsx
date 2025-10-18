@@ -8,7 +8,7 @@ export default function _layout() {
         <Stack screenOptions={{ header: HeaderComponent }}>
           <Stack.Screen name="editProfile" options={{ headerShown: false }} />
           <Stack.Screen name="notification" options={{ headerShown: false }} />
-          <Stack.Screen name="details/[details]" options={{ headerShown: false, animation: 'fade' }} />
+          <Stack.Screen name="details/[details]" options={{ headerShown: false }} />
           <Stack.Screen name="order" options={{ headerShown: false }} />
           <Stack.Screen name="addresses" options={{ headerShown: false }} />
           <Stack.Screen name="order-tracking/[orderId]" options={{ headerShown: false }} />

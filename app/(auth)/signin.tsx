@@ -107,11 +107,7 @@ const GoogleSignInSheet = () => {
       <Text style={styles.infoText}>
         {i18n.t('signInGooglePrompt')}
       </Text>
-      
-      <Text style={styles.subInfoText}>
-        سيتم إنشاء حساب جديد تلقائياً إذا لم يكن لديك حساب مسبق
-      </Text>
-      
+  
       <TouchableOpacity
         style={[styles.googleButton, isLoading && styles.googleButtonDisabled]}
         onPress={handleSignIn}

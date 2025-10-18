@@ -15,18 +15,18 @@ import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
 
 const CONSTANTS = {
-  iconSize: 22,
-  activeIconSize: 24,
+  iconSize: 18,
+  activeIconSize: 20,
   colors: {
-    primary: "#f0b745", // Modern indigo
-    secondary: "#f0b745", // Purple accent
-    tertiary: "#f0b745", // Pink accent
+    primary: "#f0b745", 
+    secondary: "#f0b745", 
+    tertiary: "#f0b745", 
     background: "#FAFAFA",
     cardBackground: "#FFFFFF",
     unfocused: "#6B7280",
     text: "#1F2937",
     border: "#E5E7EB",
-    indicator: "#f0b745", // Emerald for notifications
+    indicator: "#f0b745",
   },
   gradients: {
     primary: ["#f0b745", "#f0b745"],
@@ -125,7 +125,7 @@ const TabIcon: React.FC<TabIconProps> = ({ source, focused, label, index }) => {
           styles.tabIconLabel,
           {
             color: focused ? getGradientColor() : CONSTANTS.colors.unfocused,
-            fontWeight: focused ? "600" : "500",
+            fontWeight: focused ? "700" : "500",
             transform: [{ scale: focused ? 1.05 : 1 }]
           }
         ]}
@@ -315,12 +315,12 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 85,
+    height: 75,
     backgroundColor: CONSTANTS.colors.cardBackground,
     borderTopWidth: 0,
     paddingTop: 20,
-    paddingBottom: 10,
-    paddingHorizontal: 8,
+    paddingBottom: 0,
+    paddingHorizontal: 5,
     elevation: 0,
     shadowOpacity: 0,
     borderTopLeftRadius: 24,
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: CONSTANTS.colors.primary,
-    borderRadius: 16,
+    borderRadius: 26,
   },
 
   tabIconContainer: {
@@ -394,8 +394,7 @@ const styles = StyleSheet.create({
   },
 
   tabIconLabel: {
-    fontSize: 9,
-    textAlign: "center",
+    fontSize: 8,
     marginTop: 2,
     letterSpacing: 0.3,
   },

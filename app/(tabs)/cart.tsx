@@ -32,7 +32,7 @@ export default function CartScreen() {
   const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null);
 
   const handlePresentModalPress = useCallback(() => {
-    bottomSheetModalRef.current?.present();
+   router.push("../../components/checkOutModal");
   }, []);
 
   const handleSheetChanges = useCallback((index: number) => {
@@ -187,31 +187,16 @@ export default function CartScreen() {
             handleCheckout={handlePresentModalPress}
           />
         </View>
-        <BottomSheetModal
-          ref={bottomSheetModalRef}
-          onChange={handleSheetChanges}
-          snapPoints={["70%"]}
-          index={0}
-          backgroundStyle={styles.bottomSheetBackground}
-          handleIndicatorStyle={styles.bottomSheetIndicator}
-        >
-          <BottomSheetView style={styles.bottomSheetContent}>
-            <CheckOutModal
-              handleClose={() => bottomSheetModalRef.current?.dismiss()}
-            />
-          </BottomSheetView>
-        </BottomSheetModal>
+       
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     marginTop:10,
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  
   // Header Styles
   headerGradient: {
     paddingTop: Platform.OS === 'ios' ? 50 : 25,

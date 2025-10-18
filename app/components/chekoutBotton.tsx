@@ -109,8 +109,6 @@ export default function Checkout({ total, handleCheckout, isLoading = false, dis
           </View>
         </Pressable>
       </Animated.View>
-
-      {/* Subtle shadow/glow effect */}
     </View>
   );
 }

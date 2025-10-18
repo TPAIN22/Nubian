@@ -16,6 +16,7 @@ import useCartStore from "@/store/useCartStore";
 import useAddressStore from "@/store/addressStore";
 import AddressForm, { Address } from "./AddressForm";
 import { useUser } from "@clerk/clerk-expo";
+import i18n from "@/utils/i18n";
 
 export default function CheckOutModal({
   handleClose,
@@ -150,7 +151,7 @@ export default function CheckOutModal({
             setShowAddressForm(true);
           }}
         >
-          <Text style={styles.addButtonText}>+ إضافة عنوان جديد</Text>
+          <Text style={styles.addButtonText}>+{i18n.t("addNewAddress")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -160,7 +161,7 @@ export default function CheckOutModal({
     <View style={styles.container}>
       <View style={styles.innerContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>اختر عنوان التوصيل</Text>
+          <Text style={styles.title}>{i18n.t("addresses")}</Text>
         </View>
         <FlatList
           data={addresses}
@@ -176,18 +177,18 @@ export default function CheckOutModal({
               <Text style={styles.addressName}>
                 {item.name}{" "}
                 {item.isDefault && (
-                  <Text style={styles.defaultText}>(افتراضي)</Text>
+                  <Text style={styles.defaultText}>(default)</Text>
                 )}
               </Text>
               <Text>
                 {item.city}، {item.area}، {item.street}، {item.building}
               </Text>
               <Text>📞 {item.phone}</Text>
-              {item.notes ? <Text>ملاحظات إضافية: {item.notes}</Text> : null}
+              {item.notes ? <Text>{i18n.t("notes")} {item.notes}</Text> : null}
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>لا توجد عناوين محفوظة</Text>
+            <Text style={styles.emptyText}>{i18n.t("noAddresses")}</Text>
           }
         />
         <TouchableOpacity
@@ -200,23 +201,25 @@ export default function CheckOutModal({
           <Text style={styles.addButtonText}>+ إضافة عنوان جديد</Text>
         </TouchableOpacity>
         {/* مكون الكوبون */}
-        <CouponInput
-          products={cart.products.map((item: any) => ({
-            productId: item.product._id,
-            categoryId: item.product.category,
-          }))}
-          userId={user?.id || ""}
-          onValidate={setCouponResult}
-        />
+        {cart && cart.products && cart.products.length > 0 && (
+          <CouponInput
+            products={cart.products.map((item: any) => ({
+              productId: item.product._id,
+              categoryId: item.product.category,
+            }))}
+            userId={user?.id || ""}
+            onValidate={setCouponResult}
+          />
+        )}
         {/* عرض الخصم والمجموع النهائي */}
-        {couponResult && couponResult.valid && (
+        {couponResult && couponResult.valid && cart && cart.totalPrice && (
           <View style={{ alignItems: "center", marginVertical: 8 }}>
             <Text style={{ color: "green", fontWeight: "bold" }}>
-              خصم: {couponResult.discountValue}{" "}
+              i18n.t("discount"): {couponResult.discountValue}{" "}
               {couponResult.discountType === "percentage" ? "%" : "ج.س"}
             </Text>
             <Text style={{ color: "#2c3e50", fontWeight: "bold" }}>
-              المجموع بعد الخصم:{" "}
+              i18n.t("totalAfterDiscount"):{" "}
               {Math.max(
                 0,
                 cart.totalPrice -
@@ -235,7 +238,7 @@ export default function CheckOutModal({
           activeOpacity={0.8}
         >
           <Text style={styles.buttonText}>
-            {isLoading ? "جاري التأكيد..." : "تأكيد الطلب"}
+            {isLoading ? i18n.t('confirming') : i18n.t('confirmOrder')}
           </Text>
         </TouchableOpacity>
       </View>

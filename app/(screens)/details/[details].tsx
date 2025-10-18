@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
-import useItemStore from "@/store/useItemStore";
+import { useProductFetch } from "@/hooks/useProductFetch";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Review from "../../components/Review";
@@ -25,32 +25,53 @@ const { width: screenWidth } = Dimensions.get("window");
 const imageHeight = screenWidth * 1.1;
 
 export default function Details() {
-  const { product, resetProduct } = useItemStore();
   const { details, name, price, image } = useLocalSearchParams();
+  const productId = details ? String(details) : '';
+  
+  // Direct product fetching instead of store
+  const { product, isLoading, error } = useProductFetch(productId);
+  
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDeferred, setShowDeferred] = useState(false);
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
 
-  // Compose optimistic product if store not ready
+  // Use product directly or fallback to optimistic data
   const viewProduct = useMemo(() => {
-    if (product) return product;
-    const id = details ? String(details) : '';
-    const optimistic = {
-      _id: id,
-      name: (name as string) || '',
-      price: price ? Number(price) : 0,
-      images: image ? [String(image)] : [],
-      stock: 1,
-    } as any;
-    return optimistic;
-  }, [product, details, name, price, image]);
+    if (product) {
+      // Return product with default values for missing fields
+      return {
+        _id: product._id,
+        name: product.name || '',
+        price: product.price || 0,
+        discountPrice: product.discountPrice,
+        images: product.images || [],
+        stock: product.stock || 0,
+        sizes: product.sizes || [],
+        description: product.description || '',
+      };
+    }
+    
+    // Fallback to optimistic data from params if available
+    if (productId && (name || price || image)) {
+      return {
+        _id: productId,
+        name: (name as string) || '',
+        price: price ? Number(price) : 0,
+        images: image ? [String(image)] : [],
+        stock: 1,
+        sizes: [],
+        description: '',
+      };
+    }
+    
+    return null;
+  }, [product, productId, name, price, image]);
 
   useEffect(() => {
     if (typeof image === 'string' && image) {
@@ -76,16 +97,6 @@ export default function Details() {
     return () => task.cancel();
   }, []);
 
-  // No loader overlay; keep UI snappy
-
-  // Clear selected product on unmount to avoid stale item on next visit
-  useEffect(() => {
-    return () => {
-      try { resetProduct?.(); } catch {}
-    };
-  }, [resetProduct]);
-
-  // Memoize expensive calculations
   const formattedPrice = useMemo(() => {
     if (!viewProduct?.price) return '';
     return new Intl.NumberFormat("en-US", {
@@ -112,7 +123,7 @@ export default function Details() {
   useEffect(() => {
     if (viewProduct?.sizes && viewProduct.sizes.length > 0) {
       const task = InteractionManager.runAfterInteractions(() => {
-        setSelectedSize(viewProduct.sizes[0]);
+        setSelectedSize(viewProduct.sizes[0] || null);
       });
       return () => task.cancel();
     }
@@ -258,6 +269,32 @@ export default function Details() {
     );
   }, [viewProduct?.description, isDescriptionExpanded, descriptionLines, toggleDescription]);
 
+  // Show loading state while fetching product
+  if (isLoading && !viewProduct) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#f0b745" />
+        <Text style={styles.loadingText}>جاري تحميل المنتج...</Text>
+      </View>
+    );
+  }
+
+  // Show error state if fetch failed and no fallback data
+  if (error && !viewProduct) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>تعذر تحميل المنتج</Text>
+        <Text style={styles.errorSubText}>{error}</Text>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => router.replace("/(screens)")}
+        >
+          <Text style={styles.backButtonText}>العودة للرئيسية</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   // Early return for no product at all (no params either)
   if (!viewProduct || !viewProduct._id) {
     return (
@@ -386,15 +423,26 @@ export default function Details() {
     </View>
   );
 }
-
-// StyleSheet.create outside component to avoid recreation
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+    marginTop: 10,
   },
   scrollView: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#666",
+    marginTop: 16,
   },
   errorContainer: {
     flex: 1,
@@ -406,6 +454,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     color: "#666",
+    marginBottom: 8,
+  },
+  errorSubText: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "#999",
     marginBottom: 20,
   },
   backButton: {
@@ -561,8 +615,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   selectedSizeBox: {
-    backgroundColor: "#1a1a1a",
-    borderColor: "#1a1a1a",
+    backgroundColor: "#f0b745",
+    borderColor: "#f0b745",
   },
   sizeText: {
     fontSize: 14,
