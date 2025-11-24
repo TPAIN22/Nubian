@@ -5,11 +5,12 @@ import {
   FlatList,
   StyleSheet,
   Dimensions,
-  ScrollView,
   RefreshControl,
   I18nManager,
+  Animated,
+  StatusBar,
 } from "react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, memo, useMemo } from "react";
 import { useRouter } from "expo-router";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
@@ -20,18 +21,135 @@ import {
   BottomSheetModal,
   BottomSheetModalProvider,
   BottomSheetView,
+  BottomSheetBackdrop,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import BottomSheet from "../components/BottomSheet";
 import i18n from "@/utils/i18n";
-import { useNavigationState } from "@react-navigation/native";
 import axiosInstance from "@/utils/axiosInstans";
 import { Ionicons } from "@expo/vector-icons";
-const { width, height } = Dimensions.get("window");
-const ITEM_WIDTH = width * 0.44;
-const ITEM_HEIGHT = ITEM_WIDTH * 1.3;
 
-export default function index() {
+const { width, height } = Dimensions.get("window");
+const THREE_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+const CIRCLE_SIZE = 80;
+
+// Enhanced Category Circle with Navigation
+const CategoryCircle = memo(({ item, index, onPress }: any) => {
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      delay: index * 50,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  }, []);
+
+  const isNew = Date.now() - new Date(item.createdAt).getTime() < THREE_DAYS_MS;
+
+  return (
+    <Pressable
+      onPress={() => onPress(item._id)}
+      style={({ pressed }) => [
+        styles.categoryCirclePressable,
+        { opacity: pressed ? 0.7 : 1 }
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.categoryCircle,
+          {
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        <View style={styles.categoryCircleWrapper}>
+          <Image
+            source={{ uri: item.image }}
+            style={styles.categoryCircleImage}
+            contentFit="cover"
+            transition={300}
+            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+          />
+          <LinearGradient
+            colors={["rgba(240,183,69,0.2)", "rgba(240,183,69,0)"]}
+            style={styles.circleGlow}
+          />
+          {isNew && (
+            <View style={styles.circleNewBadge}>
+              <Ionicons name="sparkles" size={12} color="#FFF" />
+            </View>
+          )}
+        </View>
+        <Text style={styles.circleCategoryName} numberOfLines={1}>
+          {item.name}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+});
+
+const BannerItem = memo(({ item, index }: any) => {
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      delay: index * 100,
+      useNativeDriver: true,
+      tension: 40,
+      friction: 7,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <View style={styles.bannerContainer}>
+        <Image
+          source={{ uri: item.image }}
+          style={styles.bannerImage}
+          contentFit="cover"
+          transition={300}
+        />
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.4)"]}
+          style={styles.bannerOverlay}
+        />
+      </View>
+    </Animated.View>
+  );
+});
+
+const SectionHeader = memo(({ title, onViewMore, showViewMore = true }: any) => (
+  <View style={styles.sectionHeader}>
+    <View style={styles.titleContainer}>
+      <View style={styles.accentBar} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+    {showViewMore && (
+      <Pressable
+        style={({ pressed }) => [
+          styles.viewMoreButton,
+          pressed && styles.viewMoreButtonPressed,
+        ]}
+        onPress={onViewMore}
+      >
+        <Text style={styles.viewMoreText}>{i18n.t("viewAll")}</Text>
+        <View style={styles.viewMoreIconContainer}>
+          <Ionicons
+            name={I18nManager.isRTL ? "arrow-back" : "arrow-forward"}
+            size={14}
+            color="#f0b745"
+          />
+        </View>
+      </Pressable>
+    )}
+  </View>
+));
+
+export default function Index() {
   const {
     getCategories,
     categories,
@@ -41,9 +159,9 @@ export default function index() {
   } = useItemStore();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const navState = useNavigationState((state) => state);
   const [banners, setBanners] = useState([]);
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -51,279 +169,184 @@ export default function index() {
 
   const handleSheetChanges = useCallback(
     (index: number) => {
-      if (index === -1) {
-        setIsTabBarVisible(true);
-      }
+      if (index === -1) setIsTabBarVisible(true);
     },
     [setIsTabBarVisible]
   );
 
-  const handleGetCategories = async () => {
-    setRefreshing(true);
-    try {
-      await getCategories();
-    } catch (error) {
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+      />
+    ),
+    []
+  );
 
-  const handleGetProducts = async () => {
+  const fetchData = useCallback(async () => {
     setRefreshing(true);
     try {
-      await getAllProducts();
-    } catch (error) {
+      const [, , bannersRes] = await Promise.all([
+        getCategories(),
+        getAllProducts(),
+        axiosInstance.get("/banners"),
+      ]);
+      setBanners(bannersRes.data.filter((b: any) => b.isActive !== false));
+    } catch (e) {
+      setBanners([]);
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [getCategories, getAllProducts]);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      setRefreshing(true);
-      try {
-        const [cat, prod, bannersRes] = await Promise.all([
-          getCategories(),
-          getAllProducts(),
-          axiosInstance.get("/banners"),
-        ]);
-        setBanners(bannersRes.data.filter((b: any) => b.isActive !== false));
-      } catch (e) {
-        setBanners([]);
-      } finally {
-        setRefreshing(false);
-      }
-    };
-    fetchAll();
+    fetchData();
   }, []);
 
-  const renderProductItem = ({ item }: any) => {
-    return (
+  const handleCategoryPress = useCallback((categoryId: string) => {
+    router.push(`/(screens)/${categoryId}`);
+  }, [router]);
+
+  const renderProductItem = useCallback(
+    ({ item }: any) => (
       <ItemCard
         item={item}
         handlePresentModalPress={handlePresentModalPress}
         handleSheetChanges={handleSheetChanges}
       />
-    );
-  };
+    ),
+    [handlePresentModalPress, handleSheetChanges]
+  );
 
-  const renderCatigoryCircle = ({ item }: any) => {
-    return (
-      <View className="my-4">
-        <View style={styles.categoryCircle}>
-          <Image
-            source={{ uri: item.image }}
-            style={styles.categoryCircleImage}
-            contentFit="cover"
-            transition={400}
-            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+  const renderCategoryCircle = useCallback(({ item, index }: any) => (
+    <CategoryCircle item={item} index={index} onPress={handleCategoryPress} />
+  ), [handleCategoryPress]);
+
+  const renderBanner = useCallback(({ item, index }: any) => (
+    <BannerItem item={item} index={index} />
+  ), []);
+
+  const keyExtractor = useCallback((item: any) => item._id, []);
+
+  const memoizedCategories = useMemo(
+    () => categories?.slice(0, 20),
+    [categories]
+  );
+
+  const ListHeader = useCallback(
+    () => (
+      <View>
+        {/* Top Gradient Header */}
+        <LinearGradient
+          colors={["#f0b745", "#FFD700", "transparent"]}
+          style={styles.topGradient}
+        />
+
+        {/* Featured Banners */}
+        {banners.length > 0 && (
+          <View style={styles.bannersSection}>
+            <FlatList
+              data={banners}
+              renderItem={renderBanner}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={styles.horizontalListBanner}
+              snapToInterval={width * 0.75 + 16}
+              decelerationRate="fast"
+              pagingEnabled={false}
+            />
+          </View>
+        )}
+
+        {/* Categories Section - Interactive Circles */}
+        {memoizedCategories && memoizedCategories.length > 0 && (
+          <View style={styles.categoriesSection}>
+            <SectionHeader
+              title={i18n.t("discoverOurCollection")}
+              onViewMore={() => router.push("/(screens)")}
+            />
+            
+            <FlatList
+              data={memoizedCategories}
+              renderItem={renderCategoryCircle}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={styles.categoryCircleList}
+            />
+          </View>
+        )}
+
+        {/* Latest Products Header */}
+        <View style={styles.latestProductsSection}>
+          <SectionHeader
+            title={i18n.t("latestProducts")}
+            onViewMore={() => router.push("/(screens)")}
           />
         </View>
       </View>
-    );
-  };
-  const now = new Date();
-  const threeDaysAgo = new Date();
-  threeDaysAgo.setDate(now.getDate() - 10);
-
-  const renderCategoryItem = ({ item, index }: any) => {
-    return (
-      <Pressable
-        style={[
-          styles.categoryCard,
-          {
-            marginRight: index === 0 ? 20 : 8,
-            marginLeft: index === categories.length - 1 ? 20 : 0,
-          },
-        ]}
-        onPress={() => router.push(`/(screens)/${item._id}`)}
-      >
-        <View style={styles.cardContent}>
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: item.image }}
-              style={styles.categoryImage}
-              contentFit="cover"
-              transition={400}
-              placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-            />
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.7)"]}
-              style={styles.imageOverlay}
-            />
-
-            {new Date(item.createdAt) > threeDaysAgo && (
-              <View style={styles.categoryBadge}>
-                <Text style={styles.badgeText}>{i18n.t("new")}</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.textContent}>
-            <Text style={styles.categoryName} numberOfLines={2}>
-              {item.name}
-            </Text>
-            <View style={styles.actionRow}>
-              <Text style={styles.exploreText}>{i18n.t("exploreNow")}</Text>
-              <View style={styles.arrowContainer}>
-                {I18nManager.isRTL ? (
-                  <Ionicons name="arrow-back" size={10} color="#000" />
-                ) : (
-                  <Ionicons name="arrow-forward" size={10} color="#000" />
-                )}
-              </View>
-            </View>
-          </View>
-        </View>
-      </Pressable>
-    );
-  };
-
-  const SectionHeader = ({ title, onViewMore, showViewMore = true }: any) => (
-    <View style={styles.sectionHeader}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      {showViewMore && (
-        <Pressable style={styles.viewMoreButton} onPress={onViewMore}>
-          <Text style={styles.viewMoreText}>{i18n.t("viewAll")}</Text>
-          <View style={styles.viewMoreIcon}>
-            {I18nManager.isRTL ? (
-              <Ionicons name="arrow-back" size={20} color="#fff" />
-            ) : (
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
-            )}
-          </View>
-        </Pressable>
-      )}
-    </View>
+    ),
+    [categories, banners, router, keyExtractor, memoizedCategories, renderCategoryCircle, renderBanner]
   );
-  const device = Dimensions.get('window').width
+
+  const getItemLayout = useCallback(
+    (data: any, index: number) => {
+      const itemHeight = width * 0.45 * 1.3 + 16;
+      return {
+        length: itemHeight,
+        offset: itemHeight * Math.floor(index / 2),
+        index,
+      };
+    },
+    []
+  );
 
   return (
-    <GestureHandlerRootView
-      style={[
-        styles.container,
-        { direction: I18nManager.isRTL ? "rtl" : "ltr" },
-      ]}
-    >
+    <GestureHandlerRootView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <BottomSheetModalProvider>
-        <View style={styles.container}>
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            bounces={true}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={async () => {
-                  await Promise.all([
-                    handleGetCategories(),
-                    handleGetProducts(),
-                  ]);
-                }}
-                colors={["#f0b745"]}
-                tintColor="#f0b745"
-              />
-            }
-          >
-            <Image source={require("../../assets/images/onboard3.png")} style={{ width: device , height: 520 }}/>
-            <FlatList
-                data={categories?.slice(0, 20) || []}
-                renderItem={renderCatigoryCircle}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => `category-${item._id}`}
-                contentContainerStyle={styles.horizontalList}
-                snapToInterval={ITEM_WIDTH + 16}
-                decelerationRate="fast"
-                bounces={true}
-              />
-            <View style={styles.heroSection}>
-              <ImageSlider
-                banners={
-                  banners.length
-                    ? banners.slice(1, 2)
-                    : [
-                        {
-                          _id: "placeholder",
-                          image: "https://placehold.co/600x200?text=No+Banners",
-                          title: "",
-                          description: "",
-                        },
-                      ]
-                }
-              />
-            </View>
-            <View style={{ height: 10 }} />
-
-            <View style={styles.categoriesSection}>
-              <SectionHeader
-                title={i18n.t("discoverOurCollection")}
-                onViewMore={() => router.push(`/(screens)`)}
-              />
-              <FlatList
-                data={categories?.slice(0, 5) || []}
-                renderItem={renderCategoryItem}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => `category-${item._id}`}
-                contentContainerStyle={styles.horizontalList}
-                snapToInterval={ITEM_WIDTH + 16}
-                decelerationRate="fast"
-                bounces={true}
-              />
-            </View>
-
-            <View style={styles.heroSection}>
-              <ImageSlider
-                banners={
-                  banners.length
-                    ? banners.slice(0, 1)
-                    : [
-                        {
-                          _id: "placeholder",
-                          image: "https://placehold.co/600x200?text=No+Banners",
-                          title: "",
-                          description: "",
-                        },
-                      ]
-                }
-              />
-            </View>
-            <View style={{ height: 20 }}/>
-            <View style={styles.latestProductsSection}>
-              <SectionHeader
-                title={i18n.t("latestProducts")}
-                subtitle={i18n.t("latestAddedProducts")}
-                onViewMore={() => router.push(`/(screens)`)}
-              />
-              <View style={{ height: 10 }} />
-              <View style={styles.productsGrid}>
-                <FlatList
-                  data={products?.slice(0, 4) || []}
-                  renderItem={renderProductItem}
-                  keyExtractor={(item) => item._id}
-                  numColumns={2}
-                  columnWrapperStyle={styles.productsRow}
-                  scrollEnabled={false}
-                  ItemSeparatorComponent={() => (
-                    <View style={styles.productsSeparator} />
-                  )}
-                />
-              </View>
-            </View>
-          </ScrollView>
-        </View>
+        <Animated.FlatList
+          data={products}
+          renderItem={renderProductItem}
+          keyExtractor={keyExtractor}
+          numColumns={2}
+          columnWrapperStyle={styles.productsRow}
+          ListHeaderComponent={ListHeader}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          initialNumToRender={6}
+          updateCellsBatchingPeriod={50}
+          getItemLayout={getItemLayout}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={fetchData}
+              colors={["#f0b745"]}
+              tintColor="#f0b745"
+              progressBackgroundColor="#FFF"
+            />
+          }
+        />
 
         <BottomSheetModal
           ref={bottomSheetModalRef}
           onChange={handleSheetChanges}
           snapPoints={["70%"]}
-          index={0}
           backgroundStyle={styles.bottomSheetBackground}
           handleIndicatorStyle={styles.bottomSheetIndicator}
+          backdropComponent={renderBackdrop}
+          enablePanDownToClose
         >
           <BottomSheetView style={styles.contentContainer}>
             <BottomSheet />
@@ -342,193 +365,178 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
   },
-  scrollView: {
-    flex: 1,
+  topGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+    opacity: 0.15,
+    zIndex: -1,
   },
-  scrollContent: {},
+  bannersSection: {
+    marginTop: StatusBar.currentHeight || 20,
+    marginBottom: 8,
+  },
+  categoryCirclePressable: {
+    marginHorizontal: 8,
+  },
   categoryCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 40,
-    marginHorizontal: 6,
     alignItems: "center",
-    justifyContent: "center",
+
+  },
+  categoryCircleWrapper: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    overflow: "hidden",
+    borderWidth: 3,
+    borderColor: "#f0b745",
+    margin: 4,
+    position: "relative",
   },
   categoryCircleImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 40,
-    marginHorizontal: 6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // Hero Section
-  heroSection: {
-    height: height * 0.2,
-    marginBottom: 6,
-    marginHorizontal: 10,
-    marginTop: 12,
-    overflow: "hidden",
-    borderRadius: 16,
-  },
-
-  // Categories Section
-  categoriesSection: {
-    marginBottom: 10,
-    paddingHorizontal: 6,
-  },
-
-  // Products Section
-  latestProductsSection: {
-    marginHorizontal: 8,
-  },
-  productsGrid: {
-    borderRadius: 20,
-  },
-  productsRow: {
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
-  },
-  productsSeparator: {
-    height: 8,
-  },
-
-  // Section Headers
-  sectionHeader: {
-    backgroundColor: "#30a8a7",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#FFFFFFFF",
-    textAlign: "left",
-  },
-  viewMoreButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 4,
-    justifyContent: "center",
-    gap: 4,
-    borderWidth: 0.5,
-    borderRadius: 8,
-    borderColor: "#FFFFFFFF",
-    margin: 6,
-    paddingHorizontal: 10,
-  },
-  viewMoreText: {
-    fontSize: 13,
-    color: "#fff",
-    fontWeight: "400",
-  },
-  viewMoreIcon: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  viewMoreArrow: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  // Horizontal Lists
-  horizontalList: {
-    paddingRight: 4,
-  },
-  // Category Cards
-  categoryCard: {
-    width: ITEM_WIDTH,
-    height: ITEM_HEIGHT,
-    marginHorizontal: 8,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    overflow: "hidden",
-  },
-  cardContent: {
-    flex: 1,
-  },
-  imageContainer: {
-    flex: 1,
-    position: "relative",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: "hidden",
-  },
-  categoryImage: {
     width: "100%",
     height: "100%",
   },
-  imageOverlay: {
+  circleGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  circleNewBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#f0b745",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2.5,
+    borderColor: "#FFF",
+    
+  },
+  circleCategoryName: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1F2937",
+    textAlign: "center",
+    maxWidth: CIRCLE_SIZE + 10,
+  },
+  categoryCircleList: {
+    paddingHorizontal: 12,
+    paddingVertical: 20,
+  },
+  horizontalListBanner: {
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  bannerContainer: {
+    width: width * 0.75,
+    height: 140,
+    borderRadius: 20,
+    marginRight: 16,
+    overflow: "hidden",
+   
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bannerOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: 80,
   },
-  categoryBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "#f0b745",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 15,
+  heroSection: {
+    height: height * 0.22,
+    marginVertical: 16,
+    marginHorizontal: 16,
+    borderRadius: 20,
+    overflow: "hidden",
   },
-  badgeText: {
-    fontSize: 11,
-    color: "#FFFFFF",
-    fontWeight: "700",
-    textTransform: "uppercase",
+  categoriesSection: {
+    marginVertical: 16,
+    paddingTop: 10,    
   },
-  textContent: {
-    padding: 16,
-    justifyContent: "space-between",
-    minHeight: 80,
+  latestProductsSection: {
+    marginTop: 8,
+    marginBottom: 20,
   },
-  categoryName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    lineHeight: 22,
-    textAlign: "left",
-    marginBottom: 10,
+  productsRow: {
+    justifyContent: "center",
+    gap: width * 0.04,
+    paddingHorizontal: 12,
+    marginBottom: 4,
   },
-  actionRow: {
+  separator: {
+    height: 10,
+  },
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 10,
+    paddingHorizontal: 16,
   },
-  exploreText: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "600",
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
-  arrowContainer: {
-    width: 34,
-    height: 14,
-    borderRadius: 6,
+  accentBar: {
+    width: 3,
+    height: 24,
+    borderRadius: 2,
+    backgroundColor: "#f0b745",
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -0.5,
+  },
+  viewMoreButton: {
+    flexDirection: "row",
+    borderRadius: 20,
+    backgroundColor: "rgba(240, 183, 69, 0.1)",
+    alignItems: "center",
+  },
+  viewMoreButtonPressed: {
+    backgroundColor: "rgba(240, 183, 69, 0.2)",
+    transform: [{ scale: 0.96 }],
+  },
+  viewMoreText: {
+    fontSize: 12,
+    color: "#374151",
+    fontWeight: "700",
+    margin: 6,
+  },
+  viewMoreIconContainer: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
   },
-  // Bottom Sheet
   bottomSheetBackground: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+   
   },
   bottomSheetIndicator: {
     width: 48,
-    height: 4,
-    borderRadius: 2,
-  },
-  bottomSpacing: {
-    height: 100,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#D1D5DB",
   },
 });

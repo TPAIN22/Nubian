@@ -20,7 +20,7 @@ function ImageSlider({ banners }: ImageSliderProps) {
   const flatListRef = useRef<FlatList>(null);
 
   const renderItem = ({ item }: { item: Banner }) => (
-    <View style={{ width, height: 200 }}>
+    <View style={{ width, height: 350 }}>
       <Image source={{ uri: item.image }} style={styles.image} contentFit="fill"/>
       {(item.title || item.description) && (
         <View style={styles.overlay}>

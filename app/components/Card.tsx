@@ -116,7 +116,8 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
         style={{
           height: 210,
           width: cardWidth,
-          borderRadius: 8,
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
         }}
         contentFit="fill"
       />

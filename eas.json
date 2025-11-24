@@ -14,7 +14,7 @@
       "android": {
         "buildType": "apk"
       },
-      "channel": "preview",
+      "channel": "preview"
     
     },
     "production": {
@@ -30,7 +30,7 @@
         "resourceClass": "m-medium"
       },
       "autoIncrement": true,
-      "channel": "production",
+      "channel": "production"
      
     }
   },

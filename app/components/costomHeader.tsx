@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingTop: 40,
-    backgroundColor:"transparent"
+    backgroundColor:"#fff"
   },
   logoSection: {
     alignItems: 'center',

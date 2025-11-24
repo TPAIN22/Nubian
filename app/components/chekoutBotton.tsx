@@ -127,13 +127,13 @@ const styles = StyleSheet.create({
   },
   
   button: {
-    backgroundColor: "#f0b745",
+    backgroundColor: "#000",
     borderRadius: 8,
     overflow: 'hidden',    
   },
   
   buttonPressed: {
-    backgroundColor: "#e6a63a",
+    backgroundColor: "#3B3B3BFF",
   },
   
   buttonDisabled: {

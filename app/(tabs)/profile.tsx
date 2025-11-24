@@ -39,7 +39,8 @@ export default function Profile() {
 
   // callbacks
   const handlePresentModalPress = useCallback(() => {
-    bottomSheetModalRef.current?.present();
+    //bottomSheetModalRef.current?.present();
+    router.push("/signin");
   }, []);
   const handleSheetChanges = useCallback((index: number) => {}, []);
 

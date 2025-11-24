@@ -8,7 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   I18nManager,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import useOrderStore from "@/store/orderStore";
 import CouponInput, { CouponValidationResult } from "./CouponInput";
 import { useAuth } from "@clerk/clerk-expo";
@@ -17,6 +19,9 @@ import useAddressStore from "@/store/addressStore";
 import AddressForm, { Address } from "./AddressForm";
 import { useUser } from "@clerk/clerk-expo";
 import i18n from "@/utils/i18n";
+import { ScrollView } from "react-native-gesture-handler";
+
+type PaymentMethod = "cash" | "card";
 
 export default function CheckOutModal({
   handleClose,
@@ -42,6 +47,10 @@ export default function CheckOutModal({
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressFormInitial, setAddressFormInitial] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Payment method states
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [transferImage, setTransferImage] = useState<string | null>(null);
 
   useEffect(() => {
     getToken().then((token) => fetchAddresses(token));
@@ -75,11 +84,45 @@ export default function CheckOutModal({
     }
   };
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("خطأ", "نحتاج إلى إذن الوصول للصور");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      aspect: [9,16],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setTransferImage(result.assets[0].uri);
+    }
+  };
+
+  const isCheckoutEnabled = () => {
+    if (!selectedAddressId) return false;
+    if (!paymentMethod) return false;
+    if (paymentMethod === "card" && !transferImage) return false;
+    return true;
+  };
+
   const handleCheckout = async () => {
     if (!selectedAddressId) {
       Alert.alert("خطأ", "يرجى اختيار عنوان للتوصيل");
       return;
     }
+    if (!paymentMethod) {
+      Alert.alert("خطأ", "يرجى اختيار طريقة الدفع");
+      return;
+    }
+    if (paymentMethod === "card" && !transferImage) {
+      Alert.alert("خطأ", "يرجى إرفاق صورة التحويل البنكي");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const token = await getToken();
@@ -87,13 +130,16 @@ export default function CheckOutModal({
         (a: Address) => a._id === selectedAddressId
       );
       if (!selectedAddress) throw new Error("العنوان غير موجود");
+      
       const orderPayload = {
         deliveryAddress: selectedAddress,
-        paymentMethod: "cash",
+        paymentMethod: paymentMethod,
+        ...(transferImage && { transferProof: transferImage }),
         ...(couponResult && couponResult.valid
           ? { couponCode: couponResult.code }
           : {}),
       };
+      
       if (token) {
         await createOrder(orderPayload, token);
         await clearCart();
@@ -115,7 +161,7 @@ export default function CheckOutModal({
       <ActivityIndicator
         size="large"
         color="#f0b745"
-        style={{ marginTop: 40 }}
+        style={{ flex: 1 }}
       />
     );
   if (showAddressForm) {
@@ -151,18 +197,19 @@ export default function CheckOutModal({
             setShowAddressForm(true);
           }}
         >
-          <Text style={styles.addButtonText}>+{i18n.t("addNewAddress")}</Text>
+          <Text style={styles.addButtonText}>+ {i18n.t("addNewAddress")}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.innerContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>{i18n.t("addresses")}</Text>
         </View>
+        
         <FlatList
           data={addresses}
           keyExtractor={(item: Address) => item._id as string}
@@ -177,20 +224,25 @@ export default function CheckOutModal({
               <Text style={styles.addressName}>
                 {item.name}{" "}
                 {item.isDefault && (
-                  <Text style={styles.defaultText}>(default)</Text>
+                  <Text style={styles.defaultText}>(افتراضي)</Text>
                 )}
               </Text>
-              <Text>
+              <Text style={styles.addressText}>
                 {item.city}، {item.area}، {item.street}، {item.building}
               </Text>
-              <Text>📞 {item.phone}</Text>
-              {item.notes ? <Text>{i18n.t("notes")} {item.notes}</Text> : null}
+              <Text style={styles.addressText}>📞 {item.phone}</Text>
+              {item.notes ? (
+                <Text style={styles.addressText}>
+                  {i18n.t("notes")}: {item.notes}
+                </Text>
+              ) : null}
             </TouchableOpacity>
           )}
           ListEmptyComponent={
             <Text style={styles.emptyText}>{i18n.t("noAddresses")}</Text>
           }
         />
+        
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
@@ -200,7 +252,90 @@ export default function CheckOutModal({
         >
           <Text style={styles.addButtonText}>+ إضافة عنوان جديد</Text>
         </TouchableOpacity>
-        {/* مكون الكوبون */}
+
+        {/* Payment Methods Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>طريقة الدفع</Text>
+          
+          <TouchableOpacity
+            style={[
+              styles.paymentOption,
+              paymentMethod === "cash" && styles.selectedPayment,
+            ]}
+            onPress={() => {
+              setPaymentMethod("cash");
+              setTransferImage(null);
+            }}
+          >
+            <View style={styles.radioOuter}>
+              {paymentMethod === "cash" && <View style={styles.radioInner} />}
+            </View>
+            <View style={styles.paymentContent}>
+              <Text style={styles.paymentTitle}>الدفع عند الاستلام</Text>
+              <Text style={styles.paymentDesc}>ادفع نقداً عند استلام الطلب</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.paymentOption,
+              paymentMethod === "card" && styles.selectedPayment,
+            ]}
+            onPress={() => setPaymentMethod("card")}
+          >
+            <View style={styles.radioOuter}>
+              {paymentMethod === "card" && <View style={styles.radioInner} />}
+            </View>
+            <View style={styles.paymentContent}>
+              <Text style={styles.paymentTitle}>التحويل البنكي</Text>
+              <Text style={styles.paymentDesc}>حول مبلغ {cart.totalPrice} وأرفق صورة الإيصال</Text>
+              {paymentMethod === "card" && (
+                <View style={styles.paymentDetail}>
+                  <Text style={styles.paymentDetail}>
+                    رقم الحساب: 5831233
+                  </Text>
+                  <Text style={styles.paymentDetail}>
+                   الاسم : سعيد عبدالجبار
+                  </Text>
+                  <Text style={styles.paymentDetail}>
+                    البنك : بنك الخرطوم
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {/* Bank Transfer Image Upload */}
+          {paymentMethod === "card" && (
+            <View style={styles.uploadSection}>
+              <Text style={styles.uploadLabel}>إرفاق صورة التحويل البنكي *</Text>
+              <TouchableOpacity
+                style={styles.uploadButton}
+                onPress={pickImage}
+              >
+                <Text style={styles.uploadButtonText}>
+                  {transferImage ? "تغيير الصورة" : "اختيار صورة"}
+                </Text>
+              </TouchableOpacity>
+              {transferImage && (
+                <View style={styles.imagePreview}>
+                  <Image
+                    source={{ uri: transferImage }}
+                    style={styles.previewImage}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={() => setTransferImage(null)}
+                  >
+                    <Text style={styles.removeImageText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Coupon Section */}
         {cart && cart.products && cart.products.length > 0 && (
           <CouponInput
             products={cart.products.map((item: any) => ({
@@ -211,15 +346,16 @@ export default function CheckOutModal({
             onValidate={setCouponResult}
           />
         )}
-        {/* عرض الخصم والمجموع النهائي */}
+
+        {/* Discount & Total */}
         {couponResult && couponResult.valid && cart && cart.totalPrice && (
-          <View style={{ alignItems: "center", marginVertical: 8 }}>
-            <Text style={{ color: "green", fontWeight: "bold" }}>
-              i18n.t("discount"): {couponResult.discountValue}{" "}
+          <View style={styles.priceSection}>
+            <Text style={styles.discountText}>
+              الخصم: {couponResult.discountValue}{" "}
               {couponResult.discountType === "percentage" ? "%" : "ج.س"}
             </Text>
-            <Text style={{ color: "#2c3e50", fontWeight: "bold" }}>
-              i18n.t("totalAfterDiscount"):{" "}
+            <Text style={styles.totalText}>
+              المجموع بعد الخصم:{" "}
               {Math.max(
                 0,
                 cart.totalPrice -
@@ -231,23 +367,27 @@ export default function CheckOutModal({
             </Text>
           </View>
         )}
+
         <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            !isCheckoutEnabled() && styles.buttonDisabled,
+          ]}
           onPress={handleCheckout}
-          disabled={isLoading}
+          disabled={!isCheckoutEnabled() || isLoading}
           activeOpacity={0.8}
         >
           <Text style={styles.buttonText}>
-            {isLoading ? i18n.t('confirming') : i18n.t('confirmOrder')}
+            {isLoading ? "جاري التأكيد..." : "تأكيد الطلب"}
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
+    marginTop: 30,
     flex: 1,
     backgroundColor: "#f9f9fa",
     width: "100%",
@@ -258,194 +398,204 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   header: {
-    marginBottom: 30,
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#2c3e50",
-    textAlign: "center",
-  },
-  form: {
-    flex: 1,
-  },
-  inputContainer: {
     marginBottom: 20,
   },
-  label: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: 6,
-  },
-  citySelector: {
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  citySelectorText: {
-    fontSize: 16,
-    color: "#2c3e50",
-    textAlign: "center",
-    flex: 1,
-  },
-  placeholder: {
-    color: "#999",
-  },
-  arrow: {
-    fontSize: 14,
-    color: "#666",
-    marginLeft: 10,
-  },
-  input: {
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 12,
-    textAlign: "left",
-    color: "#2c3e50",
-  },
-  filledInput: {
-    borderColor: "#f0b745",
-    borderWidth: 2,
-  },
-  button: {
-    backgroundColor: "#f0b745",
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 30,
-    
-  },
-  buttonDisabled: {
-    backgroundColor: "#ccc",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#ffffff",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 0,
-    width: "85%",
-    maxHeight: "70%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  modalTitle: {
-    fontSize: 24,
+  title: {
+    fontSize: 22,
     fontWeight: "bold",
     color: "#2c3e50",
-    flex: 1,
-    textAlign: "center",
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "bold",
-  },
-  cityOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  selectedCityOption: {
-    backgroundColor: "#e3f2fd",
-  },
-  cityOptionText: {
-    fontSize: 14,
-    color: "#2c3e50",
-    textAlign: "left",
-    flex: 1,
-  },
-  selectedCityOptionText: {
-    color: "#f0b745",
-    fontWeight: "600",
-  },
-  checkMark: {
-    fontSize: 14,
-    color: "#f0b745",
-    fontWeight: "bold",
   },
   addressCard: {
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: "#fff",
   },
   selectedCard: {
     borderColor: "#f0b745",
     borderWidth: 2,
-    backgroundColor: "#e3f7fa",
   },
   addressName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#2c3e50",
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  addressText: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 4,
   },
   defaultText: {
     fontSize: 12,
-    color: "#666",
-    fontWeight: "bold",
+    color: "#f0b745",
+    fontWeight: "normal",
   },
   emptyText: {
     fontSize: 14,
-    color: "#666",
+    color: "#999",
     textAlign: "center",
+    marginTop: 20,
   },
   addButton: {
     backgroundColor: "#fff",
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: "center",
-    shadowColor: "#f0b745",
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: "#f0b745",
+    marginBottom: 20,
   },
   addButtonText: {
-    fontSize: 24,
-    fontWeight: 200,
+    fontSize: 16,
     color: "#f0b745",
+    fontWeight: "500",
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2c3e50",
+    marginBottom: 12,
+  },
+  paymentDetail: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  paymentOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+  selectedPayment: {
+    borderColor: "#f0b745",
+    borderWidth: 2,
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: "#ddd",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#f0b745",
+  },
+  paymentContent: {
+    flex: 1,
+  },
+  paymentName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#2c3e50",
+    marginBottom: 4,
+  },
+  
+  paymentTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2c3e50",
+    marginBottom: 4,
+  },
+  paymentDesc: {
+    fontSize: 13,
+    color: "#666",
+  },
+  uploadSection: {
+    marginTop: 8,
+    padding: 16,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+  },
+  uploadLabel: {
+    fontSize: 14,
+    color: "#2c3e50",
+    marginBottom: 12,
+    fontWeight: "500",
+  },
+  uploadButton: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  uploadButtonText: {
+    fontSize: 15,
+    color: "#555",
+  },
+  imagePreview: {
+    marginTop: 12,
+    position: "relative",
+  },
+  previewImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#fff",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  removeImageText: {
+    fontSize: 16,
+    color: "#666",
+  },
+  priceSection: {
+    padding: 16,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  discountText: {
+    fontSize: 15,
+    color: "#27ae60",
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  totalText: {
+    fontSize: 16,
+    color: "#2c3e50",
+    fontWeight: "bold",
+  },
+  button: {
+    backgroundColor: "#f0b745",
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  buttonDisabled: {
+    backgroundColor: "#ccc",
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
   },
 });

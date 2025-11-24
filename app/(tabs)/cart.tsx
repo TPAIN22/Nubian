@@ -6,13 +6,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Alert,
 } from "react-native";
 import { useCallback, useRef, useEffect, useState } from "react";
 import useCartStore from "@/store/useCartStore";
 import { useAuth } from "@clerk/clerk-expo";
 import CartItem from "../components/cartItem";
 import Chekout from "../components/chekoutBotton";
-import {
+import BottomSheet, {
   BottomSheetModal,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
@@ -31,7 +32,8 @@ export default function CartScreen() {
   const [isProcessing] = useState(false);
   const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null);
 
-  const handlePresentModalPress = useCallback(() => {
+
+  /*const handlePresentModalPress = useCallback(() => {
    router.push("../../components/checkOutModal");
   }, []);
 
@@ -39,7 +41,12 @@ export default function CartScreen() {
     if (index === -1) {
       bottomSheetModalRef.current?.dismiss();
     }
+  }, []);*/
+
+  const handlePresentModalPress = useCallback(() => {
+    Alert.alert("قريبا ...", "تم نفاذ الكمية سيتم توفير منتجات جديدة قريبا", [{ text: "حسنا", onPress: () => { } }]);
   }, []);
+
 
   useEffect(() => {
     const fetchCartData = async () => {
@@ -187,7 +194,6 @@ export default function CartScreen() {
             handleCheckout={handlePresentModalPress}
           />
         </View>
-       
     </View>
   );
 }

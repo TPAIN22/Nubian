@@ -1,16 +1,16 @@
 import React, { useCallback, useState } from 'react';
-import { View, Alert, ActivityIndicator, StyleSheet, Text, TouchableOpacity, TextInput } from 'react-native';
+import { View, Alert, ActivityIndicator, StyleSheet, Text, TouchableOpacity, TextInput, I18nManager } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import { useSSO, useSignIn } from '@clerk/clerk-expo';
+import { useSSO, useSignUp } from '@clerk/clerk-expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import i18n from '../../utils/i18n';
+import i18n from '@/utils/i18n';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const AuthSheet = () => {
+const SignUpSheet = () => {
   const [loading, setLoading] = useState<'google' | 'facebook' | 'email' | null>(null);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -18,7 +18,7 @@ const AuthSheet = () => {
   
   const router = useRouter();
   const { startSSOFlow } = useSSO();
-  const { signIn, isLoaded, setActive } = useSignIn();
+  const { signUp, isLoaded, setActive } = useSignUp();
 
   const redirectUrl = AuthSession.makeRedirectUri({
     native: 'sdnubian://sso-callback',
@@ -40,16 +40,16 @@ const AuthSheet = () => {
       }
     } catch (err: any) {
       if (err?.code !== 'oauth_access_denied') {
-        Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
+        Alert.alert(i18n.t('error'), i18n.t('errorCreatingAccount'));
       }
     } finally {
       setLoading(null);
     }
   }, [startSSOFlow, redirectUrl, router]);
 
-  // Email sign-in handler
+  // Email sign-up handler
   const handleEmail = useCallback(async () => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signUp) return;
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
@@ -60,39 +60,37 @@ const AuthSheet = () => {
     try {
       setLoading('email');
       
-      // إنشاء محاولة تسجيل الدخول
-      const signInAttempt = await signIn.create({ 
-        identifier: trimmedEmail 
+      // إنشاء حساب جديد
+      await signUp.create({
+        emailAddress: trimmedEmail,
       });
 
-      // الحصول على email address ID من الـ response
-      const emailAddressId = signInAttempt.supportedFirstFactors?.find(
-        (factor: any) => factor.strategy === 'email_code'
-      )?.emailAddressId;
-
-      if (!emailAddressId) {
-        Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
-        return;
-      }
-
-      // طلب إرسال كود تحقق
-      await signIn.prepareFirstFactor({
+      // طلب إرسال كود تحقق للبريد
+      await signUp.prepareEmailAddressVerification({
         strategy: 'email_code',
-        emailAddressId: emailAddressId,
       });
 
-      Alert.alert('📩', i18n.t('emailSend'));
+      Alert.alert('📩', i18n.t('verificationCodeSent'));
       setPendingVerification(true);
     } catch (err: any) {
-      const errorMessage = err.errors?.[0]?.message || i18n.t('failedToSignIn');
-      Alert.alert(i18n.t('error'), errorMessage);
+      console.error('Sign-up error:', err);
+      const errorMessage = err.errors?.[0]?.message || i18n.t('errorCreateAcount');
+      
+      // رسائل خطأ مخصصة
+      if (errorMessage.includes('already exists')) {
+        Alert.alert(i18n.t('error'), i18n.t('emailTaken'));
+      } else {
+       if (errorMessage.includes('taken'))
+         Alert.alert(i18n.t('error'), i18n.t('emailTaken'));
+      }
     } finally {
       setLoading(null);
     }
-  }, [email, isLoaded, signIn]);
+  }, [email, isLoaded, signUp]);
+
   // التحقق من الكود
   const handleVerifyCode = useCallback(async () => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signUp) return;
 
     if (code.length < 6) {
       Alert.alert(i18n.t('error'), i18n.t('invalidCode'));
@@ -101,59 +99,55 @@ const AuthSheet = () => {
 
     try {
       setLoading('email');
-      const attempt = await signIn.attemptFirstFactor({
-        strategy: 'email_code',
+      const result = await signUp.attemptEmailAddressVerification({
         code: code.trim(),
       });
 
-      if (attempt.status === 'complete') {
-        await setActive({ session: attempt.createdSessionId });
-        Alert.alert('🎉', i18n.t('signInSuccess'));
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        Alert.alert('🎉', i18n.t('successCreateAcount'));
         router.replace('/');
       } else {
-        Alert.alert(i18n.t('error'), i18n.t('invalidOrExpiredCode'));
+        Alert.alert(i18n.t('error'), i18n.t('invalidCode'));
       }
     } catch (err: any) {
-      const errorMessage = err.errors?.[0]?.message || i18n.t('codeVerificationFailed');
+      console.error('Verification error:', err);
+      const errorMessage = err.errors?.[0]?.message || i18n.t('codeExpired');
       Alert.alert(i18n.t('error'), errorMessage);
     } finally {
       setLoading(null);
     }
-  }, [code, isLoaded, signIn, setActive, router]);
+  }, [code, isLoaded, signUp, setActive, router]);
 
   // إعادة إرسال الكود
   const handleResendCode = useCallback(async () => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signUp) return;
 
     try {
       setLoading('email');
-      await signIn.prepareFirstFactor({
+      await signUp.prepareEmailAddressVerification({
         strategy: 'email_code',
-        emailAddressId: signIn.supportedFirstFactors?.find(
-          (factor: any) => factor.strategy === 'email_code'
-        )?.emailAddressId,
       });
       Alert.alert('✅', i18n.t('codeResent'));
     } catch (err: any) {
-      Alert.alert(i18n.t('error'), i18n.t('resendFailed'));
+      Alert.alert(i18n.t('error'), i18n.t('failedToResendCode'));
     } finally {
       setLoading(null);
     }
-  }, [isLoaded, signIn]);
+  }, [isLoaded, signUp]);
 
   return (
     <View style={styles.container}>
-      <View style={styles.backdrop}>
-        <Image 
-          style={styles.backdropImage} 
-          source={require('../../assets/images/nubianLogo.png')}
-          contentFit="cover"
-        />
-      </View>
-
+         <View style={styles.backdrop}>
+                <Image 
+                  style={styles.backdropImage} 
+                  source={require('../../assets/images/nubianLogo.png')}
+                  contentFit="cover"
+                />
+              </View>
       {/* Header */}
-      <Text style={styles.title}>{i18n.t('signInTitle')}</Text>
-      <Text style={styles.subtitle}>{i18n.t('signInSubtitle')}</Text>
+      <Text style={styles.title}>{i18n.t('signUp')}</Text>
+      <Text style={styles.subtitle}>{i18n.t('signUpSubtitle')}</Text>
 
       {/* Google Button */}
       <TouchableOpacity
@@ -171,7 +165,7 @@ const AuthSheet = () => {
               source={require('../../assets/images/google.svg')}
               contentFit="contain"
             />
-            <Text style={styles.googleBtnText}>Google</Text>
+            <Text style={styles.googleBtnText}>{i18n.t('signUpWithGoogle')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -192,31 +186,34 @@ const AuthSheet = () => {
               source={require('../../assets/images/facebook.png')}
               contentFit="contain"
             />
-            <Text style={styles.fbBtnText}>Facebook</Text>
+            <Text style={styles.fbBtnText}>{i18n.t('signUpWithFacebook')}</Text>
           </>
         )}
       </TouchableOpacity>
+
       {/* Divider */}
       <View style={styles.divider}>
         <View style={styles.line} />
         <Text style={styles.orText}>{i18n.t('or')}</Text>
         <View style={styles.line} />
       </View>
+
       {!pendingVerification ? (
         <>
           {/* Email Input */}
           <TextInput
             style={styles.input}
-            placeholder={i18n.t('yourEmail')}
-            placeholderTextColor="#999"
+            placeholder={typeof i18n.t('email') === 'string' ? i18n.t('email') : ''}  
+           placeholderTextColor="#999"
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
             editable={loading === null}
-            textAlign="right"
+            textAlign={I18nManager.isRTL ? 'right' : 'left'}
           />
-          {/* Send code button */}
+
+          {/* Sign up button */}
           <TouchableOpacity
             style={[styles.btn, styles.emailBtn]}
             onPress={handleEmail}
@@ -226,16 +223,35 @@ const AuthSheet = () => {
             {loading === 'email' ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.btnText}>{i18n.t('signIn')}</Text>
+              <Text style={styles.btnText}>{i18n.t('signUp')}</Text>
             )}
           </TouchableOpacity>
+          <View style={styles.footer}>
+                  <Text style={styles.footerText}>
+                    {i18n.t('alreadyHaveAnAccount')}{' '}
+                  </Text>
+                    <Text
+                      style={styles.footerLink}
+                      onPress={() => router.push('/signin')}
+                    >
+                      {i18n.t('signIn')}
+                    </Text>
+                </View>
+
+          {/* Terms */}
+          <Text style={styles.termsText}>
+            {i18n.t('signUpTerms')}{' '}
+            <Text style={styles.link}>{i18n.t('termsAndConditions')}</Text>
+            { i18n.t('and')}{' '}
+            <Text style={styles.link}>{i18n.t('privacyPolicy')}</Text>
+          </Text>
         </>
       ) : (
         <>
           {/* Verification code input */}
           <TextInput
             style={styles.input}
-            placeholder={i18n.t('enterCodeSent')}
+            placeholder={typeof i18n.t('inputCode') === 'string' ? i18n.t('inputCode') : ''}
             keyboardType="number-pad"
             value={code}
             onChangeText={setCode}
@@ -253,7 +269,7 @@ const AuthSheet = () => {
             {loading === 'email' ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.btnText}>{i18n.t('verifyAndSignIn')}</Text>
+              <Text style={styles.btnText}>{i18n.t('verify')}</Text>
             )}
           </TouchableOpacity>
 
@@ -278,27 +294,12 @@ const AuthSheet = () => {
           </TouchableOpacity>
         </>
       )}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          {i18n.t('dontHaveAccount')}{' '}
-        </Text>
-          <Text
-            style={styles.footerLink}
-            onPress={() => router.push('/signup')}
-          >
-            {i18n.t('createNewAccount')}
-          </Text>
-      </View>
-       <Text style={styles.termsText}>
-            {i18n.t('bySigningUpAgree')}{' '}
-            <Text style={styles.link}>{i18n.t('termsAndConditions')}</Text>
-            {i18n.t('and')}
-            <Text style={styles.link}>{i18n.t('privacyPolicy')}</Text>
-        </Text>
     </View>
   );
 };
-export default AuthSheet;
+
+export default SignUpSheet;
+
 const styles = StyleSheet.create({
   container: {
     padding: 24,
@@ -319,7 +320,6 @@ const styles = StyleSheet.create({
     height: 120,
     resizeMode: 'cover', 
   },
-
   googleBtnText: {
     color: '#707070',
     fontSize: 16,
@@ -420,26 +420,30 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  footerText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  footerLink: {
-    fontSize: 14,
-    color: '#007AFF',
-  },
-  link: {
-    color: '#007AFF',
-  },
   termsText: {
     fontSize: 13,
     color: '#666',
     textAlign: 'center',
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  link: {
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  footerText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  footerLink: {
+    color: '#007AFF',
+    textDecorationLine: 'underline',
   },
 });
