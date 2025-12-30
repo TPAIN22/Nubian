@@ -1,6 +1,5 @@
 import { StyleSheet } from "react-native";
 import { Dimensions } from "react-native";
-import { I18nManager } from 'react-native';
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width / 2 - 15;
