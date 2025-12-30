@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { View, FlatList, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { Text } from '@/components/ui/text';
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import ProductCard from '../components/Card';

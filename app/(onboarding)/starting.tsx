@@ -1,10 +1,10 @@
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -102,13 +102,13 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: Math.min(42, width * 0.105), // تتناسب مع عرض الشاشة
     color: '#000',
-    fontWeight: '800',
+    fontWeight: '600',
     textAlign: 'center',
     lineHeight: Math.min(50, width * 0.125),
     marginBottom: 20,
   },
   description: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#666B75FF',
     fontWeight: '400',
     textAlign: 'center',

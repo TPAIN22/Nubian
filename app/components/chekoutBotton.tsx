@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet, Dimensions, Animated } from 'react-native'
+import { View, Pressable, StyleSheet, Dimensions, Animated } from 'react-native'
+import { Text } from '@/components/ui/text'
 import { useState, useRef } from 'react'
 import i18n from '@/utils/i18n';
 import Colors from "@/locales/brandColors";

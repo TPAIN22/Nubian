@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { Text } from '@/components/ui/text';
 import i18n from "@/utils/i18n";
 
 const { width } = Dimensions.get('window');

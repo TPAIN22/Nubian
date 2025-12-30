@@ -1,10 +1,10 @@
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import i18n from "../../utils/i18n";

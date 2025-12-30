@@ -3,6 +3,7 @@ import { H1, H2, H3, H4, H5, H6 } from '@expo/html-elements';
 import { headingStyle } from './styles';
 import type { VariantProps } from '@gluestack-ui/nativewind-utils';
 import { cssInterop } from 'nativewind';
+import { Platform } from 'react-native';
 
 type IHeadingProps = VariantProps<typeof headingStyle> &
   React.ComponentPropsWithoutRef<typeof H1> & {
@@ -29,6 +30,7 @@ const MappedHeading = memo(
         sub,
         italic,
         highlight,
+        style,
         ...props
       },
       ref
@@ -50,6 +52,10 @@ const MappedHeading = memo(
                 highlight,
                 class: className,
               })}
+              style={[
+                Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+                ...(Array.isArray(style) ? style : style ? [style] : []),
+              ]}
               {...props}
               // @ts-expect-error : type issue
               ref={ref}
@@ -69,6 +75,10 @@ const MappedHeading = memo(
                 highlight,
                 class: className,
               })}
+              style={[
+                Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+                ...(Array.isArray(style) ? style : style ? [style] : []),
+              ]}
               {...props}
               // @ts-expect-error : type issue
               ref={ref}
@@ -88,6 +98,10 @@ const MappedHeading = memo(
                 highlight,
                 class: className,
               })}
+              style={[
+                Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+                ...(Array.isArray(style) ? style : style ? [style] : []),
+              ]}
               {...props}
               // @ts-expect-error : type issue
               ref={ref}
@@ -107,6 +121,10 @@ const MappedHeading = memo(
                 highlight,
                 class: className,
               })}
+              style={[
+                Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+                ...(Array.isArray(style) ? style : style ? [style] : []),
+              ]}
               {...props}
               // @ts-expect-error : type issue
               ref={ref}
@@ -126,6 +144,10 @@ const MappedHeading = memo(
                 highlight,
                 class: className,
               })}
+              style={[
+                Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+                ...(Array.isArray(style) ? style : style ? [style] : []),
+              ]}
               {...props}
               // @ts-expect-error : type issue
               ref={ref}
@@ -146,6 +168,10 @@ const MappedHeading = memo(
                 highlight,
                 class: className,
               })}
+              style={[
+                Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+                ...(Array.isArray(style) ? style : style ? [style] : []),
+              ]}
               {...props}
               // @ts-expect-error : type issue
               ref={ref}
@@ -165,6 +191,10 @@ const MappedHeading = memo(
                 highlight,
                 class: className,
               })}
+              style={[
+                Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+                ...(Array.isArray(style) ? style : style ? [style] : []),
+              ]}
               {...props}
               // @ts-expect-error : type issue
               ref={ref}
@@ -177,7 +207,7 @@ const MappedHeading = memo(
 
 const Heading = memo(
   forwardRef<React.ComponentRef<typeof H1>, IHeadingProps>(function Heading(
-    { className, size = 'lg', as: AsComp, ...props },
+    { className, size = 'lg', as: AsComp, style, ...props },
     ref
   ) {
     const {
@@ -204,13 +234,17 @@ const Heading = memo(
             highlight,
             class: className,
           })}
+          style={[
+            Platform.OS !== 'web' && { fontFamily: 'Cairo-Bold' },
+            ...(Array.isArray(style) ? style : style ? [style] : []),
+          ]}
           {...props}
         />
       );
     }
 
     return (
-      <MappedHeading className={className} size={size} ref={ref} {...props} />
+      <MappedHeading className={className || ''} size={size} ref={ref} {...props} />
     );
   })
 );

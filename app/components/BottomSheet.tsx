@@ -1,4 +1,5 @@
-import { View, Text, Dimensions, StyleSheet, Pressable, I18nManager } from "react-native";
+import { View, Dimensions, StyleSheet, Pressable, I18nManager } from "react-native";
+import { Text } from "@/components/ui/text";
 import React, { useState, useEffect } from "react"; 
 import { ScrollView } from "react-native-gesture-handler";
 import useItemStore from "@/store/useItemStore";

@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Alert, ActivityIndicator, StyleSheet, Text, TouchableOpacity, TextInput, I18nManager } from 'react-native';
+import { View, Alert, ActivityIndicator, StyleSheet, TouchableOpacity, TextInput, I18nManager } from 'react-native';
+import { Text } from '@/components/ui/text';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { useSSO, useSignUp } from '@clerk/clerk-expo';

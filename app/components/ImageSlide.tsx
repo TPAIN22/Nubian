@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View,  StyleSheet, Dimensions, Text, FlatList } from 'react-native';
+import { View,  StyleSheet, Dimensions, FlatList } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import Colors from "@/locales/brandColors";
 

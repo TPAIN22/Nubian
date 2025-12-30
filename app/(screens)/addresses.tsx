@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button, ScrollView } from 'react-native';
+import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button, ScrollView } from 'react-native';
+import { Text } from '@/components/ui/text';
 import useAddressStore from '@/store/addressStore';
 import { useAuth } from '@clerk/clerk-expo';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";

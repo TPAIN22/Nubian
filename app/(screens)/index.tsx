@@ -1,11 +1,11 @@
 import {
   View,
-  Text,
   FlatList,
   RefreshControl,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import React, { useCallback, useEffect, useRef } from "react";
 import useItemStore from "@/store/useItemStore";
 import NoNetworkScreen from "../NoNetworkScreen";

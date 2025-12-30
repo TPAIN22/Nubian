@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text } from '@/components/ui/text';
 import axiosInstance from '@/utils/axiosInstans';
 
 interface CouponInputProps {

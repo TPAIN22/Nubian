@@ -14,6 +14,7 @@ import NoNetworkScreen from "./NoNetworkScreen";
 import { Alert, Platform } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import i18n from "@/utils/i18n";
+import { useFonts } from "@/hooks/useFonts";
 
 import * as Updates from "expo-updates";
 
@@ -45,6 +46,23 @@ function AppLoaderWithClerk() {
     useState<boolean>(false);
 
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
+  
+  // Load Cairo fonts
+  const { fontsLoaded, fontError } = useFonts();
+
+  // Debug font loading
+  useEffect(() => {
+    if (__DEV__) {
+      if (fontError) {
+        console.error('Font loading error:', fontError);
+      }
+      if (fontsLoaded) {
+        console.log('✅ Cairo fonts loaded successfully');
+      } else {
+        console.log('⏳ Loading Cairo fonts...');
+      }
+    }
+  }, [fontsLoaded, fontError]);
 
   useEffect(() => {
     async function onFetchUpdateAsync() {
@@ -141,7 +159,7 @@ function AppLoaderWithClerk() {
 
   useEffect(() => {}, []);
 
-  if (isNetworkChecking) {
+  if (isNetworkChecking || !fontsLoaded) {
     return (
         <GifLoadingScreen
           onAnimationFinish={() => {}}

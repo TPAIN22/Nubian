@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl, SafeAreaView } from "react-native";
+import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, SafeAreaView } from "react-native";
+import { Text } from "@/components/ui/text";
 import { useUser } from "@clerk/clerk-expo";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";

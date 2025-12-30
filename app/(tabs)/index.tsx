@@ -1,6 +1,5 @@
 import {
   View,
-  Text,
   Pressable,
   FlatList,
   StyleSheet,
@@ -9,11 +8,11 @@ import {
   Animated,
   StatusBar,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { useCallback, useEffect, useRef, useState, memo, useMemo } from "react";
 import { useRouter } from "expo-router";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
-import ImageSlider from "../components/ImageSlide";
 import { LinearGradient } from "expo-linear-gradient";
 import ItemCard from "../components/Card";
 import {

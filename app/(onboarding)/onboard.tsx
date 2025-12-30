@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, Dimensions } from "react-native";
+import { View, TouchableOpacity, Dimensions } from "react-native";
+import { Text } from "@/components/ui/text";
 import i18n from "../../utils/i18n";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";

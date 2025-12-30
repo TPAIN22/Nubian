@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, I18nManager } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, I18nManager } from "react-native";
+import { Text } from "@/components/ui/text";
 import React from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";

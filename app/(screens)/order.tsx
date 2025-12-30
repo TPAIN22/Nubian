@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable } from "react-native";
+import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable } from "react-native";
+import { Text } from "@/components/ui/text";
 import React, { useState, useEffect } from "react";
 import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";

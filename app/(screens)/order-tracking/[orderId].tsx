@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { View, Text, ScrollView, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
+import { View, ScrollView, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
+import { Text } from '@/components/ui/text';
 import axiosInstance from '@/utils/axiosInstans';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons'; // For icons

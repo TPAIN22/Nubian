@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, TextInput, TouchableOpacity, Alert, StyleSheet, I18nManager } from "react-native";
+import { View, ActivityIndicator, TextInput, TouchableOpacity, Alert, StyleSheet, I18nManager } from "react-native";
+import { Text } from "@/components/ui/text";
 import axiosInstance from "@/utils/axiosInstans";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import i18n from "@/utils/i18n";

@@ -1,4 +1,5 @@
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Dimensions, Modal, ScrollView, Animated, StatusBar } from "react-native";
+import { View, TextInput, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Dimensions, Modal, ScrollView, Animated, StatusBar } from "react-native";
+import { Text } from "@/components/ui/text";
 import { Image as RNImage } from 'react-native';
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { Image } from "expo-image";

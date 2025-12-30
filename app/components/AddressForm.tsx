@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, TextInput, Button, TouchableOpacity, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
+import { View, Modal, TextInput, Button, TouchableOpacity, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import i18n from '../../utils/i18n';
 
