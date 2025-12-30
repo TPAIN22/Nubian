@@ -1,5 +1,3 @@
-import gluestackPlugin from '@gluestack-ui/nativewind-utils/tailwind-plugin';
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: "class",
@@ -170,10 +168,12 @@ module.exports = {
         },
       },
       fontFamily: {
-        heading: undefined,
-        body: undefined,
-        mono: undefined,
+        heading: ['Cairo-Bold', 'Cairo-Regular', 'sans-serif'],
+        body: ['Cairo-Regular', 'sans-serif'],
+        mono: ['Cairo-Regular', 'monospace'],
         roboto: ['Roboto', 'sans-serif'],
+        cairo: ['Cairo-Regular', 'sans-serif'],
+        'cairo-bold': ['Cairo-Bold', 'sans-serif'],
       },
       fontWeight: {
         extrablack: '950',
@@ -194,5 +194,5 @@ module.exports = {
       },
     },
   },
-  plugins: [gluestackPlugin],
+  plugins: [],
 };
