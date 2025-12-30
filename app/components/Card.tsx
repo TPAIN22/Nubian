@@ -13,6 +13,7 @@ import i18n from "@/utils/i18n";
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Colors from "@/locales/brandColors";
 
 interface item {
   _id: string;
@@ -157,7 +158,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
           <Ionicons
             name={inWishlist ? 'heart' : 'heart-outline'}
             size={24}
-            color="#e74c3c"
+            color={Colors.danger}
           />
         </Pressable>
         <FlatList
@@ -180,15 +181,15 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
       </View>
       <View className="px-4 pb-2">
         <VStack className="">
-          <Heading size="sm" className=" text-[#646767]">
+          <Heading size="sm" style={{ color: Colors.text.mediumGray }}>
             {item.name}
           </Heading>
           {item.discountPrice > 0 && (
-            <Text className=" line-through text-[#f0b745]">
+            <Text style={{ textDecorationLine: 'line-through', color: Colors.primary }}>
               {item.discountPrice > 0 && formatPrice(item.discountPrice)}
             </Text>
           )}
-          <Text className=" text-[#585858] font-bold text-md">
+          <Text style={{ color: Colors.text.mediumGray, fontWeight: 'bold', fontSize: 16 }}>
             {formatPrice(item.price)}
           </Text>
         </VStack>
@@ -215,19 +216,19 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
 
 const styles = StyleSheet.create({
   discountBadge: {
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 2,
     alignSelf: "flex-end",
     marginBottom: 10,
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     position: "absolute",
     top: 5,
     right: 5,
   },
   discountText: {
-    color: "#FFFFFF",
+    color: Colors.text.white,
     fontSize: 10,
     fontWeight: "bold",
     textAlign: "left",
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   paginationDotActive: {
-    backgroundColor: '#f0b745',
+    backgroundColor: Colors.primary,
   },
 });
 

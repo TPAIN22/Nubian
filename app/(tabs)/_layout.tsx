@@ -11,16 +11,17 @@ import useItemStore from "@/store/useItemStore";
 import HeaderComponent from "../components/costomHeader";
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
+import Colors from "@/locales/brandColors";
 
 const CONSTANTS = {
   iconSize: 22,
   activeIconSize: 26,
   colors: {
-    primary: "#f0b745",
-    background: "#FAFAFA",
-    cardBackground: "#FFFFFF",
-    unfocused: "#9CA3AF",
-    border: "#F3F4F6",
+    primary: Colors.primary,
+    background: Colors.surface,
+    cardBackground: Colors.background,
+    unfocused: Colors.gray[400],
+    border: Colors.gray[100],
   },
 };
 

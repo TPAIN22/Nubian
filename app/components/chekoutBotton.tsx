@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet, Dimensions, Animated } from 'react-native'
 import { useState, useRef } from 'react'
 import i18n from '@/utils/i18n';
+import Colors from "@/locales/brandColors";
 
 const { width } = Dimensions.get('window');
 
@@ -85,7 +86,7 @@ export default function Checkout({ total, handleCheckout, isLoading = false, dis
           onPressOut={handlePressOut}
           disabled={disabled || isLoading}
           android_ripple={{
-            color: 'rgba(255, 255, 255, 0.2)',
+            color: `${Colors.text.white}33`,
             borderless: false,
           }}
         >
@@ -127,17 +128,17 @@ const styles = StyleSheet.create({
   },
   
   button: {
-    backgroundColor: "#000",
+    backgroundColor: Colors.text.black,
     borderRadius: 8,
     overflow: 'hidden',    
   },
   
   buttonPressed: {
-    backgroundColor: "#3B3B3BFF",
+    backgroundColor: Colors.gray[800],
   },
   
   buttonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: Colors.gray[400],
   },
   
   buttonContent: {
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   },
   
   text: {
-    color: "#fff",
+    color: Colors.text.white,
     fontSize: 18,
     fontWeight: "bold",
     textTransform: 'uppercase',
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   divider: {
     width: 2,
     height: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: `${Colors.text.white}4D`,
     marginHorizontal: 16,
   },
   
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
   },
   
   currencyLabel: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: `${Colors.text.white}CC`,
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 2,
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
   
   textAmount: {
     fontSize: 16,
-    color: '#fff',
+    color: Colors.text.white,
     fontWeight: '900',
     
   },
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     height: 56,
-    backgroundColor: 'rgba(240, 183, 69, 0.1)',
+    backgroundColor: `${Colors.primary}1A`,
     borderRadius: 16,
     zIndex: -1,
   },

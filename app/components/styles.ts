@@ -1,34 +1,35 @@
 import { StyleSheet } from "react-native";
 import { Dimensions } from "react-native";
+import Colors from "@/locales/brandColors";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width / 2 - 15;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: Colors.surface,
   },
   header: {
     paddingBottom: 10,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#eaeaea",
+    borderBottomColor: Colors.borderLight,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
+    color: Colors.text.gray,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     margin: 10,
     paddingHorizontal: 15,
     borderRadius: 10,
     height: 50,
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -40,7 +41,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: "#333",
+    color: Colors.text.gray,
     textAlign: "left",
   },
   filterContainer: {
@@ -52,12 +53,12 @@ const styles = StyleSheet.create({
   filterButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
     marginLeft: 10,
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -65,7 +66,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     marginLeft: 5,
-    color: "#f0b745",
+    color: Colors.primary,
     fontWeight: "500",
   },
   listContainer: {
@@ -78,10 +79,10 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     width: CARD_WIDTH,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     borderRadius: 12,
     marginBottom: 15,
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: Colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
   cardName: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#333",
+    color: Colors.text.gray,
     marginBottom: 8,
     textAlign: "left",
   },
@@ -129,19 +130,19 @@ const styles = StyleSheet.create({
   },
   currency: {
     fontSize: 14,
-    color: "#30a1a7",
+    color: Colors.accent,
     marginRight: 5,
   },
   price: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: Colors.text.gray,
   },
   addButton: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
   noResults: {
     marginTop: 10,
     fontSize: 16,
-    color: "#999",
+    color: Colors.text.lightGray,
     textAlign: "center",
   },
 });

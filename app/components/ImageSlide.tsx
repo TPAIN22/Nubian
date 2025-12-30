@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View,  StyleSheet, Dimensions, Text, FlatList } from 'react-native';
 import { Image } from 'expo-image';
+import Colors from "@/locales/brandColors";
 
 const { width } = Dimensions.get('window');
 
@@ -84,16 +85,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: Colors.overlay,
     padding: 10 ,
   },
   title: {
-    color: '#fff',
+    color: Colors.text.white,
     fontWeight: 'bold',
     fontSize: 16,
   },
   description: {
-    color: '#fff',
+    color: Colors.text.white,
     fontSize: 13,
   },
   pagination: {
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   paginationDotActive: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.text.white,
   },
 });
 

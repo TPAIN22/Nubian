@@ -3,12 +3,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Dimensions,
+  Platform,
+  StatusBar,
+  Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from "@/utils/i18n";
 import { useContext } from 'react';
@@ -16,8 +18,11 @@ import { LanguageContext } from '@/utils/LanguageContext';
 import useCartStore from "@/store/useCartStore";
 import { useAuth } from "@clerk/clerk-expo";
 import CartBadge from "./CartBadge";
+import Colors from "@/locales/brandColors";
+import { useScrollStore } from "@/store/useScrollStore";
 
 const { width } = Dimensions.get('window');
+const STATUS_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0;
 
 export default function HeaderComponent() {
   const { language, setLanguage } = useContext(LanguageContext);
@@ -25,6 +30,15 @@ export default function HeaderComponent() {
   const { cart, fetchCart } = useCartStore();
   const { getToken } = useAuth();
   const [cartItemCount, setCartItemCount] = useState(0);
+  // Get scroll position from store
+  const currentScrollY = useScrollStore((state) => state.scrollY);
+  
+  // Animated values for header transparency
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerBackgroundColor = useRef(new Animated.Value(0)).current;
+  
+  // Threshold for when header becomes opaque (faster transition at 20px)
+  const SCROLL_THRESHOLD = 10;
 
   // حساب عدد العناصر في السلة
   useEffect(() => {
@@ -58,111 +72,246 @@ export default function HeaderComponent() {
     loadCart();
   }, []);
 
+  // Animate header based on scroll position
+  useEffect(() => {
+    const opacity = Math.min(currentScrollY / SCROLL_THRESHOLD, 1);
+    
+    // Fast spring animation for quick transition
+    Animated.parallel([
+      Animated.spring(headerOpacity, {
+        toValue: opacity,
+        tension: 200,
+        friction: 7,
+        useNativeDriver: false,
+      }),
+      Animated.spring(headerBackgroundColor, {
+        toValue: opacity,
+        tension: 200,
+        friction: 7,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [currentScrollY, headerOpacity, headerBackgroundColor]);
+
+  const backgroundColor = headerBackgroundColor.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', Colors.background],
+  });
+
+  const borderColor = headerOpacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', Colors.borderLight],
+  });
+
+  const shadowOpacity = headerOpacity.interpolate({
+    inputRange: [0, 0.01],
+    outputRange: [0, 0.01],
+  });
+
   return (
-    <View style={styles.header}>
-      {/* Logo */}
-      <View style={styles.logoSection}>
-        <Image
-          source={require("../../assets/images/nubianLogo.png")}
-          style={styles.logo}
-          contentFit="contain"
-        />
-      </View>
-
-      {/* Search Bar */}
-      <TouchableOpacity
-        style={styles.searchBar}
-        onPress={() => router.push("/(tabs)/explor")}
-        activeOpacity={0.7}
+    <Animated.View 
+      style={[
+        styles.headerContainer,
+        {
+          backgroundColor,
+          ...Platform.select({
+            ios: {
+              shadowOpacity,
+            },
+          }),
+        }
+      ]}
+    >
+      <StatusBar 
+        barStyle={currentScrollY > SCROLL_THRESHOLD ? "dark-content" : "light-content"} 
+        backgroundColor="transparent" 
+        translucent 
+      />
+      <Animated.View 
+        style={[
+          styles.header,
+          {
+            borderBottomWidth: headerOpacity,
+            borderBottomColor: borderColor,
+          }
+        ]}
       >
-        <Ionicons name="search" size={20} color="#666" />
-        <Text style={styles.searchPlaceholder}>
-          {i18n.t('searchPlaceholder')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* User Actions */}
-      <View style={styles.userActions}>
-        {/* Language Toggle */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => setLanguage(language.startsWith('ar') ? 'en' : 'ar')}
-          accessibilityLabel={i18n.t('changeLanguage')}
-        >
-          <Ionicons name="globe-outline" size={22} color="#000" />
-        </TouchableOpacity>
-        {/* Notifications */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => router.push("/(screens)/notification")}
-        >
-          <Ionicons name="notifications-outline" size={24} color="#000" />
-        </TouchableOpacity>
-
-        {/* Cart with Badge */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => router.push("/(tabs)/cart")}
+        {/* Logo Section */}
+        <TouchableOpacity 
+          style={styles.logoSection}
+          onPress={() => router.push("/(tabs)/index")}
           activeOpacity={0.7}
         >
-          <View style={styles.cartContainer}>
-            <Ionicons name="cart-outline" size={24} color="#000" />
-            <CartBadge size={20} fontSize={10} />
-          </View>
+          <Image
+            source={require("../../assets/images/nubianLogo.png")}
+            style={styles.logo}
+            contentFit="contain"
+          />
         </TouchableOpacity>
-      </View>
-    </View>
+
+        {/* Search Bar - Prominent & Elegant */}
+        <Animated.View
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: headerOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['rgba(255, 255, 255, 0.9)', Colors.gray[50]],
+              }),
+              borderColor: headerOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['rgba(255, 255, 255, 0.3)', Colors.borderLight],
+              }),
+            }
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.searchBarInner}
+            onPress={() => router.push("/(tabs)/explor")}
+            activeOpacity={0.9}
+          >
+            <Ionicons 
+              name="search" 
+              size={20} 
+              color={currentScrollY > SCROLL_THRESHOLD ? Colors.text.mediumGray : Colors.text.white} 
+            />
+            <Text 
+              style={[
+                styles.searchPlaceholder,
+                { color: currentScrollY > SCROLL_THRESHOLD ? Colors.text.mediumGray : Colors.text.white }
+              ]} 
+              numberOfLines={1}
+            >
+              {i18n.t('searchPlaceholder') || 'Search products...'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Action Icons */}
+        <View style={styles.actionIcons}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => setLanguage(language.startsWith('ar') ? 'en' : 'ar')}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="globe-outline" 
+              size={22} 
+              color={currentScrollY > SCROLL_THRESHOLD ? Colors.text.dark : Colors.text.white} 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/(screens)/notification")}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="notifications-outline" 
+              size={22} 
+              color={currentScrollY > SCROLL_THRESHOLD ? Colors.text.dark : Colors.text.white} 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/(tabs)/cart")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cartContainer}>
+              <Ionicons 
+                name="bag-outline" 
+                size={22} 
+                color={currentScrollY > SCROLL_THRESHOLD ? Colors.text.dark : Colors.text.white} 
+              />
+              <CartBadge size={16} fontSize={8} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    paddingTop: STATUS_BAR_HEIGHT,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.shadow,
+        shadowOffset: { width: 0, height: 0.5 },
+        shadowRadius: 0.5,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 40,
-    backgroundColor:"#fff"
+    minHeight: 56,
   },
   logoSection: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   logo: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
   },
   searchBar: {
     flex: 1,
+    height: 42,
+    borderRadius: 21,
+    marginHorizontal: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  searchBarInner: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 12,
-    borderWidth:0.5,
-    borderColor:"#000",
-    backgroundColor:"#FFFFFFE3"
-   
+    paddingHorizontal: 14,
+    height: '100%',
+    width: '100%',
   },
   searchPlaceholder: {
-    marginLeft: 8,
-    color: '#000',
-    fontSize: 12,
+    flex: 1,
+    marginLeft: 10,
+    color: Colors.text.mediumGray,
+    fontSize: 14,
+    fontWeight: '400',
   },
-  userActions: {
+  actionIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    marginLeft: 4,
   },
   iconButton: {
-    position: 'relative',
-    padding: 4,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
   },
   cartContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    width: 40,
+    height: 40,
   },
 });

@@ -20,6 +20,7 @@ import AddressForm, { Address } from "./AddressForm";
 import { useUser } from "@clerk/clerk-expo";
 import i18n from "@/utils/i18n";
 import { ScrollView } from "react-native-gesture-handler";
+import Colors from "@/locales/brandColors";
 
 type PaymentMethod = "cash" | "card";
 
@@ -160,7 +161,7 @@ export default function CheckOutModal({
     return (
       <ActivityIndicator
         size="large"
-        color="#f0b745"
+        color={Colors.primary}
         style={{ flex: 1 }}
       />
     );
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 30,
     flex: 1,
-    backgroundColor: "#f9f9fa",
+    backgroundColor: Colors.surface,
     width: "100%",
   },
   innerContainer: {
@@ -403,55 +404,55 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
   },
   addressCard: {
     padding: 16,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: Colors.borderDark,
     borderRadius: 8,
     marginBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   selectedCard: {
-    borderColor: "#f0b745",
+    borderColor: Colors.primary,
     borderWidth: 2,
   },
   addressName: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
     marginBottom: 8,
   },
   addressText: {
     fontSize: 14,
-    color: "#555",
+    color: Colors.text.mediumGray,
     marginBottom: 4,
   },
   defaultText: {
     fontSize: 12,
-    color: "#f0b745",
+    color: Colors.primary,
     fontWeight: "normal",
   },
   emptyText: {
     fontSize: 14,
-    color: "#999",
+    color: Colors.text.lightGray,
     textAlign: "center",
     marginTop: 20,
   },
   addButton: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#f0b745",
+    borderColor: Colors.primary,
     marginBottom: 20,
   },
   addButtonText: {
     fontSize: 16,
-    color: "#f0b745",
+    color: Colors.primary,
     fontWeight: "500",
   },
   section: {
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
     marginBottom: 12,
   },
   paymentDetail: {
@@ -472,13 +473,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: Colors.borderDark,
     borderRadius: 8,
     marginBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   selectedPayment: {
-    borderColor: "#f0b745",
+    borderColor: Colors.primary,
     borderWidth: 2,
   },
   radioOuter: {
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#ddd",
+    borderColor: Colors.borderDark,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
   },
   paymentContent: {
     flex: 1,
@@ -503,43 +504,43 @@ const styles = StyleSheet.create({
   paymentName: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
     marginBottom: 4,
   },
   
   paymentTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
     marginBottom: 4,
   },
   paymentDesc: {
     fontSize: 13,
-    color: "#666",
+    color: Colors.text.mediumGray,
   },
   uploadSection: {
     marginTop: 8,
     padding: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.gray[100],
     borderRadius: 8,
   },
   uploadLabel: {
     fontSize: 14,
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
     marginBottom: 12,
     fontWeight: "500",
   },
   uploadButton: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: Colors.borderDark,
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
   },
   uploadButtonText: {
     fontSize: 15,
-    color: "#555",
+    color: Colors.text.mediumGray,
   },
   imagePreview: {
     marginTop: 12,
@@ -554,48 +555,48 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     width: 30,
     height: 30,
     borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: Colors.borderDark,
   },
   removeImageText: {
     fontSize: 16,
-    color: "#666",
+    color: Colors.text.mediumGray,
   },
   priceSection: {
     padding: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.gray[100],
     borderRadius: 8,
     marginBottom: 20,
   },
   discountText: {
     fontSize: 15,
-    color: "#27ae60",
+    color: Colors.success,
     fontWeight: "600",
     marginBottom: 6,
   },
   totalText: {
     fontSize: 16,
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
     fontWeight: "bold",
   },
   button: {
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: "center",
   },
   buttonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: Colors.gray[400],
   },
   buttonText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#fff",
+    color: Colors.text.white,
   },
 });

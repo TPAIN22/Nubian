@@ -22,6 +22,7 @@ import { useRouter } from "expo-router";
 import i18n from "@/utils/i18n";
 import type { CouponValidationResult } from '../components/CouponInput';
 import { LinearGradient } from 'expo-linear-gradient';
+import Colors from "@/locales/brandColors";
 
 export default function CartScreen() {
   const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart } =
@@ -113,7 +114,7 @@ export default function CartScreen() {
   if (isLoading) {
     return (
       <View style={{flex:1 , alignItems:"center" ,justifyContent:'center'}}>
-          <ActivityIndicator size="large" color="#f0b745" />
+          <ActivityIndicator size="large" color={Colors.primary} />
       </View>
         
     );
@@ -140,7 +141,7 @@ export default function CartScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#f0b745', '#f0b745']}
+              colors={[Colors.primary, Colors.primary]}
               style={styles.buttonGradient}
             >
               <Text style={styles.continueShoppingText}>{i18n.t('startShopping')}</Text>
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop:10,
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: Colors.surface,
   },
   // Header Styles
   headerGradient: {
@@ -218,19 +219,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18, // smaller font
     fontWeight: "700", // lighter weight
-    color: "#222f3e", // dark text for light mode
-    textShadowColor: 'rgba(0, 0, 0, 0.05)',
+    color: Colors.text.darkGray, // dark text for light mode
+    textShadowColor: Colors.overlayLight,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
   },
   itemCountBadge: {
-    backgroundColor: "#30a1a7",
+    backgroundColor: Colors.accent,
     minWidth: 22, // smaller badge
     height: 22,
     borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   itemCount: {
     fontSize: 12, // smaller font
     fontWeight: "600",
-    color: "#ffffff",
+    color: Colors.text.white,
   },
 
   // Loading Styles
@@ -252,25 +253,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: Colors.surface,
   },
   loadingCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.background,
     padding: 30,
     borderRadius: 20,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 15,
   },
   loadingCardLight: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.background,
     padding: 30,
     borderRadius: 20,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -278,14 +279,14 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: "#666",
+    color: Colors.text.mediumGray,
     marginTop: 15,
     textAlign: "center",
     fontWeight: "600",
   },
   loadingTextLight: {
     fontSize: 16,
-    color: "#222f3e",
+    color: Colors.text.darkGray,
     marginTop: 15,
     textAlign: "center",
     fontWeight: "600",
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.background,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
@@ -318,13 +319,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#2c3e50",
+    color: Colors.text.darkGray,
     marginBottom: 15,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 16,
-    color: "#8A929AFF",
+    color: Colors.text.veryLightGray,
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 40,
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   continueShoppingText: {
-    color: "#ffffff",
+    color: Colors.text.white,
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
   // Cart Content Styles
   cartContent: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: Colors.surface,
   },
   listContainer: {
     paddingTop: 10,
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 15,
     overflow: 'hidden',
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -382,13 +383,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   discountLabel: {
-    color: '#155724',
+    color: Colors.success,
     fontWeight: 'bold',
     fontSize: 16,
     marginBottom: 5,
   },
   finalTotalLabel: {
-    color: '#155724',
+    color: Colors.success,
     fontWeight: 'bold',
     fontSize: 18,
   },
@@ -401,12 +402,12 @@ const styles = StyleSheet.create({
     
   },
   totalCard: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: Colors.surface,
     padding: 20,
     borderRadius: 15,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#e9ecef",
+    borderColor: Colors.borderLight,
   },
   totalRow: {
     flexDirection: "row",
@@ -416,12 +417,12 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#495057",
+    color: Colors.text.mediumGray,
   },
   totalAmount: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#30a1a7",
+    color: Colors.accent,
   },
   originalPriceRow: {
     flexDirection: "row",
@@ -430,31 +431,31 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "#e9ecef",
+    borderTopColor: Colors.borderLight,
   },
   originalPriceLabel: {
     fontSize: 14,
-    color: "#6c757d",
+    color: Colors.text.lightGray,
   },
   originalPriceAmount: {
     fontSize: 16,
-    color: "#6c757d",
+    color: Colors.text.lightGray,
     textDecorationLine: 'line-through',
   },
 
   // Bottom Sheet Styles
   bottomSheetBackground: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.background,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    shadowColor: "#000",
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: -5 },
     shadowOpacity: 0.1,
     shadowRadius: 15,
     elevation: 10,
   },
   bottomSheetIndicator: {
-    backgroundColor: "#dee2e6",
+    backgroundColor: Colors.gray[300],
     width: 50,
     height: 5,
     borderRadius: 2.5,

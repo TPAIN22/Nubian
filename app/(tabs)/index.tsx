@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Dimensions,
   RefreshControl,
-  I18nManager,
   Animated,
   StatusBar,
 } from "react-native";
@@ -28,6 +27,8 @@ import BottomSheet from "../components/BottomSheet";
 import i18n from "@/utils/i18n";
 import axiosInstance from "@/utils/axiosInstans";
 import { Ionicons } from "@expo/vector-icons";
+import Colors from "@/locales/brandColors";
+import { useScrollStore } from "@/store/useScrollStore";
 
 const { width, height } = Dimensions.get("window");
 const THREE_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
@@ -74,12 +75,12 @@ const CategoryCircle = memo(({ item, index, onPress }: any) => {
             placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
           />
           <LinearGradient
-            colors={["rgba(240,183,69,0.2)", "rgba(240,183,69,0)"]}
+            colors={[`${Colors.primary}33`, `${Colors.primary}00`]}
             style={styles.circleGlow}
           />
           {isNew && (
             <View style={styles.circleNewBadge}>
-              <Ionicons name="sparkles" size={12} color="#FFF" />
+              <Ionicons name="sparkles" size={12} color={Colors.text.white} />
             </View>
           )}
         </View>
@@ -114,7 +115,7 @@ const BannerItem = memo(({ item, index }: any) => {
           transition={300}
         />
         <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.4)"]}
+          colors={["transparent", Colors.overlayDark]}
           style={styles.bannerOverlay}
         />
       </View>
@@ -122,34 +123,16 @@ const BannerItem = memo(({ item, index }: any) => {
   );
 });
 
-const SectionHeader = memo(({ title, onViewMore, showViewMore = true }: any) => (
+const SectionHeader = memo(({ title }: any) => (
   <View style={styles.sectionHeader}>
     <View style={styles.titleContainer}>
       <View style={styles.accentBar} />
       <Text style={styles.sectionTitle}>{title}</Text>
     </View>
-    {showViewMore && (
-      <Pressable
-        style={({ pressed }) => [
-          styles.viewMoreButton,
-          pressed && styles.viewMoreButtonPressed,
-        ]}
-        onPress={onViewMore}
-      >
-        <Text style={styles.viewMoreText}>{i18n.t("viewAll")}</Text>
-        <View style={styles.viewMoreIconContainer}>
-          <Ionicons
-            name={I18nManager.isRTL ? "arrow-back" : "arrow-forward"}
-            size={14}
-            color="#f0b745"
-          />
-        </View>
-      </Pressable>
-    )}
   </View>
 ));
 
-export default function Index() {
+function IndexContent() {
   const {
     getCategories,
     categories,
@@ -162,6 +145,7 @@ export default function Index() {
   const [banners, setBanners] = useState([]);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const { setScrollY } = useScrollStore();
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -241,7 +225,7 @@ export default function Index() {
       <View>
         {/* Top Gradient Header */}
         <LinearGradient
-          colors={["#f0b745", "#FFD700", "transparent"]}
+          colors={[Colors.primary, Colors.gold, "transparent"]}
           style={styles.topGradient}
         />
 
@@ -267,7 +251,6 @@ export default function Index() {
           <View style={styles.categoriesSection}>
             <SectionHeader
               title={i18n.t("discoverOurCollection")}
-              onViewMore={() => router.push("/(screens)")}
             />
             
             <FlatList
@@ -285,7 +268,6 @@ export default function Index() {
         <View style={styles.latestProductsSection}>
           <SectionHeader
             title={i18n.t("latestProducts")}
-            onViewMore={() => router.push("/(screens)")}
           />
         </View>
       </View>
@@ -324,17 +306,20 @@ export default function Index() {
           initialNumToRender={6}
           updateCellsBatchingPeriod={50}
           getItemLayout={getItemLayout}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            const offsetY = event.nativeEvent.contentOffset.y;
+            setScrollY(offsetY);
+            // Also update animated value
+            scrollY.setValue(offsetY);
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={fetchData}
-              colors={["#f0b745"]}
-              tintColor="#f0b745"
-              progressBackgroundColor="#FFF"
+              colors={[Colors.primary]}
+              tintColor={Colors.primary}
+              progressBackgroundColor={Colors.background}
             />
           }
         />
@@ -375,7 +360,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   bannersSection: {
-    marginTop: StatusBar.currentHeight || 20,
+    //marginTop: StatusBar.currentHeight || 20,
     marginBottom: 8,
   },
   categoryCirclePressable: {
@@ -391,7 +376,7 @@ const styles = StyleSheet.create({
     borderRadius: CIRCLE_SIZE / 2,
     overflow: "hidden",
     borderWidth: 3,
-    borderColor: "#f0b745",
+    borderColor: Colors.primary,
     margin: 4,
     position: "relative",
   },
@@ -410,21 +395,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -2,
     right: -2,
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2.5,
-    borderColor: "#FFF",
+    borderColor: Colors.text.white,
     
   },
   circleCategoryName: {
     marginTop: 10,
     fontSize: 12,
     fontWeight: "700",
-    color: "#1F2937",
+    color: Colors.text.dark,
     textAlign: "center",
     maxWidth: CIRCLE_SIZE + 10,
   },
@@ -433,14 +418,13 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   horizontalListBanner: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     alignItems: "center",
+    justifyContent: "center",
   },
   bannerContainer: {
-    width: width * 0.75,
-    height: 140,
-    borderRadius: 20,
-    marginRight: 16,
+    width: width ,
+    height: 250,
     overflow: "hidden",
    
   },
@@ -457,14 +441,13 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     height: height * 0.22,
-    marginVertical: 16,
     marginHorizontal: 16,
-    borderRadius: 20,
     overflow: "hidden",
+    borderRadius: 20,
   },
   categoriesSection: {
-    marginVertical: 16,
-    paddingTop: 10,    
+    paddingTop: 10,   
+    borderRadius: 20, 
   },
   latestProductsSection: {
     marginTop: 8,
@@ -495,40 +478,16 @@ const styles = StyleSheet.create({
     width: 3,
     height: 24,
     borderRadius: 2,
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#111827",
+    color: Colors.text.darkGray,
     letterSpacing: -0.5,
   },
-  viewMoreButton: {
-    flexDirection: "row",
-    borderRadius: 20,
-    backgroundColor: "rgba(240, 183, 69, 0.1)",
-    alignItems: "center",
-  },
-  viewMoreButtonPressed: {
-    backgroundColor: "rgba(240, 183, 69, 0.2)",
-    transform: [{ scale: 0.96 }],
-  },
-  viewMoreText: {
-    fontSize: 12,
-    color: "#374151",
-    fontWeight: "700",
-    margin: 6,
-  },
-  viewMoreIconContainer: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#FFF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   bottomSheetBackground: {
-    backgroundColor: "#FFF",
+    backgroundColor: Colors.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
    
@@ -537,6 +496,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#D1D5DB",
+    backgroundColor: Colors.gray[300],
   },
 });
+
+export default function Index() {
+  return <IndexContent />;
+}
