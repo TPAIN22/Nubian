@@ -1,6 +1,5 @@
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
@@ -11,6 +10,7 @@ import {
   I18nManager,
   Linking,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { useNavigation, useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -22,6 +22,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import GoogleSignInSheet from "@/app/(auth)/signin";
 import i18n, { changeLanguage } from "../../utils/i18n";
+import Colors from "@/locales/brandColors";
 
 const { width } = Dimensions.get("window");
 
@@ -42,7 +43,7 @@ export default function Profile() {
     //bottomSheetModalRef.current?.present();
     router.push("/signin");
   }, []);
-  const handleSheetChanges = useCallback((index: number) => {}, []);
+  const handleSheetChanges = useCallback(() => {}, []);
 
   // العناصر التي تحتاج تسجيل دخول
   const userOnlyOptions = [
@@ -52,7 +53,7 @@ export default function Profile() {
         router.push("/editProfile");
       },
       icon: "person-outline" as const,
-      color: "#4A90E2",
+      color: Colors.info,
     },
     {
       title: i18n.t("notifications"),
@@ -60,7 +61,7 @@ export default function Profile() {
         router.push("/notification");
       },
       icon: "notifications-outline" as const,
-      color: "#F5A623",
+      color: Colors.yellow,
     },
     {
       title: i18n.t("orders"),
@@ -68,7 +69,7 @@ export default function Profile() {
         router.push("/order");
       },
       icon: "receipt-outline" as const,
-      color: "#7ED321",
+      color: Colors.success,
     },
     {
       title: i18n.t("shippingAddresses"),
@@ -76,7 +77,7 @@ export default function Profile() {
         router.push("/addresses");
       },
       icon: "location-outline" as const,
-      color: "#30a1a7",
+      color: Colors.accent,
     },
   ];
 
@@ -89,7 +90,7 @@ export default function Profile() {
         Linking.openURL("https://nubian-sd.store/privacy-policy");
       },
       icon: "shield-outline" as const,
-      color: "#9013FE",
+      color: Colors.purple,
     },
     {
       title: i18n.t("security"),
@@ -97,7 +98,7 @@ export default function Profile() {
         // يمكن إضافة الوظيفة هنا
       },
       icon: "lock-closed-outline" as const,
-      color: "#FF6B35",
+      color: Colors.orange,
     },
     {
       title: i18n.t("support"),
@@ -105,7 +106,7 @@ export default function Profile() {
         Linking.openURL("https://nubian-sd.store");
       },
       icon: "help-circle-outline" as const,
-      color: "#50E3C2",
+      color: Colors.cyan,
     },
     {
       title: i18n.t("exchange"),
@@ -113,7 +114,7 @@ export default function Profile() {
         Linking.openURL("https://nubian-sd.store/exchange-policy");
       },
       icon: "return-up-back" as const,
-      color: "#B7E350FF",
+      color: Colors.lime,
     },
   ];
 
@@ -132,15 +133,15 @@ export default function Profile() {
       navigation.setOptions({
         headerTitle: i18n.t("profile"),
         headerStyle: {
-          backgroundColor: "#FFFFFF",
+          backgroundColor: Colors.background,
           elevation: 4,
-          shadowColor: "#000",
+          shadowColor: Colors.shadow,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
         },
         headerTitleStyle: {
-          color: "#333333",
+          color: Colors.text.gray,
           fontSize: 18,
           fontWeight: "600",
         },
@@ -188,7 +189,7 @@ export default function Profile() {
       <Ionicons
         name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
         size={20}
-        color="#C7C7CC"
+        color={Colors.gray[300]}
       />
     </TouchableOpacity>
   );
@@ -201,7 +202,7 @@ export default function Profile() {
           { direction: I18nManager.isRTL ? "rtl" : "ltr" },
         ]}
       >
-        <ActivityIndicator size="large" color="#f0b745" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -260,7 +261,7 @@ export default function Profile() {
               activeOpacity={0.8}
             >
               <Text style={styles.loginButtonText}>{i18n.t("signIn")}</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
+              <Ionicons name="arrow-forward" size={20} color={Colors.text.white} />
             </TouchableOpacity>
           </View>
         )}
@@ -337,14 +338,14 @@ export default function Profile() {
           >
             <View style={styles.logoutContent}>
               <View style={styles.logoutIconContainer}>
-                <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
+                <Ionicons name="log-out-outline" size={22} color={Colors.error} />
               </View>
               <Text style={styles.logoutText}>{i18n.t("logout")}</Text>
             </View>
             <Ionicons
               name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
               size={20}
-              color="#FF3B30"
+              color={Colors.error}
             />
           </TouchableOpacity>
         )}
@@ -368,14 +369,14 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: Colors.surface,
     paddingTop: 30,
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
   },
   contentContainer: {
     paddingHorizontal: 20,
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
   // Sign In Invitation Styles
   signInInvitation: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
     padding: 24,
     borderRadius: 16,
     marginBottom: 24,
@@ -402,13 +403,13 @@ const styles = StyleSheet.create({
   signInTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#f0b745",
+    color: Colors.primary,
     marginBottom: 8,
     textAlign: "center",
   },
   signInSubtitle: {
     fontSize: 14,
-    color: "#8E8E93",
+    color: Colors.text.veryLightGray,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -416,14 +417,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
     minWidth: 160,
   },
   loginButtonText: {
-    color: "#FFFFFF",
+    color: Colors.text.white,
     fontSize: 16,
     fontWeight: "600",
     marginHorizontal: 8,
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
     padding: 16,
     borderRadius: 16,
     marginBottom: 16,
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: "#f0b745",
+    borderColor: Colors.primary,
   },
   onlineIndicator: {
     position: "absolute",
@@ -457,9 +458,9 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#34C759",
+    backgroundColor: Colors.success,
     borderWidth: 3,
-    borderColor: "#FFFFFF",
+    borderColor: Colors.text.white,
   },
   userInfo: {
     flex: 1,
@@ -467,18 +468,18 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 14,
-    color: "#8E8E93",
+    color: Colors.text.veryLightGray,
     marginBottom: 4,
   },
   userName: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#1C1C1E",
+    color: Colors.text.black,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 15,
-    color: "#8E8E93",
+    color: Colors.text.veryLightGray,
   },
 
   // Section Styles
@@ -488,13 +489,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#1C1C1E",
+    color: Colors.text.black,
     marginBottom: 16,
     paddingHorizontal: 4,
     textAlign: "left",
   },
   optionsContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
     borderRadius: 16,
   },
 
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E5EA",
+    borderBottomColor: Colors.borderLight,
   },
   optionLeft: {
     flexDirection: "row",
@@ -523,14 +524,14 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 17,
-    color: "#1C1C1E",
+    color: Colors.text.black,
     fontWeight: "400",
   },
 
   // Language Settings Styles
   languageContainer: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 8,
   },
@@ -543,15 +544,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   languageButtonActive: {
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
   },
   languageButtonText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#8E8E93",
+    color: Colors.text.veryLightGray,
   },
   languageButtonTextActive: {
-    color: "#FFFFFF",
+    color: Colors.text.white,
   },
 
   // Logout Styles
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderRadius: 16,
@@ -574,25 +575,25 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FF3B3015",
+    backgroundColor: Colors.error + "15",
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 16,
   },
   logoutText: {
     fontSize: 17,
-    color: "#FF3B30",
+    color: Colors.error,
     fontWeight: "500",
   },
 
   // Bottom Sheet Styles
   bottomSheetBackground: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
   bottomSheetIndicator: {
-    backgroundColor: "#C7C7CC",
+    backgroundColor: Colors.gray[300],
     width: 40,
     borderRadius: 10,
   },

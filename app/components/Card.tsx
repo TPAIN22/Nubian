@@ -110,17 +110,14 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
         } catch {}
       }}
       onPress={() => handleClick(item)}
+      style={{ width: cardWidth }}
     >
       <Image
-        source={imageUri}
+        source={{ uri: imageUri }}
         alt="product image"
-        style={{
-          height: 210,
-          width: cardWidth,
-          borderTopLeftRadius: 8,
-          borderTopRightRadius: 8,
-        }}
-        contentFit="fill"
+        style={[styles.productImage, { width: cardWidth }]}
+        contentFit="cover"
+        transition={300}
       />
     </Pressable>
   );
@@ -149,16 +146,16 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     );
   };
   return (
-    <Card className="p-0 rounded-lg " style={{ width: cardWidth }}>
-      <View style={{ height: 210, overflow: "hidden" }}>
+    <Card className="p-0" style={[styles.productCard, { width: cardWidth }]}>
+      <View style={styles.imageContainer}>
         <Pressable
           onPress={handleWishlistPress}
-          style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
+          style={styles.wishlistButton}
         >
           <Ionicons
             name={inWishlist ? 'heart' : 'heart-outline'}
-            size={24}
-            color={Colors.danger}
+            size={20}
+            color={inWishlist ? Colors.danger : Colors.primary}
           />
         </Pressable>
         <FlatList
@@ -171,72 +168,98 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
           showsHorizontalScrollIndicator={false}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-          getItemLayout={(data: any, index: number) => ({
+          getItemLayout={(_data: any, index: number) => ({
             length: cardWidth,
             offset: cardWidth * index,
             index,
           })}
+          style={{ width: cardWidth }}
         />
         {renderPagination()}
+        {discountPercentage > 0 && (
+          <View
+            style={[
+              styles.discountBadge,
+              discountPercentage > 50
+                ? { backgroundColor: Colors.success }
+                : discountPercentage > 25
+                ? { backgroundColor: Colors.warning }
+                : discountPercentage > 10
+                ? { backgroundColor: Colors.danger }
+                : { backgroundColor: Colors.primary },
+            ]}
+          >
+            <Text style={styles.discountText}>{discountPercentage}%</Text>
+          </View>
+        )}
       </View>
-      <View className="px-4 pb-2">
-        <VStack className="">
-          <Heading size="sm" style={{ color: Colors.text.mediumGray }}>
-            {item.name}
-          </Heading>
+      <View style={styles.productInfo}>
+        <Heading size="sm" style={styles.productName} numberOfLines={2}>
+          {item.name}
+        </Heading>
+        <View style={styles.priceContainer}>
           {item.discountPrice > 0 && (
-            <Text style={{ textDecorationLine: 'line-through', color: Colors.primary }}>
-              {item.discountPrice > 0 && formatPrice(item.discountPrice)}
+            <Text style={styles.originalPrice}>
+              {formatPrice(item.discountPrice)}
             </Text>
           )}
-          <Text style={{ color: Colors.text.mediumGray, fontWeight: 'bold', fontSize: 16 }}>
+          <Text style={styles.currentPrice}>
             {formatPrice(item.price)}
           </Text>
-        </VStack>
-      </View>
-      {discountPercentage > 0 && (
-        <View
-          style={[
-            styles.discountBadge,
-            discountPercentage > 50
-              ? { backgroundColor: "green" }
-              : discountPercentage > 25
-              ? { backgroundColor: "orange" }
-              : discountPercentage > 10
-              ? { backgroundColor: "red" }
-              : { backgroundColor: "blue" },
-          ]}
-        >
-          <Text style={styles.discountText}>{discountPercentage}% {i18n.t('off')}</Text>
         </View>
-      )}
+      </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  discountBadge: {
-    backgroundColor: Colors.primary,
+  productCard: {
+    borderRadius: 14,
+    overflow: "hidden",   
+    marginBottom: 4,
+  },
+  imageContainer: {
+    height: 200,
+    overflow: "hidden",
+    backgroundColor: Colors.surface,
+    position: "relative",
+  },
+  productImage: {
+    height: 200,
+    width: "100%",
+    backgroundColor: Colors.surface,
+  },
+  wishlistButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 2,
+    backgroundColor: Colors.background,
     borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    alignSelf: "flex-end",
-    marginBottom: 10,
-    shadowColor: Colors.shadow,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+   
+  },
+  discountBadge: {
     position: "absolute",
-    top: 5,
-    right: 5,
+    top: 10,
+    left: 10,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+   
   },
   discountText: {
     color: Colors.text.white,
-    fontSize: 10,
-    fontWeight: "bold",
-    textAlign: "left",
-    fontFamily: "System",
+    fontSize: 11,
+    fontWeight: "700",
   },
   pagination: {
     position: 'absolute',
-    bottom: 10,
+    bottom: 12,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -247,11 +270,47 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    marginHorizontal: 2,
+    backgroundColor: Colors.overlayLight,
+    marginHorizontal: 3,
   },
   paginationDotActive: {
     backgroundColor: Colors.primary,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  productInfo: {
+    paddingHorizontal: 12,
+    paddingTop: 2,
+    paddingBottom: 10,
+  },
+  productName: {
+    color: Colors.text.secondary,
+    fontSize: 10,
+    fontWeight: "600",
+    lineHeight: 18,
+    marginBottom: 6,
+    minHeight: 24,
+  },
+  priceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 3,
+    marginTop: 1,
+  },
+  originalPrice: {
+    textDecorationLine: 'line-through',
+    color: Colors.text.lightGray,
+    fontSize: 10,
+    fontWeight: "400",
+    flexShrink: 1,
+  },
+  currentPrice: {
+    color: Colors.primary,
+    fontWeight: "700",
+    fontSize: 15,
+    flexShrink: 1,
   },
 });
 

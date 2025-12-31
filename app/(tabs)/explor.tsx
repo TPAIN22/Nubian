@@ -14,6 +14,7 @@ import i18n from "@/utils/i18n";
 import React from "react";
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
+import Colors from "@/locales/brandColors";
 
 
 interface Product {
@@ -147,7 +148,7 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
               <Ionicons 
                 name="add" 
                 size={18} 
-                color={(item.stock || 0) === 0 ? "#999" : "#fff"} 
+                color={(item.stock || 0) === 0 ? Colors.text.lightGray : Colors.text.white} 
               />
             </TouchableOpacity>
           </View>
@@ -427,7 +428,7 @@ const SearchPage = () => {
     if (isLoading || categoriesLoading) {
       return (
         <View style={enhancedStyles.emptyContainer}>
-          <ActivityIndicator size="large" color="#f0b745" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={enhancedStyles.loadingText}>{i18n.t('loading')}</Text>
         </View>
       );
@@ -436,7 +437,7 @@ const SearchPage = () => {
     return (
       <View style={enhancedStyles.emptyContainer}>
         <View style={enhancedStyles.emptyIconContainer}>
-          <Ionicons name="search-outline" size={60} color="#f0b745" />
+          <Ionicons name="search-outline" size={60} color={Colors.primary} />
         </View>
         <Text style={enhancedStyles.emptyTitle}>
           {searchTerm ? i18n.t('noResults') : i18n.t('noProducts')}
@@ -478,7 +479,7 @@ const SearchPage = () => {
             {
               borderColor: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['#e0e0e0', '#f0b745'],
+                outputRange: [Colors.borderMedium, Colors.primary],
               }),
               shadowOpacity: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
@@ -487,7 +488,7 @@ const SearchPage = () => {
             }
           ]}
         >
-          <Ionicons name="search" size={20} color="#666" style={enhancedStyles.searchIcon} />
+          <Ionicons name="search" size={20} color={Colors.text.mediumGray} style={enhancedStyles.searchIcon} />
           <TextInput
             placeholder={i18n.t('searchProducts')}
             style={enhancedStyles.searchInput}
@@ -495,14 +496,14 @@ const SearchPage = () => {
             onChangeText={setSearchTerm}
             onFocus={handleSearchFocus}
             onBlur={handleSearchBlur}
-            placeholderTextColor="#999"
+            placeholderTextColor={Colors.text.lightGray}
           />
           {searchTerm.length > 0 && (
             <TouchableOpacity 
               onPress={() => setSearchTerm("")}
               style={enhancedStyles.clearButton}
             >
-              <Ionicons name="close-circle" size={20} color="#999" />
+              <Ionicons name="close-circle" size={20} color={Colors.text.lightGray} />
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -513,7 +514,7 @@ const SearchPage = () => {
             style={enhancedStyles.filterButton}
             onPress={showFilterModal}
           >
-            <Ionicons name="funnel-outline" size={18} color="#f0b745" />
+            <Ionicons name="funnel-outline" size={18} color={Colors.primary} />
             <Text style={enhancedStyles.filterText}>{i18n.t('filter')}</Text>
             {(showAvailableOnly || sortByHighestPrice || sortByLowestPrice || filterCategory) && (
               <View style={enhancedStyles.filterBadge} />
@@ -536,7 +537,7 @@ const SearchPage = () => {
             <Ionicons 
               name={sortByHighestPrice ? "arrow-down" : "arrow-up"} 
               size={18} 
-              color="#f0b745" 
+              color={Colors.primary} 
             />
             <Text style={enhancedStyles.sortText}>
               {sortByHighestPrice ? i18n.t('highestPrice') : sortByLowestPrice ? i18n.t('lowestPrice') : i18n.t('sort')}
@@ -577,7 +578,7 @@ const SearchPage = () => {
                 <View style={enhancedStyles.modalHeader}>
                   <Text style={enhancedStyles.modalTitle}>{i18n.t('filterOptions')}</Text>
                   <TouchableOpacity onPress={hideFilterModal}>
-                    <Ionicons name="close" size={24} color="#666" />
+                    <Ionicons name="close" size={24} color={Colors.text.mediumGray} />
                   </TouchableOpacity>
                 </View>
 
@@ -588,7 +589,7 @@ const SearchPage = () => {
                     onPress={() => setShowAvailableOnly(prev => !prev)}
                   >
                     <View style={enhancedStyles.filterOptionLeft}>
-                      <Ionicons name="checkmark-circle-outline" size={20} color="#f0b745" />
+                      <Ionicons name="checkmark-circle-outline" size={20} color={Colors.primary} />
                       <Text style={enhancedStyles.filterOptionText}>{i18n.t('availableOnly')}</Text>
                     </View>
                     <View style={[
@@ -613,7 +614,7 @@ const SearchPage = () => {
                       }}
                     >
                       <View style={enhancedStyles.filterOptionLeft}>
-                        <Ionicons name="arrow-down-outline" size={20} color="#f0b745" />
+                        <Ionicons name="arrow-down-outline" size={20} color={Colors.primary} />
                         <Text style={enhancedStyles.filterOptionText}>{i18n.t('highestPrice')}</Text>
                       </View>
                       <View style={[
@@ -634,7 +635,7 @@ const SearchPage = () => {
                       }}
                     >
                       <View style={enhancedStyles.filterOptionLeft}>
-                        <Ionicons name="arrow-up-outline" size={20} color="#f0b745" />
+                        <Ionicons name="arrow-up-outline" size={20} color={Colors.primary} />
                         <Text style={enhancedStyles.filterOptionText}>{i18n.t('lowestPrice')}</Text>
                       </View>
                       <View style={[
@@ -693,7 +694,7 @@ const SearchPage = () => {
                   style={enhancedStyles.applyButton}
                 >
                   <LinearGradient
-                    colors={['#f0b745', '#d67b1a']}
+                    colors={[Colors.primary, Colors.primaryDark]}
                     style={enhancedStyles.applyButtonGradient}
                   >
                     <Text style={enhancedStyles.applyButtonText}>{i18n.t('applyFilters')}</Text>
@@ -722,8 +723,8 @@ const SearchPage = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#f0b745"]}
-            tintColor="#f0b745"
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
           />
         }
         ListEmptyComponent={ListEmptyComponent}
@@ -750,15 +751,15 @@ const SearchPage = () => {
 const enhancedStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     paddingTop: 40,
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingBottom: 2,
     borderBottomWidth: 1,
-    borderBottomColor: '#fff',
+    borderBottomColor: Colors.background,
   },
   headerTop: {
     marginBottom: 16,
@@ -766,24 +767,24 @@ const enhancedStyles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.text.gray,
     textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.text.mediumGray,
     textAlign: 'center',
     marginTop: 4,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     borderRadius: 12,
     borderWidth: 1.5,
     paddingHorizontal: 10,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     elevation: 3,
@@ -795,7 +796,7 @@ const enhancedStyles = StyleSheet.create({
     flex: 1,
     paddingVertical: 6,
     fontSize: 16,
-    color: '#333',
+    color: Colors.text.gray,
     textAlign: 'right',
   },
   clearButton: {
@@ -808,13 +809,13 @@ const enhancedStyles = StyleSheet.create({
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#f0b745',
-    shadowColor: '#000',
+    borderColor: Colors.primary,
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -823,7 +824,7 @@ const enhancedStyles = StyleSheet.create({
   },
   filterText: {
     marginLeft: 6,
-    color: '#f0b745',
+    color: Colors.primary,
     fontWeight: '600',
     fontSize: 12,
   },
@@ -834,18 +835,18 @@ const enhancedStyles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2,
-    backgroundColor: '#ff4444',
+    backgroundColor: Colors.error,
   },
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#f0b745',
-    shadowColor: '#000',
+    borderColor: Colors.primary,
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -853,7 +854,7 @@ const enhancedStyles = StyleSheet.create({
   },
   sortText: {
     marginLeft: 4,
-    color: '#f0b745',
+    color: Colors.primary,
     fontWeight: '600',
     fontSize: 12,
   },
@@ -865,10 +866,10 @@ const enhancedStyles = StyleSheet.create({
   },
   cardContainer: {
     width: CARD_WIDTH,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -896,13 +897,13 @@ const enhancedStyles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#ff9500',
+    backgroundColor: Colors.warning,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   stockText: {
-    color: '#fff',
+    color: Colors.text.white,
     fontSize: 10,
     fontWeight: '600',
   },
@@ -912,14 +913,14 @@ const enhancedStyles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: Colors.overlayDark,
     justifyContent: 'center',
     alignItems: 'center',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
   outOfStockText: {
-    color: '#fff',
+    color: Colors.text.white,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -940,7 +941,7 @@ const enhancedStyles = StyleSheet.create({
   cardName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: Colors.text.gray,
     marginBottom: 8,
     lineHeight: 20,
     textAlign: 'right',
@@ -956,30 +957,30 @@ const enhancedStyles = StyleSheet.create({
   },
   currency: {
     fontSize: 12,
-    color: '#666',
+    color: Colors.text.mediumGray,
     marginRight: 4,
   },
   price: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#f0b745',
+    color: Colors.primary,
   },
   addButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f0b745',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f0b745',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
   addButtonDisabled: {
-    backgroundColor: '#ccc',
-    shadowColor: '#ccc',
+    backgroundColor: Colors.gray[300],
+    shadowColor: Colors.gray[300],
   },
   emptyContainer: {
     flex: 1,
@@ -991,11 +992,11 @@ const enhancedStyles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -1004,20 +1005,20 @@ const enhancedStyles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.text.gray,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.text.mediumGray,
     textAlign: 'center',
     lineHeight: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: Colors.text.mediumGray,
   },
   footerContainer: {
     flexDirection: 'row',
@@ -1029,12 +1030,12 @@ const enhancedStyles = StyleSheet.create({
   footerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: Colors.borderMedium,
   },
   footerText: {
     marginHorizontal: 16,
     fontSize: 12,
-    color: '#999',
+    color: Colors.text.lightGray,
     fontWeight: '500',
   },
   // Modal Styles
@@ -1044,14 +1045,14 @@ const enhancedStyles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Colors.overlay,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: height * 0.8,
-    shadowColor: '#000',
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -1064,12 +1065,12 @@ const enhancedStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: Colors.borderLight,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.text.gray,
   },
   modalContent: {
     maxHeight: height * 0.5,
@@ -1081,7 +1082,7 @@ const enhancedStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: Colors.text.gray,
     marginBottom: 12,
   },
   filterOption: {
@@ -1090,7 +1091,7 @@ const enhancedStyles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     marginBottom: 8,
   },
@@ -1102,21 +1103,21 @@ const enhancedStyles = StyleSheet.create({
   filterOptionText: {
     marginLeft: 12,
     fontSize: 15,
-    color: '#333',
+    color: Colors.text.gray,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderColor: Colors.borderMedium,
+    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#f0b745',
-    borderColor: '#f0b745',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   categoryScroll: {
     maxHeight: 150,
@@ -1124,30 +1125,30 @@ const enhancedStyles = StyleSheet.create({
   categoryOption: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   categoryOptionActive: {
-    backgroundColor: '#f0b745',
-    borderColor: '#d67b1a',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primaryDark,
   },
   categoryOptionText: {
     fontSize: 14,
-    color: '#333',
+    color: Colors.text.gray,
     textAlign: 'center',
   },
   categoryOptionTextActive: {
-    color: '#fff',
+    color: Colors.text.white,
     fontWeight: '600',
   },
   applyButton: {
     margin: 20,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#f0b745',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1159,7 +1160,7 @@ const enhancedStyles = StyleSheet.create({
     alignItems: 'center',
   },
   applyButtonText: {
-    color: '#fff',
+    color: Colors.text.white,
     fontSize: 16,
     fontWeight: 'bold',
   },

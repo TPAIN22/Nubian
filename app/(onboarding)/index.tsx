@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 import i18n from "../../utils/i18n";
 import { Image } from "expo-image";
+import Colors from "@/locales/brandColors";
 
 const { width, height } = Dimensions.get('window');
 
@@ -84,7 +85,7 @@ export default function index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
   },
   skipContainer: {
     position: 'absolute',
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   skipText: {
-    color: '#000',
+    color: Colors.text.black,
     fontSize: 24,
     fontWeight: '600',
     textAlign: 'center',
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   },
   subTitle: {
     fontSize: Math.min(40, width * 0.1), // تتناسب مع عرض الشاشة
-    color: '#000',
+    color: Colors.text.black,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 30,
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    color: '#666B75FF',
+    color: Colors.text.mediumGray,
     fontWeight: '400',
     lineHeight: 28,
     textAlign: 'center',
@@ -145,15 +146,15 @@ const styles = StyleSheet.create({
     marginBottom: 30, // مساحة بين الزر والنقاط
   },
   startButton: {
-    backgroundColor: '#f0b745',
+    backgroundColor: Colors.primary,
     paddingVertical: 15,
     paddingHorizontal: width * 0.3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: Colors.text.black,
   },
   startButtonText: {
-    color: '#fff',
+    color: Colors.text.white,
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -168,14 +169,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#CCCCCCFF',
+    backgroundColor: Colors.gray[300],
     marginHorizontal: 4,
   },
   dotActive: {
     width: 30,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#000',
+    backgroundColor: Colors.text.black,
     marginHorizontal: 4,
   },
   // أنماط غير مستخدمة - محتفظ بها في حال الحاجة
@@ -191,15 +192,15 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   skipbButton: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
     padding: 10,
     paddingHorizontal: 40,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#f0b745',
+    borderColor: Colors.primary,
   },
   skipbButtonText: {
-    color: '#000',
+    color: Colors.text.black,
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -211,11 +212,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 25,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: Colors.borderMedium,
     width: '90%',
   },
   skipButtonSecondaryText: {
-    color: '#6b7280',
+    color: Colors.gray[500],
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',

@@ -7,6 +7,7 @@ import {
   TextStyle,
   View,
   ActivityIndicator,
+  I18nManager,
 } from "react-native";
 import useCartStore from "@/store/useCartStore";
 import { useUser, useAuth } from "@clerk/clerk-expo";
@@ -33,7 +34,7 @@ type Props = {
 
 const AddToCartButton = ({
   product,
-  title = i18n.t('addToCart'),
+  title,
   buttonStyle,
   textStyle,
   disabled,
@@ -44,6 +45,9 @@ const AddToCartButton = ({
   const { getToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const {signInModelVisible, setSignInModelVisible} = useItemStore()
+  
+  // Get translated title dynamically
+  const buttonTitle = title || i18n.t('addToCart');
 
   const handleAddToCart = async () => {
     if (disabled) {
@@ -129,7 +133,7 @@ const AddToCartButton = ({
         {isLoading ? (
           <ActivityIndicator size="small" color="#FFFFFFFF" />
         ) : (
-          <Text style={[styles.text, textStyle]}>{title}</Text>
+          <Text style={[styles.text, textStyle]}>{buttonTitle}</Text>
         )}
       </Pressable>
     </View>
@@ -142,7 +146,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: "#f0b745",
-    padding: 14,
+    padding: 10,
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
@@ -155,6 +159,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFFFF",
     fontSize: 18,
     fontWeight: "bold",
+    textAlign: "center",
   },
 });
 

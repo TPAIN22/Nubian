@@ -4,6 +4,7 @@ import i18n from "../../utils/i18n";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import Colors from "@/locales/brandColors";
 
 export default function onboard() {
   const deviceWidth = Math.round(Dimensions.get("window").width);
@@ -36,7 +37,7 @@ export default function onboard() {
             fontSize: 30,
             fontWeight: "bold",
             textAlign: "center",
-            color: "#fff",
+            color: Colors.text.white,
             letterSpacing: 2,
           }}
         >
@@ -45,7 +46,7 @@ export default function onboard() {
 
         <TouchableOpacity
           style={{
-            backgroundColor: "#fff",
+            backgroundColor: Colors.background,
             padding: 15,
             paddingHorizontal: width * 0.2,
             borderRadius: 6,
@@ -60,7 +61,7 @@ export default function onboard() {
               fontSize: 20,
               fontWeight: "bold",
               textAlign: "center",
-              color: "#000",
+              color: Colors.text.black,
               letterSpacing: 2,
             }}
           >

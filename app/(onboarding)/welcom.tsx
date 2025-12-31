@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import i18n from "../../utils/i18n";
+import Colors from "@/locales/brandColors";
 
 const { width, height } = Dimensions.get("window");
 
@@ -77,7 +78,7 @@ export default function Welcom() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   contentContainer: {
     flex: 1,
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   skipText: {
-    color: "#000",
+    color: Colors.text.black,
     fontSize: 24,
     fontWeight: "600",
     textAlign: "center",
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     fontSize: Math.min(42, width * 0.105),
-    color: "#000",
+    color: Colors.text.black,
     fontWeight: "800",
     textAlign: "center",
     lineHeight: Math.min(50, width * 0.125),
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 18,
-    color: "#666B75FF",
+    color: Colors.text.mediumGray,
     fontWeight: "400",
     textAlign: "center",
     lineHeight: 28,
@@ -141,15 +142,15 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   startButton: {
-    backgroundColor: "#f0b745",
+    backgroundColor: Colors.primary,
     paddingVertical: 15,
     paddingHorizontal: width * 0.3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#000",
+    borderColor: Colors.text.black,
   },
   startButtonText: {
-    color: "#fff",
+    color: Colors.text.white,
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
@@ -164,14 +165,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#CCCCCCFF",
+    backgroundColor: Colors.gray[300],
     marginHorizontal: 4,
   },
   dotActive: {
     width: 30,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#000",
+    backgroundColor: Colors.text.black,
     marginHorizontal: 4,
   },
   // أنماط غير مستخدمة - محتفظ بها في حال الحاجة
@@ -180,18 +181,18 @@ const styles = StyleSheet.create({
   },
   subTitle: {
     fontSize: 24,
-    color: "#f0b745",
+    color: Colors.primary,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 30,
     lineHeight: 30,
   },
   skipButtonSecondary: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     padding: 10,
     paddingHorizontal: 40,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#f0b745",
+    borderColor: Colors.primary,
   },
 });

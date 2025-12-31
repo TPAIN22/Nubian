@@ -1,6 +1,5 @@
 import {
   View,
-  Text,
   ScrollView,
   StyleSheet,
   Pressable,
@@ -10,14 +9,19 @@ import {
   FlatList,
   ActivityIndicator,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
 import { useProductFetch } from "@/hooks/useProductFetch";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Review from "../../components/Review";
+import { Image as RNImage, InteractionManager, I18nManager } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import Colors from "@/locales/brandColors";
+import useWishlistStore from '@/store/wishlistStore';
+import { useAuth } from '@clerk/clerk-expo';
 import i18n from "@/utils/i18n";
-import { Image as RNImage, InteractionManager } from "react-native";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -32,14 +36,17 @@ export default function Details() {
   const { product, isLoading, error } = useProductFetch(productId);
   
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDeferred, setShowDeferred] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
+  const { getToken } = useAuth();
 
   // Use product directly or fallback to optimistic data
   const viewProduct = useMemo(() => {
@@ -53,6 +60,7 @@ export default function Details() {
         images: product.images || [],
         stock: product.stock || 0,
         sizes: product.sizes || [],
+        colors: (product as any).colors || [],
         description: product.description || '',
       };
     }
@@ -66,12 +74,25 @@ export default function Details() {
         images: image ? [String(image)] : [],
         stock: 1,
         sizes: [],
+        colors: [],
         description: '',
       };
     }
     
     return null;
   }, [product, productId, name, price, image]);
+  
+  // Get colors from product if available
+  const availableColors = useMemo(() => {
+    if (viewProduct?.colors && Array.isArray(viewProduct.colors) && viewProduct.colors.length > 0) {
+      return viewProduct.colors;
+    }
+    return []; // Return empty array if no colors
+  }, [viewProduct?.colors]);
+  
+  const inWishlist = useMemo(() => {
+    return viewProduct?._id ? isInWishlist(viewProduct._id) : false;
+  }, [viewProduct?._id, isInWishlist]);
 
   useEffect(() => {
     if (typeof image === 'string' && image) {
@@ -106,18 +127,6 @@ export default function Details() {
     }).format(viewProduct.price).replace('$', '$ ');
   }, [viewProduct?.price]);
 
-  const formattedDiscountPrice = useMemo(() => {
-    if (!viewProduct?.discountPrice || viewProduct.discountPrice <= 0) return '';
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD", 
-      minimumFractionDigits: 0,
-    }).format(viewProduct.discountPrice).replace('$', '$ ');
-  }, [viewProduct?.discountPrice]);
-
-  const descriptionLines = useMemo(() => {
-    return viewProduct?.description?.split('\\n') || [];
-  }, [viewProduct?.description]);
 
   // Defer initial size selection to avoid blocking interaction
   useEffect(() => {
@@ -127,7 +136,37 @@ export default function Details() {
       });
       return () => task.cancel();
     }
+    return undefined;
   }, [viewProduct?.sizes]);
+  
+  // Set initial color selection only if colors are available
+  useEffect(() => {
+    if (availableColors && availableColors.length > 0 && !selectedColor) {
+      setSelectedColor(availableColors[0]);
+    } else if (!availableColors || availableColors.length === 0) {
+      // Clear selection if no colors available
+      setSelectedColor(null);
+    }
+  }, [availableColors, selectedColor]);
+  
+  // Handle wishlist toggle
+  const handleWishlistPress = useCallback(async () => {
+    if (!viewProduct?._id || wishlistLoading) return;
+    
+    setWishlistLoading(true);
+    try {
+      const token = await getToken();
+      if (inWishlist) {
+        await removeFromWishlist(viewProduct._id, token);
+      } else {
+        await addToWishlist(viewProduct as any, token);
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+    } finally {
+      setWishlistLoading(false);
+    }
+  }, [viewProduct, inWishlist, getToken, addToWishlist, removeFromWishlist, wishlistLoading]);
 
   // Optimize viewable items callback
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
@@ -156,10 +195,6 @@ export default function Details() {
     setSelectedSize(size);
   }, []);
 
-  // Optimize description toggle
-  const toggleDescription = useCallback(() => {
-    setIsDescriptionExpanded(prev => !prev);
-  }, []);
 
   // Memoized components
   const [firstImageLoaded, setFirstImageLoaded] = useState(false);
@@ -214,8 +249,8 @@ export default function Details() {
     
     return (
       <View style={styles.sizesContainer}>
-        <Text style={styles.sectionTitle}>{i18n.t('chooseSize') || 'Choose size'}</Text>
-        <View style={styles.sizesRow}>
+        <Text style={styles.sectionTitle}>{i18n.t('chooseSize') || 'Size'}</Text>
+        <View style={[styles.sizesRow, I18nManager.isRTL && styles.sizesRowRTL]}>
           {viewProduct.sizes.map((size: string, index: number) => (
             <Pressable
               key={index}
@@ -239,42 +274,41 @@ export default function Details() {
       </View>
     );
   }, [viewProduct?.sizes, selectedSize, onSizeSelect]);
-
-  const renderDescription = useCallback(() => {
-    if (!viewProduct?.description) return null;
+  
+  const renderColorSelector = useCallback(() => {
+    // Don't show color selector if no colors available
+    if (!availableColors || availableColors.length === 0) {
+      return null;
+    }
     
-    const displayedLines = isDescriptionExpanded 
-      ? descriptionLines 
-      : descriptionLines.slice(0, 3);
-
     return (
-      <View style={styles.descriptionContainer}>
-        {displayedLines.map((line: string, index: number) => (
-          <Text key={index} style={styles.description}>
-            {line}
-          </Text>
-        ))}
-        
-        {descriptionLines.length > 3 && (
-          <Pressable
-            style={styles.expandButton}
-            onPress={toggleDescription}
-          >
-            <Text style={styles.expandButtonText}>
-              {isDescriptionExpanded ? "Show less" : "Read more"}
-            </Text>
-          </Pressable>
-        )}
+      <View style={styles.colorsContainer}>
+        <Text style={styles.sectionTitle}>{i18n.t('color') || 'Color'}</Text>
+        <View style={[styles.colorsRow, I18nManager.isRTL && styles.colorsRowRTL]}>
+          {availableColors.map((color: string, index: number) => (
+            <Pressable
+              key={index}
+              style={[
+                styles.colorSwatch,
+                color === selectedColor && styles.selectedColorSwatch,
+              ]}
+              onPress={() => setSelectedColor(color)}
+            >
+              <View style={[styles.colorCircle, { backgroundColor: color }]} />
+            </Pressable>
+          ))}
+        </View>
       </View>
     );
-  }, [viewProduct?.description, isDescriptionExpanded, descriptionLines, toggleDescription]);
+  }, [availableColors, selectedColor]);
+
 
   // Show loading state while fetching product
   if (isLoading && !viewProduct) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#f0b745" />
-        <Text style={styles.loadingText}>جاري تحميل المنتج...</Text>
+        <Text style={styles.loadingText}>{i18n.t('loading') || 'Loading...'}</Text>
       </View>
     );
   }
@@ -283,13 +317,15 @@ export default function Details() {
   if (error && !viewProduct) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>تعذر تحميل المنتج</Text>
-        <Text style={styles.errorSubText}>{error}</Text>
+        <Text style={[styles.errorText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+          {i18n.t('errorLoadingProduct') || 'Error loading product'}
+        </Text>
+        <Text style={[styles.errorSubText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{error}</Text>
         <Pressable
           style={styles.backButton}
           onPress={() => router.replace("/(screens)")}
         >
-          <Text style={styles.backButtonText}>العودة للرئيسية</Text>
+          <Text style={styles.backButtonText}>{i18n.t('backToHome') || 'Back to Home'}</Text>
         </Pressable>
       </View>
     );
@@ -299,12 +335,14 @@ export default function Details() {
   if (!viewProduct || !viewProduct._id) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>لا يوجد منتج للعرض</Text>
+        <Text style={[styles.errorText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+          {i18n.t('noProductAvailable') || 'No product available'}
+        </Text>
         <Pressable
           style={styles.backButton}
           onPress={() => router.replace("/(screens)")}
         >
-          <Text style={styles.backButtonText}>العودة للرئيسية</Text>
+          <Text style={styles.backButtonText}>{i18n.t('backToHome') || 'Back to Home'}</Text>
         </Pressable>
       </View>
     );
@@ -312,11 +350,22 @@ export default function Details() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
+      <View style={[styles.header, I18nManager.isRTL && styles.headerRTL]}>
+        <Text style={styles.brandName}>Noubian</Text>
+        <TouchableOpacity 
+          style={styles.cartIconButton}
+          onPress={() => router.push("/(tabs)/cart")}
+        >
+          <Ionicons name="bag-outline" size={24} color={Colors.text.secondary} />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         bounces={false}
-        removeClippedSubviews={true} // Optimize performance
+        removeClippedSubviews={true}
       >
         {/* Image Section */}
         <View style={styles.imageSection}>
@@ -336,64 +385,73 @@ export default function Details() {
                 length: screenWidth,
                 offset: screenWidth * index,
                 index,
-              })} // Optimize FlatList performance
+              })}
               removeClippedSubviews={true}
               maxToRenderPerBatch={3}
               windowSize={5}
             />
             
-            {/* Favorite Icon */}
-            <TouchableOpacity style={styles.favoriteButton}>
-              <Text style={styles.favoriteIcon}>♡</Text>
-            </TouchableOpacity>
-            
             {showDeferred ? renderPagination() : null}
           </View>
         </View>
 
-        {/* Product Details - Remove animation wrapper */}
+        {/* Product Details */}
         <View style={styles.productDetails}>
-          {/* Product Info Card */}
+          {/* Product Name and Price */}
           <View style={styles.productInfoCard}>
-            <Text style={styles.productName}>{viewProduct.name}</Text>    
-            {renderDescription()}
+            <Text style={styles.productName}>{viewProduct.name}</Text>
+            <Text style={styles.price}>{formattedPrice}</Text>
           </View>
+
+          {/* Description */}
+          {viewProduct.description && (
+            <View style={styles.descriptionSection}>
+              <Text style={[styles.descriptionTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+                {i18n.t('description') || 'Description'}
+              </Text>
+              <Text style={[styles.description, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+                {viewProduct.description}
+              </Text>
+            </View>
+          )}
 
           {/* Size Selector */}
           {renderSizeSelector()}
 
-          {/* Price Section */}
-          <View style={styles.priceSection}>
-            <Text style={styles.priceLabel}>Price</Text>
-            <View style={styles.priceRow}>
-              <Text style={styles.price}>{formattedPrice}</Text>
-              {formattedDiscountPrice && (
-                <Text style={styles.originalPrice}>
-                  {formattedDiscountPrice}
-                </Text>
-              )}
-            </View>
-          </View>
+          {/* Color Selector */}
+          {renderColorSelector()}
 
           {/* Review Section (deferred) */}
           {showDeferred ? <Review productId={viewProduct._id} /> : null}
         </View>
       </ScrollView>
 
-      {/* No loader overlay to avoid blocking UI */}
-
-      {/* Fixed Bottom Button */}
+      {/* Fixed Bottom Buttons */}
       <View style={styles.bottomContainer}>
-        <AddToCartButton
-          product={viewProduct}
-          selectedSize={selectedSize ?? ""}
-          title={i18n.t('addToCart') || 'Add to Cart'}
-          buttonStyle={[
-            styles.addToCartButton,
-            viewProduct.stock === 0 && styles.disabledButton,
-          ].filter(Boolean)}
-          disabled={viewProduct.stock === 0}
-        />
+        <View style={[styles.actionButtonsRow, I18nManager.isRTL && styles.actionButtonsRowRTL]}>
+          <View style={styles.addToCartButtonWrapper}>
+            <AddToCartButton
+              product={viewProduct}
+              selectedSize={selectedSize ?? ""}
+              buttonStyle={[
+                styles.addToCartButton,
+                viewProduct.stock === 0 && styles.disabledButton,
+              ]}
+              disabled={viewProduct.stock === 0}
+            />
+          </View>
+          <Pressable
+            style={[styles.wishlistButton, wishlistLoading && styles.wishlistButtonDisabled]}
+            onPress={handleWishlistPress}
+            disabled={wishlistLoading}
+          >
+            {wishlistLoading ? (
+              <ActivityIndicator size="small" color="#1a1a1a" />
+            ) : (
+              <Text style={styles.wishlistButtonText}>{i18n.t('wishlist') || 'Wishlist'}</Text>
+            )}
+          </Pressable>
+        </View>
       </View>
 
       {/* Full Screen Image Modal */}
@@ -427,10 +485,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    marginTop: 10,
   },
   scrollView: {
     flex: 1,
+  },
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  headerRTL: {
+    flexDirection: 'row-reverse',
+  },
+  brandName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  cartIconButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -439,10 +520,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   loadingText: {
-    textAlign: "center",
     fontSize: 16,
     color: "#666",
     marginTop: 16,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   errorContainer: {
     flex: 1,
@@ -476,11 +557,10 @@ const styles = StyleSheet.create({
   
   // Image Section
   imageSection: {
-    backgroundColor: "#f8f9fa",
     position: 'relative',
   },
   imageContainer: {
-    height: imageHeight, // Pre-calculated
+    height: imageHeight,
     position: 'relative',
   },
   imageWrapper: {
@@ -493,7 +573,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 0,
   },
   imageLoaderOverlay: {
     position: 'absolute',
@@ -505,27 +585,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.6)'
   },
-  favoriteButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 40,
-    height: 40,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 2,
-  },
-  favoriteIcon: {
-    fontSize: 20,
-    color: '#666',
-  },
   pagination: {
     position: 'absolute',
     bottom: 20,
@@ -536,44 +595,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dot: {
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "#FFFFFF",
     width: 8,
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
   },
   activeDot: {
-    backgroundColor: "#30a1a7",
-    width: 20,
+    backgroundColor: "#FFFFFF",
+    width: 8,
     height: 8,
   },
   
   // Product Details
   productDetails: {
-    paddingBottom: 100,
+    paddingBottom: 120,
+    backgroundColor: '#FFFFFF',
   },
   productInfoCard: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingVertical: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   productName: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "700",
     color: "#1a1a1a",
     marginBottom: 8,
-    lineHeight: 28,
+    lineHeight: 32,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  price: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginTop: 4,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   
   // Description
+  descriptionSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  descriptionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: "#1a1a1a",
+  },
   descriptionContainer: {
     marginTop: 8,
   },
   description: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
     color: "#666",
     marginBottom: 4,
   },
@@ -591,32 +669,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 16,
     color: "#1a1a1a",
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   sizesRow: {
     flexDirection: 'row',
     gap: 12,
   },
+  sizesRowRTL: {
+    flexDirection: 'row-reverse',
+  },
   sizeBox: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#e0e0e0",
-    borderRadius: 4,
-    paddingHorizontal: 20,
+    borderRadius: 8,
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    minWidth: 50,
+    minWidth: 80,
     alignItems: "center",
   },
   selectedSizeBox: {
-    backgroundColor: "#f0b745",
-    borderColor: "#f0b745",
+    backgroundColor: "#a37e2c",
+    borderColor: "#a37e2c",
   },
   sizeText: {
     fontSize: 14,
@@ -627,34 +707,39 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   
-  // Price Section
-  priceSection: {
+  // Color Selector
+  colorsContainer: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
-  priceLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  priceRow: {
+  colorsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
+    alignItems: 'center',
   },
-  price: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1a1a1a",
+  colorsRowRTL: {
+    flexDirection: 'row-reverse',
   },
-  originalPrice: {
-    fontSize: 16,
-    color: "#999",
-    textDecorationLine: "line-through",
+  colorSwatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 2,
+  },
+  selectedColorSwatch: {
+    borderColor: '#000000',
+  },
+  colorCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   
   // Bottom Container
@@ -664,16 +749,48 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingBottom: 6,
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButtonsRowRTL: {
+    flexDirection: 'row-reverse',
+  },
+  addToCartButtonWrapper: {
+    flex: 1,
   },
   addToCartButton: {
-    backgroundColor: "#f0b745",
-    borderRadius: 4,
-    width: "100%",
+    backgroundColor: "#a37e2c",
+    borderRadius: 8,
+    paddingVertical: 10,
   },
   disabledButton: {
     backgroundColor: "#B0B0B0",
+  },
+  wishlistButton: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    minWidth: 100,
+  },
+  wishlistButtonDisabled: {
+    opacity: 0.6,
+  },
+  wishlistButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1a1a1a",
   },
   
   // Modal

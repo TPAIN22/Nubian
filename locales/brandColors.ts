@@ -1,6 +1,6 @@
 const Colors = {
-  primary: '#f0b745',      // Gold/Yellow - main brand color
-  primaryDark: '#a37e2c',  // Darker gold
+  primary: '#a37e2c',      //  Darker gold - main brand color
+  primaryDark: '#382A0D',  // Darker gold
   secondary: '#005b35',    // Green
   accent: '#30a1a7',      // Teal/Cyan
   background: '#FFFFFF',

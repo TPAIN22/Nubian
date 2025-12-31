@@ -1,6 +1,5 @@
 import {
   View,
-  Text,
   ActivityIndicator,
   FlatList,
   StyleSheet,
@@ -8,6 +7,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { useCallback, useRef, useEffect, useState } from "react";
 import useCartStore from "@/store/useCartStore";
 import { useAuth } from "@clerk/clerk-expo";
