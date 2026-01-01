@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nubian",
     "slug": "Nubian",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/screen.png",
     "scheme": "sdnubian",
@@ -25,29 +25,30 @@
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/screen.png",
-        "backgroundColor": "#ffffff"
-      },
-      "softwareKeyboardLayoutMode": "pan",
-      "package": "dev.expo.nubian",
-      "googleServicesFile": "./google-services.json",
-      "intentFilters": [
+  "versionCode": 11,
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/images/screen.png",
+    "backgroundColor": "#ffffff"
+  },
+  "softwareKeyboardLayoutMode": "pan",
+  "package": "dev.expo.nubian",
+  "googleServicesFile": "./google-services.json",
+  "intentFilters": [
+    {
+      "action": "VIEW",
+      "autoVerify": true,
+      "data": [
         {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "sdnubian"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "scheme": "sdnubian"
         }
+      ],
+      "category": [
+        "BROWSABLE",
+        "DEFAULT"
       ]
-    },
+    }
+  ]
+},
     "web": {
       "bundler": "metro",
       "output": "static",

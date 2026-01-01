@@ -5,6 +5,7 @@ import useAddressStore from '@/store/addressStore';
 import { useAuth } from '@clerk/clerk-expo';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import i18n from '../components/../../utils/i18n';
+import { useTheme } from '@/providers/ThemeProvider';
 
 interface Address {
   _id: string;
@@ -26,6 +27,8 @@ interface AddressFormProps {
 }
 
 const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, initialValues }) => {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const [form, setForm] = useState<Omit<Address, '_id'>>(initialValues || {
     name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false
   });
@@ -61,29 +64,37 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={true}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>{i18n.t('icon_close')}</Text>
+      <View style={[styles.modalOverlay, { backgroundColor: Colors.overlay }]}>
+        <View style={[styles.modalContent, { backgroundColor: Colors.cardBackground }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: Colors.borderLight }]}>
+            <Text style={[styles.modalTitle, { color: Colors.text.gray }]}>{initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}</Text>
+            <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: Colors.surface }]}>
+              <Text style={[styles.closeButtonText, { color: Colors.text.veryLightGray }]}>{i18n.t('icon_close')}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.formContainer}>
             {(['name','city','area','street','building','phone','notes'] as const).map((field, idx, arr) => (
               <View key={field} style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
+                <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
                   {field === 'name' ? i18n.t('addressForm_recipientName') :
                     field === 'city' ? i18n.t('addressForm_city') :
                     field === 'area' ? i18n.t('addressForm_area') :
                     field === 'street' ? i18n.t('addressForm_street') :
                     field === 'building' ? i18n.t('addressForm_building') :
                     field === 'phone' ? i18n.t('addressForm_phone') : i18n.t('addressForm_notes')}
-                  {field !== 'notes' && <Text style={styles.required}>*</Text>}
+                  {field !== 'notes' && <Text style={[styles.required, { color: Colors.error }]}>*</Text>}
                 </Text>
                 <TextInput
                   ref={ref => { inputRefs.current[field] = ref; }}
-                  style={[styles.input, errors[field] && styles.inputError]}
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: Colors.surface, 
+                      borderColor: Colors.borderLight, 
+                      color: Colors.text.gray 
+                    },
+                    errors[field] && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                  ]}
                   placeholder={field === 'name' ? i18n.t('addressForm_recipientNamePlaceholder') :
                     field === 'city' ? i18n.t('addressForm_selectCity') :
                     field === 'area' ? i18n.t('addressForm_areaPlaceholder') :
@@ -91,6 +102,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                     field === 'building' ? i18n.t('addressForm_buildingPlaceholder') :
                     field === 'phone' ? i18n.t('addressForm_phonePlaceholder') :
                     i18n.t('addressForm_notesPlaceholder')}
+                  placeholderTextColor={Colors.text.veryLightGray}
                   value={form[field] as string}
                   onChangeText={text => setForm((f) => ({ ...f, [field]: text }))}
                   keyboardType={field === 'phone' ? 'phone-pad' : 'default'}
@@ -107,23 +119,27 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                   multiline={field === 'notes'}
                   numberOfLines={field === 'notes' ? 3 : 1}
                 />
-                {errors[field] && <Text style={styles.errorText}>{errors[field]}</Text>}
+                {errors[field] && <Text style={[styles.errorText, { color: Colors.error }]}>{errors[field]}</Text>}
               </View>
             ))}
             <TouchableOpacity 
               onPress={() => setForm((f) => ({ ...f, isDefault: !f.isDefault }))} 
-              style={styles.checkboxContainer}
+              style={[styles.checkboxContainer, { backgroundColor: Colors.surface }]}
             >
-              <View style={[styles.checkboxBox, form.isDefault && styles.checkboxChecked]}>
+              <View style={[
+                styles.checkboxBox, 
+                { borderColor: Colors.primary },
+                form.isDefault && { backgroundColor: Colors.primary }
+              ]}>
                 {form.isDefault && <Text style={styles.checkboxTick}>{i18n.t('icon_tick')}</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>{i18n.t('addressForm_makeDefault')}</Text>
+              <Text style={[styles.checkboxLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_makeDefault')}</Text>
             </TouchableOpacity>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-                <Text style={styles.cancelButtonText}>{i18n.t('addressForm_cancel')}</Text>
+              <TouchableOpacity onPress={onClose} style={[styles.cancelButton, { backgroundColor: Colors.surface }]}>
+                <Text style={[styles.cancelButtonText, { color: Colors.text.veryLightGray }]}>{i18n.t('addressForm_cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
+              <TouchableOpacity onPress={handleSubmit} style={[styles.submitButton, { backgroundColor: Colors.primary }]}>
                 <Text style={styles.submitButtonText}>{initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add')}</Text>
               </TouchableOpacity>
             </View>
@@ -135,6 +151,8 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
 };
 
 export default function AddressesTab() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { addresses, fetchAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress, isLoading, error, clearError } = useAddressStore();
   const { getToken } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
@@ -175,31 +193,31 @@ export default function AddressesTab() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#30a1a7" />
-        <Text style={styles.loadingText}>{i18n.t('loadingAddresses')}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={[styles.loadingText, { color: Colors.text.veryLightGray }]}>{i18n.t('loadingAddresses')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: Colors.primary }]}>
         <Text style={styles.headerTitle}>{i18n.t('myAddresses')}</Text>
-        <Text style={styles.headerSubtitle}>{i18n.t('manageDeliveryAddresses')}</Text>
+        <Text style={[styles.headerSubtitle, { color: Colors.text.white + 'CC' }]}>{i18n.t('manageDeliveryAddresses')}</Text>
       </View>
 
       {error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorMessage}>{error}</Text>
+        <View style={[styles.errorContainer, { backgroundColor: Colors.error + '20', borderLeftColor: Colors.error }]}>
+          <Text style={[styles.errorMessage, { color: Colors.error }]}>{error}</Text>
           <TouchableOpacity onPress={clearError} style={styles.errorCloseButton}>
-            <Text style={styles.errorCloseText}>{i18n.t('close')}</Text>
+            <Text style={[styles.errorCloseText, { color: Colors.primary }]}>{i18n.t('close')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
 
       <TouchableOpacity 
-        style={styles.addButton} 
+        style={[styles.addButton, { backgroundColor: Colors.primary }]} 
         onPress={() => { setEditAddress(null); setModalVisible(true); }}
       >
         <Text style={styles.addButtonIcon}>{i18n.t('icon_add')}</Text>
@@ -211,42 +229,46 @@ export default function AddressesTab() {
         keyExtractor={(item: Address) => item._id}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }: { item: Address }) => (
-          <View style={[styles.addressCard, item.isDefault && styles.defaultCard]}>
+          <View style={[
+            styles.addressCard, 
+            { backgroundColor: Colors.cardBackground },
+            item.isDefault && { borderColor: Colors.primary, backgroundColor: Colors.surface }
+          ]}>
             {item.isDefault && (
-              <View style={styles.defaultBadge}>
+              <View style={[styles.defaultBadge, { backgroundColor: Colors.primary }]}>
                 <Text style={styles.defaultBadgeText}>{i18n.t('default')}</Text>
               </View>
             )}
             
             <View style={styles.addressHeader}>
-              <Text style={styles.addressName}>{item.name}</Text>
-              <Text style={styles.addressPhone}>{i18n.t('icon_phone')} {item.phone}</Text>
+              <Text style={[styles.addressName, { color: Colors.primary }]}>{item.name}</Text>
+              <Text style={[styles.addressPhone, { color: Colors.primary }]}>{i18n.t('icon_phone')} {item.phone}</Text>
             </View>
             
             <View style={styles.addressDetails}>
-              <Text style={styles.addressLocation}>
+              <Text style={[styles.addressLocation, { color: Colors.text.veryLightGray }]}>
                 {i18n.t('icon_location')} {item.city}، {item.area}، {item.street}، {item.building}
               </Text>
               {item.notes && (
-                <Text style={styles.addressNotes}>
+                <Text style={[styles.addressNotes, { color: Colors.text.veryLightGray }]}>
                   {i18n.t('icon_note')} {item.notes}
                 </Text>
               )}
             </View>
             
-            <View style={styles.actionsRow}>
+            <View style={[styles.actionsRow, { borderTopColor: Colors.borderLight }]}>
               <TouchableOpacity 
                 onPress={() => { setEditAddress(item); setModalVisible(true); }}
                 style={styles.actionButton}
               >
-                <Text style={styles.actionEdit}>{i18n.t('icon_edit')} {i18n.t('edit')}</Text>
+                <Text style={[styles.actionEdit, { color: Colors.primary }]}>{i18n.t('icon_edit')} {i18n.t('edit')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 onPress={() => handleDelete(item._id)}
                 style={styles.actionButton}
               >
-                <Text style={styles.actionDelete}>{i18n.t('icon_delete')} {i18n.t('delete')}</Text>
+                <Text style={[styles.actionDelete, { color: Colors.error }]}>{i18n.t('icon_delete')} {i18n.t('delete')}</Text>
               </TouchableOpacity>
               
               {!item.isDefault && (
@@ -254,7 +276,7 @@ export default function AddressesTab() {
                   onPress={() => handleSetDefault(item._id)}
                   style={styles.actionButton}
                 >
-                  <Text style={styles.actionDefault}>{i18n.t('icon_star')} {i18n.t('setAsDefault')}</Text>
+                  <Text style={[styles.actionDefault, { color: Colors.primary }]}>{i18n.t('icon_star')} {i18n.t('setAsDefault')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -262,9 +284,9 @@ export default function AddressesTab() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>{i18n.t('icon_location')}</Text>
-            <Text style={styles.emptyTitle}>{i18n.t('noAddressesSaved')}</Text>
-            <Text style={styles.emptySubtitle}>{i18n.t('addYourFirstAddressToFacilitateDelivery')}</Text>
+            <Text style={[styles.emptyIcon, { color: Colors.text.veryLightGray }]}>{i18n.t('icon_location')}</Text>
+            <Text style={[styles.emptyTitle, { color: Colors.primary }]}>{i18n.t('noAddressesSaved')}</Text>
+            <Text style={[styles.emptySubtitle, { color: Colors.text.veryLightGray }]}>{i18n.t('addYourFirstAddressToFacilitateDelivery')}</Text>
           </View>
         }
       />
@@ -282,10 +304,8 @@ export default function AddressesTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
-    backgroundColor: '#30a1a7',
     padding: 24,
     paddingTop: 60,
     borderBottomLeftRadius: 20,
@@ -299,7 +319,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerSubtitle: {
-    color: '#E0E0E0', // Changed for better contrast
     fontSize: 16,
     textAlign: 'center',
   },
@@ -307,23 +326,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
   },
   errorContainer: {
-    backgroundColor: '#fdecec',
     borderRadius: 12,
     padding: 16,
     margin: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#e74c3c',
   },
   errorMessage: {
-    color: '#e74c3c',
     fontSize: 16,
     marginBottom: 8,
   },
@@ -331,11 +345,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   errorCloseText: {
-    color: '#30a1a7',
     fontWeight: 'bold',
   },
   addButton: {
-    backgroundColor: '#30a1a7',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -361,7 +373,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   addressCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 16,
@@ -372,17 +383,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     position: 'relative',
+    borderWidth: 1,
   },
   defaultCard: {
-    borderColor: '#30a1a7',
-    backgroundColor: '#f8f9fa',
     paddingTop: 36,
   },
   defaultBadge: {
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: '#30a1a7',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -401,12 +410,10 @@ const styles = StyleSheet.create({
   addressName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#30a1a7',
     flex: 1,
   },
   addressPhone: {
     fontSize: 16,
-    color: '#30a1a7',
     fontWeight: '600',
   },
   addressDetails: {
@@ -414,13 +421,11 @@ const styles = StyleSheet.create({
   },
   addressLocation: {
     fontSize: 16,
-    color: '#888',
     lineHeight: 24,
     marginBottom: 8,
   },
   addressNotes: {
     fontSize: 14,
-    color: '#888',
     fontStyle: 'italic',
     lineHeight: 20,
   },
@@ -429,7 +434,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#ECF0F1',
   },
   actionButton: {
     paddingVertical: 8,
@@ -437,17 +441,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   actionEdit: {
-    color: '#f0b745',
     fontWeight: 'bold',
     fontSize: 14,
   },
   actionDelete: {
-    color: '#e74c3c',
     fontWeight: 'bold',
     fontSize: 14,
   },
   actionDefault: {
-    color: '#30a1a7',
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -464,21 +465,17 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#30a1a7',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#888',
     lineHeight: 24,
   },
   
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 18,
     padding: 16, 
     marginHorizontal: 20, 
@@ -489,124 +486,105 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 18, // Slightly reduced margin
-    paddingBottom: 12, // Slightly reduced padding
+    marginBottom: 18,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#ECF0F1',
   },
   modalTitle: {
-    fontSize: 22, // Slightly smaller title
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#30a1a7',
     flex: 1,
   },
   closeButton: {
-    width: 30, // Slightly smaller
-    height: 30, // Slightly smaller
+    width: 30,
+    height: 30,
     borderRadius: 15,
-    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#888',
-    fontSize: 18, // Slightly smaller
+    fontSize: 18,
     fontWeight: 'bold',
   },
   formContainer: {
     maxHeight: '90%',
   },
   inputContainer: {
-    marginBottom: 16, // Reduced margin between inputs
+    marginBottom: 16,
   },
   inputLabel: {
-    fontSize: 15, // Slightly smaller label font
+    fontSize: 15,
     fontWeight: '600',
-    color: '#30a1a7',
-    marginBottom: 6, // Reduced margin
+    marginBottom: 6,
   },
   required: {
-    color: '#e74c3c',
     marginLeft: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#30a1a7',
-    borderRadius: 10, // Slightly smaller border radius
-    padding: 14, // Slightly reduced padding
-    fontSize: 15, // Slightly smaller font size
-    backgroundColor: '#f8f9fa',
-    color: '#30a1a7',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
     textAlignVertical: 'top',
   },
   inputError: {
-    borderColor: '#e74c3c',
-    backgroundColor: '#fdecec',
   },
   errorText: {
-    color: '#e74c3c',
-    fontSize: 13, // Slightly smaller error text
-    marginTop: 3, // Slightly reduced margin
+    fontSize: 13,
+    marginTop: 3,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 18, // Reduced vertical margin
-    padding: 14, // Reduced padding
-    backgroundColor: '#F8F9FA',
-    borderRadius: 10, // Slightly smaller border radius
+    marginVertical: 18,
+    padding: 14,
+    borderRadius: 10,
   },
   checkboxBox: {
-    width: 22, // Slightly smaller
-    height: 22, // Slightly smaller
+    width: 22,
+    height: 22,
     borderWidth: 2,
-    borderColor: '#30a1a7',
-    borderRadius: 5, // Slightly smaller border radius
+    borderRadius: 5,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10, // Slightly reduced margin
+    marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#30a1a7',
   },
   checkboxTick: {
     color: '#fff',
-    fontSize: 14, // Slightly smaller tick
+    fontSize: 14,
     fontWeight: 'bold',
   },
   checkboxLabel: {
-    fontSize: 15, // Slightly smaller label font
-    color: '#30a1a7',
+    fontSize: 15,
     fontWeight: '600',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10, // Slightly reduced gap
+    gap: 10,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    paddingVertical: 14, // Slightly reduced padding
-    borderRadius: 10, // Slightly smaller border radius
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#888',
-    fontSize: 15, // Slightly smaller font
+    fontSize: 15,
     fontWeight: 'bold',
   },
   submitButton: {
     flex: 1,
-    backgroundColor: '#30a1a7',
-    paddingVertical: 14, // Slightly reduced padding
-    borderRadius: 10, // Slightly smaller border radius
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 15, // Slightly smaller font
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });

@@ -5,8 +5,10 @@ import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import ProductCard from '../components/Card';
 import i18n from '@/utils/i18n';
+import { useTheme } from '@/providers/ThemeProvider';
 
 export default function WishlistTab() {
+  const { theme } = useTheme();
   const { wishlist, fetchWishlist, isLoading } = useWishlistStore();
   const { getToken } = useAuth();
 
@@ -14,23 +16,28 @@ export default function WishlistTab() {
     getToken().then(token => fetchWishlist(token));
   }, []);
 
-  if (isLoading) return <ActivityIndicator size="large" color="#f0b745" style={{ marginTop: 40 }} />;
+  if (isLoading) return (
+    <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface }]}>
+      <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
+    </View>
+  );
   if (!wishlist.length) return (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyTitle}>{i18n.t('wishlistEmpty')}</Text>
-      <Text style={styles.emptySubtitle}>{i18n.t('wishlistEmptySubtitle')}</Text>
+    <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface }]}>
+      <Text style={[styles.emptyTitle, { color: theme.colors.text.gray }]}>{i18n.t('wishlistEmpty')}</Text>
+      <Text style={[styles.emptySubtitle, { color: theme.colors.text.veryLightGray }]}>{i18n.t('wishlistEmptySubtitle')}</Text>
     </View>
   );
 
   return (
-    <View style = {{flex:1, marginBottom:40}}>
+    <View style={[{flex:1, marginBottom:40, backgroundColor: theme.colors.surface}]}>
     <FlatList
       data={wishlist}
       keyExtractor={item => item._id}
       numColumns={2}
       renderItem={({ item }) => <ProductCard item={item} />}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, { backgroundColor: theme.colors.surface }]}
       columnWrapperStyle={styles.colomn}
+      style={{ backgroundColor: theme.colors.surface }}
       />
     </View>
   );
@@ -41,16 +48,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 40,
+    //marginTop: 40,
   },
   emptyTitle: {
     fontSize: 18,
-    color: '#888',
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#bbb',
     textAlign: 'center',
     marginTop: 5,
   },

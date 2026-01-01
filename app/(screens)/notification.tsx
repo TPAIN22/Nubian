@@ -5,6 +5,7 @@ import { useUser } from "@clerk/clerk-expo";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useTheme } from "@/providers/ThemeProvider";
 
 interface NotificationItem {
   _id: string;
@@ -14,6 +15,8 @@ interface NotificationItem {
 }
 
 const NotificationsScreen = () => {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { user } = useUser();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,19 +77,19 @@ const NotificationsScreen = () => {
 
   return (
     <SafeAreaProvider >
-    <SafeAreaView style={{ flex: 1}}>
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.surface }}>
+    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
       <FlatList
         data={notifications}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View style={styles.notificationItem}>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.body}>{item.body}</Text>
-            <Text style={styles.date}>{new Date(item.createdAt).toLocaleString()}</Text>
+          <View style={[styles.notificationItem, { backgroundColor: Colors.cardBackground }]}>
+            <Text style={[styles.title, { color: Colors.text.gray }]}>{item.title}</Text>
+            <Text style={[styles.body, { color: Colors.text.veryLightGray }]}>{item.body}</Text>
+            <Text style={[styles.date, { color: Colors.text.veryLightGray }]}>{new Date(item.createdAt).toLocaleString()}</Text>
           </View>
         )}
-        ListEmptyComponent={<Text>لا توجد إشعارات حالياً.</Text>}
+        ListEmptyComponent={<Text style={{ color: Colors.text.veryLightGray }}>لا توجد إشعارات حالياً.</Text>}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
     </View>
@@ -97,17 +100,16 @@ const NotificationsScreen = () => {
 
 const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  container: { flex: 1, padding: 12 , backgroundColor: "#F8F6F6FF" , paddingTop:32},
+  container: { flex: 1, padding: 12, paddingTop:32},
   notificationItem: {
-    backgroundColor: "#fff",
     padding: 15,
     marginBottom: 10,
     borderRadius: 10,
     elevation: 2,
   },
   title: { fontWeight: "bold", fontSize: 16 },
-  body: { color: "#666", marginTop: 5 },
-  date: { color: "#aaa", marginTop: 5, fontSize: 12 },
+  body: { marginTop: 5 },
+  date: { marginTop: 5, fontSize: 12 },
 });
 
 export default NotificationsScreen;

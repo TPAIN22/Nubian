@@ -20,8 +20,11 @@ import { View } from "react-native";
 import BottomSheet from "../components/BottomSheet";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Card from "../components/Card";
+import { useTheme } from "@/providers/ThemeProvider";
 
 export default function CategoriesScreen() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { id } = useLocalSearchParams();
 
   const {
@@ -100,13 +103,13 @@ export default function CategoriesScreen() {
   const keyExtractor = useCallback((item: any) => item._id, []);
 
   return (
-    <GestureHandlerRootView style={styles.loadingContainer}>
+    <GestureHandlerRootView style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
       <BottomSheetModalProvider>
-        <View style={{ backgroundColor: "#EFF6FFFF" }}>
+        <View style={{ backgroundColor: Colors.surface }}>
           {isProductsLoading && products.length === 0 ? (
             <ActivityIndicator
               size="large"
-              color="#f0b745"
+              color={Colors.primary}
               style={[{ width: width }, styles.loading]}
             />
           ) : (
@@ -137,19 +140,19 @@ export default function CategoriesScreen() {
                   refreshing={isProductsLoading}
                   onRefresh={onRefresh}
                   progressViewOffset={10}
-                  progressBackgroundColor="#fff"
-                  colors={["#f0b745"]}
+                  progressBackgroundColor={Colors.cardBackground}
+                  colors={[Colors.primary]}
                 />
               }
               ListFooterComponent={
                 !hasMore ? (
-                  <Text style={styles.footerText}>
+                  <Text style={[styles.footerText, { color: Colors.text.veryLightGray }]}>
                     لا توجد منتجات اضافية
                   </Text>
                 ) : isProductsLoading ? (
                   <ActivityIndicator
                     size="large"
-                    color="#f0b745"
+                    color={Colors.primary}
                     style={styles.footerLoader}
                   />
                 ) : null
@@ -157,7 +160,7 @@ export default function CategoriesScreen() {
               ListEmptyComponent={
                 !isProductsLoading ? (
                   <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
+                    <Text style={[styles.emptyText, { color: Colors.text.gray }]}>
                       المعذرة
                       {"\n"}
                       {"\n"}
@@ -192,7 +195,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
     marginBottom: 40,
   },
   contentContainer: {

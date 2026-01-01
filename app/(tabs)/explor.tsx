@@ -15,6 +15,7 @@ import React from "react";
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import Colors from "@/locales/brandColors";
+import { useTheme } from "@/providers/ThemeProvider";
 
 
 interface Product {
@@ -39,6 +40,8 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
   animateCard: (id: string, delay: number) => void;
   onAddToCart: (product: Product) => void;
 }) => {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const cardAnim = getCardAnimation(item._id);
   
   // Use useLayoutEffect instead of useEffect to avoid hook call issues
@@ -65,6 +68,7 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
     <Animated.View
       style={[
         enhancedStyles.cardContainer,
+        { backgroundColor: colors.cardBackground },
         {
           opacity: cardAnim,
           transform: [
@@ -125,14 +129,14 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
         </View>
         
         <View style={enhancedStyles.cardInfo}>
-          <Text style={enhancedStyles.cardName} numberOfLines={2}>
+          <Text style={[enhancedStyles.cardName, { color: colors.text.gray }]} numberOfLines={2}>
             {item.name || i18n.t('undefinedProduct')}
           </Text>
           
           <View style={enhancedStyles.cardBottom}>
             <View style={enhancedStyles.priceContainer}>
-              <Text style={enhancedStyles.currency}>{i18n.t('currency')}</Text>
-              <Text style={enhancedStyles.price}>
+              <Text style={[enhancedStyles.currency, { color: colors.text.mediumGray }]}>{i18n.t('currency')}</Text>
+              <Text style={[enhancedStyles.price, { color: colors.primary }]}>
                 {typeof item.price === 'number' ? item.price.toFixed(2) : '0.00'}
               </Text>
             </View>
@@ -140,7 +144,8 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
             <TouchableOpacity 
               style={[
                 enhancedStyles.addButton,
-                (item.stock || 0) === 0 && enhancedStyles.addButtonDisabled
+                { backgroundColor: colors.primary },
+                (item.stock || 0) === 0 && { backgroundColor: colors.gray[300] }
               ]}
               disabled={(item.stock || 0) === 0}
               onPress={() => onAddToCart(item)}
@@ -148,7 +153,7 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
               <Ionicons 
                 name="add" 
                 size={18} 
-                color={(item.stock || 0) === 0 ? Colors.text.lightGray : Colors.text.white} 
+                color={(item.stock || 0) === 0 ? colors.text.lightGray : colors.text.white} 
               />
             </TouchableOpacity>
           </View>
@@ -160,6 +165,8 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
 
 const SearchPage = () => {
   const router = useRouter();
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   // const { trackEvent, getRecommendations, isLoading: smartSystemsLoading } = useSmartSystems();
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -427,22 +434,22 @@ const SearchPage = () => {
   const ListEmptyComponent = useCallback(() => {
     if (isLoading || categoriesLoading) {
       return (
-        <View style={enhancedStyles.emptyContainer}>
+        <View style={[enhancedStyles.emptyContainer, { backgroundColor: Colors.surface }]}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={enhancedStyles.loadingText}>{i18n.t('loading')}</Text>
+          <Text style={[enhancedStyles.loadingText, { color: Colors.text.veryLightGray }]}>{i18n.t('loading')}</Text>
         </View>
       );
     }
     
     return (
-      <View style={enhancedStyles.emptyContainer}>
-        <View style={enhancedStyles.emptyIconContainer}>
+      <View style={[enhancedStyles.emptyContainer, { backgroundColor: Colors.surface }]}>
+        <View style={[enhancedStyles.emptyIconContainer, { backgroundColor: Colors.cardBackground }]}>
           <Ionicons name="search-outline" size={60} color={Colors.primary} />
         </View>
-        <Text style={enhancedStyles.emptyTitle}>
+        <Text style={[enhancedStyles.emptyTitle, { color: Colors.text.gray }]}>
           {searchTerm ? i18n.t('noResults') : i18n.t('noProducts')}
         </Text>
-        <Text style={enhancedStyles.emptySubtitle}>
+        <Text style={[enhancedStyles.emptySubtitle, { color: Colors.text.veryLightGray }]}>
           {searchTerm 
             ? i18n.t('tryNewSearch') 
             : i18n.t('noProductsFound')
@@ -467,9 +474,9 @@ const SearchPage = () => {
   const flatCategories = flattenCategories(categories);
 
   return (
-    <View style={enhancedStyles.container}>      
+    <View style={[enhancedStyles.container, { backgroundColor: Colors.surface }]}>      
       {/* Header with Search */}
-      <View style={enhancedStyles.header}>
+      <View style={[enhancedStyles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.borderLight }]}>
         
         
         {/* Enhanced Search Input */}
@@ -477,9 +484,10 @@ const SearchPage = () => {
           style={[
             enhancedStyles.searchContainer,
             {
+              backgroundColor: Colors.cardBackground,
               borderColor: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: [Colors.borderMedium, Colors.primary],
+                outputRange: [Colors.borderLight, Colors.primary],
               }),
               shadowOpacity: searchFocusAnim.interpolate({
                 inputRange: [0, 1],
@@ -491,12 +499,12 @@ const SearchPage = () => {
           <Ionicons name="search" size={20} color={Colors.text.mediumGray} style={enhancedStyles.searchIcon} />
           <TextInput
             placeholder={i18n.t('searchProducts')}
-            style={enhancedStyles.searchInput}
+            style={[enhancedStyles.searchInput, { color: Colors.text.gray }]}
             value={searchTerm}
             onChangeText={setSearchTerm}
             onFocus={handleSearchFocus}
             onBlur={handleSearchBlur}
-            placeholderTextColor={Colors.text.lightGray}
+            placeholderTextColor={Colors.text.veryLightGray}
           />
           {searchTerm.length > 0 && (
             <TouchableOpacity 
@@ -510,12 +518,12 @@ const SearchPage = () => {
 
         {/* Filter and Sort Buttons */}
         <View style={enhancedStyles.filterContainer}>
-          <TouchableOpacity
-            style={enhancedStyles.filterButton}
-            onPress={showFilterModal}
-          >
-            <Ionicons name="funnel-outline" size={18} color={Colors.primary} />
-            <Text style={enhancedStyles.filterText}>{i18n.t('filter')}</Text>
+            <TouchableOpacity
+              style={[enhancedStyles.filterButton, { backgroundColor: Colors.cardBackground, borderColor: Colors.primary }]}
+              onPress={showFilterModal}
+            >
+              <Ionicons name="funnel-outline" size={18} color={Colors.primary} />
+              <Text style={[enhancedStyles.filterText, { color: Colors.primary }]}>{i18n.t('filter')}</Text>
             {(showAvailableOnly || sortByHighestPrice || sortByLowestPrice || filterCategory) && (
               <View style={enhancedStyles.filterBadge} />
             )}
@@ -751,15 +759,12 @@ const SearchPage = () => {
 const enhancedStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
     paddingTop: 40,
   },
   header: {
-    backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingBottom: 2,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.background,
   },
   headerTop: {
     marginBottom: 16,
@@ -779,12 +784,10 @@ const enhancedStyles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
     borderRadius: 12,
     borderWidth: 1.5,
     paddingHorizontal: 10,
     marginBottom: 8,
-    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     elevation: 3,
@@ -796,7 +799,6 @@ const enhancedStyles = StyleSheet.create({
     flex: 1,
     paddingVertical: 6,
     fontSize: 16,
-    color: Colors.text.gray,
     textAlign: 'right',
   },
   clearButton: {
@@ -809,13 +811,10 @@ const enhancedStyles = StyleSheet.create({
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
     paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.primary,
-    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -824,7 +823,6 @@ const enhancedStyles = StyleSheet.create({
   },
   filterText: {
     marginLeft: 6,
-    color: Colors.primary,
     fontWeight: '600',
     fontSize: 12,
   },
@@ -866,10 +864,8 @@ const enhancedStyles = StyleSheet.create({
   },
   cardContainer: {
     width: CARD_WIDTH,
-    backgroundColor: Colors.cardBackground,
     borderRadius: 16,
     marginBottom: 16,
-    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -941,7 +937,6 @@ const enhancedStyles = StyleSheet.create({
   cardName: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text.gray,
     marginBottom: 8,
     lineHeight: 20,
     textAlign: 'right',
@@ -957,13 +952,11 @@ const enhancedStyles = StyleSheet.create({
   },
   currency: {
     fontSize: 12,
-    color: Colors.text.mediumGray,
     marginRight: 4,
   },
   price: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: Colors.primary,
   },
   addButton: {
     width: 32,

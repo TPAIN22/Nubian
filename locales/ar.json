@@ -245,5 +245,7 @@
   "signInSuccess": "تم تسجيل الدخول بنجاح!",
   "invalidOrExpiredCode": "رمز غير صالح أو منتهي الصلاحية",
   "codeVerificationFailed": "فشل في التحقق من الرمز",
-  "resendFailed": "فشل في إعادة الإرسال"
+  "resendFailed": "فشل في إعادة الإرسال",
+  "appearance": "المظهر",
+  "darkMode": "الوضع الداكن"
 } 

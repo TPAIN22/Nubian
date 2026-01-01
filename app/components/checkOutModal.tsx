@@ -29,6 +29,8 @@ export default function CheckOutModal({
 }: {
   handleClose: () => void;
 }) {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const {
     addresses,
     fetchAddresses,

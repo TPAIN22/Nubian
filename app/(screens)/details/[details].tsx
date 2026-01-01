@@ -22,6 +22,7 @@ import Colors from "@/locales/brandColors";
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import i18n from "@/utils/i18n";
+import { useTheme } from "@/providers/ThemeProvider";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -29,6 +30,8 @@ const { width: screenWidth } = Dimensions.get("window");
 const imageHeight = screenWidth * 1.1;
 
 export default function Details() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { details, name, price, image } = useLocalSearchParams();
   const productId = details ? String(details) : '';
   
@@ -236,6 +239,7 @@ export default function Details() {
             key={index}
             style={[
               styles.dot,
+              { backgroundColor: Colors.text.white },
               index === currentImageIndex && styles.activeDot
             ]}
           />
@@ -248,22 +252,30 @@ export default function Details() {
     if (!viewProduct?.sizes || viewProduct.sizes.length === 0) return null;
     
     return (
-      <View style={styles.sizesContainer}>
-        <Text style={styles.sectionTitle}>{i18n.t('chooseSize') || 'Size'}</Text>
+      <View style={[styles.sizesContainer, { backgroundColor: Colors.cardBackground }]}>
+        <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>{i18n.t('chooseSize') || 'Size'}</Text>
         <View style={[styles.sizesRow, I18nManager.isRTL && styles.sizesRowRTL]}>
           {viewProduct.sizes.map((size: string, index: number) => (
             <Pressable
               key={index}
               style={[
                 styles.sizeBox,
-                size === selectedSize && styles.selectedSizeBox,
+                { 
+                  backgroundColor: Colors.cardBackground,
+                  borderColor: Colors.borderLight,
+                },
+                size === selectedSize && {
+                  backgroundColor: Colors.primary,
+                  borderColor: Colors.primary,
+                },
               ]}
               onPress={() => onSizeSelect(size)}
             >
               <Text
                 style={[
                   styles.sizeText,
-                  size === selectedSize && styles.selectedSizeText,
+                  { color: Colors.text.gray },
+                  size === selectedSize && { color: Colors.text.white },
                 ]}
               >
                 {size}
@@ -282,33 +294,34 @@ export default function Details() {
     }
     
     return (
-      <View style={styles.colorsContainer}>
-        <Text style={styles.sectionTitle}>{i18n.t('color') || 'Color'}</Text>
+      <View style={[styles.colorsContainer, { backgroundColor: Colors.cardBackground }]}>
+        <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>{i18n.t('color') || 'Color'}</Text>
         <View style={[styles.colorsRow, I18nManager.isRTL && styles.colorsRowRTL]}>
           {availableColors.map((color: string, index: number) => (
             <Pressable
               key={index}
               style={[
                 styles.colorSwatch,
-                color === selectedColor && styles.selectedColorSwatch,
+                { borderColor: 'transparent' },
+                color === selectedColor && { borderColor: Colors.text.gray },
               ]}
               onPress={() => setSelectedColor(color)}
             >
-              <View style={[styles.colorCircle, { backgroundColor: color }]} />
+              <View style={[styles.colorCircle, { backgroundColor: color, borderColor: Colors.borderLight }]} />
             </Pressable>
           ))}
         </View>
       </View>
     );
-  }, [availableColors, selectedColor]);
+  }, [availableColors, selectedColor, Colors]);
 
 
   // Show loading state while fetching product
   if (isLoading && !viewProduct) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f0b745" />
-        <Text style={styles.loadingText}>{i18n.t('loading') || 'Loading...'}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={[styles.loadingText, { color: Colors.text.veryLightGray }]}>{i18n.t('loading') || 'Loading...'}</Text>
       </View>
     );
   }
@@ -316,16 +329,16 @@ export default function Details() {
   // Show error state if fetch failed and no fallback data
   if (error && !viewProduct) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={[styles.errorText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+      <View style={[styles.errorContainer, { backgroundColor: Colors.surface }]}>
+        <Text style={[styles.errorText, { color: Colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
           {i18n.t('errorLoadingProduct') || 'Error loading product'}
         </Text>
-        <Text style={[styles.errorSubText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{error}</Text>
+        <Text style={[styles.errorSubText, { color: Colors.text.veryLightGray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{error}</Text>
         <Pressable
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: Colors.accent }]}
           onPress={() => router.replace("/(screens)")}
         >
-          <Text style={styles.backButtonText}>{i18n.t('backToHome') || 'Back to Home'}</Text>
+          <Text style={[styles.backButtonText, { color: Colors.text.white }]}>{i18n.t('backToHome') || 'Back to Home'}</Text>
         </Pressable>
       </View>
     );
@@ -334,30 +347,30 @@ export default function Details() {
   // Early return for no product at all (no params either)
   if (!viewProduct || !viewProduct._id) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={[styles.errorText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+      <View style={[styles.errorContainer, { backgroundColor: Colors.surface }]}>
+        <Text style={[styles.errorText, { color: Colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
           {i18n.t('noProductAvailable') || 'No product available'}
         </Text>
         <Pressable
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: Colors.accent }]}
           onPress={() => router.replace("/(screens)")}
         >
-          <Text style={styles.backButtonText}>{i18n.t('backToHome') || 'Back to Home'}</Text>
+          <Text style={[styles.backButtonText, { color: Colors.text.white }]}>{i18n.t('backToHome') || 'Back to Home'}</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
       {/* Header */}
-      <View style={[styles.header, I18nManager.isRTL && styles.headerRTL]}>
-        <Text style={styles.brandName}>Noubian</Text>
+      <View style={[styles.header, { backgroundColor: Colors.surface }, I18nManager.isRTL && styles.headerRTL]}>
+        <Text style={[styles.brandName, { color: Colors.text.gray }]}>Nubian</Text>
         <TouchableOpacity 
           style={styles.cartIconButton}
           onPress={() => router.push("/(tabs)/cart")}
         >
-          <Ionicons name="bag-outline" size={24} color={Colors.text.secondary} />
+          <Ionicons name="bag-outline" size={24} color={Colors.text.gray} />
         </TouchableOpacity>
       </View>
 
@@ -396,20 +409,20 @@ export default function Details() {
         </View>
 
         {/* Product Details */}
-        <View style={styles.productDetails}>
+        <View style={[styles.productDetails, { backgroundColor: Colors.surface }]}>
           {/* Product Name and Price */}
-          <View style={styles.productInfoCard}>
-            <Text style={styles.productName}>{viewProduct.name}</Text>
-            <Text style={styles.price}>{formattedPrice}</Text>
+          <View style={[styles.productInfoCard, { backgroundColor: Colors.cardBackground }]}>
+            <Text style={[styles.productName, { color: Colors.text.gray }]}>{viewProduct.name}</Text>
+            <Text style={[styles.price, { color: Colors.text.gray }]}>{formattedPrice}</Text>
           </View>
 
           {/* Description */}
           {viewProduct.description && (
-            <View style={styles.descriptionSection}>
-              <Text style={[styles.descriptionTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+            <View style={[styles.descriptionSection, { backgroundColor: Colors.cardBackground }]}>
+              <Text style={[styles.descriptionTitle, { color: Colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
                 {i18n.t('description') || 'Description'}
               </Text>
-              <Text style={[styles.description, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+              <Text style={[styles.description, { color: Colors.text.veryLightGray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
                 {viewProduct.description}
               </Text>
             </View>
@@ -484,7 +497,6 @@ export default function Details() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -497,7 +509,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 40,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
   },
   headerRTL: {
     flexDirection: 'row-reverse',
@@ -505,7 +516,6 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 20,
     fontWeight: '600',
-    color: Colors.text.secondary,
   },
   cartIconButton: {
     width: 40,
@@ -521,7 +531,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: "#666",
     marginTop: 16,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
@@ -534,23 +543,19 @@ const styles = StyleSheet.create({
   errorText: {
     textAlign: "center",
     fontSize: 18,
-    color: "#666",
     marginBottom: 8,
   },
   errorSubText: {
     textAlign: "center",
     fontSize: 14,
-    color: "#999",
     marginBottom: 20,
   },
   backButton: {
-    backgroundColor: "#30a1a7",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 4,
   },
   backButtonText: {
-    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -595,14 +600,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dot: {
-    backgroundColor: "#FFFFFF",
     width: 8,
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
   },
   activeDot: {
-    backgroundColor: "#FFFFFF",
     width: 8,
     height: 8,
   },
@@ -610,10 +613,8 @@ const styles = StyleSheet.create({
   // Product Details
   productDetails: {
     paddingBottom: 120,
-    backgroundColor: '#FFFFFF',
   },
   productInfoCard: {
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 16,
@@ -621,7 +622,6 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#1a1a1a",
     marginBottom: 8,
     lineHeight: 32,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
@@ -629,14 +629,12 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#1a1a1a",
     marginTop: 4,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   
   // Description
   descriptionSection: {
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 20,
   },
@@ -644,7 +642,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 12,
-    color: "#1a1a1a",
   },
   descriptionContainer: {
     marginTop: 8,
@@ -652,7 +649,6 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
     lineHeight: 22,
-    color: "#666",
     marginBottom: 4,
   },
   expandButton: {
@@ -666,7 +662,6 @@ const styles = StyleSheet.create({
   
   // Size Selector
   sizesContainer: {
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 20,
   },
@@ -685,9 +680,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
   },
   sizeBox: {
-    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -695,21 +688,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   selectedSizeBox: {
-    backgroundColor: "#a37e2c",
-    borderColor: "#a37e2c",
   },
   sizeText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1a1a1a",
   },
   selectedSizeText: {
-    color: "#FFFFFF",
   },
   
   // Color Selector
   colorsContainer: {
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 20,
   },
@@ -732,14 +720,12 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   selectedColorSwatch: {
-    borderColor: '#000000',
   },
   colorCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   
   // Bottom Container
@@ -748,12 +734,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingTop: 16,
     paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -766,22 +750,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addToCartButton: {
-    backgroundColor: "#a37e2c",
     borderRadius: 8,
     paddingVertical: 10,
   },
   disabledButton: {
-    backgroundColor: "#B0B0B0",
   },
   wishlistButton: {
-    backgroundColor: "#f5f5f5",
     borderRadius: 8,
     paddingHorizontal: 24,
     paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     minWidth: 100,
   },
   wishlistButtonDisabled: {
@@ -790,7 +770,6 @@ const styles = StyleSheet.create({
   wishlistButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1a1a1a",
   },
   
   // Modal

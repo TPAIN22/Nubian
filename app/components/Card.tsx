@@ -14,6 +14,7 @@ import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Colors from "@/locales/brandColors";
+import { useTheme } from "@/providers/ThemeProvider";
 
 interface item {
   _id: string;
@@ -24,6 +25,8 @@ interface item {
 }
 
 function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { setProduct } = useItemStore();
   const screenWidth = Dimensions.get("window").width;
   const cardWidth = screenWidth / 2 - 20;
@@ -115,7 +118,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
       <Image
         source={{ uri: imageUri }}
         alt="product image"
-        style={[styles.productImage, { width: cardWidth }]}
+        style={[styles.productImage, { width: cardWidth, backgroundColor: Colors.surface }]}
         contentFit="cover"
         transition={300}
       />
@@ -138,7 +141,8 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
             key={index}
             style={[
               styles.paginationDot,
-              index === currentImageIndex && styles.paginationDotActive
+              { backgroundColor: Colors.overlayLight },
+              index === currentImageIndex && { backgroundColor: Colors.primary }
             ]}
           />
         ))}
@@ -146,11 +150,11 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     );
   };
   return (
-    <Card className="p-0" style={[styles.productCard, { width: cardWidth }]}>
-      <View style={styles.imageContainer}>
+    <Card className="p-0" style={[styles.productCard, { width: cardWidth, backgroundColor: Colors.cardBackground }]}>
+      <View style={[styles.imageContainer, { backgroundColor: Colors.surface }]}>
         <Pressable
           onPress={handleWishlistPress}
-          style={styles.wishlistButton}
+          style={[styles.wishlistButton, { backgroundColor: Colors.cardBackground, borderColor: Colors.borderLight }]}
         >
           <Ionicons
             name={inWishlist ? 'heart' : 'heart-outline'}
@@ -194,16 +198,16 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
         )}
       </View>
       <View style={styles.productInfo}>
-        <Heading size="sm" style={styles.productName} numberOfLines={2}>
+        <Heading size="sm" style={[styles.productName, { color: Colors.text.gray }]} numberOfLines={2}>
           {item.name}
         </Heading>
         <View style={styles.priceContainer}>
           {item.discountPrice > 0 && (
-            <Text style={styles.originalPrice}>
+            <Text style={[styles.originalPrice, { color: Colors.text.veryLightGray }]}>
               {formatPrice(item.discountPrice)}
             </Text>
           )}
-          <Text style={styles.currentPrice}>
+          <Text style={[styles.currentPrice, { color: Colors.primary }]}>
             {formatPrice(item.price)}
           </Text>
         </View>
@@ -221,27 +225,23 @@ const styles = StyleSheet.create({
   imageContainer: {
     height: 200,
     overflow: "hidden",
-    backgroundColor: Colors.surface,
     position: "relative",
   },
   productImage: {
     height: 200,
     width: "100%",
-    backgroundColor: Colors.surface,
   },
   wishlistButton: {
     position: 'absolute',
     top: 10,
     right: 10,
     zIndex: 2,
-    backgroundColor: Colors.background,
     borderRadius: 20,
     width: 36,
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-   
   },
   discountBadge: {
     position: "absolute",
@@ -250,7 +250,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
-   
   },
   discountText: {
     color: Colors.text.white,
@@ -270,11 +269,9 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.overlayLight,
     marginHorizontal: 3,
   },
   paginationDotActive: {
-    backgroundColor: Colors.primary,
     width: 8,
     height: 8,
     borderRadius: 4,
@@ -285,7 +282,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   productName: {
-    color: Colors.text.secondary,
     fontSize: 10,
     fontWeight: "600",
     lineHeight: 18,
@@ -301,13 +297,11 @@ const styles = StyleSheet.create({
   },
   originalPrice: {
     textDecorationLine: 'line-through',
-    color: Colors.text.lightGray,
     fontSize: 10,
     fontWeight: "400",
     flexShrink: 1,
   },
   currentPrice: {
-    color: Colors.primary,
     fontWeight: "700",
     fontSize: 15,
     flexShrink: 1,

@@ -23,6 +23,8 @@ import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import GoogleSignInSheet from "@/app/(auth)/signin";
 import i18n, { changeLanguage } from "../../utils/i18n";
 import Colors from "@/locales/brandColors";
+import { useTheme } from "@/providers/ThemeProvider";
+import { Switch } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -129,19 +131,19 @@ export default function Profile() {
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = event.nativeEvent.contentOffset.y;
 
-    if (offsetY > 100 && scrollY.current <= 100) {
+      if (offsetY > 100 && scrollY.current <= 100) {
       navigation.setOptions({
         headerTitle: i18n.t("profile"),
         headerStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: theme.colors.cardBackground,
           elevation: 4,
-          shadowColor: Colors.shadow,
+          shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
         },
         headerTitleStyle: {
-          color: Colors.text.gray,
+          color: theme.colors.text.gray,
           fontSize: 18,
           fontWeight: "600",
         },
@@ -168,11 +170,13 @@ export default function Profile() {
     }
   }, [loaded, isSignedIn, user]);
 
+  const { theme, themeMode, setThemeMode, isDark } = useTheme();
+  
   const renderOptionItem = (option: any, index: number) => (
     <TouchableOpacity
       key={index}
       onPress={option.action}
-      style={styles.optionItem}
+      style={[styles.optionItem, { borderBottomColor: theme.colors.borderLight }]}
       activeOpacity={0.7}
     >
       <View style={styles.optionLeft}>
@@ -184,12 +188,12 @@ export default function Profile() {
         >
           <Ionicons name={option.icon} size={20} color={option.color} />
         </View>
-        <Text style={styles.optionText}>{option.title}</Text>
+        <Text style={[styles.optionText, { color: theme.colors.text.gray }]}>{option.title}</Text>
       </View>
       <Ionicons
         name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
         size={20}
-        color={Colors.gray[300]}
+        color={theme.colors.gray[300]}
       />
     </TouchableOpacity>
   );
@@ -212,7 +216,7 @@ export default function Profile() {
       <ScrollView
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        style={styles.container}
+        style={[styles.container, { backgroundColor: theme.colors.surface }]}
         contentContainerStyle={[
           styles.contentContainer,
           {
@@ -225,39 +229,39 @@ export default function Profile() {
         {/* عرض معلومات المستخدم أو دعوة لتسجيل الدخول */}
         {isUserLoaded && user ? (
           /* Profile Header */
-          <View style={styles.profileHeader}>
+          <View style={[styles.profileHeader, { backgroundColor: theme.colors.cardBackground }]}>
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: user?.imageUrl }} style={styles.avatar} />
-              <View style={styles.onlineIndicator} />
+              <Image source={{ uri: user?.imageUrl }} style={[styles.avatar, { borderColor: theme.colors.primary }]} />
+              <View style={[styles.onlineIndicator, { backgroundColor: theme.colors.success, borderColor: theme.colors.background }]} />
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.welcomeText}>{i18n.t("welcome")}</Text>
-              <Text style={styles.userName}>
+              <Text style={[styles.welcomeText, { color: theme.colors.text.veryLightGray }]}>{i18n.t("welcome")}</Text>
+              <Text style={[styles.userName, { color: theme.colors.text.gray }]}>
                 {user?.firstName} {user?.lastName}
               </Text>
-              <Text style={styles.userEmail}>
+              <Text style={[styles.userEmail, { color: theme.colors.text.veryLightGray }]}>
                 {user?.primaryEmailAddress?.emailAddress}
               </Text>
             </View>
           </View>
         ) : (
           /* Sign In Invitation */
-          <View style={styles.signInInvitation}>
+          <View style={[styles.signInInvitation, { backgroundColor: theme.colors.cardBackground }]}>
             <Image
               source={require("../../assets/images/profilelogin.svg")}
               style={styles.signInImage}
             />
             <View style={styles.signInTextContainer}>
-              <Text style={styles.signInTitle}>
+              <Text style={[styles.signInTitle, { color: theme.colors.primary }]}>
                 {i18n.t("signInToContinue")}
               </Text>
-              <Text style={styles.signInSubtitle}>
+              <Text style={[styles.signInSubtitle, { color: theme.colors.text.veryLightGray }]}>
                 {i18n.t("profile_signInSubtitle")}
               </Text>
             </View>
             <TouchableOpacity
               onPress={handlePresentModalPress}
-              style={styles.loginButton}
+              style={[styles.loginButton, { backgroundColor: theme.colors.primary }]}
               activeOpacity={0.8}
             >
               <Text style={styles.loginButtonText}>{i18n.t("signIn")}</Text>
@@ -269,8 +273,8 @@ export default function Profile() {
         {/* عرض خيارات المستخدم فقط إذا كان مسجل دخول */}
         {isUserLoaded && user && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{i18n.t("profile")}</Text>
-            <View style={styles.optionsContainer}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text.gray }]}>{i18n.t("profile")}</Text>
+            <View style={[styles.optionsContainer, { backgroundColor: theme.colors.cardBackground }]}>
               {userOnlyOptions.map((option, index) =>
                 renderOptionItem(option, index)
               )}
@@ -280,8 +284,8 @@ export default function Profile() {
 
         {/* عرض الخيارات العامة دائماً */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{i18n.t("seeAlso")}</Text>
-          <View style={styles.optionsContainer}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text.gray }]}>{i18n.t("seeAlso")}</Text>
+          <View style={[styles.optionsContainer, { backgroundColor: theme.colors.cardBackground }]}>
             {publicOptions.map((option, index) =>
               renderOptionItem(option, index)
             )}
@@ -290,12 +294,12 @@ export default function Profile() {
 
         {/* Language Settings Section - متاح دائماً */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{i18n.t("languageSettings")}</Text>
-          <View style={styles.languageContainer}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text.gray }]}>{i18n.t("languageSettings")}</Text>
+          <View style={[styles.languageContainer, { backgroundColor: theme.colors.cardBackground }]}>
             <TouchableOpacity
               style={[
                 styles.languageButton,
-                i18n.locale === "ar" && styles.languageButtonActive,
+                i18n.locale === "ar" && { backgroundColor: theme.colors.primary },
               ]}
               onPress={() => changeLanguage("ar")}
               disabled={i18n.locale === "ar"}
@@ -303,7 +307,7 @@ export default function Profile() {
               <Text
                 style={[
                   styles.languageButtonText,
-                  i18n.locale === "ar" && styles.languageButtonTextActive,
+                  { color: i18n.locale === "ar" ? theme.colors.text.white : theme.colors.text.veryLightGray },
                 ]}
               >
                 {i18n.t("profile_arabic")}
@@ -312,7 +316,7 @@ export default function Profile() {
             <TouchableOpacity
               style={[
                 styles.languageButton,
-                i18n.locale === "en" && styles.languageButtonActive,
+                i18n.locale === "en" && { backgroundColor: theme.colors.primary },
               ]}
               onPress={() => changeLanguage("en")}
               disabled={i18n.locale === "en"}
@@ -320,7 +324,7 @@ export default function Profile() {
               <Text
                 style={[
                   styles.languageButtonText,
-                  i18n.locale === "en" && styles.languageButtonTextActive,
+                  { color: i18n.locale === "en" ? theme.colors.text.white : theme.colors.text.veryLightGray },
                 ]}
               >
                 {i18n.t("profile_english")}
@@ -329,23 +333,61 @@ export default function Profile() {
           </View>
         </View>
 
+        {/* Dark Mode Settings Section - متاح دائماً */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{i18n.t("appearance") || "Appearance"}</Text>
+          <View style={[styles.optionsContainer, { backgroundColor: theme.colors.cardBackground }]}>
+            <TouchableOpacity
+              style={styles.optionItem}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionLeft}>
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: `${theme.colors.primary}15` },
+                  ]}
+                >
+                  <Ionicons name="moon-outline" size={20} color={theme.colors.primary} />
+                </View>
+                <Text style={[styles.optionText, { color: theme.colors.text.gray }]}>
+                  {i18n.t("darkMode") || "Dark Mode"}
+                </Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={(value) => {
+                  const newMode = value ? 'dark' : 'light';
+                  // Only update if different from current mode (skip if already set)
+                  if (themeMode !== newMode) {
+                    setThemeMode(newMode);
+                  }
+                }}
+                trackColor={{ false: theme.colors.gray[300], true: theme.colors.primary }}
+                thumbColor={theme.colors.background}
+                ios_backgroundColor={theme.colors.gray[300]}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* عرض زر تسجيل الخروج فقط إذا كان المستخدم مسجل دخول */}
         {isUserLoaded && user && (
           <TouchableOpacity
             onPress={() => signOut()}
-            style={styles.logoutButton}
+            style={[styles.logoutButton, { backgroundColor: theme.colors.cardBackground }]}
             activeOpacity={0.7}
           >
             <View style={styles.logoutContent}>
-              <View style={styles.logoutIconContainer}>
-                <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+              <View style={[styles.logoutIconContainer, { backgroundColor: `${theme.colors.error}15` }]}>
+                <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />
               </View>
-              <Text style={styles.logoutText}>{i18n.t("logout")}</Text>
+              <Text style={[styles.logoutText, { color: theme.colors.error }]}>{i18n.t("logout")}</Text>
             </View>
             <Ionicons
               name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
               size={20}
-              color={Colors.error}
+              color={theme.colors.error}
             />
           </TouchableOpacity>
         )}
@@ -355,8 +397,8 @@ export default function Profile() {
       <BottomSheetModal
         ref={bottomSheetModalRef}
         onChange={handleSheetChanges}
-        backgroundStyle={styles.bottomSheetBackground}
-        handleIndicatorStyle={styles.bottomSheetIndicator}
+        backgroundStyle={[styles.bottomSheetBackground, { backgroundColor: theme.colors.cardBackground }]}
+        handleIndicatorStyle={[styles.bottomSheetIndicator, { backgroundColor: theme.colors.gray[300] }]}
       >
         <BottomSheetView style={styles.contentContainer}>
           <GoogleSignInSheet />
@@ -369,14 +411,12 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.surface,
     paddingTop: 30,
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.background,
   },
   contentContainer: {
     paddingHorizontal: 20,
@@ -386,7 +426,6 @@ const styles = StyleSheet.create({
   // Sign In Invitation Styles
   signInInvitation: {
     alignItems: "center",
-    backgroundColor: Colors.background,
     padding: 24,
     borderRadius: 16,
     marginBottom: 24,
@@ -403,13 +442,11 @@ const styles = StyleSheet.create({
   signInTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: Colors.primary,
     marginBottom: 8,
     textAlign: "center",
   },
   signInSubtitle: {
     fontSize: 14,
-    color: Colors.text.veryLightGray,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -417,7 +454,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
@@ -434,7 +470,6 @@ const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.background,
     padding: 16,
     borderRadius: 16,
     marginBottom: 16,
@@ -448,7 +483,6 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: Colors.primary,
   },
   onlineIndicator: {
     position: "absolute",
@@ -468,18 +502,15 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 14,
-    color: Colors.text.veryLightGray,
     marginBottom: 4,
   },
   userName: {
     fontSize: 22,
     fontWeight: "700",
-    color: Colors.text.black,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 15,
-    color: Colors.text.veryLightGray,
   },
 
   // Section Styles
@@ -489,13 +520,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: Colors.text.black,
     marginBottom: 16,
     paddingHorizontal: 4,
     textAlign: "left",
   },
   optionsContainer: {
-    backgroundColor: Colors.background,
     borderRadius: 16,
   },
 
@@ -507,7 +536,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.borderLight,
   },
   optionLeft: {
     flexDirection: "row",
@@ -524,14 +552,12 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 17,
-    color: Colors.text.black,
     fontWeight: "400",
   },
 
   // Language Settings Styles
   languageContainer: {
     flexDirection: "row",
-    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 8,
   },
@@ -543,16 +569,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 4,
   },
-  languageButtonActive: {
-    backgroundColor: Colors.primary,
-  },
   languageButtonText: {
     fontSize: 16,
     fontWeight: "500",
-    color: Colors.text.veryLightGray,
-  },
-  languageButtonTextActive: {
-    color: Colors.text.white,
   },
 
   // Logout Styles
@@ -560,7 +579,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: Colors.background,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderRadius: 16,
@@ -575,25 +593,21 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.error + "15",
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 16,
   },
   logoutText: {
     fontSize: 17,
-    color: Colors.error,
     fontWeight: "500",
   },
 
   // Bottom Sheet Styles
   bottomSheetBackground: {
-    backgroundColor: Colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
   bottomSheetIndicator: {
-    backgroundColor: Colors.gray[300],
     width: 40,
     borderRadius: 10,
   },

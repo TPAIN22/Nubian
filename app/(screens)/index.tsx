@@ -22,8 +22,11 @@ import {
 } from "@gorhom/bottom-sheet";
 import BottomSheet from "../components/BottomSheet";
 import i18n from "@/utils/i18n";
+import { useTheme } from "@/providers/ThemeProvider";
 
 export default function Index() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const {
     getAllProducts,
     loadMoreAllProducts,
@@ -70,9 +73,9 @@ export default function Index() {
   }, [loadMoreAllProducts, hasMore, isProductsLoading]);
 
   return (
-    <GestureHandlerRootView style={styles.loadingContainer}>
+    <GestureHandlerRootView style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
       <BottomSheetModalProvider>
-        <View style={{ backgroundColor: "#EFF6FFFF" }}>
+        <View style={{ backgroundColor: Colors.surface }}>
           <FlatList
             onEndReachedThreshold={0.4}
             onEndReached={onEndReachedHandler}
@@ -94,13 +97,13 @@ export default function Index() {
                 refreshing={isProductsLoading}
                 onRefresh={onRefresh}
                 progressViewOffset={10}
-                progressBackgroundColor="#fff"
-                colors={["#f0b745"]}
+                progressBackgroundColor={Colors.cardBackground}
+                colors={[Colors.primary]}
               />
             }
             ListFooterComponent={
               !hasMore ? (
-                <Text style={{ textAlign: "center", marginVertical: 10, color: '#999', fontSize: 12 }}>
+                <Text style={{ textAlign: "center", marginVertical: 10, color: Colors.text.veryLightGray, fontSize: 12 }}>
                   {i18n.t('noMoreProducts')}
                 </Text>
               ) : null
@@ -111,7 +114,7 @@ export default function Index() {
               justifyContent: "space-around",
               alignItems: "center",
               width:"100%",
-              backgroundColor:'#fff'
+              backgroundColor: Colors.surface
             }}
           />
         </View>
@@ -134,7 +137,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
     marginBottom: 80,
   },
   contentContainer: {

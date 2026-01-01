@@ -19,6 +19,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import CartBadge from "./CartBadge";
 import Colors from "@/locales/brandColors";
 import { useScrollStore } from "@/store/useScrollStore";
+import { useTheme } from "@/providers/ThemeProvider";
 
 const STATUS_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0;
 
@@ -27,6 +28,8 @@ export default function HeaderComponent() {
   const router = useRouter();
   const { fetchCart } = useCartStore();
   const { getToken } = useAuth();
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   // Get scroll position from store
   const currentScrollY = useScrollStore((state) => state.scrollY);
   
@@ -77,12 +80,12 @@ export default function HeaderComponent() {
 
   const backgroundColor = headerBackgroundColor.interpolate({
     inputRange: [0, 1],
-    outputRange: ['transparent', Colors.background],
+    outputRange: ['transparent', Colors.cardBackground],
   });
 
   const borderColor = headerOpacity.interpolate({
     inputRange: [0, 1],
-    outputRange: ['transparent', Colors.border],
+    outputRange: ['transparent', Colors.borderLight],
   });
 
   const shadowOpacity = headerOpacity.interpolate({
@@ -105,7 +108,7 @@ export default function HeaderComponent() {
       ]}
     >
       <StatusBar 
-        barStyle={currentScrollY > SCROLL_THRESHOLD ? "dark-content" : "light-content"} 
+        barStyle={currentScrollY > SCROLL_THRESHOLD ? (theme.mode === 'dark' ? 'light-content' : 'dark-content') : "light-content"} 
         backgroundColor="transparent" 
         translucent 
       />
@@ -138,11 +141,11 @@ export default function HeaderComponent() {
             {
               backgroundColor: headerOpacity.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['rgba(255, 255, 255, 0.15)', Colors.surface],
+                outputRange: [theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)', Colors.cardBackground],
               }),
               borderColor: headerOpacity.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['rgba(163, 126, 44, 0.4)', 'rgba(163, 126, 44, 0.25)'],
+                outputRange: [theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(163, 126, 44, 0.4)', Colors.borderLight],
               }),
               borderWidth: headerOpacity.interpolate({
                 inputRange: [0, 1],

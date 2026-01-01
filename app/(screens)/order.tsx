@@ -7,8 +7,11 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from "@/utils/i18n";
+import { useTheme } from "@/providers/ThemeProvider";
 
 export default function Order() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { getUserOrders, orders, error, isLoading } = useOrderStore();
   const { getToken } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
@@ -133,52 +136,52 @@ export default function Order() {
 
   if (isLoading && orders.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#3498db" />
-        <Text style={styles.loadingText}>{i18n.t('loadingOrders')}</Text>
+      <View style={[styles.centerContainer, { backgroundColor: Colors.surface }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={[styles.loadingText, { color: Colors.text.veryLightGray }]}>{i18n.t('loadingOrders')}</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{i18n.t('errorOccurred')}: {error}</Text>
+      <View style={[styles.centerContainer, { backgroundColor: Colors.surface }]}>
+        <Text style={[styles.errorText, { color: Colors.error }]}>{i18n.t('errorOccurred')}: {error}</Text>
       </View>
     );
   }
 
   if (orders.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>{i18n.t('noOrders')}</Text>
+      <View style={[styles.centerContainer, { backgroundColor: Colors.surface }]}>
+        <Text style={[styles.emptyText, { color: Colors.text.veryLightGray }]}>{i18n.t('noOrders')}</Text>
       </View>
     );
   }
 
   return (
     <ScrollView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: Colors.surface }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <Text style={styles.title}>{i18n.t('myOrders')} ({orders.length})</Text>
+      <Text style={[styles.title, { color: Colors.text.gray }]}>{i18n.t('myOrders')} ({orders.length})</Text>
       
       {orders.map((order: any) => (
-        <View key={order._id} style={styles.orderCard}>
+        <View key={order._id} style={[styles.orderCard, { backgroundColor: Colors.cardBackground }]}>
           {/* رأس البطاقة */}
           <TouchableOpacity 
-            style={styles.orderHeader}
+            style={[styles.orderHeader, { borderBottomColor: Colors.borderLight }]}
             onPress={() => toggleOrderExpansion(order._id)}
           >
             <View style={styles.headerContent}>
-              <Text style={styles.orderNumber}>{order.orderNumber}</Text>
+              <Text style={[styles.orderNumber, { color: Colors.text.gray }]}>{order.orderNumber}</Text>
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
                 <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
               </View>
             </View>
-            <Text style={styles.expandText}>
+            <Text style={[styles.expandText, { color: Colors.primary }]}>
               {expandedOrders[order._id] ? i18n.t('hideDetails') : i18n.t('showDetails')}
             </Text>
           </TouchableOpacity>
@@ -188,54 +191,54 @@ export default function Order() {
             style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, alignSelf: 'flex-end' }}
             onPress={() => router.push(`/order-tracking/${order._id}`)}
           >
-            <Ionicons name="location-outline" size={18} color="#3498db" />
-            <Text style={{ color: '#3498db', marginLeft: 4 }}>{i18n.t('trackOrder')}</Text>
+            <Ionicons name="location-outline" size={18} color={Colors.primary} />
+            <Text style={{ color: Colors.primary, marginLeft: 4 }}>{i18n.t('trackOrder')}</Text>
           </Pressable>
 
           {/* معلومات سريعة */}
           <View style={styles.quickInfo}>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>{i18n.t('date')}:</Text>
-              <Text style={styles.infoValue}>{formatDate(order.orderDate)}</Text>
+              <Text style={[styles.infoLabel, { color: Colors.text.veryLightGray }]}>{i18n.t('date')}:</Text>
+              <Text style={[styles.infoValue, { color: Colors.text.gray }]}>{formatDate(order.orderDate)}</Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>{i18n.t('products')}:</Text>
-              <Text style={styles.infoValue}>{getProductsCount(order.productsDetails)} {i18n.t('productUnit')}</Text>
+              <Text style={[styles.infoLabel, { color: Colors.text.veryLightGray }]}>{i18n.t('products')}:</Text>
+              <Text style={[styles.infoValue, { color: Colors.text.gray }]}>{getProductsCount(order.productsDetails)} {i18n.t('productUnit')}</Text>
             </View>
           </View>
 
           {/* المجموع */}
-          <View style={styles.totalSection}>
-            <Text style={styles.totalLabel}>المجموع الكلي:</Text>
-            <Text style={styles.totalAmount}>{formatCurrency(order.totalAmount)}</Text>
+          <View style={[styles.totalSection, { borderTopColor: Colors.borderLight }]}>
+            <Text style={[styles.totalLabel, { color: Colors.text.gray }]}>المجموع الكلي:</Text>
+            <Text style={[styles.totalAmount, { color: Colors.success }]}>{formatCurrency(order.totalAmount)}</Text>
           </View>
 
           {/* التفاصيل الموسعة */}
           {expandedOrders[order._id] && (
-            <View style={styles.expandedDetails}>
+            <View style={[styles.expandedDetails, { borderTopColor: Colors.borderLight }]}>
               {/* تفاصيل الطلب */}
               <View style={styles.orderDetails}>
-                <Text style={styles.sectionTitle}>معلومات التوصيل</Text>
+                <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>معلومات التوصيل</Text>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>المدينة:</Text>
-                  <Text style={styles.detailValue}>{order.city}</Text>
+                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>المدينة:</Text>
+                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{order.city}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>العنوان:</Text>
-                  <Text style={styles.detailValue}>{order.address}</Text>
+                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>العنوان:</Text>
+                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{order.address}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>رقم الهاتف:</Text>
-                  <Text style={styles.detailValue}>{order.phoneNumber}</Text>
+                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>رقم الهاتف:</Text>
+                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{order.phoneNumber}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>طريقة الدفع:</Text>
-                  <Text style={styles.detailValue}>{getPaymentMethodText(order.paymentMethod)}</Text>
+                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>طريقة الدفع:</Text>
+                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{getPaymentMethodText(order.paymentMethod)}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>حالة الدفع:</Text>
+                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>حالة الدفع:</Text>
                   <Text style={[styles.detailValue, { 
-                    color: order.paymentStatus === 'paid' ? '#27ae60' : '#f39c12' 
+                    color: order.paymentStatus === 'paid' ? Colors.success : Colors.warning 
                   }]}>
                     {getPaymentStatusText(order.paymentStatus)}
                   </Text>
@@ -244,28 +247,28 @@ export default function Order() {
 
               {/* تفاصيل المنتجات */}
               <View style={styles.productsSection}>
-                <Text style={styles.sectionTitle}>المنتجات ({getProductsCount(order.productsDetails)})</Text>
+                <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>المنتجات ({getProductsCount(order.productsDetails)})</Text>
                 {order.productsDetails && order.productsDetails.length > 0 ? (
                   order.productsDetails.map((product: any, index: number) => (
-                    <View key={product._id || index} style={styles.productCard}>
+                    <View key={product._id || index} style={[styles.productCard, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
                       <View style={styles.productInfo}>
                         {/* صورة المنتج - إذا كانت متوفرة */}
                         {product.images && Array.isArray(product.images) && product.images[0] && (
                           <Image 
                             source={{ uri: product.images[0] }} 
-                            style={styles.productImage}
+                            style={[styles.productImage, { backgroundColor: Colors.borderLight }]}
                             contentFit="cover"
                           />
                         )}
                         <View style={styles.productDetails}>
-                          <Text style={styles.productName} numberOfLines={2}>
+                          <Text style={[styles.productName, { color: Colors.text.gray }]} numberOfLines={2}>
                             {product.name || product.productName || 'منتج غير محدد'}
                           </Text>
                           <View style={styles.productPricing}>
-                            <Text style={styles.productPrice}>
+                            <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
                               {product.price ? formatCurrency(product.price) : 'السعر غير محدد'} × {product.quantity || 1}
                             </Text>
-                            <Text style={styles.productTotal}>
+                            <Text style={[styles.productTotal, { color: Colors.success }]}>
                               = {formatCurrency((product.price || 0) * (product.quantity || 1))}
                             </Text>
                           </View>
@@ -274,12 +277,12 @@ export default function Order() {
                     </View>
                   ))
                 ) : (
-                  <Text style={styles.noProductsText}>لا توجد تفاصيل منتجات</Text>
+                  <Text style={[styles.noProductsText, { color: Colors.text.veryLightGray }]}>لا توجد تفاصيل منتجات</Text>
                 )}
               </View>
 
               {/* تاريخ آخر تحديث */}
-              <Text style={styles.updateDate}>
+              <Text style={[styles.updateDate, { color: Colors.text.veryLightGray }]}>
                 آخر تحديث: {formatDate(order.updatedAt)}
               </Text>
             </View>
@@ -293,40 +296,33 @@ export default function Order() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
     padding: 16,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginBottom: 20,
     textAlign: 'center',
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#7f8c8d',
   },
   errorText: {
     fontSize: 16,
-    color: '#e74c3c',
     textAlign: 'center',
     padding: 20,
   },
   emptyText: {
     fontSize: 18,
-    color: '#7f8c8d',
     textAlign: 'center',
   },
   orderCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -343,7 +339,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
   },
   headerContent: {
     flexDirection: 'row',
@@ -354,7 +349,6 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -368,7 +362,6 @@ const styles = StyleSheet.create({
   },
   expandText: {
     fontSize: 14,
-    color: '#3498db',
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -382,12 +375,10 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#7f8c8d',
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 14,
-    color: '#2c3e50',
     fontWeight: '500',
   },
   totalSection: {
@@ -396,29 +387,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
     marginBottom: 8,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2c3e50',
   },
   totalAmount: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#27ae60',
   },
   expandedDetails: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginBottom: 12,
   },
   orderDetails: {
@@ -432,13 +418,11 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#7f8c8d',
     fontWeight: '500',
     flex: 1,
   },
   detailValue: {
     fontSize: 14,
-    color: '#2c3e50',
     fontWeight: '400',
     flex: 2,
     textAlign: 'right',
@@ -447,12 +431,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   productCard: {
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   productInfo: {
     flexDirection: 'row',
@@ -462,7 +444,6 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: '#e9ecef',
   },
   productDetails: {
     flex: 1,
@@ -470,12 +451,10 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginBottom: 4,
   },
   productCategory: {
     fontSize: 12,
-    color: '#6c757d',
     marginBottom: 4,
   },
   productPricing: {
@@ -485,24 +464,20 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 14,
-    color: '#5e6c84',
     marginRight: 8,
   },
   productTotal: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#27ae60',
   },
   noProductsText: {
     fontSize: 14,
-    color: '#7f8c8d',
     textAlign: 'center',
     fontStyle: 'italic',
     padding: 16,
   },
   updateDate: {
     fontSize: 12,
-    color: '#95a5a6',
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 12,

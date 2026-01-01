@@ -15,18 +15,7 @@ import HeaderComponent from "../components/costomHeader";
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
 import Colors from "@/locales/brandColors";
-
-const CONSTANTS = {
-  iconSize: 24,
-  activeIconSize: 26,
-  colors: {
-    primary: Colors.primary,
-    background: Colors.surface,
-    cardBackground: Colors.background,
-    unfocused: Colors.gray[400],
-    border: Colors.borderLight,
-  },
-};
+import { useTheme } from "@/providers/ThemeProvider";
 
 interface TabIconProps {
   iconType: 'home' | 'cart' | 'search' | 'profile' | 'wishlist';
@@ -96,6 +85,7 @@ const WishlistIcon = ({ size, color }: { size: number; color: string }) => (
 );
 
 const TabIcon: React.FC<TabIconProps> = ({ iconType, focused, label }) => {
+  const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(focused ? 1.1 : 1)).current;
   const opacityAnim = useRef(new Animated.Value(focused ? 1 : 0.5)).current;
   const indicatorScale = useRef(new Animated.Value(focused ? 1 : 0)).current;
@@ -129,8 +119,8 @@ const TabIcon: React.FC<TabIconProps> = ({ iconType, focused, label }) => {
     ]).start();
   }, [focused]);
 
-  const iconSize = focused ? CONSTANTS.activeIconSize : CONSTANTS.iconSize;
-  const iconColor = focused ? CONSTANTS.colors.primary : CONSTANTS.colors.unfocused;
+  const iconSize = focused ? 26 : 24;
+  const iconColor = focused ? theme.colors.primary : theme.colors.text.veryLightGray;
 
   const renderIcon = () => {
     switch (iconType) {
@@ -166,6 +156,7 @@ const TabIcon: React.FC<TabIconProps> = ({ iconType, focused, label }) => {
             {
               transform: [{ scale: backgroundScale }],
               opacity: backgroundScale,
+              backgroundColor: theme.colors.primary + "15",
             },
           ]}
         />
@@ -178,6 +169,8 @@ const TabIcon: React.FC<TabIconProps> = ({ iconType, focused, label }) => {
             {
               transform: [{ scaleX: indicatorScale }],
               opacity: indicatorScale,
+              backgroundColor: theme.colors.primary,
+              shadowColor: theme.colors.primary,
             },
           ]}
         />
@@ -236,9 +229,10 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const safeAreaBottom = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 8);
   const iconAreaHeight = 60; // Height for icon area only
+  const { theme, isDark } = useTheme();
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.surface }}>
       <Tabs
         detachInactiveScreens
         screenOptions={{
@@ -252,13 +246,29 @@ export default function TabsLayout() {
               paddingTop: 0,
               height: iconAreaHeight + safeAreaBottom,
               minHeight: iconAreaHeight + safeAreaBottom,
+              backgroundColor: theme.colors.surface,
+              borderTopColor: isDark 
+                ? `${theme.colors.borderLight}30` // ~19% opacity in dark mode for dimmer border
+                : theme.colors.borderLight,
+              borderTopWidth: 1,
+              marginBottom: 0,
+              ...Platform.select({
+                ios: {
+                  shadowColor: theme.colors.shadow,
+                },
+                android: {
+                  backgroundColor: theme.colors.surface,
+                },
+              }),
             },
           ],
           tabBarButton: (props) => <CustomTabButton {...props} />,
-          tabBarActiveTintColor: CONSTANTS.colors.primary,
-          tabBarInactiveTintColor: CONSTANTS.colors.unfocused,
+          tabBarActiveTintColor: theme.colors.primary,
+          tabBarInactiveTintColor: theme.colors.text.veryLightGray,
           headerShadowVisible: false,
-          headerStyle: styles.header,
+          headerStyle: [styles.header, { backgroundColor: theme.colors.cardBackground }],
+          headerTintColor: theme.colors.text.gray,
+          headerTitleStyle: { color: theme.colors.text.gray },
           lazy: true,
           freezeOnBlur: true,
         }}
@@ -286,6 +296,10 @@ export default function TabsLayout() {
           name="cart"
           options={{
             headerShown: true,
+            headerStyle: { backgroundColor: theme.colors.cardBackground },
+            headerTintColor: theme.colors.text.gray,
+            headerTitleStyle: { color: theme.colors.text.gray },
+            headerShadowVisible: false,
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 iconType="cart"
@@ -328,6 +342,10 @@ export default function TabsLayout() {
           name="wishlist"
           options={{
             headerShown: true,
+            headerStyle: { backgroundColor: theme.colors.cardBackground },
+            headerTintColor: theme.colors.text.gray,
+            headerTitleStyle: { color: theme.colors.text.gray },
+            headerShadowVisible: false,
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 iconType="wishlist"
@@ -344,7 +362,6 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: CONSTANTS.colors.cardBackground,
     borderTopWidth: 0,
     paddingHorizontal: 4,
     flexDirection: 'row',
@@ -352,7 +369,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: Colors.shadow,
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.08,
         shadowRadius: 12,
@@ -405,7 +421,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.primary + "15",
   },
 
   activeIndicator: {
@@ -414,10 +429,8 @@ const styles = StyleSheet.create({
     width: 28,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: Colors.primary,
     ...Platform.select({
       ios: {
-        shadowColor: Colors.primary,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
@@ -432,7 +445,6 @@ const styles = StyleSheet.create({
   header: {
     elevation: 0,
     shadowOpacity: 0,
-    backgroundColor: CONSTANTS.colors.background,
     borderBottomWidth: 0,
   },
 

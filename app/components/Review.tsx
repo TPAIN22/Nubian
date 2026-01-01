@@ -6,12 +6,15 @@ import { useUser, useAuth } from "@clerk/clerk-expo";
 import i18n from "@/utils/i18n";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Colors from "@/locales/brandColors";
+import { useTheme } from "@/providers/ThemeProvider";
 
 interface ReviewProps {
   productId: string;
 }
 
 const Review: React.FC<ReviewProps> = ({ productId }) => {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { isSignedIn } = useUser();
   const { getToken } = useAuth();
   const [reviews, setReviews] = useState<any[]>([]);
@@ -142,8 +145,10 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
             key={star}
             style={[
               styles.star,
-              { fontSize: size },
-              star <= rating ? styles.starFilled : styles.starEmpty
+              { 
+                fontSize: size,
+                color: star <= rating ? Colors.gold : Colors.borderMedium
+              }
             ]}
           >
             ★
@@ -166,22 +171,22 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+      <Text style={[styles.title, { color: Colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
         {i18n.t('reviews') || 'Customer Reviews'}
       </Text>
       
       {loadingReviews ? (
-        <ActivityIndicator size="small" color="#a37e2c" style={styles.loader} />
+        <ActivityIndicator size="small" color={Colors.primary} style={styles.loader} />
       ) : reviews.length === 0 ? (
-        <Text style={styles.noReviews}>{i18n.t('noReviews') || 'No reviews yet'}</Text>
+        <Text style={[styles.noReviews, { color: Colors.text.veryLightGray }]}>{i18n.t('noReviews') || 'No reviews yet'}</Text>
       ) : (
         <>
           {/* Overall Rating Section */}
           <View style={styles.ratingOverview}>
             <View style={styles.ratingMain}>
-              <Text style={styles.ratingNumber}>{ratingStats.average.toFixed(1)}</Text>
+              <Text style={[styles.ratingNumber, { color: Colors.text.gray }]}>{ratingStats.average.toFixed(1)}</Text>
               {renderStars(Math.round(ratingStats.average), 20)}
-              <Text style={styles.reviewCount}>
+              <Text style={[styles.reviewCount, { color: Colors.text.veryLightGray }]}>
                 {ratingStats?.total || 0} {i18n.t('reviews') || 'reviews'}
               </Text>
             </View>
@@ -193,11 +198,11 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
                 const percentage = ratingStats.total > 0 ? (count / ratingStats.total) * 100 : 0;
                 return (
                   <View key={star} style={styles.distributionRow}>
-                    <Text style={styles.distributionStar}>{star} star</Text>
-                    <View style={styles.barContainer}>
-                      <View style={[styles.bar, { width: `${percentage}%` }]} />
+                    <Text style={[styles.distributionStar, { color: Colors.text.veryLightGray }]}>{star} star</Text>
+                    <View style={[styles.barContainer, { backgroundColor: Colors.borderLight }]}>
+                      <View style={[styles.bar, { width: `${percentage}%`, backgroundColor: Colors.primary }]} />
                     </View>
-                    <Text style={styles.distributionPercent}>{Math.round(percentage)}%</Text>
+                    <Text style={[styles.distributionPercent, { color: Colors.text.veryLightGray }]}>{Math.round(percentage)}%</Text>
                   </View>
                 );
               })}
@@ -207,32 +212,32 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
           {/* Individual Reviews */}
           <View style={styles.reviewsList}>
             {reviews.slice(0, 10).map((rev, idx) => (
-              <View key={rev._id || idx} style={styles.reviewItem}>
+              <View key={rev._id || idx} style={[styles.reviewItem, { borderBottomColor: Colors.borderLight }]}>
                 <View style={styles.reviewHeader}>
                   <View style={styles.avatarContainer}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>
+                    <View style={[styles.avatar, { backgroundColor: Colors.surface }]}>
+                      <Text style={[styles.avatarText, { color: Colors.text.veryLightGray }]}>
                         {getInitials(rev.user?.name || 'User')}
                       </Text>
                     </View>
                   </View>
                   <View style={styles.reviewInfo}>
-                    <Text style={styles.userName}>{rev.user?.name || 'User'}</Text>
-                    <Text style={styles.date}>{formatDate(rev.createdAt || new Date().toISOString())}</Text>
+                    <Text style={[styles.userName, { color: Colors.text.gray }]}>{rev.user?.name || 'User'}</Text>
+                    <Text style={[styles.date, { color: Colors.text.veryLightGray }]}>{formatDate(rev.createdAt || new Date().toISOString())}</Text>
                   </View>
                 </View>
                 <View style={styles.starsWrapper}>
                   {renderStars(rev.rating || 0, 16)}
                 </View>
-                <Text style={styles.reviewComment}>{rev.comment || ''}</Text>
+                <Text style={[styles.reviewComment, { color: Colors.text.veryLightGray }]}>{rev.comment || ''}</Text>
                 <View style={styles.reviewActions}>
                   <TouchableOpacity style={styles.actionButton}>
-                    <Ionicons name="thumbs-up-outline" size={16} color="#666" />
-                    <Text style={styles.actionText}>0</Text>
+                    <Ionicons name="thumbs-up-outline" size={16} color={Colors.text.veryLightGray} />
+                    <Text style={[styles.actionText, { color: Colors.text.veryLightGray }]}>0</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionButton}>
-                    <Ionicons name="thumbs-down-outline" size={16} color="#666" />
-                    <Text style={styles.actionText}>0</Text>
+                    <Ionicons name="thumbs-down-outline" size={16} color={Colors.text.veryLightGray} />
+                    <Text style={[styles.actionText, { color: Colors.text.veryLightGray }]}>0</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -276,7 +281,7 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
               ))}
             </View>
             {rating > 0 && (
-              <Text style={styles.ratingText}>
+              <Text style={[styles.ratingText, { color: Colors.primary }]}>
                 {rating === 1 && (i18n.t('ratingPoor') || 'Poor')}
                 {rating === 2 && (i18n.t('ratingFair') || 'Fair')}
                 {rating === 3 && (i18n.t('ratingGood') || 'Good')}
@@ -297,13 +302,21 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
               placeholder={i18n.t('writeComment') || 'Write your comment here...'}
               style={[
                 styles.input,
-                reviewText.length > maxCommentLength && styles.inputError
+                { 
+                  backgroundColor: Colors.surface,
+                  borderColor: Colors.borderMedium,
+                  color: Colors.text.gray
+                },
+                reviewText.length > maxCommentLength && { 
+                  borderColor: Colors.danger,
+                  backgroundColor: Colors.error + '15'
+                }
               ]}
               multiline
               numberOfLines={4}
               maxLength={maxCommentLength}
               textAlignVertical="top"
-              placeholderTextColor={Colors.text.lightGray}
+              placeholderTextColor={Colors.text.veryLightGray}
             />
             <View style={styles.charCountContainer}>
               <Text style={[
@@ -350,19 +363,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 20,
     paddingTop: 8,
-    backgroundColor: '#FFFFFF',
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 24,
-    color: '#1a1a1a',
   },
   loader: {
     marginVertical: 20,
   },
   noReviews: {
-    color: '#888',
     marginBottom: 8,
     fontSize: 14,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
@@ -380,7 +390,6 @@ const styles = StyleSheet.create({
   ratingNumber: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1a1a1a',
     marginBottom: 4,
     marginTop: 4,
     minHeight: 60,
@@ -388,7 +397,6 @@ const styles = StyleSheet.create({
   },
   reviewCount: {
     fontSize: 14,
-    color: '#666',
     marginTop: 12,
   },
   starsContainer: {
@@ -397,13 +405,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   star: {
-    color: '#000000',
   },
   starFilled: {
-    color: '#000000',
   },
   starEmpty: {
-    color: '#e0e0e0',
   },
   distributionContainer: {
     gap: 10,
@@ -417,25 +422,21 @@ const styles = StyleSheet.create({
   },
   distributionStar: {
     fontSize: 12,
-    color: '#666',
     width: 50,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   barContainer: {
     flex: 1,
     height: 8,
-    backgroundColor: '#f0f0f0',
     borderRadius: 4,
     overflow: 'hidden',
   },
   bar: {
     height: '100%',
-    backgroundColor: '#a37e2c',
     borderRadius: 4,
   },
   distributionPercent: {
     fontSize: 12,
-    color: '#666',
     width: 40,
     textAlign: I18nManager.isRTL ? 'left' : 'right',
   },
@@ -447,7 +448,6 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     paddingTop: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   reviewHeader: {
     flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
@@ -462,14 +462,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e0e0e0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
   },
   reviewInfo: {
     flex: 1,
@@ -477,13 +475,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
     marginBottom: 4,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   date: {
     fontSize: 12,
-    color: '#999',
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   starsWrapper: {
@@ -493,7 +489,6 @@ const styles = StyleSheet.create({
   reviewComment: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#666',
     marginTop: 12,
     marginBottom: 16,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
@@ -510,11 +505,10 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 14,
-    color: '#666',
   },
   addReviewBox: {
     marginTop: 24,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
@@ -531,7 +525,7 @@ const styles = StyleSheet.create({
   addReviewTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text.secondary,
+    color: Colors.text.gray,
     marginBottom: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
@@ -546,7 +540,7 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.secondary,
+    color: Colors.text.gray,
     marginBottom: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
@@ -565,7 +559,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    color: Colors.primary,
     fontWeight: '600',
     marginTop: 4,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
@@ -576,24 +569,19 @@ const styles = StyleSheet.create({
   commentLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.secondary,
+    color: Colors.text.gray,
     marginBottom: 8,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   input: {
-    backgroundColor: Colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.borderMedium,
     padding: 14,
     fontSize: 15,
-    color: Colors.text.secondary,
     minHeight: 100,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   inputError: {
-    borderColor: Colors.danger,
-    backgroundColor: '#fdecec',
   },
   charCountContainer: {
     marginTop: 6,
@@ -601,7 +589,7 @@ const styles = StyleSheet.create({
   },
   charCount: {
     fontSize: 12,
-    color: Colors.text.lightGray,
+    color: Colors.text.veryLightGray,
   },
   charCountWarning: {
     color: Colors.warning,
@@ -643,7 +631,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   loginMsg: {
-    color: '#888',
+    color: Colors.text.veryLightGray,
     marginTop: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },

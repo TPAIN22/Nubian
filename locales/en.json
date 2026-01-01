@@ -243,6 +243,8 @@
   "signInSuccess": "Signed in successfully!",
   "invalidOrExpiredCode": "Invalid or expired code",
   "codeVerificationFailed": "Code verification failed",
-  "resendFailed": "Failed to resend"
+  "resendFailed": "Failed to resend",
+  "appearance": "Appearance",
+  "darkMode": "Dark Mode"
 
 } 

@@ -5,6 +5,7 @@ import { Text } from '@/components/ui/text';
 import axiosInstance from '@/utils/axiosInstans';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons'; // For icons
+import { useTheme } from '@/providers/ThemeProvider';
 
 // Types for Order and OrderItem (unchanged, but included for completeness)
 interface OrderItem {
@@ -48,6 +49,8 @@ const fetchOrder = async (orderId: string, token: string): Promise<Order> => {
 const { width } = Dimensions.get('window');
 
 export default function OrderTracking() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { orderId } = useLocalSearchParams();
   const { getToken } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
@@ -76,27 +79,27 @@ export default function OrderTracking() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#f0b745" />
-        <Text style={styles.loadingText}>جاري تحميل تفاصيل الطلب...</Text>
+      <View style={[styles.centered, { backgroundColor: Colors.surface }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={[styles.loadingText, { color: Colors.text.veryLightGray }]}>جاري تحميل تفاصيل الطلب...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Ionicons name="close-circle-outline" size={50} color="#f0b745" />
-        <Text style={styles.errorText}>حدث خطأ أثناء جلب الطلب. الرجاء المحاولة مرة أخرى.</Text>
+      <View style={[styles.centered, { backgroundColor: Colors.surface }]}>
+        <Ionicons name="close-circle-outline" size={50} color={Colors.primary} />
+        <Text style={[styles.errorText, { color: Colors.text.gray }]}>حدث خطأ أثناء جلب الطلب. الرجاء المحاولة مرة أخرى.</Text>
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View style={styles.centered}>
-        <Ionicons name="information-circle-outline" size={50} color="#f0b745" />
-        <Text style={styles.noDataText}>لا يوجد بيانات للطلب لعرضها.</Text>
+      <View style={[styles.centered, { backgroundColor: Colors.surface }]}>
+        <Ionicons name="information-circle-outline" size={50} color={Colors.primary} />
+        <Text style={[styles.noDataText, { color: Colors.text.gray }]}>لا يوجد بيانات للطلب لعرضها.</Text>
       </View>
     );
   }
@@ -105,50 +108,60 @@ export default function OrderTracking() {
   const currentStatusIndex = ORDER_STATUS.findIndex(s => s.key === order.status);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerCard}>
-        <Text style={styles.title}>تتبع الطلب</Text>
-        <Text style={styles.orderId}>#{order.id}</Text>
-        <Text style={styles.date}>تاريخ الطلب: {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : 'غير متوفر'}</Text>
+    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: Colors.surface }]}>
+      <View style={[styles.headerCard, { backgroundColor: Colors.cardBackground }]}>
+        <Text style={[styles.title, { color: Colors.text.gray }]}>تتبع الطلب</Text>
+        <Text style={[styles.orderId, { color: Colors.text.veryLightGray }]}>#{order.id}</Text>
+        <Text style={[styles.date, { color: Colors.text.veryLightGray }]}>تاريخ الطلب: {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : 'غير متوفر'}</Text>
       </View>
 
-      <View style={styles.timelineCard}>
-        <Text style={styles.cardTitle}>حالة الطلب</Text>
+      <View style={[styles.timelineCard, { backgroundColor: Colors.cardBackground }]}>
+        <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>حالة الطلب</Text>
         <View style={styles.timeline}>
           {ORDER_STATUS.map((status, idx) => (
             <View key={status.key} style={styles.timelineItem}>
               <View style={styles.iconCircleWrapper}>
-                <View style={[styles.circle, idx <= currentStatusIndex ? styles.activeCircle : styles.inactiveCircle]} />
+                <View style={[
+                  styles.circle, 
+                  idx <= currentStatusIndex ? { backgroundColor: Colors.primary, borderColor: Colors.primary } : { backgroundColor: Colors.borderLight, borderColor: Colors.borderLight }
+                ]} />
                 <Ionicons
                   name={status.icon as any} // Type assertion for icon name
                   size={20}
-                  color={idx <= currentStatusIndex ? '#FFFFFF' : '#888'}
+                  color={idx <= currentStatusIndex ? Colors.text.white : Colors.text.veryLightGray}
                   style={styles.icon}
                 />
               </View>
-              <Text style={[styles.statusLabel, idx <= currentStatusIndex ? styles.activeText : styles.inactiveText]}>
+              <Text style={[
+                styles.statusLabel, 
+                { color: idx <= currentStatusIndex ? Colors.text.gray : Colors.text.veryLightGray },
+                idx <= currentStatusIndex && { fontWeight: 'bold' }
+              ]}>
                 {status.label}
               </Text>
               {idx < ORDER_STATUS.length - 1 && (
-                <View style={[styles.line, idx < currentStatusIndex ? styles.lineActive : styles.lineInactive]} />
+                <View style={[
+                  styles.line, 
+                  { backgroundColor: idx < currentStatusIndex ? Colors.primary : Colors.borderLight }
+                ]} />
               )}
             </View>
           ))}
         </View>
       </View>
 
-      <View style={styles.detailsCard}>
-        <Text style={styles.cardTitle}>تفاصيل المنتجات</Text>
+      <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
+        <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>تفاصيل المنتجات</Text>
         {order.productsDetails && order.productsDetails.length > 0 ? (
           order.productsDetails.map((item: any) => (
-            <View key={item.productId} style={styles.productItem}>
-              <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.productQuantity}>الكمية: {item.quantity}</Text>
-              <Text style={styles.productPrice}>السعر: {item.price.toFixed(2)} ر.س</Text>
+            <View key={item.productId} style={[styles.productItem, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
+              <Text style={[styles.productName, { color: Colors.text.gray }]}>{item.name}</Text>
+              <Text style={[styles.productQuantity, { color: Colors.text.veryLightGray }]}>الكمية: {item.quantity}</Text>
+              <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>السعر: {item.price.toFixed(2)} ر.س</Text>
             </View>
           ))
         ) : (
-          <Text style={styles.noProductsText}>لا توجد منتجات في هذا الطلب.</Text>
+          <Text style={[styles.noProductsText, { color: Colors.text.veryLightGray }]}>لا توجد منتجات في هذا الطلب.</Text>
         )}
       </View>
     </ScrollView>
@@ -158,7 +171,6 @@ export default function OrderTracking() {
 const styles = StyleSheet.create({
   container: {
     padding: 15,
-    backgroundColor: '#F5F7FA',// Light background for the whole screen
     flexGrow: 1,
     paddingTop: 40,
   },
@@ -166,61 +178,49 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#f0b745',
   },
   errorText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#f0b745',
     textAlign: 'center',
     marginHorizontal: 20,
   },
   noDataText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#f0b745',
     textAlign: 'center',
     marginHorizontal: 20,
   },
   headerCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
-   
     alignItems: 'center',
   },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 5,
   },
   orderId: {
     fontSize: 18,
-    color: '#666',
     marginBottom: 5,
   },
   date: {
     fontSize: 14,
-    color: '#888',
   },
   timelineCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
-    
   },
   cardTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -249,12 +249,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   activeCircle: {
-    backgroundColor: '#f0b745', // Primary color
-    borderColor: '#f0b745',
   },
   inactiveCircle: {
-    backgroundColor: '#E0E0E0',
-    borderColor: '#BDBDBD',
   },
   icon: {
     zIndex: 2, // Ensure icon is on top
@@ -264,11 +260,8 @@ const styles = StyleSheet.create({
     flex: 1, // Allow text to take remaining space
   },
   activeText: {
-    color: '#333',
-    fontWeight: 'bold',
   },
   inactiveText: {
-    color: '#888',
   },
   line: {
     position: 'absolute',
@@ -279,44 +272,34 @@ const styles = StyleSheet.create({
     zIndex: 0, // Ensure line is behind circle/icon
   },
   lineActive: {
-    backgroundColor: '#f0b745', // Active line color
   },
   lineInactive: {
-    backgroundColor: '#BDBDBD', // Inactive line color
   },
   detailsCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
-  
   },
   productItem: {
-    backgroundColor: '#F9F9F9',
     borderRadius: 8,
     padding: 15,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#EEE',
   },
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#444',
     marginBottom: 5,
   },
   productQuantity: {
     fontSize: 14,
-    color: '#666',
   },
   productPrice: {
     fontSize: 14,
-    color: '#666',
     marginTop: 3,
   },
   noProductsText: {
     fontSize: 15,
-    color: '#888',
     textAlign: 'center',
     paddingVertical: 10,
   },

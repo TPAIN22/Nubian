@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { Stack } from "expo-router";
 import "./global.css";
 import ClerkProvider from "@/providers/Clerck";
@@ -24,6 +23,7 @@ import { I18nManager } from "react-native";
 import { LanguageProvider } from "@/utils/LanguageContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { ThemeProvider, useTheme } from "@/providers/ThemeProvider";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -46,6 +46,7 @@ function AppLoaderWithClerk() {
     useState<boolean>(false);
 
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
+  const { isDark } = useTheme();
   
   // Load Cairo fonts
   const { fontsLoaded, fontError } = useFonts();
@@ -188,7 +189,7 @@ function AppLoaderWithClerk() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <BottomSheetModalProvider>
         <>
-          <StatusBar style="auto" />
+          <StatusBar style={isDark ? "light" : "dark"} />
           <Stack
             screenOptions={{
               headerShown: false,
@@ -217,7 +218,7 @@ function AppLoaderWithClerk() {
 export default function RootLayout() {
   return (
     <LanguageProvider>
-      <GluestackUIProvider mode="light">
+      <ThemeProvider>
         <KeyboardProvider>
           <ClerkProvider>
             <NetworkProvider>
@@ -232,7 +233,7 @@ export default function RootLayout() {
             </NetworkProvider>
           </ClerkProvider>
         </KeyboardProvider>
-      </GluestackUIProvider>
+      </ThemeProvider>
     </LanguageProvider>
   );
 }

@@ -15,9 +15,12 @@ import { Image } from 'expo-image'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Toast from 'react-native-toast-message'
+import { useTheme } from '@/providers/ThemeProvider'
 
 
 export default function EditProfile() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -59,20 +62,20 @@ export default function EditProfile() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: Colors.surface }]}>
 
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: Colors.surface }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/profile')}>
-          <Text style={styles.backButtonText}>←</Text>
+      <View style={[styles.header, { backgroundColor: Colors.cardBackground, borderBottomColor: Colors.borderLight }]}>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: Colors.surface }]} onPress={() => router.push('/profile')}>
+          <Text style={[styles.backButtonText, { color: Colors.text.gray }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>تعديل الملف الشخصي</Text>
+        <Text style={[styles.headerTitle, { color: Colors.text.gray }]}>تعديل الملف الشخصي</Text>
         <View style={styles.placeholder} />
       </View>
 
       {/* Profile Image Section */}
-      <View style={styles.imageSection}>
+      <View style={[styles.imageSection, { backgroundColor: Colors.surface }]}>
         <TouchableOpacity onPress={()=>{}} style={styles.imageContainer}>
           <Image
             source={
@@ -80,7 +83,7 @@ export default function EditProfile() {
                 ? { uri: user.imageUrl }
                 : require('../../assets/images/google.svg')
             }
-            style={styles.profileImage}
+            style={[styles.profileImage, { borderColor: Colors.primary }]}
           />
         </TouchableOpacity>
       </View>
@@ -88,23 +91,37 @@ export default function EditProfile() {
       <View style={styles.formContainer}>
         
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>الاسم الكامل</Text>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>الاسم الكامل</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { 
+                backgroundColor: Colors.cardBackground, 
+                borderColor: Colors.borderLight, 
+                color: Colors.text.gray 
+              }
+            ]}
             value={profileData.name}
             onChangeText={(text) => handleInputChange('name', text)}
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor={Colors.text.veryLightGray}
           />
         </View>
 
         {/* Email Field */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>البريد الإلكتروني</Text>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>البريد الإلكتروني</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { 
+                backgroundColor: Colors.cardBackground, 
+                borderColor: Colors.borderLight, 
+                color: Colors.text.gray 
+              }
+            ]}
             value={user?.primaryEmailAddress?.emailAddress}
             placeholder="أدخل بريدك الإلكتروني"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor={Colors.text.veryLightGray}
             keyboardType="email-address"
             autoCapitalize="none"
             editable={false}
@@ -113,31 +130,45 @@ export default function EditProfile() {
 
         {/* Phone Field */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>رقم الهاتف</Text>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>رقم الهاتف</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { 
+                backgroundColor: Colors.cardBackground, 
+                borderColor: Colors.borderLight, 
+                color: Colors.text.gray 
+              }
+            ]}
             value={profileData.phone}
             onChangeText={(text) => handleInputChange('phone', text)}
             placeholder="أدخل رقم هاتفك"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor={Colors.text.veryLightGray}
             keyboardType="phone-pad"
             editable={false}
           />
         </View>
         {/* Location Field */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>الموقع</Text>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>الموقع</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { 
+                backgroundColor: Colors.cardBackground, 
+                borderColor: Colors.borderLight, 
+                color: Colors.text.gray 
+              }
+            ]}
             value={profileData.location}
             onChangeText={(text) => handleInputChange('location', text)}
             placeholder="أدخل موقعك"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor={Colors.text.veryLightGray}
           />
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: Colors.primary }]} onPress={handleSave}
           disabled={isEditing}
         >
             {isEditing ?
@@ -150,8 +181,8 @@ export default function EditProfile() {
         </TouchableOpacity>
 
         {/* Delete Account */}
-        <TouchableOpacity style={styles.deleteButton}>
-          <Text style={styles.deleteButtonText}>حذف الحساب</Text>
+        <TouchableOpacity style={[styles.deleteButton, { borderColor: Colors.error }]}>
+          <Text style={[styles.deleteButtonText, { color: Colors.error }]}>حذف الحساب</Text>
         </TouchableOpacity>
 
       </View>
@@ -164,7 +195,6 @@ export default function EditProfile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
@@ -173,27 +203,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'center',
   },
   backButtonText: {
     fontSize: 20,
-    color: '#495057',
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#212529',
     textAlign: 'center',
   },
   placeholder: {
@@ -202,7 +227,6 @@ const styles = StyleSheet.create({
   imageSection: {
     alignItems: 'center',
     paddingVertical: 30,
-    backgroundColor: '#F9F9F9FF',
     marginBottom: 20,
   },
   imageContainer: {
@@ -214,7 +238,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: '#4A90E2',
   },
   cameraIcon: {
     position: 'absolute',
@@ -247,19 +270,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#212529',
     marginBottom: 8,
     textAlign: 'right',
   },
   input: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E9ECEF',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#212529',
     textAlign: 'right',
     ...Platform.select({
       ios: {
@@ -304,7 +323,6 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
-    color: '#212529',
     textAlign: 'right',
     flex: 1,
   },
@@ -314,7 +332,6 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   saveButton: {
-    backgroundColor: '#30a1a7',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -339,14 +356,12 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#DC3545',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 15,
   },
   deleteButtonText: {
-    color: '#DC3545',
     fontSize: 16,
     fontWeight: '500',
   },

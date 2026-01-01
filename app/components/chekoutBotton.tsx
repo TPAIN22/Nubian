@@ -3,6 +3,7 @@ import { Text } from '@/components/ui/text'
 import { useState, useRef } from 'react'
 import i18n from '@/utils/i18n';
 import Colors from "@/locales/brandColors";
+import { useTheme } from "@/providers/ThemeProvider";
 
 const { width } = Dimensions.get('window');
 
@@ -14,6 +15,8 @@ interface CheckoutProps {
 }
 
 export default function Checkout({ total, handleCheckout, isLoading = false, disabled = false }: CheckoutProps) {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const [isPressed, setIsPressed] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
@@ -79,8 +82,9 @@ export default function Checkout({ total, handleCheckout, isLoading = false, dis
         <Pressable
           style={[
             styles.button,
-            (disabled || isLoading) && styles.buttonDisabled,
-            isPressed && styles.buttonPressed,
+            { backgroundColor: Colors.text.black },
+            (disabled || isLoading) && { backgroundColor: Colors.gray[400] },
+            isPressed && { backgroundColor: Colors.gray[800] },
           ]}
           onPress={handlePress}
           onPressIn={handlePressIn}
@@ -94,19 +98,19 @@ export default function Checkout({ total, handleCheckout, isLoading = false, dis
           <View style={styles.buttonContent}>
             <View style={styles.checkoutSection}>
               {isLoading ? (
-                <Text style={[styles.text, styles.loadingText]}>
+                <Text style={[styles.text, styles.loadingText, { color: Colors.text.white }]}>
                   {i18n.t('processing') || 'Processing...'}
                 </Text>
               ) : (
-                <Text style={styles.text}>{i18n.t('checkout')}</Text>
+                <Text style={[styles.text, { color: Colors.text.white }]}>{i18n.t('checkout')}</Text>
               )}
             </View>
             
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: `${Colors.text.white}4D` }]} />
             
             <View style={styles.amountSection}>
-              <Text style={styles.currencyLabel}>SDG</Text>
-              <Text style={styles.textAmount}>{formatAmount(total)}</Text>
+              <Text style={[styles.currencyLabel, { color: `${Colors.text.white}CC` }]}>SDG</Text>
+              <Text style={[styles.textAmount, { color: Colors.text.white }]}>{formatAmount(total)}</Text>
             </View>
           </View>
         </Pressable>
@@ -129,17 +133,14 @@ const styles = StyleSheet.create({
   },
   
   button: {
-    backgroundColor: Colors.text.black,
     borderRadius: 8,
     overflow: 'hidden',    
   },
   
   buttonPressed: {
-    backgroundColor: Colors.gray[800],
   },
   
   buttonDisabled: {
-    backgroundColor: Colors.gray[400],
   },
   
   buttonContent: {
@@ -157,12 +158,10 @@ const styles = StyleSheet.create({
   },
   
   text: {
-    color: Colors.text.white,
     fontSize: 18,
     fontWeight: "bold",
     textTransform: 'uppercase',
     letterSpacing: 1,
-  
   },
   
   loadingText: {
@@ -172,7 +171,6 @@ const styles = StyleSheet.create({
   divider: {
     width: 2,
     height: 30,
-    backgroundColor: `${Colors.text.white}4D`,
     marginHorizontal: 16,
   },
   
@@ -183,7 +181,6 @@ const styles = StyleSheet.create({
   },
   
   currencyLabel: {
-    color: `${Colors.text.white}CC`,
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 2,
@@ -191,9 +188,7 @@ const styles = StyleSheet.create({
   
   textAmount: {
     fontSize: 16,
-    color: Colors.text.white,
     fontWeight: '900',
-    
   },
   
   shadowLayer: {
@@ -202,7 +197,6 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     height: 56,
-    backgroundColor: `${Colors.primary}1A`,
     borderRadius: 16,
     zIndex: -1,
   },

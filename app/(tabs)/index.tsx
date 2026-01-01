@@ -28,13 +28,14 @@ import axiosInstance from "@/utils/axiosInstans";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/locales/brandColors";
 import { useScrollStore } from "@/store/useScrollStore";
+import { useTheme } from "@/providers/ThemeProvider";
 
 const { width, height } = Dimensions.get("window");
 const THREE_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 const CIRCLE_SIZE = 80;
 
 // Enhanced Category Circle with Navigation
-const CategoryCircle = memo(({ item, index, onPress }: any) => {
+const CategoryCircle = memo(({ item, index, onPress, colors }: any) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -65,7 +66,7 @@ const CategoryCircle = memo(({ item, index, onPress }: any) => {
           },
         ]}
       >
-        <View style={styles.categoryCircleWrapper}>
+        <View style={[styles.categoryCircleWrapper, { borderColor: colors.primary }]}>
           <Image
             source={{ uri: item.image }}
             style={styles.categoryCircleImage}
@@ -74,16 +75,16 @@ const CategoryCircle = memo(({ item, index, onPress }: any) => {
             placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
           />
           <LinearGradient
-            colors={[`${Colors.primary}33`, `${Colors.primary}00`]}
+            colors={[`${colors.primary}33`, `${colors.primary}00`]}
             style={styles.circleGlow}
           />
           {isNew && (
-            <View style={styles.circleNewBadge}>
-              <Ionicons name="sparkles" size={12} color={Colors.text.white} />
+            <View style={[styles.circleNewBadge, { backgroundColor: colors.primary, borderColor: colors.text.white }]}>
+              <Ionicons name="sparkles" size={12} color={colors.text.white} />
             </View>
           )}
         </View>
-        <Text style={styles.circleCategoryName} numberOfLines={1}>
+        <Text style={[styles.circleCategoryName, { color: colors.text.gray }]} numberOfLines={1}>
           {item.name}
         </Text>
       </Animated.View>
@@ -91,7 +92,7 @@ const CategoryCircle = memo(({ item, index, onPress }: any) => {
   );
 });
 
-const BannerItem = memo(({ item, index }: any) => {
+const BannerItem = memo(({ item, index, colors }: any) => {
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
@@ -114,7 +115,7 @@ const BannerItem = memo(({ item, index }: any) => {
           transition={300}
         />
         <LinearGradient
-          colors={["transparent", Colors.overlayDark]}
+          colors={["transparent", colors.overlayDark]}
           style={styles.bannerOverlay}
         />
       </View>
@@ -122,11 +123,11 @@ const BannerItem = memo(({ item, index }: any) => {
   );
 });
 
-const SectionHeader = memo(({ title }: any) => (
+const SectionHeader = memo(({ title, colors }: any) => (
   <View style={styles.sectionHeader}>
     <View style={styles.titleContainer}>
-      <View style={styles.accentBar} />
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
+      <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>{title}</Text>
     </View>
   </View>
 ));
@@ -145,6 +146,8 @@ function IndexContent() {
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
   const { setScrollY } = useScrollStore();
+  const { theme } = useTheme();
+  const Colors = theme.colors;
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -205,12 +208,12 @@ function IndexContent() {
   );
 
   const renderCategoryCircle = useCallback(({ item, index }: any) => (
-    <CategoryCircle item={item} index={index} onPress={handleCategoryPress} />
-  ), [handleCategoryPress]);
+    <CategoryCircle item={item} index={index} onPress={handleCategoryPress} colors={Colors} />
+  ), [handleCategoryPress, Colors]);
 
   const renderBanner = useCallback(({ item, index }: any) => (
-    <BannerItem item={item} index={index} />
-  ), []);
+    <BannerItem item={item} index={index} colors={Colors} />
+  ), [Colors]);
 
   const keyExtractor = useCallback((item: any) => item._id, []);
 
@@ -221,7 +224,7 @@ function IndexContent() {
 
   const ListHeader = useCallback(
     () => (
-      <View>
+      <View style={{ backgroundColor: Colors.surface }}>
         {/* Top Gradient Header */}
         <LinearGradient
           colors={[Colors.primary, Colors.gold, "transparent"]}
@@ -250,6 +253,7 @@ function IndexContent() {
           <View style={styles.categoriesSection}>
             <SectionHeader
               title={i18n.t("discoverOurCollection")}
+              colors={Colors}
             />
             
             <FlatList
@@ -267,11 +271,12 @@ function IndexContent() {
         <View style={styles.latestProductsSection}>
           <SectionHeader
             title={i18n.t("latestProducts")}
+            colors={Colors}
           />
         </View>
       </View>
     ),
-    [categories, banners, router, keyExtractor, memoizedCategories, renderCategoryCircle, renderBanner]
+    [categories, banners, router, keyExtractor, memoizedCategories, renderCategoryCircle, renderBanner, Colors]
   );
 
   const getItemLayout = useCallback(
@@ -287,8 +292,8 @@ function IndexContent() {
   );
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: Colors.surface }]}>
+      <StatusBar barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
       <BottomSheetModalProvider>
         <Animated.FlatList
           data={products}
@@ -306,6 +311,8 @@ function IndexContent() {
           updateCellsBatchingPeriod={50}
           getItemLayout={getItemLayout}
           scrollEventThrottle={16}
+          style={{ backgroundColor: Colors.surface }}
+          contentContainerStyle={{ backgroundColor: Colors.surface }}
           onScroll={(event) => {
             const offsetY = event.nativeEvent.contentOffset.y;
             setScrollY(offsetY);
@@ -318,7 +325,7 @@ function IndexContent() {
               onRefresh={fetchData}
               colors={[Colors.primary]}
               tintColor={Colors.primary}
-              progressBackgroundColor={Colors.background}
+              progressBackgroundColor={Colors.cardBackground}
             />
           }
         />
@@ -327,8 +334,8 @@ function IndexContent() {
           ref={bottomSheetModalRef}
           onChange={handleSheetChanges}
           snapPoints={["70%"]}
-          backgroundStyle={styles.bottomSheetBackground}
-          handleIndicatorStyle={styles.bottomSheetIndicator}
+          backgroundStyle={[styles.bottomSheetBackground, { backgroundColor: Colors.cardBackground }]}
+          handleIndicatorStyle={[styles.bottomSheetIndicator, { backgroundColor: Colors.gray[300] }]}
           backdropComponent={renderBackdrop}
           enablePanDownToClose
         >
@@ -375,7 +382,6 @@ const styles = StyleSheet.create({
     borderRadius: CIRCLE_SIZE / 2,
     overflow: "hidden",
     borderWidth: 3,
-    borderColor: Colors.primary,
     margin: 4,
     position: "relative",
   },
@@ -394,21 +400,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -2,
     right: -2,
-    backgroundColor: Colors.primary,
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2.5,
-    borderColor: Colors.text.white,
-    
   },
   circleCategoryName: {
     marginTop: 10,
     fontSize: 12,
     fontWeight: "700",
-    color: Colors.text.dark,
     textAlign: "center",
     maxWidth: CIRCLE_SIZE + 10,
   },
@@ -477,25 +479,20 @@ const styles = StyleSheet.create({
     width: 3,
     height: 24,
     borderRadius: 2,
-    backgroundColor: Colors.primary,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: Colors.text.darkGray,
     letterSpacing: -0.5,
   },
   bottomSheetBackground: {
-    backgroundColor: Colors.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-   
   },
   bottomSheetIndicator: {
     width: 48,
     height: 5,
     borderRadius: 3,
-    backgroundColor: Colors.gray[300],
   },
 });
 

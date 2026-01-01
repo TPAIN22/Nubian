@@ -1,8 +1,9 @@
-const Colors = {
-  primary: '#a37e2c',      //  Darker gold - main brand color
+// Light theme colors
+export const lightColors = {
+  primary: '#a37e2c',      // Darker gold - main brand color
   primaryDark: '#382A0D',  // Darker gold
   secondary: '#005b35',    // Green
-  accent: '#30a1a7',      // Teal/Cyan
+  accent: '#30a1a7',       // Teal/Cyan
   background: '#FFFFFF',
   secondaryBackground: '#1f1c14',
   surface: '#F9FAFB',
@@ -59,7 +60,7 @@ const Colors = {
   // Specific brand colors
   gold: '#FFD700',
   teal: '#30a1a7',
-  darkBackground: '#111e22', // Brand dark background color
+  darkBackground: '#111e22', // Added brand color
   
   // Status colors
   info: '#4A90E2',
@@ -70,4 +71,5 @@ const Colors = {
   yellow: '#F5A623',
 };
 
-export default Colors;
+export type LightColors = typeof lightColors;
+

@@ -3,6 +3,7 @@ import { View, Modal, TextInput, Button, TouchableOpacity, StyleSheet, ScrollVie
 import { Text } from '@/components/ui/text';
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import i18n from '../../utils/i18n';
+import { useTheme } from '@/providers/ThemeProvider';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -40,6 +41,8 @@ const SUDANESE_CITIES = [
 ];
 
 const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, initialValues }) => {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const [form, setForm] = useState<Omit<Address, '_id'>>(initialValues || {
     name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false
   });
@@ -98,23 +101,24 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>{i18n.t('addressForm_city')} *</Text>
                   <TouchableOpacity
-                    style={styles.selectButton}
+                    style={[styles.selectButton, { backgroundColor: Colors.surface }]}
                     onPress={() => setShowCityPicker(true)}
                     activeOpacity={0.7}
                     accessibilityLabel={i18n.t('addressForm_selectCity')}
                   >
-                    <Text style={styles.dropdownIcon}>▼</Text>
-                    <Text style={[styles.selectText, !form.city && styles.placeholderText]}>
+                    <Text style={[styles.dropdownIcon, { color: Colors.text.veryLightGray }]}>▼</Text>
+                    <Text style={[styles.selectText, { color: Colors.text.gray }, !form.city && { color: Colors.text.veryLightGray }]}>
                       {form.city || i18n.t('addressForm_selectCity')}
                     </Text>
                   </TouchableOpacity>
                 </View>
                 {/* المنطقة/الحي */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_area')} *</Text>
+                  <Text style={[styles.fieldLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_area')} *</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: Colors.surface, color: Colors.text.gray }]}
                     placeholder={i18n.t('addressForm_areaPlaceholder')}
+                    placeholderTextColor={Colors.text.veryLightGray}
                     value={form.area}
                     onChangeText={text => setForm((f) => ({ ...f, area: text }))}
                     textAlign="right"
@@ -123,10 +127,11 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* الشارع */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_street')} *</Text>
+                  <Text style={[styles.fieldLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_street')} *</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: Colors.surface, color: Colors.text.gray }]}
                     placeholder={i18n.t('addressForm_streetPlaceholder')}
+                    placeholderTextColor={Colors.text.veryLightGray}
                     value={form.street}
                     onChangeText={text => setForm((f) => ({ ...f, street: text }))}
                     textAlign="right"
@@ -135,10 +140,11 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* المبنى/الشقة */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_building')}</Text>
+                  <Text style={[styles.fieldLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_building')}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: Colors.surface, color: Colors.text.gray }]}
                     placeholder={i18n.t('addressForm_buildingPlaceholder')}
+                    placeholderTextColor={Colors.text.veryLightGray}
                     value={form.building}
                     onChangeText={text => setForm((f) => ({ ...f, building: text }))}
                     textAlign="right"
@@ -147,10 +153,11 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* رقم الهاتف */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_phone')} *</Text>
+                  <Text style={[styles.fieldLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_phone')} *</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: Colors.surface, color: Colors.text.gray }]}
                     placeholder={i18n.t('addressForm_phonePlaceholder')}
+                    placeholderTextColor={Colors.text.veryLightGray}
                     value={form.phone}
                     onChangeText={text => setForm((f) => ({ ...f, phone: text }))}
                     keyboardType="phone-pad"
@@ -160,10 +167,11 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 </View>
                 {/* ملاحظات */}
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>{i18n.t('addressForm_notes')}</Text>
+                  <Text style={[styles.fieldLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_notes')}</Text>
                   <TextInput
-                    style={[styles.input, styles.notesInput]}
+                    style={[styles.input, styles.notesInput, { backgroundColor: Colors.surface, color: Colors.text.gray }]}
                     placeholder={i18n.t('addressForm_notesPlaceholder')}
+                    placeholderTextColor={Colors.text.veryLightGray}
                     value={form.notes}
                     onChangeText={text => setForm((f) => ({ ...f, notes: text }))}
                     multiline
@@ -179,20 +187,24 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                   activeOpacity={0.7}
                   accessibilityLabel="اجعل هذا العنوان افتراضيًا"
                 >
-                  <Text style={styles.checkboxLabel}>{i18n.t('addressForm_makeDefault')}</Text>
-                  <View style={[styles.checkboxBox, form.isDefault && styles.checkboxChecked]}>
-                    {form.isDefault && <Text style={styles.checkMark}>✓</Text>}
+                  <Text style={[styles.checkboxLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_makeDefault')}</Text>
+                  <View style={[
+                    styles.checkboxBox,
+                    { borderColor: Colors.borderLight },
+                    form.isDefault && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                  ]}>
+                    {form.isDefault && <Text style={[styles.checkMark, { color: Colors.text.white }]}>✓</Text>}
                   </View>
                 </TouchableOpacity>
               </View>
             </ScrollView>
             {/* أزرار الأكشن */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.8} accessibilityLabel={i18n.t('addressForm_cancel')}>
-                <Text style={styles.cancelButtonText}>{i18n.t('addressForm_cancel')}</Text>
+              <TouchableOpacity style={[styles.cancelButton, { backgroundColor: Colors.surface }]} onPress={onClose} activeOpacity={0.8} accessibilityLabel={i18n.t('addressForm_cancel')}>
+                <Text style={[styles.cancelButtonText, { color: Colors.text.gray }]}>{i18n.t('addressForm_cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8} accessibilityLabel={initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}>
-                <Text style={styles.submitButtonText}>
+              <TouchableOpacity style={[styles.submitButton, { backgroundColor: Colors.primary }]} onPress={handleSubmit} activeOpacity={0.8} accessibilityLabel={initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}>
+                <Text style={[styles.submitButtonText, { color: Colors.text.white }]}>
                   {initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add')}
                 </Text>
               </TouchableOpacity>
@@ -210,12 +222,12 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
             onPress={() => setShowCityPicker(false)}
             accessibilityLabel="إغلاق نافذة اختيار المدينة"
           />
-          <View style={styles.pickerModal}>
-            <View style={styles.pickerHeader}>
+          <View style={[styles.pickerModal, { backgroundColor: Colors.cardBackground }]}>
+            <View style={[styles.pickerHeader, { borderBottomColor: Colors.borderLight }]}>
               <TouchableOpacity onPress={() => setShowCityPicker(false)} style={styles.pickerCloseButtonContainer} accessibilityLabel="إغلاق محدد المدينة">
-                <Text style={styles.pickerCloseButton}>✕</Text>
+                <Text style={[styles.pickerCloseButton, { color: Colors.text.veryLightGray }]}>✕</Text>
               </TouchableOpacity>
-              <Text style={styles.pickerTitle}>{i18n.t('addressForm_selectCity')}</Text>
+              <Text style={[styles.pickerTitle, { color: Colors.text.gray }]}>{i18n.t('addressForm_selectCity')}</Text>
             </View>
             <ScrollView style={styles.pickerList}>
               {SUDANESE_CITIES.map((city) => (
@@ -223,7 +235,8 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                   key={city}
                   style={[
                     styles.pickerItem,
-                    form.city === city && styles.pickerItemSelected
+                    { borderBottomColor: Colors.borderLight },
+                    form.city === city && { backgroundColor: Colors.surface }
                   ]}
                   onPress={() => {
                     setForm((f) => ({ ...f, city }));
@@ -234,7 +247,8 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
                 >
                   <Text style={[
                     styles.pickerItemText,
-                    form.city === city && styles.pickerItemTextSelected
+                    { color: Colors.text.gray },
+                    form.city === city && { color: Colors.primary, fontWeight: 'bold' }
                   ]}>
                     {city}
                   </Text>
@@ -248,22 +262,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, i
   );
 };
 
-const COLORS = {
-  primary: '#30a1a7',     
-    // أزرق مخضر ناعم: للزر الأساسي والعناصر المميزة
-  text: '#2c3e50',        
-    // لون غامق للنصوص الأساسية
-  gray: '#6c757d',        
-    // رمادي للنصوص الثانوية والأيقونات
-  lightGray: '#f1f3f4',   
-    // رمادي فاتح لحقول الإدخال والخلفيات
-  border: '#dcdcdc',      
-    // لون حدود ناعم
-  white: '#ffffff',       
-    // أبيض نقي
-  danger: '#e74c3c',      
-    // أحمر للتنبيهات والأخطاء
-};
+// COLORS moved to use theme colors dynamically
 
 
 const styles = StyleSheet.create({
@@ -273,7 +272,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.white,
     padding: 20,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -288,12 +286,10 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 20,
-    color: COLORS.gray,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -302,16 +298,13 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 14,
-    color: COLORS.text,
     marginBottom: 5,
   },
   input: {
-    backgroundColor: COLORS.lightGray,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 15,
     fontSize: 14,
-    color: COLORS.text,
   },
   notesInput: {
     height: 80,
@@ -320,7 +313,6 @@ const styles = StyleSheet.create({
   selectButton: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: COLORS.lightGray,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 15,
@@ -328,15 +320,12 @@ const styles = StyleSheet.create({
   dropdownIcon: {
     marginLeft: 8,
     fontSize: 14,
-    color: COLORS.gray,
   },
   selectText: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.text,
   },
   placeholderText: {
-    color: COLORS.gray,
   },
   checkboxContainer: {
     flexDirection: 'row-reverse',
@@ -345,24 +334,19 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     fontSize: 14,
-    color: COLORS.text,
     marginLeft: 10,
   },
   checkboxBox: {
     width: 20,
     height: 20,
     borderWidth: 1,
-    borderColor: COLORS.gray,
     borderRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   checkMark: {
-    color: COLORS.white,
     fontSize: 14,
   },
   buttonContainer: {
@@ -371,26 +355,22 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: COLORS.lightGray,
     padding: 14,
     borderRadius: 14,
     marginLeft: 10,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: COLORS.gray,
     fontSize: 15,
     fontWeight: '600',
   },
   submitButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     padding: 14,
     borderRadius: 14,
     alignItems: 'center',
   },
   submitButtonText: {
-    color: COLORS.white,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -403,7 +383,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   pickerModal: {
-    backgroundColor: COLORS.white,
     maxHeight: screenHeight * 0.5,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -412,7 +391,6 @@ const styles = StyleSheet.create({
   pickerHeader: {
     padding: 15,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -422,12 +400,10 @@ const styles = StyleSheet.create({
   },
   pickerCloseButton: {
     fontSize: 20,
-    color: COLORS.gray,
   },
   pickerTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.text,
   },
   pickerList: {
     paddingHorizontal: 15,
@@ -435,19 +411,15 @@ const styles = StyleSheet.create({
   pickerItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
   },
   pickerItemText: {
     fontSize: 15,
-    color: COLORS.text,
     textAlign: 'right',
   },
   pickerItemSelected: {
-    backgroundColor: COLORS.lightGray,
     borderRadius: 10,
   },
   pickerItemTextSelected: {
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   scrollViewContent: {

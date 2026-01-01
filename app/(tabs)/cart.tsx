@@ -23,8 +23,11 @@ import i18n from "@/utils/i18n";
 import type { CouponValidationResult } from '../components/CouponInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from "@/locales/brandColors";
+import { useTheme } from "@/providers/ThemeProvider";
 
 export default function CartScreen() {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart } =
     useCartStore();
   const { getToken } = useAuth();
@@ -123,15 +126,15 @@ export default function CartScreen() {
   if (isCartEmpty) {
     return (
       <View
-        style={styles.emptyContainer}
+        style={[styles.emptyContainer, { backgroundColor: Colors.surface }]}
       >
-        <View style={styles.emptyContent}>
-          <View style={styles.emptyIconContainer}>
+          <View style={styles.emptyContent}>
+          <View style={[styles.emptyIconContainer, { backgroundColor: Colors.cardBackground }]}>
             <Text style={styles.emptyIcon}>🛒</Text>
           </View>
 
-          <Text style={styles.emptyTitle}>{i18n.t('cartEmpty')}</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: Colors.text.gray }]}>{i18n.t('cartEmpty')}</Text>
+          <Text style={[styles.emptySubtitle, { color: Colors.text.veryLightGray }]}>
             {i18n.t('cartEmptySubtitle')}
           </Text>
 
@@ -144,7 +147,7 @@ export default function CartScreen() {
               colors={[Colors.primary, Colors.primary]}
               style={styles.buttonGradient}
             >
-              <Text style={styles.continueShoppingText}>{i18n.t('startShopping')}</Text>
+              <Text style={[styles.continueShoppingText, { color: Colors.text.white }]}>{i18n.t('startShopping')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -154,8 +157,8 @@ export default function CartScreen() {
 
   if (isProcessing) {
     return (
-      <View style={{flex:1 , alignItems:"center" ,justifyContent:'center'}}>
-      <ActivityIndicator size="large" color="#f0b745" />
+      <View style={[styles.emptyContainer, { backgroundColor: Colors.surface }]}>
+      <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -167,8 +170,8 @@ export default function CartScreen() {
     : cart.totalPrice;
 
   return (
-    <View style={styles.container}>
-        <View style={styles.cartContent}>
+    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
+        <View style={[styles.cartContent, { backgroundColor: Colors.surface }]}>
           <FlatList
             data={Array.isArray(cart.products) ? cart.products : []}
             renderItem={({ item }) => (
@@ -202,7 +205,6 @@ const styles = StyleSheet.create({
   container: {
     marginTop:10,
     flex: 1,
-    backgroundColor: Colors.surface,
   },
   // Header Styles
   headerGradient: {
@@ -217,30 +219,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12, // smaller padding
   },
   headerTitle: {
-    fontSize: 18, // smaller font
-    fontWeight: "700", // lighter weight
-    color: Colors.text.darkGray, // dark text for light mode
-    textShadowColor: Colors.overlayLight,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    fontSize: 18,
+    fontWeight: "700",
   },
   itemCountBadge: {
-    backgroundColor: Colors.accent,
-    minWidth: 22, // smaller badge
+    minWidth: 22,
     height: 22,
     borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 2,
   },
   itemCount: {
-    fontSize: 12, // smaller font
+    fontSize: 12,
     fontWeight: "600",
-    color: Colors.text.white,
   },
 
   // Loading Styles
@@ -253,25 +248,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: Colors.surface,
   },
   loadingCard: {
-    backgroundColor: Colors.background,
     padding: 30,
     borderRadius: 20,
     alignItems: "center",
-    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 15,
   },
   loadingCardLight: {
-    backgroundColor: Colors.background,
     padding: 30,
     borderRadius: 20,
     alignItems: "center",
-    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -279,14 +269,12 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: Colors.text.mediumGray,
     marginTop: 15,
     textAlign: "center",
     fontWeight: "600",
   },
   loadingTextLight: {
     fontSize: 16,
-    color: Colors.text.darkGray,
     marginTop: 15,
     textAlign: "center",
     fontWeight: "600",
@@ -306,11 +294,9 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: Colors.background,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
-   
   },
   emptyIcon: {
     fontSize: 60,
@@ -319,13 +305,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 28,
     fontWeight: "800",
-    color: Colors.text.darkGray,
     marginBottom: 15,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 16,
-    color: Colors.text.veryLightGray,
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 40,
@@ -339,7 +323,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   continueShoppingText: {
-    color: Colors.text.white,
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
@@ -348,7 +331,6 @@ const styles = StyleSheet.create({
   // Cart Content Styles
   cartContent: {
     flex: 1,
-    backgroundColor: Colors.surface,
   },
   listContainer: {
     paddingTop: 10,
@@ -383,13 +365,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   discountLabel: {
-    color: Colors.success,
     fontWeight: 'bold',
     fontSize: 16,
     marginBottom: 5,
   },
   finalTotalLabel: {
-    color: Colors.success,
     fontWeight: 'bold',
     fontSize: 18,
   },
@@ -402,12 +382,10 @@ const styles = StyleSheet.create({
     
   },
   totalCard: {
-    backgroundColor: Colors.surface,
     padding: 20,
     borderRadius: 15,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   totalRow: {
     flexDirection: "row",
@@ -417,12 +395,10 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.text.mediumGray,
   },
   totalAmount: {
     fontSize: 22,
     fontWeight: "800",
-    color: Colors.accent,
   },
   originalPriceRow: {
     flexDirection: "row",
@@ -431,31 +407,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
   },
   originalPriceLabel: {
     fontSize: 14,
-    color: Colors.text.lightGray,
   },
   originalPriceAmount: {
     fontSize: 16,
-    color: Colors.text.lightGray,
     textDecorationLine: 'line-through',
   },
 
   // Bottom Sheet Styles
   bottomSheetBackground: {
-    backgroundColor: Colors.background,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: -5 },
     shadowOpacity: 0.1,
     shadowRadius: 15,
     elevation: 10,
   },
   bottomSheetIndicator: {
-    backgroundColor: Colors.gray[300],
     width: 50,
     height: 5,
     borderRadius: 2.5,

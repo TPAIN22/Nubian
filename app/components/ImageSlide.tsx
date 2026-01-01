@@ -3,6 +3,7 @@ import { View,  StyleSheet, Dimensions, FlatList } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import Colors from "@/locales/brandColors";
+import { useTheme } from "@/providers/ThemeProvider";
 
 const { width } = Dimensions.get('window');
 
@@ -18,6 +19,8 @@ interface ImageSliderProps {
 }
 
 function ImageSlider({ banners }: ImageSliderProps) {
+  const { theme } = useTheme();
+  const Colors = theme.colors;
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
@@ -41,15 +44,16 @@ function ImageSlider({ banners }: ImageSliderProps) {
 
   const renderPagination = () => (
     <View style={styles.pagination}>
-      {banners.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.paginationDot,
-            index === currentIndex && styles.paginationDotActive
-          ]}
-        />
-      ))}
+        {banners.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.paginationDot,
+              { backgroundColor: 'rgba(255,255,255,0.5)' },
+              index === currentIndex && { backgroundColor: Colors.text.white }
+            ]}
+          />
+        ))}
     </View>
   );
 
@@ -115,7 +119,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   paginationDotActive: {
-    backgroundColor: Colors.text.white,
   },
 });
 
