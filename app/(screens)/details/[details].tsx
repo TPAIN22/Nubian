@@ -385,7 +385,14 @@ export default function Details() {
           <View style={styles.imageContainer}>
             <FlatList
               data={viewProduct.images}
-              keyExtractor={(item, index) => `${item}-${index}`}
+              keyExtractor={(item, index) => {
+                // Create a unique, stable key that handles duplicate URLs
+                // For product images, the list is static (from product data, doesn't reorder)
+                // So using index is safe and ensures uniqueness even with duplicate URLs
+                // Format: "url-index" ensures both uniqueness and stability for static lists
+                const url = item || `image-${index}`;
+                return `${url}-${index}`;
+              }}
               horizontal
               showsHorizontalScrollIndicator={false}
               renderItem={renderImageItem}

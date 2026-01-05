@@ -1,7 +1,16 @@
 import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const baseURL = "https://nubian-lne4.onrender.com/api";
-//const baseURL = "http://192.168.0.115:5000/api";
+
+// Get API URL from environment variable
+// This should be set via EXPO_PUBLIC_API_URL in .env or app.json
+// Example: EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api (development)
+//          EXPO_PUBLIC_API_URL=https://nubian-lne4.onrender.com/api (production)
+const baseURL = process.env.EXPO_PUBLIC_API_URL || "https://nubian-lne4.onrender.com/api";
+
+// Validate API URL is configured
+if (!process.env.EXPO_PUBLIC_API_URL && __DEV__) {
+  console.warn('EXPO_PUBLIC_API_URL is not set. Using default production URL. Set EXPO_PUBLIC_API_URL in .env for development.');
+}
 // إعدادات التخزين المؤقت
 const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
 const RETRY_ATTEMPTS = 3;
