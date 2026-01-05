@@ -385,7 +385,7 @@ export default function Details() {
           <View style={styles.imageContainer}>
             <FlatList
               data={viewProduct.images}
-              keyExtractor={(item) => item}
+              keyExtractor={(item, index) => `${item}-${index}`}
               horizontal
               showsHorizontalScrollIndicator={false}
               renderItem={renderImageItem}
