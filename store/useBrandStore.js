@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import axiosInstance from '../utils/axiosInstans';
 
-const API_URL = '/brands'; // لأن baseURL معرف في axiosInstance
+const API_URL = '/merchant'; // لأن baseURL معرف في axiosInstance
 
-const useBrandStore = () => {
-  const [brands, setBrands] = useState([]);
+const usemerchanttore = () => {
+  const [merchant, setmerchant] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchBrands = async () => {
+  const fetchmerchant = async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await axiosInstance.get(API_URL);
-      setBrands(response.data);
+      setmerchant(response.data);
     } catch (err) {
       setError(err);
     } finally {
@@ -21,7 +21,7 @@ const useBrandStore = () => {
     }
   };
 
-  return { brands, fetchBrands, loading, error };
+  return { merchant, fetchmerchant, loading, error };
 };
 
-export default useBrandStore; 
+export default usemerchanttore; 
