@@ -139,6 +139,8 @@ function IndexContent() {
     products,
     getAllProducts,
     setIsTabBarVisible,
+    error,
+    isProductsLoading,
   } = useItemStore();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -274,9 +276,26 @@ function IndexContent() {
             colors={Colors}
           />
         </View>
+
+        {/* Error Message */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: Colors.error }]}>{error}</Text>
+          </View>
+        )}
+
+        {/* Empty State */}
+        {!isProductsLoading && products.length === 0 && !error && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cube-outline" size={64} color={Colors.text.veryLightGray} />
+            <Text style={[styles.emptyText, { color: Colors.text.veryLightGray }]}>
+              {i18n.t("noProductsAvailable") || "لا توجد منتجات متاحة"}
+            </Text>
+          </View>
+        )}
       </View>
     ),
-    [categories, banners, router, keyExtractor, memoizedCategories, renderCategoryCircle, renderBanner, Colors]
+    [categories, banners, router, keyExtractor, memoizedCategories, renderCategoryCircle, renderBanner, Colors, error, products.length, isProductsLoading]
   );
 
   const getItemLayout = useCallback(
@@ -493,6 +512,27 @@ const styles = StyleSheet.create({
     width: 48,
     height: 5,
     borderRadius: 3,
+  },
+  errorContainer: {
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 0, 0, 0.1)",
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: "center",
   },
 });
 

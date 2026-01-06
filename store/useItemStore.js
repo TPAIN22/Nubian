@@ -95,29 +95,106 @@ const useItemStore = create((set, get) => ({
     set({ isProductsLoading: true, error: null });
     
     try {
-      const response = await axiosInstance.get("/products", {
-        params: { page: 1, limit },
+      // First try with pagination params (like the mobile app expects)
+      // Also try to get only active products if API supports it
+      let response;
+      try {
+        response = await axiosInstance.get("/products", {
+          params: { page: 1, limit, isActive: true },
+        });
+      } catch (paginationError) {
+        // If pagination with isActive fails, try without isActive
+        try {
+          response = await axiosInstance.get("/products", {
+            params: { page: 1, limit },
+          });
+        } catch (paginationError2) {
+          // If pagination fails completely, try without params (like dashboard does)
+          console.log("⚠️ Pagination params failed, trying without params...");
+          response = await axiosInstance.get("/products");
+        }
+      }
+
+      // Debug: Log the response structure
+      console.log("📦 Products API Response:", {
+        status: response.status,
+        dataKeys: Object.keys(response.data || {}),
+        hasProducts: !!response.data?.products,
+        productsType: Array.isArray(response.data?.products) ? 'array' : typeof response.data?.products,
+        productsLength: Array.isArray(response.data?.products) ? response.data.products.length : 'N/A',
+        dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
+        dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+        fullResponse: response.data
       });
 
-      const products = Array.isArray(response.data.products) 
-        ? response.data.products 
-        : Array.isArray(response.data) 
-        ? response.data 
-        : [];
+      // Try multiple response structure patterns
+      let products = [];
+      
+      // Pattern 1: response.data.products (most common)
+      if (Array.isArray(response.data?.products)) {
+        products = response.data.products;
+      }
+      // Pattern 2: response.data is directly an array
+      else if (Array.isArray(response.data)) {
+        products = response.data;
+      }
+      // Pattern 3: response.data.data.products (nested structure)
+      else if (Array.isArray(response.data?.data?.products)) {
+        products = response.data.data.products;
+      }
+      // Pattern 4: response.data.data is directly an array
+      else if (Array.isArray(response.data?.data)) {
+        products = response.data.data;
+      }
+      // Pattern 5: response.data.results (some APIs use 'results')
+      else if (Array.isArray(response.data?.results)) {
+        products = response.data.results;
+      }
+      // Pattern 6: response.data.items (some APIs use 'items')
+      else if (Array.isArray(response.data?.items)) {
+        products = response.data.items;
+      }
 
-      const totalPages = Number(response.data.totalPages) || 1;
-      const currentPage = Number(response.data.currentPage) || 1;
+      // Filter out inactive products if they have isActive field (like banners)
+      // Only filter if API didn't already filter by isActive query param
+      const originalLength = products.length;
+      if (products.length > 0) {
+        // Only filter if we have products with isActive field defined
+        // Don't filter if all products are missing isActive (they might be active by default)
+        const hasIsActiveField = products.some(p => p.hasOwnProperty('isActive'));
+        if (hasIsActiveField) {
+          products = products.filter((product) => product.isActive !== false);
+          if (originalLength !== products.length) {
+            console.log(`📦 Filtered out ${originalLength - products.length} inactive products`);
+          }
+        } else {
+          console.log("📦 Products don't have isActive field, showing all products");
+        }
+      }
+
+      console.log("📦 Parsed products:", products.length, "items");
+
+      const totalPages = Number(response.data?.totalPages) || Number(response.data?.data?.totalPages) || 1;
+      const currentPage = Number(response.data?.currentPage) || Number(response.data?.data?.currentPage) || Number(response.data?.page) || 1;
 
       set({
         products,
         isProductsLoading: false,
-        error: null,
+        error: products.length === 0 ? "لا توجد منتجات متاحة" : null,
         // Set up pagination for getAllProducts
         page: currentPage + 1,
         hasMore: currentPage < totalPages,
         selectedCategory: null,
       });
     } catch (error) {
+      console.error("❌ Error fetching products:", {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        url: error?.config?.url,
+        fullError: error
+      });
+      
       const errorMessage = error?.response?.data?.message 
         || error?.message 
         || "تعذر تحميل المنتجات";
@@ -125,6 +202,7 @@ const useItemStore = create((set, get) => ({
       set({
         isProductsLoading: false,
         error: errorMessage,
+        products: [], // Ensure products is reset on error
       });
     }
   },

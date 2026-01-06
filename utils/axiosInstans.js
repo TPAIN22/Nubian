@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Get API URL from environment variable
 // This should be set via EXPO_PUBLIC_API_URL in .env or app.json
 // Example: EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api (development)
-//          EXPO_PUBLIC_API_URL=https://nubian-lne4.onrender.com/api (production)
+// EXPO_PUBLIC_API_URL=https://nubian-lne4.onrender.com/api (production)
 const baseURL = process.env.EXPO_PUBLIC_API_URL || "https://nubian-lne4.onrender.com/api";
 
 // Validate API URL is configured
