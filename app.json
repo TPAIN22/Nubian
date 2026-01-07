@@ -25,30 +25,30 @@
       }
     },
     "android": {
-  "versionCode": 11,
-  "adaptiveIcon": {
-    "foregroundImage": "./assets/images/screen.png",
-    "backgroundColor": "#ffffff"
-  },
-  "softwareKeyboardLayoutMode": "pan",
-  "package": "dev.expo.nubian",
-  "googleServicesFile": "./google-services.json",
-  "intentFilters": [
-    {
-      "action": "VIEW",
-      "autoVerify": true,
-      "data": [
+      "versionCode": 12,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/screen.png",
+        "backgroundColor": "#ffffff"
+      },
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "dev.expo.nubian",
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
         {
-          "scheme": "sdnubian"
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "sdnubian"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
-      ],
-      "category": [
-        "BROWSABLE",
-        "DEFAULT"
       ]
-    }
-  ]
-},
+    },
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -82,7 +82,8 @@
       ],
       "expo-font",
       "expo-notifications",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
