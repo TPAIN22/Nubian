@@ -9,14 +9,11 @@ const useOrderStore = create((set, get) => ({
   error: null,
 
   // جلب طلبات المستخدم
-  getUserOrders: async (token) => {
+  // Token is automatically added by axios interceptor
+  getUserOrders: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/orders/my-orders", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.get("/orders/my-orders");
       if (!Array.isArray(response.data)) {
         throw new Error("البيانات المستلمة غير صحيحة");
       }
@@ -40,14 +37,11 @@ const useOrderStore = create((set, get) => ({
   },
 
   // جلب طلب واحد بالتفصيل
-  getOrderById: async (orderId, token) => {
+  // Token is automatically added by axios interceptor
+  getOrderById: async (orderId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/orders/${orderId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.get(`/orders/${orderId}`);
       set({ 
         selectedOrder: response.data, 
         isLoading: false,
@@ -66,14 +60,11 @@ const useOrderStore = create((set, get) => ({
   },
 
   // إنشاء طلب جديد
-  createOrder: async (orderData, token) => {
+  // Token is automatically added by axios interceptor
+  createOrder: async (orderData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/orders", orderData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.post("/orders", orderData);
       
       // إضافة الطلب الجديد لبداية القائمة
       const currentOrders = get().orders;
@@ -94,14 +85,12 @@ const useOrderStore = create((set, get) => ({
   },
 
   // تحديث حالة الطلب (للأدمن)
-  updateOrderStatus: async (orderId, statusData, token) => {
+  // Token is automatically added by axios interceptor
+  updateOrderStatus: async (orderId, statusData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(`/orders/${orderId}/status`, statusData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // Backend expects PATCH /orders/:id/status
+      const response = await axiosInstance.patch(`/orders/${orderId}/status`, statusData);
       
       // تحديث الطلب في القائمة
       const currentOrders = get().orders;
@@ -127,14 +116,11 @@ const useOrderStore = create((set, get) => ({
   },
 
   // جلب إحصائيات الطلبات (للأدمن)
-  getOrderStats: async (token) => {
+  // Token is automatically added by axios interceptor
+  getOrderStats: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/orders/stats", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.get("/orders/stats");
       set({ 
         orderStats: response.data, 
         isLoading: false,
@@ -191,8 +177,8 @@ const useOrderStore = create((set, get) => ({
   clearSelectedOrder: () => set({ selectedOrder: null }),
 
   // إعادة تحميل الطلبات
-  refreshOrders: async (token) => {
-    return get().getUserOrders(token);
+  refreshOrders: async () => {
+    return get().getUserOrders();
   },
 }));
 

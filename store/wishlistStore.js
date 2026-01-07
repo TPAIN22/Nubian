@@ -19,12 +19,11 @@ const useWishlistStore = create((set, get) => {
     error: null,
 
     // جلب المفضلة من الباكند
-    fetchWishlist: async (token) => {
+    // Token is automatically added by axios interceptor
+    fetchWishlist: async () => {
       set({ isLoading: true, error: null });
       try {
-        const res = await axiosInstance.get('/wishlist', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axiosInstance.get('/wishlist');
         set({ wishlist: res.data, isLoading: false });
         await AsyncStorage.setItem('wishlist', JSON.stringify(res.data));
       } catch (error) {
@@ -38,14 +37,13 @@ const useWishlistStore = create((set, get) => {
     },
 
     // إضافة منتج (Optimistic + Feedback)
-    addToWishlist: async (product, token) => {
+    // Token is automatically added by axios interceptor
+    addToWishlist: async (product) => {
       const prevWishlist = get().wishlist;
       set({ wishlist: [product, ...prevWishlist] });
       try {
-        await axiosInstance.post(`/wishlist/${product._id}`, {}, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        await get().fetchWishlist(token);
+        await axiosInstance.post(`/wishlist/${product._id}`, {});
+        await get().fetchWishlist();
         Alert.alert('تمت الإضافة', 'تمت إضافة المنتج إلى المفضلة بنجاح');
       } catch (error) {
         set({ wishlist: prevWishlist, error: error?.response?.data?.message || error.message });
@@ -55,14 +53,13 @@ const useWishlistStore = create((set, get) => {
     },
 
     // حذف منتج (Optimistic + Feedback)
-    removeFromWishlist: async (productId, token) => {
+    // Token is automatically added by axios interceptor
+    removeFromWishlist: async (productId) => {
       const prevWishlist = get().wishlist;
       set({ wishlist: prevWishlist.filter((p) => p._id !== productId) });
       try {
-        await axiosInstance.delete(`/wishlist/${productId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        await get().fetchWishlist(token);
+        await axiosInstance.delete(`/wishlist/${productId}`);
+        await get().fetchWishlist();
         Alert.alert('تم الحذف', 'تمت إزالة المنتج من المفضلة');
       } catch (error) {
         set({ wishlist: prevWishlist, error: error?.response?.data?.message || error.message });

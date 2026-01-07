@@ -32,9 +32,19 @@ export const useProductFetch = (productId: string): UseProductFetchReturn => {
 
     try {
       const response = await axiosInstance.get(`/products/${productId}`);
-      setProduct(response.data);
+      
+      // Backend returns: { success: true, data: { ...product... }, message: "..." }
+      // Extract the actual product data from response.data.data
+      const productData = response.data?.data || response.data;
+      
+      if (!productData || !productData._id) {
+        throw new Error('Invalid product data received');
+      }
+      
+      setProduct(productData);
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.message 
+      const errorMessage = err?.response?.data?.error?.message 
+        || err?.response?.data?.message 
         || err?.message 
         || "تعذر تحميل المنتج";
       setError(errorMessage);

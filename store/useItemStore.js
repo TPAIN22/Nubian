@@ -213,13 +213,23 @@ const useItemStore = create((set, get) => ({
     
     try {
       const response = await axiosInstance.get(`/products/${productId}`);
+      
+      // Backend returns: { success: true, data: { ...product... }, message: "..." }
+      // Extract the actual product data from response.data.data
+      const productData = response.data?.data || response.data;
+      
+      if (!productData || !productData._id) {
+        throw new Error('Invalid product data received');
+      }
+      
       set({
-        product: response.data,
+        product: productData,
         isProductsLoading: false,
         error: null,
       });
     } catch (error) {
-      const errorMessage = error?.response?.data?.message 
+      const errorMessage = error?.response?.data?.error?.message 
+        || error?.response?.data?.message 
         || error?.message 
         || "تعذر تحميل المنتج";
       

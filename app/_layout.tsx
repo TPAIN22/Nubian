@@ -24,6 +24,7 @@ import { LanguageProvider } from "@/utils/LanguageContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ThemeProvider, useTheme } from "@/providers/ThemeProvider";
+import { useTokenManager } from "@/hooks/useTokenManager";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,6 +48,9 @@ function AppLoaderWithClerk() {
 
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
   const { isDark } = useTheme();
+  
+  // Initialize token manager for API requests
+  useTokenManager();
   
   // Load Cairo fonts
   const { fontsLoaded, fontError } = useFonts();
