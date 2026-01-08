@@ -4,6 +4,7 @@ import React from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { useTheme } from "@/providers/ThemeProvider";
+import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/cartUtils";
 
  const CartItem = React.memo(function CartItem({
   item,
@@ -18,6 +19,11 @@ import { useTheme } from "@/providers/ThemeProvider";
     "https://placehold.co/80x100/eeeeee/aaaaaa?text=No+Image";
 
   const imageSource = item?.product?.images?.[0] || PLACEHOLDER_IMAGE;
+  
+  // Extract attributes from cart item (handles both new and legacy formats)
+  const attributes = extractCartItemAttributes(item);
+  const attributesText = getAttributesDisplayText(attributes);
+  
   return (
     <View style={[styles.container, { backgroundColor: Colors.cardBackground }]}>
       <View style={styles.imgContainer}>
@@ -32,7 +38,17 @@ import { useTheme } from "@/providers/ThemeProvider";
           <Text style={[styles.productName, { color: Colors.text.gray }]}>
             {item?.product?.name || "Product Name"}
           </Text>
-          <Text style={[styles.productSize, { color: Colors.text.veryLightGray }]}>المقاس : {item?.size || "N/A"}</Text>
+          {attributesText ? (
+            <Text style={[styles.productSize, { color: Colors.text.veryLightGray }]}>
+              {attributesText}
+            </Text>
+          ) : (
+            item?.size && (
+              <Text style={[styles.productSize, { color: Colors.text.veryLightGray }]}>
+                المقاس : {item.size}
+              </Text>
+            )
+          )}
         </View>
         <View style={styles.priceAndQuantity}>
           <View style={[styles.quantity, { backgroundColor: Colors.surface }]}>

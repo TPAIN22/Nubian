@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Pressable,
   Text,
@@ -10,18 +10,13 @@ import {
   I18nManager,
 } from "react-native";
 import useCartStore from "@/store/useCartStore";
-import { useUser, useAuth } from "@clerk/clerk-expo";
+import { useUser } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
 import { router } from "expo-router";
 import useItemStore from "@/store/useItemStore";
 import i18n from "@/utils/i18n";
-
-type Product = {
-  _id: string;
-  quantity?: number;
-  size?: string;
-  [key: string]: any;
-};
+import type { Product, SelectedAttributes } from "@/types/cart.types";
+import { validateRequiredAttributes, mergeSizeAndAttributes } from "@/utils/cartUtils";
 
 type Props = {
   product: Product;
@@ -29,7 +24,8 @@ type Props = {
   buttonStyle?: ViewStyle | any;
   textStyle?: TextStyle;
   disabled?: boolean;
-  selectedSize?: string
+  selectedSize?: string; // Legacy support
+  selectedAttributes?: SelectedAttributes; // New generic attributes
 };
 
 const AddToCartButton = ({
@@ -38,26 +34,45 @@ const AddToCartButton = ({
   buttonStyle,
   textStyle,
   disabled,
-  selectedSize
+  selectedSize,
+  selectedAttributes,
 }: Props) => {
-  const { addToCart, clearError, fetchCart } = useCartStore();
+  const { addToCart, clearError, fetchCart, error } = useCartStore();
   const { isSignedIn } = useUser();
-  const { getToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const {signInModelVisible, setSignInModelVisible} = useItemStore()
-  
+  const { signInModelVisible, setSignInModelVisible } = useItemStore();
+
   // Get translated title dynamically
   const buttonTitle = title || i18n.t('addToCart');
 
+  // Merge size and attributes for validation and submission
+  const mergedAttributes = useMemo(() => {
+    return mergeSizeAndAttributes(selectedSize, selectedAttributes);
+  }, [selectedSize, selectedAttributes]);
+
+  // Validate required attributes
+  const validation = useMemo(() => {
+    if (!product) return { valid: false, missing: [] };
+    return validateRequiredAttributes(product.attributes, mergedAttributes);
+  }, [product, mergedAttributes]);
+
+  // Check if button should be disabled
+  const isButtonDisabled = useMemo(() => {
+    return disabled || isLoading || !validation.valid || product?.stock === 0;
+  }, [disabled, isLoading, validation.valid, product?.stock]);
+
   const handleAddToCart = async () => {
-    if (disabled) {
+    if (isButtonDisabled) {
       return;
     }
 
-    if (!product?.size && product?.category?.includes("ملابس")) {
+    // Validate required attributes
+    if (!validation.valid) {
+      const missingText = validation.missing.join(', ');
       Toast.show({
         type: 'info',
-        text1: i18n.t('selectSizeFirst'),
+        text1: i18n.t('selectAttributesFirst') || 'Please select required attributes',
+        text2: `Missing: ${missingText}`,
       });
       return;
     }
@@ -84,22 +99,18 @@ const AddToCartButton = ({
         return;
       }
 
-      const token = await getToken();
-      if (!token) {
-        Toast.show({
-          type: "error",
-          text1: i18n.t('authError'),
-        });
-        setIsLoading(false);
-        return;
-      }
+      // Pass both size (for backward compatibility) and attributes
+      await addToCart(
+        product._id,
+        1,
+        selectedSize || '',
+        selectedAttributes
+      );
 
-      await addToCart(token, product._id, 1, selectedSize || '');
-      
-      // تحديث السلة لضمان تحديث الـ badge
+      // Refresh cart to update badge
       setTimeout(async () => {
         try {
-          await fetchCart(token);
+          await fetchCart();
         } catch (error) {
           console.log('Error refreshing cart:', error);
         }
@@ -109,10 +120,25 @@ const AddToCartButton = ({
         type: "success",
         text1: i18n.t('addedToCart'),
       });
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Error adding to cart:', err);
+      console.error('Error response:', err?.response?.data);
+      console.error('Error message:', err?.message);
+      
+      // Get error message from the caught error
+      const errorMessage = err?.response?.data?.message || err?.message || i18n.t('addToCartError');
+      
+      // Also check the store error state
+      const storeError = useCartStore.getState().error;
+      const finalErrorMessage = storeError || errorMessage;
+      
       Toast.show({
         type: "error",
         text1: i18n.t('addToCartError'),
+        text2: typeof finalErrorMessage === 'string' && finalErrorMessage !== i18n.t('addToCartError') 
+          ? finalErrorMessage 
+          : undefined,
+        visibilityTime: 4000,
       });
     } finally {
       setIsLoading(false);
@@ -125,10 +151,10 @@ const AddToCartButton = ({
         style={[
           styles.button,
           buttonStyle,
-          (isLoading || disabled) && styles.disabledButton
+          isButtonDisabled && styles.disabledButton
         ]}
         onPress={handleAddToCart}
-        disabled={isLoading || disabled}
+        disabled={isButtonDisabled}
       >
         {isLoading ? (
           <ActivityIndicator size="small" color="#FFFFFFFF" />

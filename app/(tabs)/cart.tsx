@@ -10,9 +10,9 @@ import {
 import { Text } from "@/components/ui/text";
 import { useCallback, useRef, useEffect, useState } from "react";
 import useCartStore from "@/store/useCartStore";
-import { useAuth } from "@clerk/clerk-expo";
 import CartItem from "../components/cartItem";
 import Chekout from "../components/chekoutBotton";
+import { extractCartItemAttributes } from "@/utils/cartUtils";
 import BottomSheet, {
   BottomSheetModal,
   BottomSheetView,
@@ -28,9 +28,8 @@ import { useTheme } from "@/providers/ThemeProvider";
 export default function CartScreen() {
   const { theme } = useTheme();
   const Colors = theme.colors;
-  const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart } =
+  const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart, error, clearError } =
     useCartStore();
-  const { getToken } = useAuth();
   const router = useRouter();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [isProcessing] = useState(false);
@@ -55,52 +54,41 @@ export default function CartScreen() {
   useEffect(() => {
     const fetchCartData = async () => {
       try {
-        const token = await getToken();
-        if (token) {
-          await fetchCart(token);
+        await fetchCart();
+      } catch (error: any) {
+        // Only log non-404 errors (404 for cart not found is handled as empty cart)
+        if (error?.response?.status !== 404) {
+          console.error('Error loading cart:', error);
         }
-      } catch (error) {
-        console.log('Error loading cart:', error);
       }
     };
     fetchCartData();
   }, []);
 
   const increment = useCallback(async (item: any) => {
-    const token = await getToken();
-    if (token) {
-      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : (item.size || "")).trim();
-      await updateCartItemQuantity(
-        token,
-        item.product._id,
-        1,
-        normalizedSize
-      );
-    }
-  }, []);
+    const attributes = extractCartItemAttributes(item);
+    await updateCartItemQuantity(
+      item.product._id,
+      1,
+      attributes.size || '',
+      attributes
+    );
+  }, [updateCartItemQuantity]);
 
   const decrement = useCallback(async (item: any) => {
-    const token = await getToken();
-    if (token) {
-      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : (item.size || "")).trim();
-     
-      await updateCartItemQuantity(
-        token,
-        item.product._id,
-        -1,
-        normalizedSize
-      );
-    }
-  }, []);
+    const attributes = extractCartItemAttributes(item);
+    await updateCartItemQuantity(
+      item.product._id,
+      -1,
+      attributes.size || '',
+      attributes
+    );
+  }, [updateCartItemQuantity]);
 
   const deleteItem = useCallback(async (item: any) => {
-    const token = await getToken();
-    if (token) {
-      const normalizedSize = (item.size === null || item.size === undefined || item.size === 'null' || item.size === 'undefined' ? "" : (item.size || "")).trim();
-    
-      await removeFromCart(token, item.product._id, normalizedSize);
-    }
-  }, []);
+    const attributes = extractCartItemAttributes(item);
+    await removeFromCart(item.product._id, attributes.size || '', attributes);
+  }, [removeFromCart]);
 
   const handleContinueShopping = () => {
     router.replace("/");
@@ -120,6 +108,34 @@ export default function CartScreen() {
           <ActivityIndicator size="large" color={Colors.primary} />
       </View>
         
+    );
+  }
+
+  // Show error message if there's an error (but not for empty cart)
+  if (error && !isCartEmpty) {
+    return (
+      <View style={[styles.emptyContainer, { backgroundColor: Colors.surface }]}>
+        <View style={styles.emptyContent}>
+          <Text style={[styles.emptyTitle, { color: Colors.error }]}>{error}</Text>
+          <TouchableOpacity
+            style={styles.continueShoppingButton}
+            onPress={() => {
+              clearError();
+              fetchCart();
+            }}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[Colors.primary, Colors.primary]}
+              style={styles.buttonGradient}
+            >
+              <Text style={[styles.continueShoppingText, { color: Colors.text.white }]}>
+                {i18n.t('tryAgain') || 'حاول مرة أخرى'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
 

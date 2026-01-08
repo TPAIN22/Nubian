@@ -23,6 +23,8 @@ import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
+import type { SelectedAttributes } from "@/types/cart.types";
+import { mergeSizeAndAttributes } from "@/utils/cartUtils";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -40,6 +42,14 @@ export default function Details() {
   
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  
+  // Build selected attributes object for cart
+  const selectedAttributes = useMemo<SelectedAttributes>(() => {
+    const attrs: SelectedAttributes = {};
+    if (selectedSize) attrs.size = selectedSize;
+    if (selectedColor) attrs.color = selectedColor;
+    return attrs;
+  }, [selectedSize, selectedColor]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -453,6 +463,7 @@ export default function Details() {
             <AddToCartButton
               product={viewProduct}
               selectedSize={selectedSize ?? ""}
+              selectedAttributes={selectedAttributes}
               buttonStyle={[
                 styles.addToCartButton,
                 viewProduct.stock === 0 && styles.disabledButton,

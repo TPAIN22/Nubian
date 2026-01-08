@@ -10,7 +10,19 @@ const baseURL = process.env.EXPO_PUBLIC_API_URL || "https://nubian-lne4.onrender
 
 // Validate API URL is configured
 if (!process.env.EXPO_PUBLIC_API_URL && __DEV__) {
-  console.warn('EXPO_PUBLIC_API_URL is not set. Using default production URL. Set EXPO_PUBLIC_API_URL in .env for development.');
+  console.warn('⚠️ EXPO_PUBLIC_API_URL is not set. Using default production URL:', baseURL);
+  console.warn('💡 Set EXPO_PUBLIC_API_URL in .env file for development, e.g.:');
+  console.warn('   EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api');
+}
+
+// Log the API URL being used (only the domain for security)
+if (__DEV__) {
+  try {
+    const url = new URL(baseURL);
+    console.log('📡 API Base URL:', `${url.protocol}//${url.host}`);
+  } catch (e) {
+    console.warn('⚠️ Invalid API URL format:', baseURL);
+  }
 }
 // إعدادات التخزين المؤقت
 const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
@@ -124,6 +136,28 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   async (error) => {
+    // Handle network errors (no response from server)
+    if (!error.response) {
+      console.error('Network Error:', {
+        message: error.message,
+        code: error.code,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullURL: error.config?.baseURL ? `${error.config.baseURL}${error.config.url}` : error.config?.url,
+        method: error.config?.method,
+        timeout: error.code === 'ECONNABORTED' ? 'Request timeout' : 'Connection failed',
+      });
+      
+      // Provide more helpful error messages
+      if (error.code === 'ECONNABORTED') {
+        error.message = 'Request timeout - the server took too long to respond';
+      } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        error.message = `Network error - unable to connect to server at ${error.config?.baseURL || 'unknown'}`;
+      }
+      
+      return Promise.reject(error);
+    }
+
     // Handle authentication errors
     if (error.response?.status === 401) {
       // Token is invalid or expired
@@ -139,10 +173,17 @@ axiosInstance.interceptors.response.use(
       console.warn(`Rate limited. Retry after ${retryAfter} seconds`);
     }
 
-    // Log errors in development
+    // Log errors in development (but skip 404 for carts as it's expected when cart is empty)
     if (__DEV__) {
+      // Don't log 404 errors for cart endpoints as they're expected (empty cart)
+      if (error.response?.status === 404 && error.config?.url?.includes('/carts')) {
+        // Silently handle - cart not found is normal for empty carts
+        return Promise.reject(error);
+      }
       console.error('API Error:', {
         url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullURL: error.config?.baseURL ? `${error.config.baseURL}${error.config.url}` : error.config?.url,
         method: error.config?.method,
         status: error.response?.status,
         message: error.message,

@@ -27,7 +27,6 @@ export default function HeaderComponent() {
   const { language, setLanguage } = useContext(LanguageContext);
   const router = useRouter();
   const { fetchCart } = useCartStore();
-  const { getToken } = useAuth();
   const { theme } = useTheme();
   const Colors = theme.colors;
   // Get scroll position from store
@@ -45,10 +44,7 @@ export default function HeaderComponent() {
   useEffect(() => {
     const loadCart = async () => {
       try {
-        const token = await getToken();
-        if (token) {
-          await fetchCart(token);
-        }
+        await fetchCart();
       } catch (error) {
         console.log('Error loading cart:', error);
       }

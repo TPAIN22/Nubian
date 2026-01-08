@@ -14,7 +14,6 @@ const CartBadge: React.FC<CartBadgeProps> = ({
   fontSize = 10 
 }) => {
   const { cart, fetchCart } = useCartStore();
-  const { getToken } = useAuth();
   const [cartItemCount, setCartItemCount] = useState(0);
 
   // حساب عدد العناصر في السلة
@@ -37,10 +36,7 @@ const CartBadge: React.FC<CartBadgeProps> = ({
   useEffect(() => {
     const loadCart = async () => {
       try {
-        const token = await getToken();
-        if (token) {
-          await fetchCart(token);
-        }
+        await fetchCart();
       } catch (error) {
         console.log('Error loading cart:', error);
       }

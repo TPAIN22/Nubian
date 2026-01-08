@@ -16,9 +16,66 @@ const useCartStore = create((set, get) => ({
     if (get().isLoading) return;
     set({ isLoading: true, error: null });
     try {
+      console.log('Fetch cart request:', {
+        url: '/carts',
+        baseURL: axiosInstance.defaults.baseURL,
+        fullURL: `${axiosInstance.defaults.baseURL}/carts`,
+      });
+      
       const response = await axiosInstance.get("/carts");
       set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isLoading: false });
     } catch (error) {
+      console.error('Fetch cart error:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL,
+        fullURL: error.config?.url ? `${error.config.baseURL}${error.config.url}` : 'unknown',
+      });
+      
+      // Handle 404 (cart not found) as empty cart, not an error
+      if (error.response?.status === 404) {
+        const errorMessage = error.response?.data?.message || '';
+        console.log('404 error details:', {
+          errorMessage,
+          responseData: error.response?.data,
+        });
+        
+        // If it's "Cart not found", treat as empty cart (normal case)
+        if (errorMessage.includes("Cart not found")) {
+          set({
+            cart: null,
+            error: null,
+            isLoading: false,
+          });
+          return;
+        }
+        // If it's "User not found", there's an authentication issue
+        if (errorMessage.includes("User not found")) {
+          const errorMsg = "خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.";
+          set({
+            cart: null,
+            error: errorMsg,
+            isLoading: false,
+          });
+          throw error;
+        }
+        // If there's no specific message, it might be a route not found (404 from Express)
+        if (!errorMessage) {
+          console.warn('404 with no error message - likely route not found');
+          const errorMsg = "Route not found. Please check the API endpoint.";
+          set({
+            cart: null,
+            error: errorMsg,
+            isLoading: false,
+          });
+          throw error;
+        }
+      }
+      // For other errors, set error message
       const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء جلب السلة.";
       set({
         cart: null,
@@ -35,9 +92,26 @@ const useCartStore = create((set, get) => ({
     if (get().isUpdating) return;
     set({ isUpdating: true, error: null });
     try {
+      console.log('Add to cart request:', {
+        url: '/carts/add',
+        productId,
+        quantity,
+        size,
+        baseURL: axiosInstance.defaults.baseURL,
+      });
+      
       const response = await axiosInstance.post("/carts/add", { productId, quantity, size });
       set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
     } catch (error) {
+      console.error('Add to cart error:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method,
+      });
+      
       const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء إضافة المنتج للسلة.";
       set({
         error: errorMessage,
