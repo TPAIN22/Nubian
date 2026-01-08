@@ -36,9 +36,11 @@ const CIRCLE_SIZE = 80;
 
 // Enhanced Category Circle with Navigation
 const CategoryCircle = memo(({ item, index, onPress, colors }: any) => {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current; // Start at 1 instead of 0
 
   useEffect(() => {
+    // Optional: Still animate but start visible
+    scaleAnim.setValue(0.8);
     Animated.spring(scaleAnim, {
       toValue: 1,
       delay: index * 50,
@@ -151,6 +153,8 @@ function IndexContent() {
   const { theme } = useTheme();
   const Colors = theme.colors;
   const isFetchingRef = useRef(false);
+  const lastFetchTimeRef = useRef<number>(0);
+  const MIN_FETCH_INTERVAL = 3000; // Minimum 3 seconds between fetches
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -176,12 +180,21 @@ function IndexContent() {
   );
 
   const fetchData = useCallback(async () => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
     // Prevent multiple simultaneous requests
     if (isFetchingRef.current) {
       return;
     }
     
+    // Throttle: Don't fetch if last fetch was less than MIN_FETCH_INTERVAL ago
+    if (timeSinceLastFetch < MIN_FETCH_INTERVAL && lastFetchTimeRef.current > 0) {
+      return;
+    }
+    
     isFetchingRef.current = true;
+    lastFetchTimeRef.current = now;
     setRefreshing(true);
     try {
       const [, , bannersRes] = await Promise.all([
@@ -199,7 +212,10 @@ function IndexContent() {
   }, [getCategories, getAllProducts]);
 
   useEffect(() => {
-    fetchData();
+    // Only fetch if we don't have data yet
+    if (categories.length === 0 && products.length === 0) {
+      fetchData();
+    }
     // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -276,6 +292,14 @@ function IndexContent() {
               showsHorizontalScrollIndicator={false}
               keyExtractor={keyExtractor}
               contentContainerStyle={styles.categoryCircleList}
+              getItemLayout={(_data, index) => {
+                const itemWidth = 80 + 16; // CIRCLE_SIZE + margin
+                return {
+                  length: itemWidth,
+                  offset: itemWidth * index,
+                  index,
+                };
+              }}
             />
           </View>
         )}
@@ -414,10 +438,16 @@ const styles = StyleSheet.create({
   },
   categoryCirclePressable: {
     marginHorizontal: 8,
+    width: CIRCLE_SIZE + 16,
+    height: CIRCLE_SIZE + 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryCircle: {
     alignItems: "center",
-
+    justifyContent: "center",
+    width: CIRCLE_SIZE + 16,
+    height: CIRCLE_SIZE + 40,
   },
   categoryCircleWrapper: {
     width: CIRCLE_SIZE,
@@ -460,6 +490,8 @@ const styles = StyleSheet.create({
   categoryCircleList: {
     paddingHorizontal: 12,
     paddingVertical: 20,
+    alignItems: 'center',
+    minHeight: CIRCLE_SIZE + 50,
   },
   horizontalListBanner: {
     paddingHorizontal: 0,
@@ -490,8 +522,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   categoriesSection: {
-    paddingTop: 10,   
-    borderRadius: 20, 
+    paddingTop: 10,
+    borderRadius: 20,
+    minHeight: CIRCLE_SIZE + 80,
+    backgroundColor: 'transparent',
   },
   latestProductsSection: {
     marginTop: 8,

@@ -20,6 +20,11 @@ const useItemStore = create((set, get) => ({
     categories: false,
     products: false,
   },
+  // Timestamps for request throttling
+  _lastRequestTime: {
+    categories: 0,
+    products: 0,
+  },
 
   // Actions
   setSelectedCategory: (categoryId) => 
@@ -97,16 +102,25 @@ const useItemStore = create((set, get) => ({
 
   // Get all products with pagination
   getAllProducts: async (limit = 90) => {
-    const { _requestInProgress } = get();
+    const { _requestInProgress, _lastRequestTime } = get();
+    const now = Date.now();
+    const MIN_INTERVAL = 5000; // 5 seconds minimum between product requests
+    
     // Prevent duplicate requests
     if (_requestInProgress.products) {
+      return;
+    }
+    
+    // Throttle: Don't fetch if last fetch was less than MIN_INTERVAL ago
+    if (now - _lastRequestTime.products < MIN_INTERVAL && _lastRequestTime.products > 0) {
       return;
     }
     
     set({ 
       isProductsLoading: true, 
       error: null,
-      _requestInProgress: { ..._requestInProgress, products: true }
+      _requestInProgress: { ..._requestInProgress, products: true },
+      _lastRequestTime: { ..._lastRequestTime, products: now }
     });
     
     try {
@@ -125,22 +139,10 @@ const useItemStore = create((set, get) => ({
           });
         } catch (paginationError2) {
           // If pagination fails completely, try without params (like dashboard does)
-          console.log("⚠️ Pagination params failed, trying without params...");
           response = await axiosInstance.get("/products");
         }
       }
 
-      // Debug: Log the response structure
-      console.log("📦 Products API Response:", {
-        status: response.status,
-        dataKeys: Object.keys(response.data || {}),
-        hasProducts: !!response.data?.products,
-        productsType: Array.isArray(response.data?.products) ? 'array' : typeof response.data?.products,
-        productsLength: Array.isArray(response.data?.products) ? response.data.products.length : 'N/A',
-        dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
-        dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
-        fullResponse: response.data
-      });
 
       // Try multiple response structure patterns
       let products = [];
@@ -179,15 +181,8 @@ const useItemStore = create((set, get) => ({
         const hasIsActiveField = products.some(p => p.hasOwnProperty('isActive'));
         if (hasIsActiveField) {
           products = products.filter((product) => product.isActive !== false);
-          if (originalLength !== products.length) {
-            console.log(`📦 Filtered out ${originalLength - products.length} inactive products`);
-          }
-        } else {
-          console.log("📦 Products don't have isActive field, showing all products");
         }
       }
-
-      console.log("📦 Parsed products:", products.length, "items");
 
       const totalPages = Number(response.data?.totalPages) || Number(response.data?.data?.totalPages) || 1;
       const currentPage = Number(response.data?.currentPage) || Number(response.data?.data?.currentPage) || Number(response.data?.page) || 1;
@@ -284,32 +279,32 @@ const useItemStore = create((set, get) => ({
 
   // Get categories
   getCategories: async () => {
-    const { _requestInProgress } = get();
+    const { _requestInProgress, _lastRequestTime, categories } = get();
+    const now = Date.now();
+    const MIN_INTERVAL = 10000; // 10 seconds minimum between category requests
+    
     // Prevent duplicate requests
     if (_requestInProgress.categories) {
       return;
     }
     
+    // Throttle: Don't fetch if last fetch was less than MIN_INTERVAL ago
+    if (now - _lastRequestTime.categories < MIN_INTERVAL && _lastRequestTime.categories > 0) {
+      // Return existing categories if available
+      if (categories && categories.length > 0) {
+        return;
+      }
+    }
+    
     set({ 
       isCategoriesLoading: true, 
       error: null,
-      _requestInProgress: { ..._requestInProgress, categories: true }
+      _requestInProgress: { ..._requestInProgress, categories: true },
+      _lastRequestTime: { ..._lastRequestTime, categories: now }
     });
     
     try {
       const response = await axiosInstance.get("/categories");
-      
-      // Debug: Log the response structure
-      console.log("📂 Categories API Response:", {
-        status: response.status,
-        dataKeys: Object.keys(response.data || {}),
-        hasCategories: !!response.data?.categories,
-        categoriesType: Array.isArray(response.data?.categories) ? 'array' : typeof response.data?.categories,
-        categoriesLength: Array.isArray(response.data?.categories) ? response.data.categories.length : 'N/A',
-        dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
-        dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
-        fullResponse: response.data
-      });
 
       // Try multiple response structure patterns
       // Backend sends: res.json(categories) - so response.data is directly an array
@@ -346,14 +341,9 @@ const useItemStore = create((set, get) => ({
         const hasIsActiveField = categories.some(c => c.hasOwnProperty('isActive'));
         if (hasIsActiveField) {
           categories = categories.filter((category) => category.isActive !== false);
-          if (originalLength !== categories.length) {
-            console.log(`📂 Filtered out ${originalLength - categories.length} inactive categories`);
-          }
         }
       }
 
-      console.log("📂 Parsed categories:", categories.length, "items");
-      
       const { _requestInProgress } = get();
       set({ 
         categories, 
@@ -362,14 +352,6 @@ const useItemStore = create((set, get) => ({
         _requestInProgress: { ..._requestInProgress, categories: false }
       });
     } catch (error) {
-      console.error("❌ Error fetching categories:", {
-        message: error?.message,
-        response: error?.response?.data,
-        status: error?.response?.status,
-        url: error?.config?.url,
-        fullError: error
-      });
-      
       const errorMessage = error?.response?.data?.message 
         || error?.message 
         || "فشل في تحميل الأقسام";
