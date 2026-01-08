@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/ui/text";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
@@ -23,8 +25,13 @@ import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
-import type { SelectedAttributes } from "@/types/cart.types";
-import { mergeSizeAndAttributes } from "@/utils/cartUtils";
+import type { SelectedAttributes, ProductAttribute, ProductVariant } from "@/types/cart.types";
+import { 
+  mergeSizeAndAttributes, 
+  findMatchingVariant,
+  getProductStock,
+  isProductAvailable 
+} from "@/utils/cartUtils";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -34,6 +41,7 @@ const imageHeight = screenWidth * 1.1;
 export default function Details() {
   const { theme } = useTheme();
   const Colors = theme.colors;
+  const insets = useSafeAreaInsets();
   const { details, name, price, image } = useLocalSearchParams();
   const productId = details ? String(details) : '';
   
@@ -42,14 +50,50 @@ export default function Details() {
   
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  // For flexible attributes system
+  const [selectedAttributesState, setSelectedAttributesState] = useState<SelectedAttributes>({});
   
-  // Build selected attributes object for cart
+  // Build selected attributes object for cart (merge legacy size/color with new attributes)
   const selectedAttributes = useMemo<SelectedAttributes>(() => {
-    const attrs: SelectedAttributes = {};
+    const attrs: SelectedAttributes = { ...selectedAttributesState };
+    // Legacy support: add size and color if selected
     if (selectedSize) attrs.size = selectedSize;
     if (selectedColor) attrs.color = selectedColor;
     return attrs;
-  }, [selectedSize, selectedColor]);
+  }, [selectedSize, selectedColor, selectedAttributesState]);
+  
+  // Get product attributes (for variant-based products)
+  const productAttributes = useMemo(() => {
+    return product?.attributes || [];
+  }, [product?.attributes]);
+  
+  // Find matching variant for selected attributes
+  const matchingVariant = useMemo(() => {
+    if (!product || !product.variants || product.variants.length === 0) {
+      return null;
+    }
+    return findMatchingVariant(product, selectedAttributes);
+  }, [product, selectedAttributes]);
+  
+  // Get current price (variant price if variant selected, otherwise product price)
+  const currentPrice = useMemo(() => {
+    if (matchingVariant) {
+      return matchingVariant.price;
+    }
+    return product?.price || 0;
+  }, [matchingVariant, product?.price]);
+  
+  // Get current stock
+  const currentStock = useMemo(() => {
+    if (!product) return 0;
+    return getProductStock(product, selectedAttributes);
+  }, [product, selectedAttributes]);
+  
+  // Check if product/variant is available
+  const isAvailable = useMemo(() => {
+    if (!product) return false;
+    return isProductAvailable(product, selectedAttributes);
+  }, [product, selectedAttributes]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -75,6 +119,8 @@ export default function Details() {
         sizes: product.sizes || [],
         colors: (product as any).colors || [],
         description: product.description || '',
+        attributes: product.attributes || [],
+        variants: product.variants || [],
       };
     }
     
@@ -132,13 +178,14 @@ export default function Details() {
   }, []);
 
   const formattedPrice = useMemo(() => {
-    if (!viewProduct?.price) return '';
+    const price = currentPrice || viewProduct?.price || 0;
+    if (!price) return '';
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 0,
-    }).format(viewProduct.price).replace('$', '$ ');
-  }, [viewProduct?.price]);
+    }).format(price).replace('$', '$ ');
+  }, [currentPrice, viewProduct?.price]);
 
 
   // Defer initial size selection to avoid blocking interaction
@@ -151,6 +198,22 @@ export default function Details() {
     }
     return undefined;
   }, [viewProduct?.sizes]);
+  
+  // Initialize attribute selections for variant-based products
+  useEffect(() => {
+    if (productAttributes && productAttributes.length > 0) {
+      const initialAttrs: SelectedAttributes = {};
+      productAttributes.forEach(attr => {
+        if (attr.type === 'select' && attr.options && attr.options.length > 0) {
+          // Auto-select first option for required attributes
+          if (attr.required) {
+            initialAttrs[attr.name] = attr.options[0];
+          }
+        }
+      });
+      setSelectedAttributesState(initialAttrs);
+    }
+  }, [productAttributes]);
   
   // Set initial color selection only if colors are available
   useEffect(() => {
@@ -206,6 +269,8 @@ export default function Details() {
   // Optimize size selection
   const onSizeSelect = useCallback((size: string) => {
     setSelectedSize(size);
+    // Also update attributes state for variant-based products
+    setSelectedAttributesState(prev => ({ ...prev, size }));
   }, []);
 
 
@@ -315,7 +380,11 @@ export default function Details() {
                 { borderColor: 'transparent' },
                 color === selectedColor && { borderColor: Colors.text.gray },
               ]}
-              onPress={() => setSelectedColor(color)}
+              onPress={() => {
+                setSelectedColor(color);
+                // Also update attributes state
+                setSelectedAttributesState(prev => ({ ...prev, color }));
+              }}
             >
               <View style={[styles.colorCircle, { backgroundColor: color, borderColor: Colors.borderLight }]} />
             </Pressable>
@@ -324,6 +393,70 @@ export default function Details() {
       </View>
     );
   }, [availableColors, selectedColor, Colors]);
+  
+  // Render flexible attributes selector for variant-based products
+  const renderAttributesSelector = useCallback(() => {
+    if (!productAttributes || productAttributes.length === 0) {
+      return null;
+    }
+    
+    return (
+      <>
+        {productAttributes.map((attr: ProductAttribute) => {
+          // Skip if it's size or color (handled separately for legacy support)
+          if (attr.name === 'size' || attr.name === 'color') {
+            return null;
+          }
+          
+          if (attr.type === 'select' && attr.options && attr.options.length > 0) {
+            return (
+              <View key={attr.name} style={[styles.attributesContainer, { backgroundColor: Colors.cardBackground }]}>
+                <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>
+                  {attr.displayName || attr.name} {attr.required && '*'}
+                </Text>
+                <View style={[styles.sizesRow, I18nManager.isRTL && styles.sizesRowRTL]}>
+                  {attr.options.map((option: string, index: number) => {
+                    const isSelected = selectedAttributesState[attr.name] === option;
+                    return (
+                      <Pressable
+                        key={index}
+                        style={[
+                          styles.sizeBox,
+                          { 
+                            backgroundColor: Colors.cardBackground,
+                            borderColor: Colors.borderLight,
+                          },
+                          isSelected && {
+                            backgroundColor: Colors.primary,
+                            borderColor: Colors.primary,
+                          },
+                        ]}
+                        onPress={() => {
+                          setSelectedAttributesState(prev => ({ ...prev, [attr.name]: option }));
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.sizeText,
+                            { color: Colors.text.gray },
+                            isSelected && { color: Colors.text.white },
+                          ]}
+                        >
+                          {option}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          }
+          
+          return null;
+        })}
+      </>
+    );
+  }, [productAttributes, selectedAttributesState, Colors]);
 
 
   // Show loading state while fetching product
@@ -445,11 +578,27 @@ export default function Details() {
             </View>
           )}
 
-          {/* Size Selector */}
+          {/* Size Selector (legacy support) */}
           {renderSizeSelector()}
 
-          {/* Color Selector */}
+          {/* Color Selector (legacy support) */}
           {renderColorSelector()}
+          
+          {/* Flexible Attributes Selector (for variant-based products) */}
+          {renderAttributesSelector()}
+          
+          {/* Stock Display */}
+          {viewProduct && (
+            <View style={[styles.stockContainer, { backgroundColor: Colors.cardBackground }]}>
+              <Text style={[styles.stockText, { color: Colors.text.gray }]}>
+                {i18n.t('stock') || 'Stock'}: {currentStock > 0 ? (
+                  <Text style={{ color: Colors.primary, fontWeight: '600' }}>{currentStock}</Text>
+                ) : (
+                  <Text style={{ color: '#ff4444', fontWeight: '600' }}>{i18n.t('outOfStock') || 'Out of Stock'}</Text>
+                )}
+              </Text>
+            </View>
+          )}
 
           {/* Review Section (deferred) */}
           {showDeferred ? <Review productId={viewProduct._id} /> : null}
@@ -457,7 +606,14 @@ export default function Details() {
       </ScrollView>
 
       {/* Fixed Bottom Buttons */}
-      <View style={styles.bottomContainer}>
+      <View style={[
+        styles.bottomContainer, 
+        { 
+          paddingBottom: Math.max(insets.bottom, 20),
+          backgroundColor: Colors.surface,
+          borderTopColor: Colors.borderLight,
+        }
+      ]}>
         <View style={[styles.actionButtonsRow, I18nManager.isRTL && styles.actionButtonsRowRTL]}>
           <View style={styles.addToCartButtonWrapper}>
             <AddToCartButton
@@ -466,9 +622,9 @@ export default function Details() {
               selectedAttributes={selectedAttributes}
               buttonStyle={[
                 styles.addToCartButton,
-                viewProduct.stock === 0 && styles.disabledButton,
+                !isAvailable && styles.disabledButton,
               ]}
-              disabled={viewProduct.stock === 0}
+              disabled={!isAvailable}
             />
           </View>
           <Pressable
@@ -744,6 +900,24 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1,
+  },
+  
+  // Attributes Container
+  attributesContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  
+  // Stock Display
+  stockContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  stockText: {
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   
   // Bottom Container

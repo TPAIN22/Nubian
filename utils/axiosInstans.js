@@ -6,13 +6,19 @@ import { getToken } from './tokenManager';
 // This should be set via EXPO_PUBLIC_API_URL in .env or app.json
 // Example: EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api (development)
 // EXPO_PUBLIC_API_URL=https://nubian-lne4.onrender.com/api (production)
-const baseURL = process.env.EXPO_PUBLIC_API_URL || "https://nubian-lne4.onrender.com/api";
+// Force local server in development, even if EXPO_PUBLIC_API_URL is set
+// This ensures we always use the local dev server when running locally
+const baseURL = __DEV__ 
+  ? "http://192.168.0.115:5000/api"  // Always use local server in development
+  : (process.env.EXPO_PUBLIC_API_URL || "https://nubian-lne4.onrender.com/api");
 
-// Validate API URL is configured
-if (!process.env.EXPO_PUBLIC_API_URL && __DEV__) {
-  console.warn('⚠️ EXPO_PUBLIC_API_URL is not set. Using default production URL:', baseURL);
-  console.warn('💡 Set EXPO_PUBLIC_API_URL in .env file for development, e.g.:');
-  console.warn('   EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api');
+// Log API URL configuration in development
+if (__DEV__) {
+  console.log('🔧 Development mode: Forcing local server');
+  console.log('📡 Using API URL:', baseURL);
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    console.log('ℹ️ EXPO_PUBLIC_API_URL is set but ignored in development:', process.env.EXPO_PUBLIC_API_URL);
+  }
 }
 
 // Log the API URL being used (only the domain for security)

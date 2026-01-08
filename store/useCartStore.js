@@ -40,23 +40,18 @@ const useCartStore = create((set, get) => ({
       
       // Handle 404 (cart not found) as empty cart, not an error
       if (error.response?.status === 404) {
-        const errorMessage = error.response?.data?.message || '';
+        const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || '';
+        const errorCode = error.response?.data?.error?.code || '';
         console.log('404 error details:', {
           errorMessage,
+          errorCode,
           responseData: error.response?.data,
         });
         
-        // If it's "Cart not found", treat as empty cart (normal case)
-        if (errorMessage.includes("Cart not found")) {
-          set({
-            cart: null,
-            error: null,
-            isLoading: false,
-          });
-          return;
-        }
-        // If it's "User not found", there's an authentication issue
-        if (errorMessage.includes("User not found")) {
+        // Treat any 404 as empty cart (normal case for new users or when cart doesn't exist)
+        // This handles: "Cart not found", "Resource not found", or any other 404
+        // Only exception is if it's explicitly a user/auth issue
+        if (errorMessage.includes("User not found") || errorCode === 'UNAUTHORIZED') {
           const errorMsg = "خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.";
           set({
             cart: null,
@@ -65,17 +60,14 @@ const useCartStore = create((set, get) => ({
           });
           throw error;
         }
-        // If there's no specific message, it might be a route not found (404 from Express)
-        if (!errorMessage) {
-          console.warn('404 with no error message - likely route not found');
-          const errorMsg = "Route not found. Please check the API endpoint.";
-          set({
-            cart: null,
-            error: errorMsg,
-            isLoading: false,
-          });
-          throw error;
-        }
+        
+        // For all other 404s (including "Resource not found", "Cart not found"), treat as empty cart
+        set({
+          cart: null,
+          error: null,
+          isLoading: false,
+        });
+        return;
       }
       // For other errors, set error message
       const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء جلب السلة.";

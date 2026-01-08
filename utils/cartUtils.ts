@@ -279,7 +279,9 @@ export function isProductAvailable(
   product: Product,
   selectedAttributes: SelectedAttributes | undefined | null
 ): boolean {
-  if (!product.isActive) {
+  // If isActive is explicitly false, product is not available
+  // If isActive is undefined/null, assume it's active (backward compatibility)
+  if (product.isActive === false) {
     return false;
   }
 
@@ -289,7 +291,12 @@ export function isProductAvailable(
     if (!variant) {
       return false; // No matching variant
     }
-    return variant.isActive && (variant.stock || 0) > 0;
+    // If variant.isActive is explicitly false, it's not available
+    // If undefined/null, assume it's active (backward compatibility)
+    if (variant.isActive === false) {
+      return false;
+    }
+    return (variant.stock || 0) > 0;
   }
 
   // For simple products, check product stock

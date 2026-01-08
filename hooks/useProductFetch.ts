@@ -1,16 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '@/utils/axiosInstans';
-
-interface Product {
-  _id: string;
-  name: string;
-  price: number;
-  discountPrice?: number;
-  images: string[];
-  description?: string;
-  sizes?: string[];
-  stock: number;
-}
+import type { Product } from '@/types/cart.types';
 
 interface UseProductFetchReturn {
   product: Product | null;

@@ -88,8 +88,26 @@ const AddToCartButton = ({
 
   // Check if button should be disabled
   const isButtonDisabled = useMemo(() => {
-    return disabled || isLoading || !validation.valid || !isAvailable;
-  }, [disabled, isLoading, validation.valid, isAvailable]);
+    const result = disabled || isLoading || !validation.valid || !isAvailable;
+    
+    // Debug logging to help identify why button is disabled
+    if (__DEV__ && result && product) {
+      console.log('AddToCartButton disabled:', {
+        disabled,
+        isLoading,
+        validationValid: validation.valid,
+        validationMissing: validation.missing,
+        isAvailable,
+        productId: product._id,
+        productIsActive: product.isActive,
+        productStock: product.stock,
+        hasVariants: !!(product.variants && product.variants.length > 0),
+        selectedAttributes: mergedAttributes,
+      });
+    }
+    
+    return result;
+  }, [disabled, isLoading, validation.valid, isAvailable, product, mergedAttributes, validation.missing]);
 
   const handleAddToCart = async () => {
     if (isButtonDisabled) {
@@ -194,6 +212,21 @@ const AddToCartButton = ({
     }
   };
 
+  // Show helpful message when disabled (for debugging)
+  const disabledReason = useMemo(() => {
+    if (!product) return 'No product';
+    if (isLoading) return 'Loading...';
+    if (!validation.valid) {
+      return `Missing: ${validation.missing.join(', ')}`;
+    }
+    if (!isAvailable) {
+      const stock = getProductStock(product, mergedAttributes);
+      return stock === 0 ? 'Out of stock' : 'Not available';
+    }
+    if (disabled) return 'Disabled';
+    return null;
+  }, [product, isLoading, validation.valid, validation.missing, isAvailable, disabled, mergedAttributes]);
+
   return (
     <View style={styles.container}>
       <Pressable
@@ -208,7 +241,12 @@ const AddToCartButton = ({
         {isLoading ? (
           <ActivityIndicator size="small" color="#FFFFFFFF" />
         ) : (
-          <Text style={[styles.text, textStyle]}>{buttonTitle}</Text>
+          <View style={styles.buttonContent}>
+            <Text style={[styles.text, textStyle]}>{buttonTitle}</Text>
+            {isButtonDisabled && disabledReason && __DEV__ && (
+              <Text style={styles.disabledReasonText}>({disabledReason})</Text>
+            )}
+          </View>
         )}
       </Pressable>
     </View>
@@ -235,6 +273,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  buttonContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  disabledReasonText: {
+    color: "#FFFFFFFF",
+    fontSize: 10,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });
 

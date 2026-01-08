@@ -1,10 +1,12 @@
 import { View, Dimensions, StyleSheet, Pressable, I18nManager } from "react-native";
 import { Text } from "@/components/ui/text";
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect, useMemo } from "react"; 
 import { ScrollView } from "react-native-gesture-handler";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import AddToCartButton from "./AddToCartButton";
+import type { SelectedAttributes } from "@/types/cart.types";
+import { mergeSizeAndAttributes } from "@/utils/cartUtils";
 
 const { width: windowWidth } = Dimensions.get("window");
 
@@ -18,9 +20,9 @@ const BottomSheet = () => {
     }
   }, [product]);
   
-  useEffect(() => {
-    if (selectedSize !== null) {
-    }
+  // Build selected attributes for cart
+  const selectedAttributes = useMemo<SelectedAttributes>(() => {
+    return mergeSizeAndAttributes(selectedSize, {});
   }, [selectedSize]);
 
   if (!product) {
@@ -115,7 +117,11 @@ const BottomSheet = () => {
 
       {/* Add to Cart Button */}
       <View style={styles.buttonContainer}>
-        <AddToCartButton product={product} selectedSize={selectedSize??""} />
+        <AddToCartButton 
+          product={product} 
+          selectedSize={selectedSize??""} 
+          selectedAttributes={selectedAttributes}
+        />
       </View>
     </View>
   );
