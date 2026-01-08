@@ -93,7 +93,7 @@ const CategoryCircle = memo(({ item, index, onPress, colors }: any) => {
 });
 
 const BannerItem = memo(({ item, index, colors }: any) => {
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const scaleAnim = useRef(new Animated.Value(0.99)).current;
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -111,7 +111,7 @@ const BannerItem = memo(({ item, index, colors }: any) => {
         <Image
           source={{ uri: item.image }}
           style={styles.bannerImage}
-          contentFit="cover"
+          contentFit="fill"
           transition={300}
         />
         <LinearGradient
@@ -226,7 +226,7 @@ function IndexContent() {
 
   const ListHeader = useCallback(
     () => (
-      <View style={{ backgroundColor: Colors.surface }}>
+      <View style={[styles.listHeaderContainer, { backgroundColor: Colors.surface }]}>
         {/* Top Gradient Header */}
         <LinearGradient
           colors={[Colors.primary, Colors.gold, "transparent"]}
@@ -243,9 +243,10 @@ function IndexContent() {
               showsHorizontalScrollIndicator={false}
               keyExtractor={keyExtractor}
               contentContainerStyle={styles.horizontalListBanner}
-              snapToInterval={width * 0.75 + 16}
+              snapToInterval={width}
               decelerationRate="fast"
-              pagingEnabled={false}
+              pagingEnabled={true}
+              style={styles.bannerFlatList}
             />
           </View>
         )}
@@ -299,7 +300,7 @@ function IndexContent() {
   );
 
   const getItemLayout = useCallback(
-    (data: any, index: number) => {
+    (_data: any, index: number) => {
       const itemHeight = width * 0.45 * 1.3 + 16;
       return {
         length: itemHeight,
@@ -331,7 +332,7 @@ function IndexContent() {
           getItemLayout={getItemLayout}
           scrollEventThrottle={16}
           style={{ backgroundColor: Colors.surface }}
-          contentContainerStyle={{ backgroundColor: Colors.surface }}
+          contentContainerStyle={{ backgroundColor: Colors.surface, paddingHorizontal: 0 }}
           onScroll={(event) => {
             const offsetY = event.nativeEvent.contentOffset.y;
             setScrollY(offsetY);
@@ -375,6 +376,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
   },
+  listHeaderContainer: {
+    paddingHorizontal: 0,
+    marginHorizontal: 0,
+    width: '100%',
+  },
   topGradient: {
     position: "absolute",
     top: 0,
@@ -385,8 +391,16 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   bannersSection: {
-    //marginTop: StatusBar.currentHeight || 20,
+    width: width + 32,
+    marginLeft: -16,
+    marginRight: -16,
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  bannerFlatList: {
+    marginHorizontal: 0,
+    paddingHorizontal: 0,
+    flexGrow: 0,
   },
   categoryCirclePressable: {
     marginHorizontal: 8,
@@ -439,18 +453,18 @@ const styles = StyleSheet.create({
   },
   horizontalListBanner: {
     paddingHorizontal: 0,
-    alignItems: "center",
-    justifyContent: "center",
+    marginHorizontal: 0,
   },
   bannerContainer: {
-    width: width ,
+    width: width,
     height: 250,
     overflow: "hidden",
-   
+    alignSelf: 'stretch',
   },
   bannerImage: {
-    width: "100%",
+    width: width,
     height: "100%",
+    flex: 1,
   },
   bannerOverlay: {
     position: "absolute",

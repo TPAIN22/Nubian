@@ -269,9 +269,60 @@ const useItemStore = create((set, get) => ({
     
     try {
       const response = await axiosInstance.get("/categories");
-      const categories = Array.isArray(response.data) 
-        ? response.data 
-        : [];
+      
+      // Debug: Log the response structure
+      console.log("📂 Categories API Response:", {
+        status: response.status,
+        dataKeys: Object.keys(response.data || {}),
+        hasCategories: !!response.data?.categories,
+        categoriesType: Array.isArray(response.data?.categories) ? 'array' : typeof response.data?.categories,
+        categoriesLength: Array.isArray(response.data?.categories) ? response.data.categories.length : 'N/A',
+        dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
+        dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+        fullResponse: response.data
+      });
+
+      // Try multiple response structure patterns
+      let categories = [];
+      
+      // Pattern 1: response.data.categories (most common)
+      if (Array.isArray(response.data?.categories)) {
+        categories = response.data.categories;
+      }
+      // Pattern 2: response.data is directly an array
+      else if (Array.isArray(response.data)) {
+        categories = response.data;
+      }
+      // Pattern 3: response.data.data.categories (nested structure)
+      else if (Array.isArray(response.data?.data?.categories)) {
+        categories = response.data.data.categories;
+      }
+      // Pattern 4: response.data.data is directly an array
+      else if (Array.isArray(response.data?.data)) {
+        categories = response.data.data;
+      }
+      // Pattern 5: response.data.results (some APIs use 'results')
+      else if (Array.isArray(response.data?.results)) {
+        categories = response.data.results;
+      }
+      // Pattern 6: response.data.items (some APIs use 'items')
+      else if (Array.isArray(response.data?.items)) {
+        categories = response.data.items;
+      }
+
+      // Filter out inactive categories if they have isActive field
+      const originalLength = categories.length;
+      if (categories.length > 0) {
+        const hasIsActiveField = categories.some(c => c.hasOwnProperty('isActive'));
+        if (hasIsActiveField) {
+          categories = categories.filter((category) => category.isActive !== false);
+          if (originalLength !== categories.length) {
+            console.log(`📂 Filtered out ${originalLength - categories.length} inactive categories`);
+          }
+        }
+      }
+
+      console.log("📂 Parsed categories:", categories.length, "items");
         
       set({ 
         categories, 
@@ -279,6 +330,14 @@ const useItemStore = create((set, get) => ({
         error: null,
       });
     } catch (error) {
+      console.error("❌ Error fetching categories:", {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        url: error?.config?.url,
+        fullError: error
+      });
+      
       const errorMessage = error?.response?.data?.message 
         || error?.message 
         || "فشل في تحميل الأقسام";
