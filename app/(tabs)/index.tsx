@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useCallback, useEffect, useRef, useState, memo, useMemo } from "react";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -146,7 +146,7 @@ function IndexContent() {
   } = useItemStore();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [banners, setBanners] = useState([]);
+  const [banners, setBanners] = useState<any[]>([]);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
   const { setScrollY } = useScrollStore();
@@ -179,7 +179,7 @@ function IndexContent() {
     []
   );
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceBanners = false) => {
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTimeRef.current;
     
@@ -189,7 +189,8 @@ function IndexContent() {
     }
     
     // Throttle: Don't fetch if last fetch was less than MIN_FETCH_INTERVAL ago
-    if (timeSinceLastFetch < MIN_FETCH_INTERVAL && lastFetchTimeRef.current > 0) {
+    // But always fetch banners if forceBanners is true
+    if (!forceBanners && timeSinceLastFetch < MIN_FETCH_INTERVAL && lastFetchTimeRef.current > 0) {
       return;
     }
     
@@ -197,28 +198,52 @@ function IndexContent() {
     lastFetchTimeRef.current = now;
     setRefreshing(true);
     try {
-      const [, , bannersRes] = await Promise.all([
-        getCategories(),
-        getAllProducts(),
-        axiosInstance.get("/banners"),
-      ]);
-      setBanners(bannersRes.data.filter((b: any) => b.isActive !== false));
+      // Always fetch banners, but conditionally fetch categories/products
+      const promises: Promise<any>[] = [axiosInstance.get("/banners")];
+      
+      // Only fetch categories/products if we don't have them
+      if (categories.length === 0) {
+        promises.unshift(getCategories());
+      } else {
+        promises.unshift(Promise.resolve(null));
+      }
+      
+      if (products.length === 0) {
+        promises.splice(1, 0, getAllProducts());
+      } else {
+        promises.splice(1, 0, Promise.resolve(null));
+      }
+      
+      const [, , bannersRes] = await Promise.all(promises);
+      // Extract banners from response - handle both direct array and wrapped response
+      const bannersData = bannersRes?.data?.data || bannersRes?.data || [];
+      setBanners(Array.isArray(bannersData) ? bannersData.filter((b: any) => b.isActive !== false) : []);
     } catch (e) {
-      setBanners([]);
+      // If banners fetch fails, keep existing banners if any
+      console.error('Error fetching data:', e);
+      // Only clear banners if this was a forced fetch (screen focus)
+      if (forceBanners) {
+        // Keep existing banners on error to avoid flickering
+      }
     } finally {
       setRefreshing(false);
       isFetchingRef.current = false;
     }
-  }, [getCategories, getAllProducts]);
+  }, [getCategories, getAllProducts, categories.length, products.length]);
 
   useEffect(() => {
-    // Only fetch if we don't have data yet
-    if (categories.length === 0 && products.length === 0) {
-      fetchData();
-    }
-    // Only run once on mount
+    // Initial fetch on mount
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refetch banners when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // Always refetch banners when screen is focused
+      fetchData(true);
+    }, [fetchData])
+  );
 
   const handleCategoryPress = useCallback((categoryId: string) => {
     router.push(`/(screens)/${categoryId}`);

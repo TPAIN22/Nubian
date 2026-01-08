@@ -6,6 +6,7 @@
 import {
   Product,
   ProductAttribute,
+  ProductVariant,
   SelectedAttributes,
   AttributeValidationResult,
 } from '@/types/cart.types';
@@ -213,4 +214,84 @@ export function extractCartItemAttributes(item: {
   }
 
   return {};
+}
+
+/**
+ * Finds a matching variant for a product based on selected attributes
+ */
+export function findMatchingVariant(
+  product: Product,
+  selectedAttributes: SelectedAttributes | undefined | null
+): ProductVariant | null {
+  if (!product.variants || product.variants.length === 0) {
+    return null;
+  }
+
+  const normalizedAttrs = normalizeAttributes(selectedAttributes);
+
+  // Find variant that matches all selected attributes
+  return product.variants.find(variant => {
+    const variantAttrs = variant.attributes instanceof Map
+      ? Object.fromEntries(variant.attributes)
+      : variant.attributes;
+
+    // Check if all selected attributes match variant attributes
+    const allMatch = Object.keys(normalizedAttrs).every(key => {
+      const variantValue = variantAttrs[key];
+      return variantValue && variantValue === normalizedAttrs[key];
+    });
+
+    // Also check that variant has no extra required attributes that aren't selected
+    const variantKeys = Object.keys(variantAttrs);
+    const selectedKeys = Object.keys(normalizedAttrs);
+    
+    // For variant to match, all variant attribute keys should be in selected attributes
+    // (unless the product has optional attributes)
+    return allMatch && variantKeys.every(key => selectedKeys.includes(key));
+  }) || null;
+}
+
+/**
+ * Gets the stock for a product, considering variants if applicable
+ */
+export function getProductStock(
+  product: Product,
+  selectedAttributes: SelectedAttributes | undefined | null
+): number {
+  // If product has variants, find matching variant and return its stock
+  if (product.variants && product.variants.length > 0) {
+    const variant = findMatchingVariant(product, selectedAttributes);
+    if (variant) {
+      return variant.stock || 0;
+    }
+    // If no matching variant found, return 0 (variant not available)
+    return 0;
+  }
+
+  // For simple products, return product stock
+  return product.stock || 0;
+}
+
+/**
+ * Checks if a product/variant is available (has stock and is active)
+ */
+export function isProductAvailable(
+  product: Product,
+  selectedAttributes: SelectedAttributes | undefined | null
+): boolean {
+  if (!product.isActive) {
+    return false;
+  }
+
+  // For variant products, check variant availability
+  if (product.variants && product.variants.length > 0) {
+    const variant = findMatchingVariant(product, selectedAttributes);
+    if (!variant) {
+      return false; // No matching variant
+    }
+    return variant.isActive && (variant.stock || 0) > 0;
+  }
+
+  // For simple products, check product stock
+  return (product.stock || 0) > 0;
 }

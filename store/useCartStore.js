@@ -23,7 +23,9 @@ const useCartStore = create((set, get) => ({
       });
       
       const response = await axiosInstance.get("/carts");
-      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isLoading: false });
+      // Backend returns { success: true, data: {...cart...} }
+      const cartData = response.data?.data || response.data;
+      set({ cart: cartData && typeof cartData === 'object' ? cartData : null, isLoading: false });
     } catch (error) {
       console.error('Fetch cart error:', {
         status: error.response?.status,
@@ -88,7 +90,7 @@ const useCartStore = create((set, get) => ({
 
   // لإضافة منتج إلى السلة
   // Token is automatically added by axios interceptor
-  addToCart: async (productId, quantity, size = '') => {
+  addToCart: async (productId, quantity, size = '', attributes = null) => {
     if (get().isUpdating) return;
     set({ isUpdating: true, error: null });
     try {
@@ -97,11 +99,19 @@ const useCartStore = create((set, get) => ({
         productId,
         quantity,
         size,
+        attributes,
         baseURL: axiosInstance.defaults.baseURL,
       });
       
-      const response = await axiosInstance.post("/carts/add", { productId, quantity, size });
-      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
+      // Build request payload - include attributes if provided
+      const payload = { productId, quantity };
+      if (size) payload.size = size;
+      if (attributes && Object.keys(attributes).length > 0) payload.attributes = attributes;
+      
+      const response = await axiosInstance.post("/carts/add", payload);
+      // Backend returns { success: true, data: {...cart...} }
+      const cartData = response.data?.data || response.data;
+      set({ cart: cartData && typeof cartData === 'object' ? cartData : null, isUpdating: false });
     } catch (error) {
       console.error('Add to cart error:', {
         status: error.response?.status,
@@ -131,7 +141,9 @@ const useCartStore = create((set, get) => ({
     
     try {
       const response = await axiosInstance.put("/carts/update", { productId, quantity, size });
-      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
+      // Backend returns { success: true, data: {...cart...} }
+      const cartData = response.data?.data || response.data;
+      set({ cart: cartData && typeof cartData === 'object' ? cartData : null, isUpdating: false });
     } catch (error) {
       const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء تحديث السلة.";
       set({
@@ -150,7 +162,9 @@ const useCartStore = create((set, get) => ({
       const response = await axiosInstance.delete("/carts/remove", {
         data: { productId, size }
       });
-      set({ cart: response.data && typeof response.data === 'object' ? response.data : null, isUpdating: false });
+      // Backend returns { success: true, data: {...cart...} }
+      const cartData = response.data?.data || response.data;
+      set({ cart: cartData && typeof cartData === 'object' ? cartData : null, isUpdating: false });
     } catch (error) {
       const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء حذف المنتج من السلة.";
       set({

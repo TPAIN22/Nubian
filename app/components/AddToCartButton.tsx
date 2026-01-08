@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Pressable,
   Text,
@@ -7,16 +7,20 @@ import {
   TextStyle,
   View,
   ActivityIndicator,
-  I18nManager,
 } from "react-native";
 import useCartStore from "@/store/useCartStore";
 import { useUser } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
-import { router } from "expo-router";
 import useItemStore from "@/store/useItemStore";
 import i18n from "@/utils/i18n";
 import type { Product, SelectedAttributes } from "@/types/cart.types";
-import { validateRequiredAttributes, mergeSizeAndAttributes } from "@/utils/cartUtils";
+import { 
+  validateRequiredAttributes, 
+  mergeSizeAndAttributes,
+  findMatchingVariant,
+  isProductAvailable,
+  getProductStock
+} from "@/utils/cartUtils";
 
 type Props = {
   product: Product;
@@ -37,10 +41,10 @@ const AddToCartButton = ({
   selectedSize,
   selectedAttributes,
 }: Props) => {
-  const { addToCart, clearError, fetchCart, error } = useCartStore();
+  const { addToCart, clearError, fetchCart } = useCartStore();
   const { isSignedIn } = useUser();
   const [isLoading, setIsLoading] = useState(false);
-  const { signInModelVisible, setSignInModelVisible } = useItemStore();
+  const { setSignInModelVisible } = useItemStore();
 
   // Get translated title dynamically
   const buttonTitle = title || i18n.t('addToCart');
@@ -53,29 +57,71 @@ const AddToCartButton = ({
   // Validate required attributes
   const validation = useMemo(() => {
     if (!product) return { valid: false, missing: [] };
+    
+    // For variant-based products, also check if a matching variant exists
+    if (product.variants && product.variants.length > 0) {
+      const attrValidation = validateRequiredAttributes(product.attributes, mergedAttributes);
+      if (!attrValidation.valid) {
+        return attrValidation;
+      }
+      
+      // Check if selected attributes match a variant
+      const matchingVariant = findMatchingVariant(product, mergedAttributes);
+      if (!matchingVariant) {
+        return {
+          valid: false,
+          missing: ['Please select a valid combination of attributes']
+        };
+      }
+      
+      return { valid: true, missing: [] };
+    }
+    
     return validateRequiredAttributes(product.attributes, mergedAttributes);
+  }, [product, mergedAttributes]);
+
+  // Check product/variant availability
+  const isAvailable = useMemo(() => {
+    if (!product) return false;
+    return isProductAvailable(product, mergedAttributes);
   }, [product, mergedAttributes]);
 
   // Check if button should be disabled
   const isButtonDisabled = useMemo(() => {
-    return disabled || isLoading || !validation.valid || product?.stock === 0;
-  }, [disabled, isLoading, validation.valid, product?.stock]);
+    return disabled || isLoading || !validation.valid || !isAvailable;
+  }, [disabled, isLoading, validation.valid, isAvailable]);
 
   const handleAddToCart = async () => {
     if (isButtonDisabled) {
       return;
     }
 
-    // Validate required attributes
-    if (!validation.valid) {
-      const missingText = validation.missing.join(', ');
-      Toast.show({
-        type: 'info',
-        text1: i18n.t('selectAttributesFirst') || 'Please select required attributes',
-        text2: `Missing: ${missingText}`,
-      });
-      return;
-    }
+      // Validate required attributes
+      if (!validation.valid) {
+        const missingText = validation.missing.join(', ');
+        Toast.show({
+          type: 'info',
+          text1: i18n.t('selectAttributesFirst') || 'Please select required attributes',
+          text2: `Missing: ${missingText}`,
+        });
+        return;
+      }
+
+      // Check availability
+      if (!isAvailable) {
+        const stock = getProductStock(product, mergedAttributes);
+        const toastConfig: any = {
+          type: 'error',
+          text1: i18n.t('productUnavailable') || 'Product unavailable',
+        };
+        if (stock === 0) {
+          toastConfig.text2 = 'Out of stock';
+        } else {
+          toastConfig.text2 = 'This combination is not available';
+        }
+        Toast.show(toastConfig);
+        return;
+      }
 
     try {
       if (!product || !product._id) {
@@ -132,14 +178,17 @@ const AddToCartButton = ({
       const storeError = useCartStore.getState().error;
       const finalErrorMessage = storeError || errorMessage;
       
-      Toast.show({
+      const toastConfig: any = {
         type: "error",
         text1: i18n.t('addToCartError'),
-        text2: typeof finalErrorMessage === 'string' && finalErrorMessage !== i18n.t('addToCartError') 
-          ? finalErrorMessage 
-          : undefined,
         visibilityTime: 4000,
-      });
+      };
+      
+      if (typeof finalErrorMessage === 'string' && finalErrorMessage !== i18n.t('addToCartError')) {
+        toastConfig.text2 = finalErrorMessage;
+      }
+      
+      Toast.show(toastConfig);
     } finally {
       setIsLoading(false);
     }

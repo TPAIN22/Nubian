@@ -65,9 +65,11 @@ const useCartStore = create<CartStore>()(
           fullURL: `${axiosInstance.defaults.baseURL}/carts`,
         });
 
-        const response = await axiosInstance.get<Cart>("/carts");
+        const response = await axiosInstance.get<{ success: boolean; data: Cart }>("/carts");
+        // Backend returns { success: true, data: {...cart...} }
+        const cartData = response.data?.data || response.data;
         set({
-          cart: response.data && typeof response.data === 'object' ? response.data : null,
+          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isLoading: false,
         });
       } catch (error: any) {
@@ -156,9 +158,11 @@ const useCartStore = create<CartStore>()(
           ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
         };
 
-        const response = await axiosInstance.post<Cart>("/carts/add", payload);
+        const response = await axiosInstance.post<{ success: boolean; data: Cart }>("/carts/add", payload);
+        // Backend returns { success: true, data: {...cart...} }
+        const cartData = response.data?.data || response.data;
         set({
-          cart: response.data && typeof response.data === 'object' ? response.data : null,
+          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isUpdating: false,
         });
       } catch (error: any) {
@@ -205,9 +209,11 @@ const useCartStore = create<CartStore>()(
           ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
         };
 
-        const response = await axiosInstance.put<Cart>("/carts/update", payload);
+        const response = await axiosInstance.put<{ success: boolean; data: Cart }>("/carts/update", payload);
+        // Backend returns { success: true, data: {...cart...} }
+        const cartData = response.data?.data || response.data;
         set({
-          cart: response.data && typeof response.data === 'object' ? response.data : null,
+          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isUpdating: false,
         });
       } catch (error: any) {
@@ -235,9 +241,11 @@ const useCartStore = create<CartStore>()(
           ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
         };
 
-        const response = await axiosInstance.delete<Cart>("/carts/remove", { data: payload });
+        const response = await axiosInstance.delete<{ success: boolean; data: Cart }>("/carts/remove", { data: payload });
+        // Backend returns { success: true, data: {...cart...} }
+        const cartData = response.data?.data || response.data;
         set({
-          cart: response.data && typeof response.data === 'object' ? response.data : null,
+          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isUpdating: false,
         });
       } catch (error: any) {

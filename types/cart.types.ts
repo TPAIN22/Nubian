@@ -24,19 +24,34 @@ export interface SelectedAttributes {
 }
 
 /**
+ * Product variant (from backend)
+ */
+export interface ProductVariant {
+  _id?: string;
+  sku: string;
+  attributes: Record<string, string>;
+  price: number;
+  discountPrice?: number;
+  stock: number;
+  images?: string[];
+  isActive: boolean;
+}
+
+/**
  * Product interface (matches backend structure)
  */
 export interface Product {
   _id: string;
   name: string;
   description?: string;
-  price: number;
+  price?: number; // Optional for variant-based products
   discountPrice?: number;
   images: string[];
-  stock: number;
+  stock?: number; // Optional for variant-based products (calculated from variants)
   sizes?: string[]; // Legacy field
   colors?: string[]; // Color options
   attributes?: ProductAttribute[]; // New flexible attributes
+  variants?: ProductVariant[]; // Product variants
   category?: string | { _id: string; name: string };
   merchant?: string;
   averageRating?: number;
