@@ -111,7 +111,7 @@ const BannerItem = memo(({ item, index, colors }: any) => {
         <Image
           source={{ uri: item.image }}
           style={styles.bannerImage}
-          contentFit="fill"
+          contentFit="cover"
           transition={300}
         />
         <LinearGradient
@@ -150,6 +150,7 @@ function IndexContent() {
   const { setScrollY } = useScrollStore();
   const { theme } = useTheme();
   const Colors = theme.colors;
+  const isFetchingRef = useRef(false);
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -175,6 +176,12 @@ function IndexContent() {
   );
 
   const fetchData = useCallback(async () => {
+    // Prevent multiple simultaneous requests
+    if (isFetchingRef.current) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
     setRefreshing(true);
     try {
       const [, , bannersRes] = await Promise.all([
@@ -187,11 +194,14 @@ function IndexContent() {
       setBanners([]);
     } finally {
       setRefreshing(false);
+      isFetchingRef.current = false;
     }
   }, [getCategories, getAllProducts]);
 
   useEffect(() => {
     fetchData();
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCategoryPress = useCallback((categoryId: string) => {

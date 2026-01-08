@@ -15,6 +15,11 @@ const useItemStore = create((set, get) => ({
   categories: [],
   signInModelVisible: false,
   selectedCategory: null,
+  // Request tracking to prevent duplicate calls
+  _requestInProgress: {
+    categories: false,
+    products: false,
+  },
 
   // Actions
   setSelectedCategory: (categoryId) => 
@@ -92,7 +97,17 @@ const useItemStore = create((set, get) => ({
 
   // Get all products with pagination
   getAllProducts: async (limit = 90) => {
-    set({ isProductsLoading: true, error: null });
+    const { _requestInProgress } = get();
+    // Prevent duplicate requests
+    if (_requestInProgress.products) {
+      return;
+    }
+    
+    set({ 
+      isProductsLoading: true, 
+      error: null,
+      _requestInProgress: { ..._requestInProgress, products: true }
+    });
     
     try {
       // First try with pagination params (like the mobile app expects)
@@ -177,6 +192,7 @@ const useItemStore = create((set, get) => ({
       const totalPages = Number(response.data?.totalPages) || Number(response.data?.data?.totalPages) || 1;
       const currentPage = Number(response.data?.currentPage) || Number(response.data?.data?.currentPage) || Number(response.data?.page) || 1;
 
+      const { _requestInProgress } = get();
       set({
         products,
         isProductsLoading: false,
@@ -185,6 +201,7 @@ const useItemStore = create((set, get) => ({
         page: currentPage + 1,
         hasMore: currentPage < totalPages,
         selectedCategory: null,
+        _requestInProgress: { ..._requestInProgress, products: false }
       });
     } catch (error) {
       console.error("❌ Error fetching products:", {
@@ -199,10 +216,12 @@ const useItemStore = create((set, get) => ({
         || error?.message 
         || "تعذر تحميل المنتجات";
       
+      const { _requestInProgress } = get();
       set({
         isProductsLoading: false,
         error: errorMessage,
         products: [], // Ensure products is reset on error
+        _requestInProgress: { ..._requestInProgress, products: false }
       });
     }
   },
@@ -265,7 +284,17 @@ const useItemStore = create((set, get) => ({
 
   // Get categories
   getCategories: async () => {
-    set({ isCategoriesLoading: true, error: null });
+    const { _requestInProgress } = get();
+    // Prevent duplicate requests
+    if (_requestInProgress.categories) {
+      return;
+    }
+    
+    set({ 
+      isCategoriesLoading: true, 
+      error: null,
+      _requestInProgress: { ..._requestInProgress, categories: true }
+    });
     
     try {
       const response = await axiosInstance.get("/categories");
@@ -283,15 +312,16 @@ const useItemStore = create((set, get) => ({
       });
 
       // Try multiple response structure patterns
+      // Backend sends: res.json(categories) - so response.data is directly an array
       let categories = [];
       
-      // Pattern 1: response.data.categories (most common)
-      if (Array.isArray(response.data?.categories)) {
-        categories = response.data.categories;
-      }
-      // Pattern 2: response.data is directly an array
-      else if (Array.isArray(response.data)) {
+      // Pattern 1: response.data is directly an array (BACKEND FORMAT - nubian-auth)
+      if (Array.isArray(response.data)) {
         categories = response.data;
+      }
+      // Pattern 2: response.data.categories (wrapped format)
+      else if (Array.isArray(response.data?.categories)) {
+        categories = response.data.categories;
       }
       // Pattern 3: response.data.data.categories (nested structure)
       else if (Array.isArray(response.data?.data?.categories)) {
@@ -323,11 +353,13 @@ const useItemStore = create((set, get) => ({
       }
 
       console.log("📂 Parsed categories:", categories.length, "items");
-        
+      
+      const { _requestInProgress } = get();
       set({ 
         categories, 
         isCategoriesLoading: false,
         error: null,
+        _requestInProgress: { ..._requestInProgress, categories: false }
       });
     } catch (error) {
       console.error("❌ Error fetching categories:", {
@@ -342,10 +374,12 @@ const useItemStore = create((set, get) => ({
         || error?.message 
         || "فشل في تحميل الأقسام";
       
+      const { _requestInProgress } = get();
       set({ 
         error: errorMessage, 
         isCategoriesLoading: false,
         categories: [],
+        _requestInProgress: { ..._requestInProgress, categories: false }
       });
     }
   },
