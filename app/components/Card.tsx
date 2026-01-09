@@ -72,12 +72,16 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   };
 
   // Ensure prices are valid numbers
-  const validPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
-  const validDiscountPrice = typeof item.discountPrice === 'number' && !isNaN(item.discountPrice) && item.discountPrice > 0 ? item.discountPrice : 0;
+  // price = original price, discountPrice = final selling price (after discount)
+  const originalPrice = typeof item.price === 'number' && !isNaN(item.price) && item.price > 0 ? item.price : 0;
+  const finalPrice = typeof item.discountPrice === 'number' && !isNaN(item.discountPrice) && item.discountPrice > 0 
+    ? item.discountPrice 
+    : originalPrice; // Fallback to original price if no discount
 
+  // Calculate discount percentage: ((original - final) / original) * 100
   const discountPercentage = calculateDiscountPercentage(
-    validDiscountPrice,
-    validPrice
+    originalPrice,
+    finalPrice
   );
 
   const handleClick = (item: item) => {
@@ -86,7 +90,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
       params: {
         details: String(item._id),
         name: item.name || '',
-        price: String(validPrice),
+        price: String(finalPrice),
         image: item.images?.[0] || '',
       },
     } as any);
@@ -213,13 +217,15 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
           {item.name}
         </Heading>
         <View style={styles.priceContainer}>
-          {validDiscountPrice > 0 && (
+          {/* Show original price (strikethrough) if there's a discount */}
+          {discountPercentage > 0 && originalPrice > finalPrice && (
             <Text style={[styles.originalPrice, { color: Colors.text.veryLightGray }]}>
-              {formatPrice(validDiscountPrice)}
+              {formatPrice(originalPrice)}
             </Text>
           )}
+          {/* Show final price (discountPrice if exists, else original price) */}
           <Text style={[styles.currentPrice, { color: Colors.primary }]}>
-            {formatPrice(validPrice)}
+            {formatPrice(finalPrice)}
           </Text>
         </View>
       </View>

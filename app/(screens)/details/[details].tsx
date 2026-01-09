@@ -75,13 +75,24 @@ export default function Details() {
     return findMatchingVariant(product, selectedAttributes);
   }, [product, selectedAttributes]);
   
-  // Get current price (variant price if variant selected, otherwise product price)
+  // Get current price (final selling price)
+  // price = original price, discountPrice = final selling price
+  // For variants: use variant.discountPrice if exists, else variant.price
+  // For products: use product.discountPrice if exists, else product.price
   const currentPrice = useMemo(() => {
     if (matchingVariant) {
-      return matchingVariant.price;
+      // Variant: prefer discountPrice (final price), fallback to price (original)
+      const variantFinalPrice = matchingVariant.discountPrice && matchingVariant.discountPrice > 0
+        ? matchingVariant.discountPrice
+        : matchingVariant.price;
+      return variantFinalPrice || 0;
     }
-    return product?.price || 0;
-  }, [matchingVariant, product?.price]);
+    // Product: prefer discountPrice (final price), fallback to price (original)
+    const productFinalPrice = product?.discountPrice && product.discountPrice > 0
+      ? product.discountPrice
+      : product?.price;
+    return productFinalPrice || 0;
+  }, [matchingVariant, product?.price, product?.discountPrice]);
   
   // Get current stock
   const currentStock = useMemo(() => {

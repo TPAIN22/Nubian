@@ -72,9 +72,14 @@ import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/car
           </View>
           <Text style={[styles.price, { color: Colors.success }]}>
             {(() => {
-              const validPrice = typeof item?.product?.price === 'number' && !isNaN(item.product.price) && isFinite(item.product.price) ? item.product.price : 0;
+              // price = original price, discountPrice = final selling price
+              // Use final price (discountPrice if exists and > 0, else price)
+              const originalPrice = typeof item?.product?.price === 'number' && !isNaN(item.product.price) && isFinite(item.product.price) ? item.product.price : 0;
+              const finalPrice = typeof item?.product?.discountPrice === 'number' && !isNaN(item.product.discountPrice) && isFinite(item.product.discountPrice) && item.product.discountPrice > 0
+                ? item.product.discountPrice
+                : originalPrice;
               const validQuantity = typeof item?.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 0;
-              return (validPrice * validQuantity).toFixed(2);
+              return (finalPrice * validQuantity).toFixed(2);
             })()}
           </Text>
         </View>

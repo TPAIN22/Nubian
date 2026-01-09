@@ -106,22 +106,29 @@ const BottomSheet = () => {
           )}
 
           {/* Price Display */}
+          {/* price = original price, discountPrice = final selling price */}
           <View style={styles.priceContainer}>
             {(() => {
-              const validPrice = getValidPrice(product.price);
-              const validDiscountPrice = getValidPrice(product.discountPrice);
+              const originalPrice = getValidPrice(product.price);
+              const finalPrice = getValidPrice(product.discountPrice) > 0 
+                ? getValidPrice(product.discountPrice) 
+                : originalPrice; // Use discountPrice if exists, else fallback to original
               
-              return validDiscountPrice > 0 ? (
+              const hasDiscount = finalPrice < originalPrice && getValidPrice(product.discountPrice) > 0;
+              
+              return hasDiscount ? (
                 <>
+                  {/* Final price (after discount) */}
                   <Text style={styles.discountPrice}>
-                    {validPrice} SDG
+                    {finalPrice} SDG
                   </Text>
+                  {/* Original price (strikethrough) */}
                   <Text style={styles.originalPrice}>
-                    {validDiscountPrice} SDG
+                    {originalPrice} SDG
                   </Text>
                 </>
               ) : (
-                <Text style={styles.productPrice}>{validPrice} SDG</Text>
+                <Text style={styles.productPrice}>{originalPrice} SDG</Text>
               );
             })()}
           </View>
