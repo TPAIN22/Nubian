@@ -5,17 +5,15 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
-  Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from "@/utils/i18n";
 import { useContext } from 'react';
 import { LanguageContext } from '@/utils/LanguageContext';
 import useCartStore from "@/store/useCartStore";
-import { useAuth } from "@clerk/clerk-expo";
 import CartBadge from "./CartBadge";
 import Colors from "@/locales/brandColors";
 import { useScrollStore } from "@/store/useScrollStore";
@@ -29,16 +27,12 @@ export default function HeaderComponent() {
   const { fetchCart } = useCartStore();
   const { theme } = useTheme();
   const Colors = theme.colors;
-  // Get scroll position from store
+  
+  // Get scroll position from store - this will cause re-render when scroll changes
   const currentScrollY = useScrollStore((state) => state.scrollY);
   
-  // Animated values for header transparency
-  const headerOpacity = useRef(new Animated.Value(0)).current;
-  const headerBackgroundColor = useRef(new Animated.Value(0)).current;
-  
-  // Threshold for when header becomes opaque (faster transition at 20px)
+  // Threshold for when header becomes opaque
   const SCROLL_THRESHOLD = 10;
-
 
   // جلب بيانات السلة عند تحميل المكون
   useEffect(() => {
@@ -53,67 +47,44 @@ export default function HeaderComponent() {
     loadCart();
   }, []);
 
-  // Animate header based on scroll position
-  useEffect(() => {
-    const opacity = Math.min(currentScrollY / SCROLL_THRESHOLD, 1);
+  // Header should be transparent at top, opaque when scrolling down
+  // Memoize to prevent unnecessary recalculations
+  const headerStyle = useMemo(() => {
+    const isScrolled = currentScrollY > SCROLL_THRESHOLD;
     
-    // Fast spring animation for quick transition
-    Animated.parallel([
-      Animated.spring(headerOpacity, {
-        toValue: opacity,
-        tension: 200,
-        friction: 7,
-        useNativeDriver: false,
-      }),
-      Animated.spring(headerBackgroundColor, {
-        toValue: opacity,
-        tension: 200,
-        friction: 7,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [currentScrollY, headerOpacity, headerBackgroundColor]);
-
-  const backgroundColor = headerBackgroundColor.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['transparent', Colors.cardBackground],
-  });
-
-  const borderColor = headerOpacity.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['transparent', Colors.borderLight],
-  });
-
-  const shadowOpacity = headerOpacity.interpolate({
-    inputRange: [0, 0.01],
-    outputRange: [0, 0.15],
-  });
+    return {
+      backgroundColor: isScrolled ? Colors.cardBackground : 'transparent',
+      borderColor: isScrolled ? Colors.borderLight : 'transparent',
+      shadowOpacity: isScrolled ? 0.15 : 0,
+      isScrolled,
+    };
+  }, [currentScrollY, Colors.cardBackground, Colors.borderLight]);
 
   return (
-    <Animated.View 
+    <View 
       style={[
         styles.headerContainer,
         {
-          backgroundColor,
+          backgroundColor: headerStyle.backgroundColor,
           ...Platform.select({
             ios: {
-              shadowOpacity,
+              shadowOpacity: headerStyle.shadowOpacity,
             },
           }),
         }
       ]}
     >
       <StatusBar 
-        barStyle={currentScrollY > SCROLL_THRESHOLD ? (theme.mode === 'dark' ? 'light-content' : 'dark-content') : "light-content"} 
+        barStyle={headerStyle.isScrolled ? (theme.mode === 'dark' ? 'light-content' : 'dark-content') : "light-content"} 
         backgroundColor="transparent" 
         translucent 
       />
-      <Animated.View 
+      <View 
         style={[
           styles.header,
           {
-            borderBottomWidth: headerOpacity,
-            borderBottomColor: borderColor,
+            borderBottomWidth: headerStyle.isScrolled ? 1 : 0,
+            borderBottomColor: headerStyle.borderColor,
           }
         ]}
       >
@@ -131,22 +102,17 @@ export default function HeaderComponent() {
         </TouchableOpacity>
 
         {/* Search Bar - Prominent & Elegant */}
-        <Animated.View
+        <View
           style={[
             styles.searchBar,
             {
-              backgroundColor: headerOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: [theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)', Colors.cardBackground],
-              }),
-              borderColor: headerOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: [theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(163, 126, 44, 0.4)', Colors.borderLight],
-              }),
-              borderWidth: headerOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1.5, 1.5],
-              }),
+              backgroundColor: headerStyle.isScrolled 
+                ? Colors.cardBackground 
+                : (theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)'),
+              borderColor: headerStyle.isScrolled 
+                ? Colors.borderLight 
+                : (theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(163, 126, 44, 0.4)'),
+              borderWidth: 1.5,
             }
           ]}
         >
@@ -158,26 +124,26 @@ export default function HeaderComponent() {
             <Ionicons 
               name="search" 
               size={20} 
-              color={currentScrollY > SCROLL_THRESHOLD ? Colors.primary : Colors.text.white} 
+              color={headerStyle.isScrolled ? Colors.primary : Colors.text.white} 
             />
             <Text 
               style={[
                 styles.searchPlaceholder,
-                { color: currentScrollY > SCROLL_THRESHOLD ? Colors.text.secondary : Colors.text.white }
+                { color: headerStyle.isScrolled ? Colors.text.secondary : Colors.text.white }
               ]} 
               numberOfLines={1}
             >
               {i18n.t('searchPlaceholder') || 'Search products...'}
             </Text>
           </TouchableOpacity>
-        </Animated.View>
+        </View>
 
         {/* Action Icons */}
         <View style={styles.actionIcons}>
           <TouchableOpacity
             style={[
               styles.iconButton,
-              currentScrollY > SCROLL_THRESHOLD && styles.iconButtonActive
+              headerStyle.isScrolled && styles.iconButtonActive
             ]}
             onPress={() => setLanguage(language.startsWith('ar') ? 'en' : 'ar')}
             activeOpacity={0.7}
@@ -185,14 +151,14 @@ export default function HeaderComponent() {
             <Ionicons 
               name="globe-outline" 
               size={22} 
-              color={currentScrollY > SCROLL_THRESHOLD ? Colors.primary : Colors.text.white} 
+              color={headerStyle.isScrolled ? Colors.primary : Colors.text.white} 
             />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.iconButton,
-              currentScrollY > SCROLL_THRESHOLD && styles.iconButtonActive
+              headerStyle.isScrolled && styles.iconButtonActive
             ]}
             onPress={() => router.push("/(screens)/notification")}
             activeOpacity={0.7}
@@ -200,7 +166,7 @@ export default function HeaderComponent() {
             <Ionicons 
               name="notifications-outline" 
               size={22} 
-              color={currentScrollY > SCROLL_THRESHOLD ? Colors.primary : Colors.text.white} 
+              color={headerStyle.isScrolled ? Colors.primary : Colors.text.white} 
             />
           </TouchableOpacity>
 
@@ -208,7 +174,7 @@ export default function HeaderComponent() {
             style={[
               styles.iconButton,
               styles.cartButton,
-              currentScrollY > SCROLL_THRESHOLD && styles.iconButtonActive
+              headerStyle.isScrolled && styles.iconButtonActive
             ]}
             onPress={() => router.push("/(tabs)/cart")}
             activeOpacity={0.7}
@@ -217,14 +183,14 @@ export default function HeaderComponent() {
               <Ionicons 
                 name="bag-outline" 
                 size={22} 
-                color={currentScrollY > SCROLL_THRESHOLD ? Colors.primary : Colors.text.white} 
+                color={headerStyle.isScrolled ? Colors.primary : Colors.text.white} 
               />
               <CartBadge size={16} fontSize={8} />
             </View>
           </TouchableOpacity>
         </View>
-      </Animated.View>
-    </Animated.View>
+      </View>
+    </View>
   );
 }
 

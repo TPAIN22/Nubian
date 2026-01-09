@@ -31,68 +31,7 @@ import { useScrollStore } from "@/store/useScrollStore";
 import { useTheme } from "@/providers/ThemeProvider";
 
 const { width, height } = Dimensions.get("window");
-const THREE_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
-const CIRCLE_SIZE = 80;
 
-// Enhanced Category Circle with Navigation
-const CategoryCircle = memo(({ item, index, onPress, colors }: any) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current; // Start at 1 instead of 0
-
-  useEffect(() => {
-    // Optional: Still animate but start visible
-    scaleAnim.setValue(0.8);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      delay: index * 50,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 7,
-    }).start();
-  }, []);
-
-  const isNew = Date.now() - new Date(item.createdAt).getTime() < THREE_DAYS_MS;
-
-  return (
-    <Pressable
-      onPress={() => onPress(item._id)}
-      style={({ pressed }) => [
-        styles.categoryCirclePressable,
-        { opacity: pressed ? 0.7 : 1 }
-      ]}
-    >
-      <Animated.View
-        style={[
-          styles.categoryCircle,
-          {
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
-      >
-        <View style={[styles.categoryCircleWrapper, { borderColor: colors.primary }]}>
-          <Image
-            source={{ uri: item.image }}
-            style={styles.categoryCircleImage}
-            contentFit="cover"
-            transition={300}
-            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-          />
-          <LinearGradient
-            colors={[`${colors.primary}33`, `${colors.primary}00`]}
-            style={styles.circleGlow}
-          />
-          {isNew && (
-            <View style={[styles.circleNewBadge, { backgroundColor: colors.primary, borderColor: colors.text.white }]}>
-              <Ionicons name="sparkles" size={12} color={colors.text.white} />
-            </View>
-          )}
-        </View>
-        <Text style={[styles.circleCategoryName, { color: colors.text.gray }]} numberOfLines={1}>
-          {item.name}
-        </Text>
-      </Animated.View>
-    </Pressable>
-  );
-});
 
 const BannerItem = memo(({ item, index, colors }: any) => {
   const scaleAnim = useRef(new Animated.Value(0.99)).current;
@@ -245,9 +184,6 @@ function IndexContent() {
     }, [fetchData])
   );
 
-  const handleCategoryPress = useCallback((categoryId: string) => {
-    router.push(`/(screens)/${categoryId}`);
-  }, [router]);
 
   const renderProductItem = useCallback(
     ({ item }: any) => (
@@ -260,20 +196,11 @@ function IndexContent() {
     [handlePresentModalPress, handleSheetChanges]
   );
 
-  const renderCategoryCircle = useCallback(({ item, index }: any) => (
-    <CategoryCircle item={item} index={index} onPress={handleCategoryPress} colors={Colors} />
-  ), [handleCategoryPress, Colors]);
-
   const renderBanner = useCallback(({ item, index }: any) => (
     <BannerItem item={item} index={index} colors={Colors} />
   ), [Colors]);
 
   const keyExtractor = useCallback((item: any) => item._id, []);
-
-  const memoizedCategories = useMemo(
-    () => categories?.slice(0, 20),
-    [categories]
-  );
 
   const ListHeader = useCallback(
     () => (
@@ -302,32 +229,6 @@ function IndexContent() {
           </View>
         )}
 
-        {/* Categories Section - Interactive Circles */}
-        {memoizedCategories && memoizedCategories.length > 0 && (
-          <View style={styles.categoriesSection}>
-            <SectionHeader
-              title={i18n.t("discoverOurCollection")}
-              colors={Colors}
-            />
-            
-            <FlatList
-              data={memoizedCategories}
-              renderItem={renderCategoryCircle}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={keyExtractor}
-              contentContainerStyle={styles.categoryCircleList}
-              getItemLayout={(_data, index) => {
-                const itemWidth = 80 + 16; // CIRCLE_SIZE + margin
-                return {
-                  length: itemWidth,
-                  offset: itemWidth * index,
-                  index,
-                };
-              }}
-            />
-          </View>
-        )}
 
         {/* Latest Products Header */}
         <View style={styles.latestProductsSection}>
@@ -355,7 +256,7 @@ function IndexContent() {
         )}
       </View>
     ),
-    [categories, banners, router, keyExtractor, memoizedCategories, renderCategoryCircle, renderBanner, Colors, error, products.length, isProductsLoading]
+    [banners, router, keyExtractor, renderBanner, Colors, error, products.length, isProductsLoading]
   );
 
   const getItemLayout = useCallback(
@@ -461,63 +362,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     flexGrow: 0,
   },
-  categoryCirclePressable: {
-    marginHorizontal: 8,
-    width: CIRCLE_SIZE + 16,
-    height: CIRCLE_SIZE + 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categoryCircle: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: CIRCLE_SIZE + 16,
-    height: CIRCLE_SIZE + 40,
-  },
-  categoryCircleWrapper: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
-    overflow: "hidden",
-    borderWidth: 3,
-    margin: 4,
-    position: "relative",
-  },
-  categoryCircleImage: {
-    width: "100%",
-    height: "100%",
-  },
-  circleGlow: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  circleNewBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2.5,
-  },
-  circleCategoryName: {
-    marginTop: 10,
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center",
-    maxWidth: CIRCLE_SIZE + 10,
-  },
-  categoryCircleList: {
-    paddingHorizontal: 12,
-    paddingVertical: 20,
-    alignItems: 'center',
-    minHeight: CIRCLE_SIZE + 50,
-  },
   horizontalListBanner: {
     paddingHorizontal: 0,
     marginHorizontal: 0,
@@ -545,12 +389,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     overflow: "hidden",
     borderRadius: 20,
-  },
-  categoriesSection: {
-    paddingTop: 10,
-    borderRadius: 20,
-    minHeight: CIRCLE_SIZE + 80,
-    backgroundColor: 'transparent',
   },
   latestProductsSection: {
     marginTop: 8,
