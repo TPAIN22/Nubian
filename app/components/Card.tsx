@@ -65,8 +65,8 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   };
 
   const discountPercentage = calculateDiscountPercentage(
-    item.discountPrice,
-    item.price || 0
+    item.discountPrice || 0,
+    item.price
   );
 
   const handleClick = (item: item) => {

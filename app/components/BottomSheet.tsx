@@ -102,10 +102,10 @@ const BottomSheet = () => {
             {product.discountPrice ? (
               <>
                 <Text style={styles.discountPrice}>
-                  {product.discountPrice} SDG
+                  {product.price} SDG
                 </Text>
                 <Text style={styles.originalPrice}>
-                  {product.price} SDG
+                  {product.discountPrice} SDG
                 </Text>
               </>
             ) : (
