@@ -71,7 +71,11 @@ import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/car
             </TouchableOpacity>
           </View>
           <Text style={[styles.price, { color: Colors.success }]}>
-            {(item?.product?.price * item?.quantity || 0).toFixed(2)}
+            {(() => {
+              const validPrice = typeof item?.product?.price === 'number' && !isNaN(item.product.price) && isFinite(item.product.price) ? item.product.price : 0;
+              const validQuantity = typeof item?.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 0;
+              return (validPrice * validQuantity).toFixed(2);
+            })()}
           </Text>
         </View>
       </View>

@@ -137,7 +137,7 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
             <View style={enhancedStyles.priceContainer}>
               <Text style={[enhancedStyles.currency, { color: colors.text.mediumGray }]}>{i18n.t('currency')}</Text>
               <Text style={[enhancedStyles.price, { color: colors.primary }]}>
-                {typeof item.price === 'number' ? item.price.toFixed(2) : '0.00'}
+                {typeof item.price === 'number' && !isNaN(item.price) ? item.price.toFixed(2) : '0.00'}
               </Text>
             </View>
             
@@ -387,9 +387,17 @@ const SearchPage = () => {
       
       // Sort by price
       if (sortByHighestPrice) {
-        tempProducts.sort((a: Product, b: Product) => (b.price || 0) - (a.price || 0));
+        tempProducts.sort((a: Product, b: Product) => {
+          const priceA = typeof a.price === 'number' && !isNaN(a.price) ? a.price : 0;
+          const priceB = typeof b.price === 'number' && !isNaN(b.price) ? b.price : 0;
+          return priceB - priceA;
+        });
       } else if (sortByLowestPrice) {
-        tempProducts.sort((a: Product, b: Product) => (a.price || 0) - (b.price || 0));
+        tempProducts.sort((a: Product, b: Product) => {
+          const priceA = typeof a.price === 'number' && !isNaN(a.price) ? a.price : 0;
+          const priceB = typeof b.price === 'number' && !isNaN(b.price) ? b.price : 0;
+          return priceA - priceB;
+        });
       }
       
       return tempProducts;
@@ -409,11 +417,13 @@ const SearchPage = () => {
           try {
             // تتبع عرض المنتج
             handleProductView(item);
+            // Validate price before passing
+            const validPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
             router.push({
               pathname: `/details/${item._id}`,
               params: {
                 name: item.name || '',
-                price: String(item.price ?? ''),
+                price: String(validPrice),
                 image: item.images?.[0] || '',
               },
             });

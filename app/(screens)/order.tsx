@@ -65,7 +65,8 @@ export default function Order() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `${amount.toLocaleString()} ${i18n.t('currency')}`;
+    const validAmount = typeof amount === 'number' && !isNaN(amount) && isFinite(amount) ? amount : 0;
+    return `${validAmount.toLocaleString()} ${i18n.t('currency')}`;
   };
 
   const getStatusColor = (status: string) => {
@@ -266,10 +267,17 @@ export default function Order() {
                           </Text>
                           <View style={styles.productPricing}>
                             <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
-                              {product.price ? formatCurrency(product.price) : 'السعر غير محدد'} × {product.quantity || 1}
+                              {(() => {
+                                const validPrice = typeof product.price === 'number' && !isNaN(product.price) && isFinite(product.price) ? product.price : 0;
+                                return validPrice > 0 ? formatCurrency(validPrice) : 'السعر غير محدد';
+                              })()} × {product.quantity || 1}
                             </Text>
                             <Text style={[styles.productTotal, { color: Colors.success }]}>
-                              = {formatCurrency((product.price || 0) * (product.quantity || 1))}
+                              = {(() => {
+                                const validPrice = typeof product.price === 'number' && !isNaN(product.price) && isFinite(product.price) ? product.price : 0;
+                                const validQuantity = typeof product.quantity === 'number' && !isNaN(product.quantity) ? product.quantity : 1;
+                                return formatCurrency(validPrice * validQuantity);
+                              })()}
                             </Text>
                           </View>
                         </View>

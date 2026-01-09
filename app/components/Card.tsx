@@ -38,6 +38,13 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   const inWishlist = isInWishlist(item._id);
 
   const formatPrice = (price: number) => {
+    // Validate price is a valid number
+    if (price === null || price === undefined || isNaN(price) || typeof price !== 'number') {
+      return new Intl.NumberFormat("ar-SDG", {
+        style: "currency",
+        currency: "SDG",
+      }).format(0);
+    }
     return new Intl.NumberFormat("ar-SDG", {
       style: "currency",
       currency: "SDG",
@@ -64,9 +71,13 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     return Math.round(discount);
   };
 
+  // Ensure prices are valid numbers
+  const validPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+  const validDiscountPrice = typeof item.discountPrice === 'number' && !isNaN(item.discountPrice) && item.discountPrice > 0 ? item.discountPrice : 0;
+
   const discountPercentage = calculateDiscountPercentage(
-    item.discountPrice || 0,
-    item.price
+    validDiscountPrice,
+    validPrice
   );
 
   const handleClick = (item: item) => {
@@ -75,7 +86,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
       params: {
         details: String(item._id),
         name: item.name || '',
-        price: String(item.price ?? ''),
+        price: String(validPrice),
         image: item.images?.[0] || '',
       },
     } as any);
@@ -202,13 +213,13 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
           {item.name}
         </Heading>
         <View style={styles.priceContainer}>
-          {item.discountPrice > 0 && (
+          {validDiscountPrice > 0 && (
             <Text style={[styles.originalPrice, { color: Colors.text.veryLightGray }]}>
-              {formatPrice(item.discountPrice)}
+              {formatPrice(validDiscountPrice)}
             </Text>
           )}
           <Text style={[styles.currentPrice, { color: Colors.primary }]}>
-            {formatPrice(item.price)}
+            {formatPrice(validPrice)}
           </Text>
         </View>
       </View>

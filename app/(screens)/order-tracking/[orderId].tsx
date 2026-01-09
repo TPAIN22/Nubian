@@ -157,7 +157,9 @@ export default function OrderTracking() {
             <View key={item.productId} style={[styles.productItem, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
               <Text style={[styles.productName, { color: Colors.text.gray }]}>{item.name}</Text>
               <Text style={[styles.productQuantity, { color: Colors.text.veryLightGray }]}>الكمية: {item.quantity}</Text>
-              <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>السعر: {item.price.toFixed(2)} ر.س</Text>
+              <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
+                السعر: {typeof item.price === 'number' && !isNaN(item.price) ? item.price.toFixed(2) : '0.00'} ر.س
+              </Text>
             </View>
           ))
         ) : (

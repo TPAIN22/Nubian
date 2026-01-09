@@ -19,6 +19,14 @@ const BottomSheet = () => {
       setSelectedSize(product.sizes[0]);
     }
   }, [product]);
+
+  // Validate and format price
+  const getValidPrice = (price: any): number => {
+    if (typeof price === 'number' && !isNaN(price) && price >= 0) {
+      return price;
+    }
+    return 0;
+  };
   
   // Build selected attributes for cart
   const selectedAttributes = useMemo<SelectedAttributes>(() => {
@@ -99,18 +107,23 @@ const BottomSheet = () => {
 
           {/* Price Display */}
           <View style={styles.priceContainer}>
-            {product.discountPrice ? (
-              <>
-                <Text style={styles.discountPrice}>
-                  {product.price} SDG
-                </Text>
-                <Text style={styles.originalPrice}>
-                  {product.discountPrice} SDG
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.productPrice}>{product.price} SDG</Text>
-            )}
+            {(() => {
+              const validPrice = getValidPrice(product.price);
+              const validDiscountPrice = getValidPrice(product.discountPrice);
+              
+              return validDiscountPrice > 0 ? (
+                <>
+                  <Text style={styles.discountPrice}>
+                    {validPrice} SDG
+                  </Text>
+                  <Text style={styles.originalPrice}>
+                    {validDiscountPrice} SDG
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.productPrice}>{validPrice} SDG</Text>
+              );
+            })()}
           </View>
         </View>
       </ScrollView>

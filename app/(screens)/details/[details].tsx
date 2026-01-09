@@ -179,12 +179,13 @@ export default function Details() {
 
   const formattedPrice = useMemo(() => {
     const price = currentPrice || viewProduct?.price || 0;
-    if (!price) return '';
+    const validPrice = typeof price === 'number' && !isNaN(price) && isFinite(price) ? price : 0;
+    if (!validPrice) return '';
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 0,
-    }).format(price).replace('$', '$ ');
+    }).format(validPrice).replace('$', '$ ');
   }, [currentPrice, viewProduct?.price]);
 
 
