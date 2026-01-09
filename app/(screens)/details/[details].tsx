@@ -32,6 +32,7 @@ import {
   getProductStock,
   isProductAvailable 
 } from "@/utils/cartUtils";
+import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -75,24 +76,19 @@ export default function Details() {
     return findMatchingVariant(product, selectedAttributes);
   }, [product, selectedAttributes]);
   
-  // Get current price (final selling price)
+  // Get current price (final selling price) and original price
   // price = original price, discountPrice = final selling price
-  // For variants: use variant.discountPrice if exists, else variant.price
-  // For products: use product.discountPrice if exists, else product.price
   const currentPrice = useMemo(() => {
-    if (matchingVariant) {
-      // Variant: prefer discountPrice (final price), fallback to price (original)
-      const variantFinalPrice = matchingVariant.discountPrice && matchingVariant.discountPrice > 0
-        ? matchingVariant.discountPrice
-        : matchingVariant.price;
-      return variantFinalPrice || 0;
-    }
-    // Product: prefer discountPrice (final price), fallback to price (original)
-    const productFinalPrice = product?.discountPrice && product.discountPrice > 0
-      ? product.discountPrice
-      : product?.price;
-    return productFinalPrice || 0;
-  }, [matchingVariant, product?.price, product?.discountPrice]);
+    return getFinalPrice(product, matchingVariant || undefined);
+  }, [product, matchingVariant]);
+  
+  const originalPrice = useMemo(() => {
+    return getOriginalPrice(product, matchingVariant || undefined);
+  }, [product, matchingVariant]);
+  
+  const productHasDiscount = useMemo(() => {
+    return hasDiscount(product, matchingVariant || undefined);
+  }, [product, matchingVariant]);
   
   // Get current stock
   const currentStock = useMemo(() => {
@@ -188,16 +184,15 @@ export default function Details() {
     return () => task.cancel();
   }, []);
 
-  const formattedPrice = useMemo(() => {
-    const price = currentPrice || viewProduct?.price || 0;
-    const validPrice = typeof price === 'number' && !isNaN(price) && isFinite(price) ? price : 0;
-    if (!validPrice) return '';
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-    }).format(validPrice).replace('$', '$ ');
-  }, [currentPrice, viewProduct?.price]);
+  const formattedFinalPrice = useMemo(() => {
+    if (!currentPrice) return '';
+    return formatPriceUtil(currentPrice, 'SDG');
+  }, [currentPrice]);
+  
+  const formattedOriginalPrice = useMemo(() => {
+    if (!originalPrice || !productHasDiscount) return '';
+    return formatPriceUtil(originalPrice, 'SDG');
+  }, [originalPrice, productHasDiscount]);
 
 
   // Defer initial size selection to avoid blocking interaction
@@ -575,7 +570,14 @@ export default function Details() {
           {/* Product Name and Price */}
           <View style={[styles.productInfoCard, { backgroundColor: Colors.cardBackground }]}>
             <Text style={[styles.productName, { color: Colors.text.gray }]}>{viewProduct.name}</Text>
-            <Text style={[styles.price, { color: Colors.text.gray }]}>{formattedPrice}</Text>
+            <View style={styles.priceContainer}>
+              {productHasDiscount && (
+                <Text style={[styles.originalPrice, { color: Colors.text.veryLightGray }]}>
+                  {formattedOriginalPrice}
+                </Text>
+              )}
+              <Text style={[styles.price, { color: Colors.text.gray }]}>{formattedFinalPrice}</Text>
+            </View>
           </View>
 
           {/* Description */}
@@ -812,10 +814,22 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
   price: {
     fontSize: 24,
     fontWeight: "700",
-    marginTop: 4,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  originalPrice: {
+    fontSize: 18,
+    fontWeight: "400",
+    textDecorationLine: 'line-through',
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   

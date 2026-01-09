@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
+import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 
 export default function Order() {
   const { theme } = useTheme();
@@ -266,19 +267,50 @@ export default function Order() {
                             {product.name || product.productName || 'منتج غير محدد'}
                           </Text>
                           <View style={styles.productPricing}>
-                            <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
-                              {(() => {
-                                const validPrice = typeof product.price === 'number' && !isNaN(product.price) && isFinite(product.price) ? product.price : 0;
-                                return validPrice > 0 ? formatCurrency(validPrice) : 'السعر غير محدد';
-                              })()} × {product.quantity || 1}
-                            </Text>
-                            <Text style={[styles.productTotal, { color: Colors.success }]}>
-                              = {(() => {
-                                const validPrice = typeof product.price === 'number' && !isNaN(product.price) && isFinite(product.price) ? product.price : 0;
-                                const validQuantity = typeof product.quantity === 'number' && !isNaN(product.quantity) ? product.quantity : 1;
-                                return formatCurrency(validPrice * validQuantity);
-                              })()}
-                            </Text>
+                            {(() => {
+                              // Convert product to Product type for utility functions
+                              const productObj = {
+                                _id: product.productId || product._id || '',
+                                name: product.name || '',
+                                price: product.price || 0,
+                                discountPrice: product.discountPrice,
+                                images: product.images || [],
+                              } as any;
+                              
+                              const finalPrice = getFinalPrice(productObj);
+                              const originalPrice = getOriginalPrice(productObj);
+                              const productHasDiscount = hasDiscount(productObj);
+                              const quantity = product.quantity || 1;
+                              const totalFinalPrice = finalPrice * quantity;
+                              const totalOriginalPrice = originalPrice * quantity;
+                              
+                              return (
+                                <>
+                                  {productHasDiscount ? (
+                                    <>
+                                      <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
+                                        <Text style={{ textDecorationLine: 'line-through' }}>
+                                          {formatPriceUtil(originalPrice)}
+                                        </Text>
+                                        {' '}{formatPriceUtil(finalPrice)} × {quantity}
+                                      </Text>
+                                      <Text style={[styles.productTotal, { color: Colors.success }]}>
+                                        = {formatPriceUtil(totalFinalPrice)}
+                                      </Text>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
+                                        {formatPriceUtil(finalPrice)} × {quantity}
+                                      </Text>
+                                      <Text style={[styles.productTotal, { color: Colors.success }]}>
+                                        = {formatPriceUtil(totalFinalPrice)}
+                                      </Text>
+                                    </>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </View>
                         </View>
                       </View>

@@ -15,6 +15,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
+import { getFinalPrice, getOriginalPrice, hasDiscount, calculateDiscountPercentage, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 
 interface item {
   _id: string;
@@ -37,52 +38,15 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   const { getToken } = useAuth();
   const inWishlist = isInWishlist(item._id);
 
-  const formatPrice = (price: number) => {
-    // Validate price is a valid number
-    if (price === null || price === undefined || isNaN(price) || typeof price !== 'number') {
-      return new Intl.NumberFormat("ar-SDG", {
-        style: "currency",
-        currency: "SDG",
-      }).format(0);
-    }
-    return new Intl.NumberFormat("ar-SDG", {
-      style: "currency",
-      currency: "SDG",
-    }).format(price);
-  };
-
-  const calculateDiscountPercentage = (
-    originalPrice: number,
-    discountedPrice: number
-  ) => {
-    if (
-      !originalPrice ||
-      !discountedPrice ||
-      originalPrice <= 0 ||
-      discountedPrice < 0
-    ) {
-      return 0;
-    }
-
-    if (discountedPrice >= originalPrice) {
-      return 0;
-    }
-    const discount = ((originalPrice - discountedPrice) / originalPrice) * 100;
-    return Math.round(discount);
-  };
-
-  // Ensure prices are valid numbers
   // price = original price, discountPrice = final selling price (after discount)
-  const originalPrice = typeof item.price === 'number' && !isNaN(item.price) && item.price > 0 ? item.price : 0;
-  const finalPrice = typeof item.discountPrice === 'number' && !isNaN(item.discountPrice) && item.discountPrice > 0 
-    ? item.discountPrice 
-    : originalPrice; // Fallback to original price if no discount
-
+  const originalPrice = getOriginalPrice(item);
+  const finalPrice = getFinalPrice(item);
+  const productHasDiscount = hasDiscount(item);
+  
   // Calculate discount percentage: ((original - final) / original) * 100
-  const discountPercentage = calculateDiscountPercentage(
-    originalPrice,
-    finalPrice
-  );
+  const discountPercentage = productHasDiscount 
+    ? calculateDiscountPercentage(originalPrice, finalPrice)
+    : 0;
 
   const handleClick = (item: item) => {
     router.push({
@@ -218,14 +182,14 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
         </Heading>
         <View style={styles.priceContainer}>
           {/* Show original price (strikethrough) if there's a discount */}
-          {discountPercentage > 0 && originalPrice > finalPrice && (
+          {productHasDiscount && (
             <Text style={[styles.originalPrice, { color: Colors.text.veryLightGray }]}>
-              {formatPrice(originalPrice)}
+              {formatPriceUtil(originalPrice)}
             </Text>
           )}
           {/* Show final price (discountPrice if exists, else original price) */}
           <Text style={[styles.currentPrice, { color: Colors.primary }]}>
-            {formatPrice(finalPrice)}
+            {formatPriceUtil(finalPrice)}
           </Text>
         </View>
       </View>

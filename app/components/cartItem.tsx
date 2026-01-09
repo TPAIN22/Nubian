@@ -5,6 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { useTheme } from "@/providers/ThemeProvider";
 import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/cartUtils";
+import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 
  const CartItem = React.memo(function CartItem({
   item,
@@ -70,18 +71,30 @@ import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/car
               <Ionicons name="add" size={18} color={Colors.text.gray} />
             </TouchableOpacity>
           </View>
-          <Text style={[styles.price, { color: Colors.success }]}>
+          <View style={styles.priceContainer}>
             {(() => {
               // price = original price, discountPrice = final selling price
-              // Use final price (discountPrice if exists and > 0, else price)
-              const originalPrice = typeof item?.product?.price === 'number' && !isNaN(item.product.price) && isFinite(item.product.price) ? item.product.price : 0;
-              const finalPrice = typeof item?.product?.discountPrice === 'number' && !isNaN(item.product.discountPrice) && isFinite(item.product.discountPrice) && item.product.discountPrice > 0
-                ? item.product.discountPrice
-                : originalPrice;
+              const finalPrice = getFinalPrice(item?.product);
+              const originalPrice = getOriginalPrice(item?.product);
+              const hasDiscountPrice = hasDiscount(item?.product);
               const validQuantity = typeof item?.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 0;
-              return (finalPrice * validQuantity).toFixed(2);
+              const totalFinalPrice = finalPrice * validQuantity;
+              const totalOriginalPrice = originalPrice * validQuantity;
+              
+              return (
+                <>
+                  {hasDiscountPrice && (
+                    <Text style={[styles.originalPriceText, { color: Colors.text.veryLightGray }]}>
+                      {formatPriceUtil(totalOriginalPrice)}
+                    </Text>
+                  )}
+                  <Text style={[styles.price, { color: Colors.success }]}>
+                    {formatPriceUtil(totalFinalPrice)}
+                  </Text>
+                </>
+              );
             })()}
-          </Text>
+          </View>
         </View>
       </View>
       <TouchableOpacity
@@ -166,10 +179,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginHorizontal: 12,
   },
-  price: {
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginLeft: 22,
+  },
+  price: {
     fontSize: 14,
     fontWeight: "700",
+  },
+  originalPriceText: {
+    fontSize: 12,
+    textDecorationLine: 'line-through',
+    fontWeight: "400",
   },
   trashContainer: {
     justifyContent: "center",

@@ -7,6 +7,7 @@ import { Image } from "expo-image";
 import AddToCartButton from "./AddToCartButton";
 import type { SelectedAttributes } from "@/types/cart.types";
 import { mergeSizeAndAttributes } from "@/utils/cartUtils";
+import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 
 const { width: windowWidth } = Dimensions.get("window");
 
@@ -20,13 +21,10 @@ const BottomSheet = () => {
     }
   }, [product]);
 
-  // Validate and format price
-  const getValidPrice = (price: any): number => {
-    if (typeof price === 'number' && !isNaN(price) && price >= 0) {
-      return price;
-    }
-    return 0;
-  };
+  // Get prices using centralized utility
+  const originalPrice = getOriginalPrice(product);
+  const finalPrice = getFinalPrice(product);
+  const productHasDiscount = hasDiscount(product);
   
   // Build selected attributes for cart
   const selectedAttributes = useMemo<SelectedAttributes>(() => {
@@ -108,29 +106,20 @@ const BottomSheet = () => {
           {/* Price Display */}
           {/* price = original price, discountPrice = final selling price */}
           <View style={styles.priceContainer}>
-            {(() => {
-              const originalPrice = getValidPrice(product.price);
-              const finalPrice = getValidPrice(product.discountPrice) > 0 
-                ? getValidPrice(product.discountPrice) 
-                : originalPrice; // Use discountPrice if exists, else fallback to original
-              
-              const hasDiscount = finalPrice < originalPrice && getValidPrice(product.discountPrice) > 0;
-              
-              return hasDiscount ? (
-                <>
-                  {/* Final price (after discount) */}
-                  <Text style={styles.discountPrice}>
-                    {finalPrice} SDG
-                  </Text>
-                  {/* Original price (strikethrough) */}
-                  <Text style={styles.originalPrice}>
-                    {originalPrice} SDG
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.productPrice}>{originalPrice} SDG</Text>
-              );
-            })()}
+            {productHasDiscount ? (
+              <>
+                {/* Final price (after discount) */}
+                <Text style={styles.discountPrice}>
+                  {formatPriceUtil(finalPrice)}
+                </Text>
+                {/* Original price (strikethrough) */}
+                <Text style={styles.originalPrice}>
+                  {formatPriceUtil(originalPrice)}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.productPrice}>{formatPriceUtil(finalPrice)}</Text>
+            )}
           </View>
         </View>
       </ScrollView>
