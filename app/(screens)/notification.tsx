@@ -25,17 +25,7 @@ const NotificationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'unread' | 'read'>('all');
   const router = useRouter();
-
-  const categories = [
-    { id: null, label: 'All' },
-    { id: 'transactional', label: 'Orders' },
-    { id: 'merchant_alerts', label: 'Merchant' },
-    { id: 'behavioral', label: 'Recommendations' },
-    { id: 'marketing', label: 'Offers' },
-  ];
 
   const fetchNotifications = async () => {
     try {
@@ -47,32 +37,20 @@ const NotificationsScreen = () => {
         return;
       }
 
+      // Simplified: Just fetch all notifications, backend will filter based on preferences
       const options: {
         limit?: number;
         offset?: number;
-        category?: string;
-        isRead?: boolean;
-        type?: string;
       } = {
         limit: 50,
         offset: 0,
       };
 
-      if (selectedCategory) {
-        options.category = selectedCategory;
-      }
-
-      if (selectedFilter === 'unread') {
-        options.isRead = false;
-      } else if (selectedFilter === 'read') {
-        options.isRead = true;
-      }
-
       const result = await getNotifications(options, token);
       setNotifications(result.notifications || []);
 
-      // Fetch unread count
-      const count = await getUnreadCount(selectedCategory || undefined, token);
+      // Fetch unread count (all categories)
+      const count = await getUnreadCount(undefined, token);
       setUnreadCount(count);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -85,12 +63,12 @@ const NotificationsScreen = () => {
 
   useEffect(() => {
     fetchNotifications();
-  }, [user, selectedCategory, selectedFilter]);
+  }, [user]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchNotifications();
-  }, [selectedCategory, selectedFilter]);
+  }, []);
 
   const handleNotificationPress = async (notification: Notification) => {
     try {
@@ -231,86 +209,24 @@ const NotificationsScreen = () => {
                 </Text>
               )}
             </Text>
-            {unreadCount > 0 && (
-              <TouchableOpacity onPress={handleMarkAllAsRead}>
-                <Text style={[styles.markAllButton, { color: Colors.primary }]}>
-                  Mark all read
-                </Text>
+            <View style={styles.headerActions}>
+              {unreadCount > 0 && (
+                <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerButton}>
+                  <Text style={[styles.markAllButton, { color: Colors.primary }]}>
+                    Mark all read
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => router.push('/(screens)/notificationPreferences')}
+                style={styles.headerButton}
+              >
+                <Ionicons name="settings-outline" size={24} color={Colors.primary} />
               </TouchableOpacity>
-            )}
+            </View>
           </View>
 
-          {/* Category filter */}
-          <FlatList
-            horizontal
-            data={categories}
-            keyExtractor={(item) => item.id || 'all'}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => setSelectedCategory(item.id)}
-                style={[
-                  styles.categoryButton,
-                  {
-                    backgroundColor:
-                      selectedCategory === item.id
-                        ? Colors.primary
-                        : Colors.cardBackground,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.categoryButtonText,
-                    {
-                      color:
-                        selectedCategory === item.id
-                          ? '#FFFFFF'
-                          : Colors.text.primary,
-                    },
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            )}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}
-          />
-
-          {/* Filter buttons */}
-          <View style={styles.filterContainer}>
-            {(['all', 'unread', 'read'] as const).map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                onPress={() => setSelectedFilter(filter)}
-                style={[
-                  styles.filterButton,
-                  {
-                    backgroundColor:
-                      selectedFilter === filter
-                        ? Colors.primary
-                        : Colors.cardBackground,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    {
-                      color:
-                        selectedFilter === filter
-                          ? '#FFFFFF'
-                          : Colors.text.primary,
-                    },
-                  ]}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Notifications list */}
+          {/* Notifications list - Simplified: no filters, backend handles categorization */}
           <FlatList
             data={notifications}
             keyExtractor={(item) => item._id}
@@ -413,6 +329,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerButton: {
+    padding: 4,
+  },
   badge: {
     marginLeft: 8,
     paddingHorizontal: 8,
@@ -423,34 +347,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   markAllButton: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  categoriesContainer: {
-    paddingVertical: 8,
-  },
-  categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  categoryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  filterContainer: {
-    flexDirection: "row",
-    marginTop: 8,
-    marginBottom: 16,
-    gap: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  filterButtonText: {
     fontSize: 14,
     fontWeight: "600",
   },
