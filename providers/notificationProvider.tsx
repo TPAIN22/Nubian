@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
+import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, registerPushTokenWithAuth } from '@/utils/pushToken';
+import { Platform } from 'react-native';
 
 type NotificationContextType = {
   expoPushToken: string | null;
@@ -12,41 +14,136 @@ const NotificationContext = createContext<NotificationContextType>({
 
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const { getToken, userId } = useAuth();
+  const { getToken, userId, isLoaded } = useAuth();
+  const hasRegisteredToken = useRef(false);
 
+  // Set up notification listeners
   useEffect(() => {
-    const setup = async () => {
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      console.log('📬 Notification received:', {
+        title: notification.request.content.title,
+        body: notification.request.content.body,
+        data: notification.request.content.data,
+      });
+    });
+
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('👆 Notification tapped:', {
+        title: response.notification.request.content.title,
+        data: response.notification.request.content.data,
+      });
+      
+      // Handle deep link navigation here if needed
+      if (response.notification.request.content.data?.deepLink) {
+        // Navigate to deep link
+      }
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener);
+      Notifications.removeNotificationSubscription(responseListener);
+    };
+  }, []);
+
+  // Register push token when user is loaded and userId is available
+  useEffect(() => {
+    if (!isLoaded) {
+      console.log('⏳ Clerk not loaded yet, waiting...');
+      return;
+    }
+
+    const setupPushToken = async () => {
+      // Prevent duplicate registrations
+      if (hasRegisteredToken.current) {
+        console.log('⚠️ Push token already registered, skipping...');
+        return;
+      }
+
       try {
+        console.log('🔔 Setting up push notifications...', { userId: userId || 'anonymous' });
+        
         // If user is authenticated, register with auth token to link token to user
         if (userId) {
           try {
             const authToken = await getToken();
             if (authToken) {
+              console.log('✅ Got auth token, registering push token with authentication...');
               // Register token with authentication to link it to the user
               const token = await registerPushTokenWithAuth(authToken);
               if (token) {
                 setExpoPushToken(token);
-                console.log('✅ Push token registered with authentication');
+                hasRegisteredToken.current = true;
+                console.log('✅ Push token registered with authentication:', token.substring(0, 30) + '...');
                 return;
+              } else {
+                console.warn('⚠️ Failed to register push token with auth, trying anonymous...');
               }
+            } else {
+              console.warn('⚠️ No auth token available, registering anonymously...');
             }
           } catch (error) {
-            console.error('Error registering push token with auth:', error);
+            console.error('❌ Error registering push token with auth:', error);
           }
         }
         
         // Fallback: Register anonymously (for users not logged in)
+        console.log('📱 Registering push token anonymously...');
         const token = await registerForPushNotificationsAsync();
         if (token) {
           setExpoPushToken(token);
+          hasRegisteredToken.current = true;
+          console.log('✅ Push token registered anonymously:', token.substring(0, 30) + '...');
+        } else {
+          console.error('❌ Failed to register push token');
         }
       } catch (error) {
-        console.error('Error setting up push notifications:', error);
+        console.error('❌ Error setting up push notifications:', error);
+        hasRegisteredToken.current = false; // Allow retry
       }
     };
 
-    setup();
-  }, [userId]); // Re-run when user logs in/logs out (getToken is stable from Clerk)
+    setupPushToken();
+  }, [userId, isLoaded, getToken]); // Re-run when user logs in/logs out or when Clerk loads
+
+  // Re-register token when userId changes (user logs in) - reset flag to allow re-registration
+  useEffect(() => {
+    if (isLoaded && userId && expoPushToken) {
+      // User just logged in, re-register token with auth to link it to user account
+      const reRegisterWithAuth = async () => {
+        try {
+          const authToken = await getToken();
+          if (authToken) {
+            console.log('🔄 User logged in, re-registering push token with auth...', {
+              hasToken: !!expoPushToken,
+              userId,
+            });
+            const token = await registerPushTokenWithAuth(authToken);
+            if (token) {
+              setExpoPushToken(token);
+              hasRegisteredToken.current = true;
+              console.log('✅ Push token re-registered with authentication after login:', token.substring(0, 30) + '...');
+            } else {
+              console.warn('⚠️ Failed to re-register push token with auth after login');
+              hasRegisteredToken.current = false; // Allow retry
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error re-registering push token after login:', error);
+          hasRegisteredToken.current = false; // Allow retry on error
+        }
+      };
+      
+      // Only re-register if we haven't registered with auth yet
+      // Check if token exists but wasn't registered with auth
+      if (!hasRegisteredToken.current || (expoPushToken && !expoPushToken.includes('ExponentPushToken'))) {
+        reRegisterWithAuth();
+      }
+    } else if (isLoaded && !userId && expoPushToken) {
+      // User logged out - token remains but flag reset
+      console.log('👋 User logged out, push token remains active');
+      hasRegisteredToken.current = false;
+    }
+  }, [userId, isLoaded, expoPushToken, getToken]);
 
   return (
     <NotificationContext.Provider value={{ expoPushToken }}>

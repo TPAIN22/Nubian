@@ -278,3 +278,34 @@ export async function updatePreferences(
     throw error;
   }
 }
+
+/**
+ * Send a test notification to the current user (for debugging)
+ * @param authToken Required auth token
+ */
+export async function sendTestNotification(authToken: string): Promise<any> {
+  try {
+    if (!authToken) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/notifications/test`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to send test notification' }));
+      throw new Error(errorData.message || 'Failed to send test notification');
+    }
+
+    const data = await response.json();
+    return data.data || null;
+  } catch (error) {
+    console.error('Error sending test notification:', error);
+    throw error;
+  }
+}

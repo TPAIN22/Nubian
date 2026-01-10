@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   Platform,
   StatusBar,
   Pressable,
-  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +20,10 @@ import { useScrollStore } from '@/store/useScrollStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface AppHeaderProps {
   showMenu?: boolean;
   onMenuPress?: () => void;
@@ -30,11 +33,172 @@ interface AppHeaderProps {
   maxQuickActions?: number;
 }
 
-// Elegant animated cart badge with gradient
-const CartBadgeComponent = memo<{ quantity: number; badgeColor: string }>(
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SCROLL_THRESHOLD = 10;
+const ICON_SIZE = 22;
+const SEARCH_ICON_SIZE = 18;
+
+const SHADOWS = {
+  searchBar: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+    },
+    android: {
+      elevation: 2,
+    },
+  }),
+  badge: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+    },
+    android: {
+      elevation: 4,
+    },
+  }),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+function useHeaderState() {
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const currentScrollY = useScrollStore((state) => state.scrollY);
+  
+  const isScrolled = currentScrollY > SCROLL_THRESHOLD;
+  const isRTL = I18nManager.isRTL;
+  const isDark = theme.mode === 'dark';
+  
+  const topPadding = Math.max(
+    insets.top,
+    Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0
+  );
+
+  const statusBarStyle = isScrolled 
+    ? (isDark ? 'light-content' : 'dark-content') 
+    : 'light-content';
+
+  const iconColor = isScrolled ? theme.colors.text.primary : '#FFFFFF';
+
+  const headerGradient = isScrolled
+    ? [theme.colors.surface, theme.colors.surface]
+    : ['rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0)'];
+
+  const glassBackground = isScrolled
+    ? isDark
+      ? 'rgba(18, 18, 18, 0.85)'
+      : 'rgba(255, 255, 255, 0.85)'
+    : 'transparent';
+
+  return {
+    isScrolled,
+    isRTL,
+    isDark,
+    topPadding,
+    statusBarStyle,
+    iconColor,
+    headerGradient,
+    glassBackground,
+    colors: theme.colors,
+  };
+}
+
+function useHeaderActions(onNotificationPress?: () => void) {
+  const router = useRouter();
+
+  const handleLogoPress = () => router.push('/(tabs)/index');
+  const handleSearchPress = () => router.push('/(tabs)/explor');
+  const handleCartPress = () => router.push('/(tabs)/cart');
+  
+  const handleNotificationPress = () => {
+    if (onNotificationPress) {
+      onNotificationPress();
+    } else {
+      router.push('/(screens)/notification');
+    }
+  };
+
+  return {
+    handleLogoPress,
+    handleSearchPress,
+    handleCartPress,
+    handleNotificationPress,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HeaderLogo = memo<{ isScrolled: boolean; onPress: () => void }>(
+  ({ isScrolled, onPress }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={styles.logoContainer}
+      activeOpacity={0.7}
+    >
+      <Image
+        source={require('../../assets/images/nubianLogo.png')}
+        style={[
+          styles.logo,
+          {
+            opacity: isScrolled ? 1 : 0.95,
+            tintColor: isScrolled ? undefined : '#FFFFFF',
+          },
+        ]}
+        contentFit="contain"
+      />
+    </TouchableOpacity>
+  )
+);
+HeaderLogo.displayName = 'HeaderLogo';
+
+const SearchBar = memo<{
+  onPress: () => void;
+  isRTL: boolean;
+  primaryColor: string;
+  textColor: string;
+}>(({ onPress, isRTL, primaryColor, textColor }) => {
+  const placeholder = i18n.t('searchPlaceholder') || 'ابحث عن منتج، متجر، أو فئة';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.searchBarCenter,
+        {
+          borderColor: pressed ? primaryColor : 'rgba(0, 0, 0, 0.08)',
+          opacity: pressed ? 0.95 : 1,
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+        },
+        SHADOWS.searchBar,
+      ]}
+    >
+      <View style={[styles.searchIconContainer, { backgroundColor: primaryColor + '15' }]}>
+        <Ionicons name="search" size={SEARCH_ICON_SIZE} color={primaryColor} />
+      </View>
+      <Text style={[styles.searchPlaceholder, { color: textColor }]} numberOfLines={1}>
+        {placeholder}
+      </Text>
+    </Pressable>
+  );
+});
+SearchBar.displayName = 'SearchBar';
+
+const CartBadge = memo<{ quantity: number; badgeColor: string }>(
   ({ quantity, badgeColor }) => {
     if (quantity <= 0) return null;
-    
+
     return (
       <View style={styles.cartBadgeContainer}>
         <LinearGradient
@@ -51,266 +215,148 @@ const CartBadgeComponent = memo<{ quantity: number; badgeColor: string }>(
     );
   }
 );
-CartBadgeComponent.displayName = 'CartBadgeComponent';
+CartBadge.displayName = 'CartBadge';
+
+const IconButton = memo<{
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  color: string;
+  isScrolled: boolean;
+  isDark: boolean;
+  badge?: React.ReactNode;
+}>(({ icon, onPress, color, isScrolled, isDark, badge }) => (
+  <Pressable
+    onPress={onPress}
+    style={({ pressed }) => [
+      styles.iconButton,
+      {
+        backgroundColor: isScrolled
+          ? isDark
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.05)'
+          : 'rgba(255, 255, 255, 0.15)',
+        transform: [{ scale: pressed ? 0.92 : 1 }],
+        borderWidth: isScrolled ? 1 : 0,
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+      },
+    ]}
+  >
+    <Ionicons name={icon} size={ICON_SIZE} color={color} />
+    {badge}
+  </Pressable>
+));
+IconButton.displayName = 'IconButton';
+
+const HeaderActions = memo<{
+  showNotifications: boolean;
+  onNotificationPress: () => void;
+  onCartPress: () => void;
+  iconColor: string;
+  isScrolled: boolean;
+  isDark: boolean;
+  isRTL: boolean;
+  cartQuantity: number;
+  primaryColor: string;
+}>(({
+  showNotifications,
+  onNotificationPress,
+  onCartPress,
+  iconColor,
+  isScrolled,
+  isDark,
+  isRTL,
+  cartQuantity,
+  primaryColor,
+}) => (
+  <View style={[styles.rightActions, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+    {showNotifications && (
+      <IconButton
+        icon="notifications-outline"
+        onPress={onNotificationPress}
+        color={iconColor}
+        isScrolled={isScrolled}
+        isDark={isDark}
+      />
+    )}
+    <IconButton
+      icon="bag-outline"
+      onPress={onCartPress}
+      color={iconColor}
+      isScrolled={isScrolled}
+      isDark={isDark}
+      badge={<CartBadge quantity={cartQuantity} badgeColor={primaryColor} />}
+    />
+  </View>
+));
+HeaderActions.displayName = 'HeaderActions';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────────────────────────────────────────
 
 const AppHeader: React.FC<AppHeaderProps> = ({
-  showMenu = false,
-  onMenuPress,
   showNotifications = true,
   onNotificationPress,
-  showQuickActions = false,
-  maxQuickActions = 10,
 }) => {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  
-  const currentScrollY = useScrollStore((state) => state.scrollY);
-  const SCROLL_THRESHOLD = 10;
-  const isScrolled = currentScrollY > SCROLL_THRESHOLD;
-  
-  const colors = useMemo(() => theme.colors, [theme.colors]);
-  const themeMode = useMemo(() => theme.mode, [theme.mode]);
-  const isRTL = I18nManager.isRTL;
-
+  const state = useHeaderState();
+  const actions = useHeaderActions(onNotificationPress);
   const cartQuantity = useCartQuantity();
-  
-  const searchPlaceholder = useMemo(
-    () => i18n.t('searchPlaceholder') || 'ابحث عن منتج، متجر، أو فئة',
-    []
-  );
-
-  const handleLogoPress = useCallback(() => {
-    router.push('/(tabs)/index');
-  }, [router]);
-
-  const handleSearchPress = useCallback(() => {
-    router.push('/(tabs)/explor');
-  }, [router]);
-
-  const handleCartPress = useCallback(() => {
-    router.push('/(tabs)/cart');
-  }, [router]);
-
-  const handleNotificationPress = useCallback(() => {
-    if (onNotificationPress) {
-      onNotificationPress();
-    } else {
-      router.push('/(screens)/notification');
-    }
-  }, [router, onNotificationPress]);
-
-  const topPadding = useMemo(
-    () => Math.max(insets.top, Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0),
-    [insets.top]
-  );
-
-  // Enhanced gradient background when not scrolled
-  const headerGradient = useMemo(
-    () => isScrolled 
-      ? [colors.surface, colors.surface]
-      : ['rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0)'],
-    [isScrolled, colors.surface]
-  );
-
-  const containerStyle = useMemo(
-    () => [
-      styles.container,
-      {
-        paddingTop: topPadding,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-      },
-    ],
-    [topPadding]
-  );
-
-  const topBarStyle = useMemo(
-    () => [styles.topBar, { flexDirection: isRTL ? 'row-reverse' : 'row' }],
-    [isRTL]
-  );
-
-  const rightActionsStyle = useMemo(
-    () => [styles.rightActions, { flexDirection: isRTL ? 'row-reverse' : 'row' }],
-    [isRTL]
-  );
-
-  const statusBarStyle = useMemo(
-    () => isScrolled ? (themeMode === 'dark' ? 'light-content' : 'dark-content') : 'light-content',
-    [themeMode, isScrolled]
-  );
-
-  // Glass morphism effect for scrolled state
-  const glassMorphStyle = useMemo(
-    () => ({
-      backgroundColor: isScrolled 
-        ? themeMode === 'dark' 
-          ? 'rgba(18, 18, 18, 0.85)'
-          : 'rgba(255, 255, 255, 0.85)'
-        : 'transparent',
-      backdropFilter: isScrolled ? 'blur(20px)' : 'none',
-    }),
-    [isScrolled, themeMode]
-  );
-
-  // Icon button with elegant backdrop
-  const iconButtonStyle = useCallback((pressed: boolean) => [
-    styles.iconButton,
-    {
-      backgroundColor: isScrolled 
-        ? themeMode === 'dark'
-          ? 'rgba(255, 255, 255, 0.1)'
-          : 'rgba(0, 0, 0, 0.05)'
-        : 'rgba(255, 255, 255, 0.15)',
-      transform: [{ scale: pressed ? 0.92 : 1 }],
-      borderWidth: isScrolled ? 1 : 0,
-      borderColor: themeMode === 'dark' 
-        ? 'rgba(255, 255, 255, 0.1)' 
-        : 'rgba(0, 0, 0, 0.05)',
-    }
-  ], [isScrolled, themeMode]);
-
-  const iconColor = useMemo(
-    () => isScrolled ? colors.text.primary : '#FFFFFF',
-    [isScrolled, colors.text.primary]
-  );
 
   return (
-    <View style={containerStyle}>
+    <View style={[styles.container, { paddingTop: state.topPadding }]}>
       <StatusBar
-        barStyle={statusBarStyle}
+        barStyle={state.statusBarStyle}
         backgroundColor="transparent"
         translucent
       />
 
-      {/* Gradient background overlay */}
+      {/* Gradient background */}
       <LinearGradient
-        colors={headerGradient}
-        style={[styles.gradientOverlay, glassMorphStyle]}
+        colors={state.headerGradient}
+        style={[styles.gradientOverlay, { backgroundColor: state.glassBackground }]}
         pointerEvents="none"
       />
 
-      {/* Glass morphism blur effect when scrolled */}
-      {isScrolled && Platform.OS === 'ios' && (
+      {/* iOS blur effect */}
+      {state.isScrolled && Platform.OS === 'ios' && (
         <BlurView
           intensity={80}
-          tint={themeMode === 'dark' ? 'dark' : 'light'}
+          tint={state.isDark ? 'dark' : 'light'}
           style={styles.blurView}
         />
       )}
 
-      <View style={topBarStyle}>
-        {/* Logo with elegant scaling */}
-        <TouchableOpacity
-          onPress={handleLogoPress}
-          style={styles.logoContainer}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={require('../../assets/images/nubianLogo.png')}
-            style={[
-              styles.logo,
-              { 
-                opacity: isScrolled ? 1 : 0.95,
-                tintColor: isScrolled ? undefined : '#FFFFFF'
-              }
-            ]}
-            contentFit="contain"
-          />
-        </TouchableOpacity>
+      {/* Main content */}
+      <View style={[styles.topBar, { flexDirection: state.isRTL ? 'row-reverse' : 'row' }]}>
+        <HeaderLogo isScrolled={state.isScrolled} onPress={actions.handleLogoPress} />
 
-        {/* Premium search bar with white background */}
-        <Pressable
-          onPress={handleSearchPress}
-          style={({ pressed }) => [
-            styles.searchBarCenter,
-            {
-              backgroundColor: '#FFFFFF',
-              borderColor: pressed ? colors.primary : 'rgba(0, 0, 0, 0.08)',
-              borderWidth: 1,
-              opacity: pressed ? 0.95 : 1,
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              ...Platform.select({
-                ios: {
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.08,
-                  shadowRadius: 8,
-                },
-                android: {
-                  elevation: 2,
-                },
-              }),
-            },
-          ]}
-        >
-          <View style={[
-            styles.searchIconContainer,
-            {
-              backgroundColor: colors.primary + '15',
-            }
-          ]}>
-            <Ionicons
-              name="search"
-              size={18}
-              color={colors.primary}
-            />
-          </View>
-          <Text
-            style={[
-              styles.searchPlaceholder,
-              {
-                color: colors.text.secondary,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {searchPlaceholder}
-          </Text>
-        </Pressable>
+        <SearchBar
+          onPress={actions.handleSearchPress}
+          isRTL={state.isRTL}
+          primaryColor={state.colors.primary}
+          textColor={state.colors.text.secondary}
+        />
 
-        {/* Action buttons with modern styling */}
-        <View style={rightActionsStyle}>
-          {showNotifications && (
-            <Pressable
-              onPress={handleNotificationPress}
-              style={({ pressed }) => iconButtonStyle(pressed)}
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={iconColor}
-              />
-            </Pressable>
-          )}
-
-          <Pressable
-            onPress={handleCartPress}
-            style={({ pressed }) => [
-              iconButtonStyle(pressed),
-              { position: 'relative' }
-            ]}
-          >
-            <Ionicons
-              name="bag-outline"
-              size={22}
-              color={iconColor}
-            />
-            <CartBadgeComponent quantity={cartQuantity} badgeColor={colors.primary} />
-          </Pressable>
-        </View>
+        <HeaderActions
+          showNotifications={showNotifications}
+          onNotificationPress={actions.handleNotificationPress}
+          onCartPress={actions.handleCartPress}
+          iconColor={state.iconColor}
+          isScrolled={state.isScrolled}
+          isDark={state.isDark}
+          isRTL={state.isRTL}
+          cartQuantity={cartQuantity}
+          primaryColor={state.colors.primary}
+        />
       </View>
 
-      {/* Subtle bottom border when scrolled */}
-      {isScrolled && (
+      {/* Bottom border */}
+      {state.isScrolled && (
         <View
           style={[
             styles.bottomBorder,
             {
-              backgroundColor: themeMode === 'dark'
+              backgroundColor: state.isDark
                 ? 'rgba(255, 255, 255, 0.1)'
                 : 'rgba(0, 0, 0, 0.06)',
             },
@@ -321,9 +367,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
   },
   gradientOverlay: {
     position: 'absolute',
@@ -387,17 +442,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     borderWidth: 2.5,
     borderColor: '#fff',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    ...SHADOWS.badge,
   },
   cartBadgeText: {
     color: '#fff',
@@ -416,6 +461,8 @@ const styles = StyleSheet.create({
     minHeight: 46,
     maxHeight: 46,
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
   },
   searchIconContainer: {
     width: 32,
@@ -440,6 +487,10 @@ const styles = StyleSheet.create({
     height: 0.5,
   },
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Memoization
+// ─────────────────────────────────────────────────────────────────────────────
 
 const arePropsEqual = (prevProps: AppHeaderProps, nextProps: AppHeaderProps) => {
   return (
