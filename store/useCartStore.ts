@@ -255,7 +255,7 @@ const useCartStore = create<CartStore>()(
 // Optimized selectors to prevent unnecessary re-renders
 export const useCartItems = () => useCartStore((state) => state.cart?.products || []);
 export const useCartTotal = () => useCartStore((state) => state.cart?.totalPrice || 0);
-export const useCartQuantity = () => useCartStore((state) => state.cart?.totalQuantity || 0);
+export const useCartQuantity: () => number = () => useCartStore((state) => state.cart?.totalQuantity || 0);
 export const useCartLoading = () => useCartStore((state) => state.isLoading);
 export const useCartUpdating = () => useCartStore((state) => state.isUpdating);
 export const useCartError = () => useCartStore((state) => state.error);
