@@ -4,32 +4,14 @@ import { getToken } from './tokenManager';
 
 // Get API URL from environment variable
 // This should be set via EXPO_PUBLIC_API_URL in .env or app.json
-// Example: EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api (development)
+// Example: EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api or http://192.168.56.1:5000/api (development)
 // EXPO_PUBLIC_API_URL=https://nubian-lne4.onrender.com/api (production)
 // Force local server in development, even if EXPO_PUBLIC_API_URL is set
 // This ensures we always use the local dev server when running locally
 const baseURL = __DEV__ 
-  ? "http://192.168.56.1:5000/api"  // Always use local server in development
+  ? "http://192.168.0.115:5000/api"  // Always use local server in development
   : (process.env.EXPO_PUBLIC_API_URL || "https://nubian-lne4.onrender.com/api");
 
-// Log API URL configuration in development
-if (__DEV__) {
-  console.log('🔧 Development mode: Forcing local server');
-  console.log('📡 Using API URL:', baseURL);
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    console.log('ℹ️ EXPO_PUBLIC_API_URL is set but ignored in development:', process.env.EXPO_PUBLIC_API_URL);
-  }
-}
-
-// Log the API URL being used (only the domain for security)
-if (__DEV__) {
-  try {
-    const url = new URL(baseURL);
-    console.log('📡 API Base URL:', `${url.protocol}//${url.host}`);
-  } catch (e) {
-    console.warn('⚠️ Invalid API URL format:', baseURL);
-  }
-}
 // إعدادات التخزين المؤقت
 const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
 const RETRY_ATTEMPTS = 3;
@@ -144,16 +126,6 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     // Handle network errors (no response from server)
     if (!error.response) {
-      console.error('Network Error:', {
-        message: error.message,
-        code: error.code,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-        fullURL: error.config?.baseURL ? `${error.config.baseURL}${error.config.url}` : error.config?.url,
-        method: error.config?.method,
-        timeout: error.code === 'ECONNABORTED' ? 'Request timeout' : 'Connection failed',
-      });
-      
       // Provide more helpful error messages
       if (error.code === 'ECONNABORTED') {
         error.message = 'Request timeout - the server took too long to respond';
@@ -177,24 +149,6 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 429) {
       const retryAfter = error.response.headers['retry-after'];
       console.warn(`Rate limited. Retry after ${retryAfter} seconds`);
-    }
-
-    // Log errors in development (but skip 404 for carts as it's expected when cart is empty)
-    if (__DEV__) {
-      // Don't log 404 errors for cart endpoints as they're expected (empty cart)
-      if (error.response?.status === 404 && error.config?.url?.includes('/carts')) {
-        // Silently handle - cart not found is normal for empty carts
-        return Promise.reject(error);
-      }
-      console.error('API Error:', {
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-        fullURL: error.config?.baseURL ? `${error.config.baseURL}${error.config.url}` : error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data
-      });
     }
 
     return Promise.reject(error);

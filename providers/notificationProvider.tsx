@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, registerPushTokenWithAuth } from '@/utils/pushToken';
 import { Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 
 type NotificationContextType = {
   expoPushToken: string | null;
@@ -16,6 +17,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const { getToken, userId, isLoaded } = useAuth();
   const hasRegisteredToken = useRef(false);
+  const router = useRouter();
 
   // Set up notification listeners
   useEffect(() => {
@@ -33,15 +35,31 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         data: response.notification.request.content.data,
       });
       
-      // Handle deep link navigation here if needed
-      if (response.notification.request.content.data?.deepLink) {
-        // Navigate to deep link
+      // Handle deep link navigation
+      const deepLink = response.notification.request.content.data?.deepLink;
+      if (deepLink) {
+        try {
+          const url = deepLink.startsWith('/') ? deepLink : `/${deepLink}`;
+          
+          // Navigate based on deep link path
+          if (url.startsWith('/orders/')) {
+            router.push(`/(tabs)/orders/${url.split('/orders/')[1]}` as any);
+          } else if (url.startsWith('/products/')) {
+            router.push(`/(tabs)/products/${url.split('/products/')[1]}` as any);
+          } else if (url.startsWith('/cart')) {
+            router.push('/(tabs)/cart' as any);
+          } else {
+            router.push(url as any);
+          }
+        } catch (error) {
+          console.error('❌ Error navigating to deep link:', error);
+        }
       }
     });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
+      notificationListener.remove();
+      responseListener.remove();
     };
   }, []);
 

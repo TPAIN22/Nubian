@@ -34,9 +34,34 @@ export async function registerForPushNotificationsAsync(userId?: string | null) 
       return null;
     }
 
-    const tokenResponse = await Notifications.getExpoPushTokenAsync({
-      projectId: Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId,
-    });
+    // Get Expo push token with proper error handling
+    let tokenResponse;
+    try {
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+      if (!projectId) {
+        console.error('❌ Expo projectId is missing. Check app.json configuration.');
+        alert(i18n.t('pushNotificationsConfigError') || 'Push notifications configuration error. Please contact support.');
+        return null;
+      }
+      tokenResponse = await Notifications.getExpoPushTokenAsync({ projectId });
+    } catch (error: any) {
+      console.error('❌ Failed to get Expo push token:', error);
+      if (error.code === 'E_MISSING_PERMISSIONS') {
+        alert(i18n.t('pushNotificationsPermissionDenied'));
+      } else if (error.code === 'E_NOT_DEVICE') {
+        alert(i18n.t('pushNotificationsDeviceOnly'));
+      } else {
+        alert(i18n.t('pushNotificationsTokenError') || 'Failed to register for push notifications. Please try again.');
+      }
+      return null;
+    }
+
+    if (!tokenResponse?.data) {
+      console.error('❌ Invalid token response from Expo:', tokenResponse);
+      alert(i18n.t('pushNotificationsTokenError') || 'Invalid push token response. Please try again.');
+      return null;
+    }
+
     const token = tokenResponse.data;
 
     // Get device info
@@ -107,9 +132,26 @@ export async function registerPushTokenWithAuth(authToken: string) {
       return null;
     }
 
-    const tokenResponse = await Notifications.getExpoPushTokenAsync({
-      projectId: Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId,
-    });
+    // Get Expo push token with proper error handling
+    let tokenResponse;
+    try {
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+      if (!projectId) {
+        console.error('❌ Expo projectId is missing. Check app.json configuration.');
+        return null;
+      }
+      tokenResponse = await Notifications.getExpoPushTokenAsync({ projectId });
+    } catch (error: any) {
+      console.error('❌ Failed to get Expo push token:', error);
+      // Don't show alert for authenticated registration (silent fail)
+      return null;
+    }
+
+    if (!tokenResponse?.data) {
+      console.error('❌ Invalid token response from Expo:', tokenResponse);
+      return null;
+    }
+
     const token = tokenResponse.data;
 
     const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown-device';

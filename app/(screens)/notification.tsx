@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, SafeAreaView, TouchableOpacity } from "react-native";
+import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, TouchableOpacity } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/providers/ThemeProvider";
 import * as Linking from 'expo-linking';
 import { 
@@ -53,7 +53,6 @@ const NotificationsScreen = () => {
       const count = await getUnreadCount(undefined, token);
       setUnreadCount(count);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
       setNotifications([]);
     } finally {
       setLoading(false);

@@ -59,40 +59,21 @@ const useCartStore = create<CartStore>()(
       if (get().isLoading) return;
       set({ isLoading: true, error: null });
       try {
-        console.log('Fetch cart request:', {
-          url: '/carts',
-          baseURL: axiosInstance.defaults.baseURL,
-          fullURL: `${axiosInstance.defaults.baseURL}/carts`,
-        });
-
-        const response = await axiosInstance.get<{ success: boolean; data: Cart }>("/carts");
+        const response = await axiosInstance.get("/carts");
         // Backend returns { success: true, data: {...cart...} }
-        const cartData = response.data?.data || response.data;
+        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
+        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
+          ? responseData.data 
+          : (responseData as Cart);
         set({
           cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isLoading: false,
         });
       } catch (error: any) {
-        console.error('Fetch cart error:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          message: error.message,
-          url: error.config?.url,
-          method: error.config?.method,
-          baseURL: error.config?.baseURL,
-          fullURL: error.config?.url ? `${error.config.baseURL}${error.config.url}` : 'unknown',
-        });
-
         // Handle 404 (cart not found) as empty cart, not an error
         if (error.response?.status === 404) {
           const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || '';
           const errorCode = error.response?.data?.error?.code || '';
-          console.log('404 error details:', {
-            errorMessage,
-            errorCode,
-            responseData: error.response?.data,
-          });
 
           // Treat any 404 as empty cart (normal case for new users or when cart doesn't exist)
           // This handles: "Cart not found", "Resource not found", or any other 404
@@ -134,15 +115,6 @@ const useCartStore = create<CartStore>()(
         // Merge size and attributes for backward compatibility
         const mergedAttributes = mergeSizeAndAttributes(size, attributes);
 
-        console.log('Add to cart request:', {
-          url: '/carts/add',
-          productId,
-          quantity,
-          size,
-          attributes: mergedAttributes,
-          baseURL: axiosInstance.defaults.baseURL,
-        });
-
         const payload: AddToCartRequest = {
           productId,
           quantity,
@@ -150,23 +122,17 @@ const useCartStore = create<CartStore>()(
           ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
         };
 
-        const response = await axiosInstance.post<{ success: boolean; data: Cart }>("/carts/add", payload);
+        const response = await axiosInstance.post("/carts/add", payload);
         // Backend returns { success: true, data: {...cart...} }
-        const cartData = response.data?.data || response.data;
+        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
+        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
+          ? responseData.data 
+          : (responseData as Cart);
         set({
           cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isUpdating: false,
         });
       } catch (error: any) {
-        console.error('Add to cart error:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          message: error.message,
-          url: error.config?.url,
-          method: error.config?.method,
-        });
-
         const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء إضافة المنتج للسلة.";
         set({
           error: errorMessage,
@@ -201,9 +167,12 @@ const useCartStore = create<CartStore>()(
           ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
         };
 
-        const response = await axiosInstance.put<{ success: boolean; data: Cart }>("/carts/update", payload);
+        const response = await axiosInstance.put("/carts/update", payload);
         // Backend returns { success: true, data: {...cart...} }
-        const cartData = response.data?.data || response.data;
+        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
+        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
+          ? responseData.data 
+          : (responseData as Cart);
         set({
           cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isUpdating: false,
@@ -233,9 +202,12 @@ const useCartStore = create<CartStore>()(
           ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
         };
 
-        const response = await axiosInstance.delete<{ success: boolean; data: Cart }>("/carts/remove", { data: payload });
+        const response = await axiosInstance.delete("/carts/remove", { data: payload });
         // Backend returns { success: true, data: {...cart...} }
-        const cartData = response.data?.data || response.data;
+        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
+        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
+          ? responseData.data 
+          : (responseData as Cart);
         set({
           cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
           isUpdating: false,
@@ -255,7 +227,7 @@ const useCartStore = create<CartStore>()(
 // Optimized selectors to prevent unnecessary re-renders
 export const useCartItems = () => useCartStore((state) => state.cart?.products || []);
 export const useCartTotal = () => useCartStore((state) => state.cart?.totalPrice || 0);
-export const useCartQuantity: () => number = () => useCartStore((state) => state.cart?.totalQuantity || 0);
+export const useCartQuantity = () => useCartStore((state) => state.cart?.totalQuantity || 0);
 export const useCartLoading = () => useCartStore((state) => state.isLoading);
 export const useCartUpdating = () => useCartStore((state) => state.isUpdating);
 export const useCartError = () => useCartStore((state) => state.error);

@@ -56,10 +56,7 @@ export default function CartScreen() {
       try {
         await fetchCart();
       } catch (error: any) {
-        // Only log non-404 errors (404 for cart not found is handled as empty cart)
-        if (error?.response?.status !== 404) {
-          console.error('Error loading cart:', error);
-        }
+        // Error handling (404 for cart not found is handled as empty cart)
       }
     };
     fetchCartData();

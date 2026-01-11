@@ -159,7 +159,6 @@ function IndexContent() {
       setBanners(Array.isArray(bannersData) ? bannersData.filter((b: any) => b.isActive !== false) : []);
     } catch (e) {
       // If banners fetch fails, keep existing banners if any
-      console.error('Error fetching data:', e);
       // Only clear banners if this was a forced fetch (screen focus)
       if (forceBanners) {
         // Keep existing banners on error to avoid flickering

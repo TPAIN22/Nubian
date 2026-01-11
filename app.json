@@ -25,10 +25,14 @@
       }
     },
     "android": {
-      "versionCode": 13,
+      "versionCode": 14,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/screen.png",
         "backgroundColor": "#ffffff"
+      },
+      "notification": {
+        "icon": "./assets/images/notification-icon.png",
+        "color": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
       "package": "dev.expo.nubian",

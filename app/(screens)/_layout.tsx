@@ -1,11 +1,11 @@
 import { View } from "react-native";
 import { Stack } from "expo-router";
-import HeaderComponent from "../components/costomHeader";
+import AppHeader from "../components/AppHeader";
 
 export default function _layout() {
   return (
       <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ header: HeaderComponent }}>
+        <Stack screenOptions={{ header: () => <AppHeader showNotifications={false} /> }}>
           <Stack.Screen name="editProfile" options={{ headerShown: false }} />
           <Stack.Screen name="notification" options={{ headerShown: false }} />
           <Stack.Screen name="details/[details]" options={{ headerShown: false }} />

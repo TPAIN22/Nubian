@@ -38,7 +38,7 @@ const CartBadge: React.FC<CartBadgeProps> = ({
       try {
         await fetchCart();
       } catch (error) {
-        console.log('Error loading cart:', error);
+        // Error handling
       }
     };
 

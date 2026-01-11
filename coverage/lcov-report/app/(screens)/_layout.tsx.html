@@ -109,13 +109,13 @@
 import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import HeaderComponent from "../components/costomHeader";
+import AppHeader from "../components/AppHeader";
 &nbsp;
 export default function <span class="fstat-no" title="function not covered" >_layout(</span>) {
 <span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;SafeAreaProvider&gt;
       &lt;View style={{ flex: 1 }}&gt;
-        &lt;Stack screenOptions={{ header: HeaderComponent }}&gt;
+        &lt;Stack screenOptions={{ header: () =&gt; &lt;AppHeader showNotifications={false} /&gt; }}&gt;
           &lt;Stack.Screen name="editProfile" options={{ headerShown: false }} /&gt;
           &lt;Stack.Screen name="notification" options={{ headerShown: false }} /&gt;
           &lt;Stack.Screen name="details/[details]" options={{ headerShown: false }} /&gt;

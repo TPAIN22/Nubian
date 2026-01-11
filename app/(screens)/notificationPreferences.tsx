@@ -8,6 +8,7 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { Switch } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getPreferences, updatePreferences, type NotificationPreferences } from "@/utils/notificationService";
+import i18n from "@/utils/i18n";
 
 const NotificationPreferencesScreen = () => {
   const { theme } = useTheme();
@@ -33,12 +34,7 @@ const NotificationPreferencesScreen = () => {
       setLoading(true);
       const token = await getToken();
       if (!token) {
-        Alert.alert("Error", "Please log in to manage notification preferences");
-        return;
-      }
-
-      if (!token) {
-        Alert.alert("Error", "Please log in to manage notification preferences");
+        Alert.alert(i18n.t("alertErrorTitle"), i18n.t("pleaseLoginToManagePreferences"));
         return;
       }
 
@@ -60,8 +56,7 @@ const NotificationPreferencesScreen = () => {
         setPushEnabled(prefs.channels?.push !== false);
       }
     } catch (error: any) {
-      console.error("Error fetching preferences:", error);
-      Alert.alert("Error", error.message || "Failed to load preferences");
+      Alert.alert(i18n.t("alertErrorTitle"), error.message || i18n.t("failedToLoadPreferences"));
     } finally {
       setLoading(false);
     }
@@ -74,7 +69,7 @@ const NotificationPreferencesScreen = () => {
     try {
       const token = await getToken();
       if (!token) {
-        Alert.alert("Error", "Please log in to update preferences");
+        Alert.alert(i18n.t("alertErrorTitle"), i18n.t("pleaseLoginToUpdatePreferences"));
         return;
       }
 
@@ -159,8 +154,6 @@ const NotificationPreferencesScreen = () => {
         setPushEnabled(updated.channels?.push !== false);
       }
     } catch (error: any) {
-      console.error("Error updating preferences:", error);
-      
       // Revert local state on error
       switch (toggleType) {
         case 'recommendations':
@@ -180,7 +173,7 @@ const NotificationPreferencesScreen = () => {
           break;
       }
       
-      Alert.alert("Error", error.message || "Failed to update preferences");
+      Alert.alert(i18n.t("alertErrorTitle"), error.message || i18n.t("failedToUpdatePreferences"));
     } finally {
       setSaving(false);
     }
@@ -193,7 +186,7 @@ const NotificationPreferencesScreen = () => {
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={[styles.loadingText, { color: Colors.text.secondary, marginTop: 16 }]}>
-              Loading preferences...
+              {i18n.t("loadingPreferences")}
             </Text>
           </View>
         </SafeAreaView>
@@ -206,11 +199,7 @@ const NotificationPreferencesScreen = () => {
       <SafeAreaView style={{ flex: 1, backgroundColor: Colors.surface }}>
         <Stack.Screen
           options={{
-            title: "Notification Preferences",
-            headerStyle: {
-              backgroundColor: Colors.surface,
-            },
-            headerTintColor: Colors.text.primary,
+            headerShown: false,
           }}
         />
         <ScrollView
@@ -219,10 +208,10 @@ const NotificationPreferencesScreen = () => {
         >
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: Colors.text.primary }]}>
-              Notification Types
+              {i18n.t("notificationTypes")}
             </Text>
             <Text style={[styles.sectionDescription, { color: Colors.text.secondary }]}>
-              Choose what notifications you want to receive. The system will automatically send the right type to you.
+              {i18n.t("chooseNotificationTypes")}
             </Text>
           </View>
 
@@ -233,10 +222,10 @@ const NotificationPreferencesScreen = () => {
                 <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
                 <View style={styles.toggleTextContainer}>
                   <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    Push Notifications
+                    {i18n.t("pushNotifications")}
                   </Text>
                   <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    Enable or disable all push notifications
+                    {i18n.t("enableDisablePushNotifications")}
                   </Text>
                 </View>
               </View>
@@ -244,7 +233,7 @@ const NotificationPreferencesScreen = () => {
                 value={pushEnabled}
                 onValueChange={(value) => handleToggle('push', value)}
                 disabled={saving}
-                trackColor={{ false: Colors.text.tertiary, true: Colors.primary }}
+                trackColor={{ false: '#E5E5E5', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -257,10 +246,10 @@ const NotificationPreferencesScreen = () => {
                 <Ionicons name="heart-outline" size={24} color="#FF3B30" />
                 <View style={styles.toggleTextContainer}>
                   <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    Recommendations
+                    {i18n.t("recommendations")}
                   </Text>
                   <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    Personalized product recommendations
+                    {i18n.t("personalizedRecommendations")}
                   </Text>
                 </View>
               </View>
@@ -268,7 +257,7 @@ const NotificationPreferencesScreen = () => {
                 value={recommendations}
                 onValueChange={(value) => handleToggle('recommendations', value)}
                 disabled={saving || !pushEnabled}
-                trackColor={{ false: Colors.text.tertiary, true: Colors.primary }}
+                trackColor={{ false: '#E5E5E5', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -281,10 +270,10 @@ const NotificationPreferencesScreen = () => {
                 <Ionicons name="pricetag-outline" size={24} color="#34C759" />
                 <View style={styles.toggleTextContainer}>
                   <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    Offers & Promotions
+                    {i18n.t("offersPromotions")}
                   </Text>
                   <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    Special deals, discounts, and promotional offers
+                    {i18n.t("specialDealsDiscounts")}
                   </Text>
                 </View>
               </View>
@@ -292,7 +281,7 @@ const NotificationPreferencesScreen = () => {
                 value={offers}
                 onValueChange={(value) => handleToggle('offers', value)}
                 disabled={saving || !pushEnabled}
-                trackColor={{ false: Colors.text.tertiary, true: Colors.primary }}
+                trackColor={{ false: '#E5E5E5', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -305,10 +294,10 @@ const NotificationPreferencesScreen = () => {
                 <Ionicons name="receipt-outline" size={24} color="#007AFF" />
                 <View style={styles.toggleTextContainer}>
                   <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    Order Updates
+                    {i18n.t("orderUpdates")}
                   </Text>
                   <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    Order confirmations, shipping updates, and delivery notifications
+                    {i18n.t("orderConfirmationsShipping")}
                   </Text>
                 </View>
               </View>
@@ -316,7 +305,7 @@ const NotificationPreferencesScreen = () => {
                 value={orderUpdates}
                 onValueChange={(value) => handleToggle('orderUpdates', value)}
                 disabled={saving || !pushEnabled}
-                trackColor={{ false: Colors.text.tertiary, true: Colors.primary }}
+                trackColor={{ false: '#E5E5E5', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -330,10 +319,10 @@ const NotificationPreferencesScreen = () => {
                   <Ionicons name="storefront-outline" size={24} color="#FF9500" />
                   <View style={styles.toggleTextContainer}>
                     <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                      Merchant Alerts
+                      {i18n.t("merchantAlerts")}
                     </Text>
                     <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                      Store updates, inventory alerts, and merchant notifications
+                      {i18n.t("storeUpdatesInventoryAlerts")}
                     </Text>
                   </View>
                 </View>
@@ -341,7 +330,7 @@ const NotificationPreferencesScreen = () => {
                   value={merchantAlerts}
                   onValueChange={(value) => handleToggle('merchantAlerts', value)}
                   disabled={saving || !pushEnabled}
-                  trackColor={{ false: Colors.text.tertiary, true: Colors.primary }}
+                  trackColor={{ false: '#E5E5E5', true: Colors.primary }}
                   thumbColor="#FFFFFF"
                 />
               </View>
@@ -352,14 +341,14 @@ const NotificationPreferencesScreen = () => {
             <View style={styles.savingIndicator}>
               <ActivityIndicator size="small" color={Colors.primary} />
               <Text style={[styles.savingText, { color: Colors.text.secondary }]}>
-                Saving...
+                {i18n.t("saving")}
               </Text>
             </View>
           )}
 
           <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: Colors.text.tertiary }]}>
-              The system will automatically determine if you're a merchant or customer and send the appropriate notifications.
+            <Text style={[styles.footerText, { color: Colors.text.secondary }]}>
+              {i18n.t("systemAutoDetermine")}
             </Text>
           </View>
         </ScrollView>

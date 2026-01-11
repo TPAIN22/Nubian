@@ -104,7 +104,6 @@ export async function getNotifications(
     const data = await response.json();
     return data.data || { notifications: [], total: 0, limit, offset };
   } catch (error) {
-    console.error('Error fetching notifications:', error);
     throw error;
   }
 }
@@ -238,7 +237,6 @@ export async function getPreferences(authToken: string): Promise<NotificationPre
     const data = await response.json();
     return data.data || null;
   } catch (error) {
-    console.error('Error fetching preferences:', error);
     return null;
   }
 }
@@ -274,7 +272,6 @@ export async function updatePreferences(
     const data = await response.json();
     return data.data || null;
   } catch (error) {
-    console.error('Error updating preferences:', error);
     throw error;
   }
 }

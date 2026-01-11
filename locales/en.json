@@ -245,6 +245,25 @@
   "codeVerificationFailed": "Code verification failed",
   "resendFailed": "Failed to resend",
   "appearance": "Appearance",
-  "darkMode": "Dark Mode"
-
+  "darkMode": "Dark Mode",
+  "notificationPreferences": "Notification Preferences",
+  "loadingPreferences": "Loading preferences...",
+  "pleaseLoginToManagePreferences": "Please log in to manage notification preferences",
+  "pleaseLoginToUpdatePreferences": "Please log in to update preferences",
+  "failedToLoadPreferences": "Failed to load preferences",
+  "failedToUpdatePreferences": "Failed to update preferences",
+  "notificationTypes": "Notification Types",
+  "chooseNotificationTypes": "Choose what notifications you want to receive. The system will automatically send the right type to you.",
+  "pushNotifications": "Push Notifications",
+  "enableDisablePushNotifications": "Enable or disable all push notifications",
+  "recommendations": "Recommendations",
+  "personalizedRecommendations": "Personalized product recommendations",
+  "offersPromotions": "Offers & Promotions",
+  "specialDealsDiscounts": "Special deals, discounts, and promotional offers",
+  "orderUpdates": "Order Updates",
+  "orderConfirmationsShipping": "Order confirmations, shipping updates, and delivery notifications",
+  "merchantAlerts": "Merchant Alerts",
+  "storeUpdatesInventoryAlerts": "Store updates, inventory alerts, and merchant notifications",
+  "saving": "Saving...",
+  "systemAutoDetermine": "The system will automatically determine if you're a merchant or customer and send the appropriate notifications."
 } 

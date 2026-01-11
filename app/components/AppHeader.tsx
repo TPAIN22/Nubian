@@ -7,14 +7,15 @@ import {
   Platform,
   StatusBar,
   Pressable,
-} from 'react-native';
+  StatusBarStyle,
+  } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { I18nManager } from 'react-native';
 import { useTheme } from '@/providers/ThemeProvider';
-import { useCartQuantity } from '@/store/useCartStore';
+import { useCartQuantity } from '../../store/useCartStore';
 import i18n from '@/utils/i18n';
 import { useScrollStore } from '@/store/useScrollStore';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -116,7 +117,7 @@ function useHeaderState() {
 function useHeaderActions(onNotificationPress?: () => void) {
   const router = useRouter();
 
-  const handleLogoPress = () => router.push('/(tabs)/index');
+  const handleLogoPress = () => {}; // No routing on logo press
   const handleSearchPress = () => router.push('/(tabs)/explor');
   const handleCartPress = () => router.push('/(tabs)/cart');
   
@@ -177,19 +178,23 @@ const SearchBar = memo<{
       style={({ pressed }) => [
         styles.searchBarCenter,
         {
-          borderColor: pressed ? primaryColor : 'rgba(0, 0, 0, 0.08)',
+          borderColor: pressed ? primaryColor : 'rgb(241, 214, 214)',
           opacity: pressed ? 0.95 : 1,
-          flexDirection: isRTL ? 'row-reverse' : 'row',
         },
         SHADOWS.searchBar,
       ]}
     >
-      <View style={[styles.searchIconContainer, { backgroundColor: primaryColor + '15' }]}>
-        <Ionicons name="search" size={SEARCH_ICON_SIZE} color={primaryColor} />
+      <View style={[
+        styles.searchInnerContainer,
+        { flexDirection: isRTL ? 'row-reverse' : 'row' }
+      ]}>
+        <View style={[styles.searchIconContainer, { backgroundColor: primaryColor + '15' }]}>
+          <Ionicons name="search" size={SEARCH_ICON_SIZE} color={'#000000'} />
+        </View>
+        <Text style={[styles.searchPlaceholder, { color: textColor }]} numberOfLines={1}>
+          {placeholder}
+        </Text>
       </View>
-      <Text style={[styles.searchPlaceholder, { color: textColor }]} numberOfLines={1}>
-        {placeholder}
-      </Text>
     </Pressable>
   );
 });
@@ -305,14 +310,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <View style={[styles.container, { paddingTop: state.topPadding }]}>
       <StatusBar
-        barStyle={state.statusBarStyle}
+        barStyle={state.statusBarStyle as StatusBarStyle}
         backgroundColor="transparent"
         translucent
       />
 
       {/* Gradient background */}
       <LinearGradient
-        colors={state.headerGradient}
+        colors={state.headerGradient as [string, string]}
         style={[styles.gradientOverlay, { backgroundColor: state.glassBackground }]}
         pointerEvents="none"
       />
@@ -398,12 +403,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingLeft: 12,
-    paddingRight: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     minHeight: 56,
     position: 'relative',
     zIndex: 1,
+    maxWidth: '100%',
   },
   iconButton: {
     width: 42,
@@ -414,19 +419,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   logoContainer: {
-    width: 100,
-    alignItems: 'flex-start',
+    width: 50,
+    height: 42,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingLeft: 4,
+    flexShrink: 0,
+    // Remove this after debugging: backgroundColor: 'red',
   },
   logo: {
-    width: 100,
+    width: 50,
     height: 34,
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    flexShrink: 0,
+    // Remove this after debugging: backgroundColor: 'blue',
   },
   cartBadgeContainer: {
     position: 'absolute',
@@ -452,17 +461,24 @@ const styles = StyleSheet.create({
   },
   searchBarCenter: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    height: 46,
+    marginHorizontal: 8,
     borderRadius: 14,
-    minHeight: 46,
-    maxHeight: 46,
-    overflow: 'hidden',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
+    justifyContent: 'center',
+    ...SHADOWS.searchBar,
+  },
+  searchInnerContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFFBB',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    gap: 10,
+    minWidth: '65%',
   },
   searchIconContainer: {
     width: 32,
@@ -470,8 +486,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
-    marginLeft: 0,
   },
   searchPlaceholder: {
     flex: 1,

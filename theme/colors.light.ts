@@ -12,6 +12,7 @@ export const lightColors = {
   text: {
     primary: '#005b35',
     secondary: '#191610',
+    tertiary: '#8E8E93',
     accent: '#8d7c58',
     white: '#FFFFFF',
     black: '#000000',

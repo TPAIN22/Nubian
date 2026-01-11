@@ -199,18 +199,6 @@ const useItemStore = create((set, get) => ({
         _requestInProgress: { ..._requestInProgress, products: false }
       });
     } catch (error) {
-      console.error("❌ Error fetching products:", {
-        message: error?.message,
-        code: error?.code,
-        response: error?.response?.data,
-        status: error?.response?.status,
-        url: error?.config?.url,
-        baseURL: error?.config?.baseURL,
-        fullURL: error?.config?.baseURL ? `${error.config.baseURL}${error.config.url}` : error?.config?.url,
-        isNetworkError: !error?.response,
-        fullError: error
-      });
-      
       const errorMessage = error?.response?.data?.message 
         || error?.message 
         || "تعذر تحميل المنتجات";

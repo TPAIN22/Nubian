@@ -12,6 +12,7 @@ export const darkColors = {
   text: {
     primary: '#00a855',     // Brighter green for dark mode
     secondary: '#E5E7EB',   // Light text
+    tertiary: '#9CA3AF',
     accent: '#c9a04d',      // Gold accent
     white: '#FFFFFF',
     black: '#000000',
