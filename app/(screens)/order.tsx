@@ -9,6 +9,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
 import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
+import { navigateToProduct } from "@/utils/deepLinks";
 
 export default function Order() {
   const { theme } = useTheme();
@@ -251,21 +252,37 @@ export default function Order() {
               <View style={styles.productsSection}>
                 <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>المنتجات ({getProductsCount(order.productsDetails)})</Text>
                 {order.productsDetails && order.productsDetails.length > 0 ? (
-                  order.productsDetails.map((product: any, index: number) => (
-                    <View key={product._id || index} style={[styles.productCard, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
-                      <View style={styles.productInfo}>
-                        {/* صورة المنتج - إذا كانت متوفرة */}
-                        {product.images && Array.isArray(product.images) && product.images[0] && (
-                          <Image 
-                            source={{ uri: product.images[0] }} 
-                            style={[styles.productImage, { backgroundColor: Colors.borderLight }]}
-                            contentFit="cover"
-                          />
-                        )}
-                        <View style={styles.productDetails}>
-                          <Text style={[styles.productName, { color: Colors.text.gray }]} numberOfLines={2}>
-                            {product.name || product.productName || 'منتج غير محدد'}
-                          </Text>
+                  order.productsDetails.map((product: any, index: number) => {
+                    const productId = product.productId || product._id;
+                    return (
+                      <Pressable
+                        key={product._id || index}
+                        style={[styles.productCard, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}
+                        onPress={() => {
+                          if (productId) {
+                            navigateToProduct(productId, {
+                              _id: productId,
+                              name: product.name || product.productName,
+                              price: product.price || 0,
+                              discountPrice: product.discountPrice,
+                              images: product.images || [],
+                            });
+                          }
+                        }}
+                      >
+                        <View style={styles.productInfo}>
+                          {/* صورة المنتج - إذا كانت متوفرة */}
+                          {product.images && Array.isArray(product.images) && product.images[0] && (
+                            <Image 
+                              source={{ uri: product.images[0] }} 
+                              style={[styles.productImage, { backgroundColor: Colors.borderLight }]}
+                              contentFit="cover"
+                            />
+                          )}
+                          <View style={styles.productDetails}>
+                            <Text style={[styles.productName, { color: Colors.text.gray }]} numberOfLines={2}>
+                              {product.name || product.productName || 'منتج غير محدد'}
+                            </Text>
                           <View style={styles.productPricing}>
                             {(() => {
                               // Convert product to Product type for utility functions
@@ -314,8 +331,9 @@ export default function Order() {
                           </View>
                         </View>
                       </View>
-                    </View>
-                  ))
+                      </Pressable>
+                    );
+                  })
                 ) : (
                   <Text style={[styles.noProductsText, { color: Colors.text.veryLightGray }]}>لا توجد تفاصيل منتجات</Text>
                 )}

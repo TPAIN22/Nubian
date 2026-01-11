@@ -62,16 +62,89 @@ const useItemStore = create((set, get) => ({
       const response = await axiosInstance.get("/products", {
         params: { 
           page, 
-          limit: 6, 
+          limit: 50, // Increased limit to get more products
           category: selectedCategory 
         },
       });
 
-      const newProducts = Array.isArray(response.data.products) 
-        ? response.data.products 
-        : [];
-      const totalPages = Number(response.data.totalPages) || 1;
-      const currentPage = Number(response.data.currentPage) || page;
+      // Debug: Log the API response structure
+      if (__DEV__) {
+        console.log(`[Category ${selectedCategory}] Products API Response:`, {
+          responseType: typeof response.data,
+          isArray: Array.isArray(response.data),
+          hasData: !!response.data?.data,
+          dataIsArray: Array.isArray(response.data?.data),
+          dataLength: Array.isArray(response.data?.data) ? response.data.data.length : 'N/A',
+          hasMeta: !!response.data?.meta,
+          hasPagination: !!response.data?.meta?.pagination,
+          totalPages: response.data?.meta?.pagination?.totalPages || 'N/A',
+          total: response.data?.meta?.pagination?.total || response.data?.meta?.total || 'N/A',
+          hasProducts: !!response.data?.products,
+          productsIsArray: Array.isArray(response.data?.products),
+          responseKeys: response.data ? Object.keys(response.data) : [],
+          responsePreview: JSON.stringify(response.data).substring(0, 500),
+        });
+      }
+
+      // Handle different response structures
+      let newProducts = [];
+      let totalPages = 1;
+      let currentPage = page;
+
+      // Pattern 1: response.data.data (array) with response.data.meta.pagination (sendPaginated)
+      if (Array.isArray(response.data?.data) && response.data?.meta?.pagination) {
+        newProducts = response.data.data;
+        totalPages = Number(response.data.meta.pagination.totalPages) || 1;
+        currentPage = Number(response.data.meta.pagination.page) || page;
+      }
+      // Pattern 1b: response.data.data (array) with response.data.meta.total (alternative pagination)
+      else if (Array.isArray(response.data?.data) && response.data?.meta?.total) {
+        newProducts = response.data.data;
+        const limit = Number(response.data.meta.limit) || 50;
+        const total = Number(response.data.meta.total) || 0;
+        totalPages = Math.ceil(total / limit) || 1;
+        currentPage = Number(response.data.meta.page) || page;
+      }
+      // Pattern 2: response.data.products (legacy structure)
+      else if (Array.isArray(response.data?.products)) {
+        newProducts = response.data.products;
+        totalPages = Number(response.data.totalPages) || 1;
+        currentPage = Number(response.data.currentPage) || page;
+      }
+      // Pattern 3: response.data.data (array, no meta)
+      else if (Array.isArray(response.data?.data)) {
+        newProducts = response.data.data;
+        totalPages = 1;
+        currentPage = page;
+      }
+      // Pattern 4: response.data is directly an array
+      else if (Array.isArray(response.data)) {
+        newProducts = response.data;
+        totalPages = 1;
+        currentPage = page;
+      }
+
+      // Debug: Log what we extracted
+      if (__DEV__) {
+        console.log(`[Category ${selectedCategory}] Extracted products:`, {
+          count: newProducts.length,
+          totalPages,
+          currentPage,
+          hasMore: currentPage < totalPages,
+        });
+        
+        if (newProducts.length === 0) {
+          console.warn(`[Category ${selectedCategory}] ⚠️ No products found!`);
+          console.warn(`[Category ${selectedCategory}] Response structure:`, {
+            hasData: !!response.data?.data,
+            hasProducts: !!response.data?.products,
+            isArray: Array.isArray(response.data),
+            keys: response.data ? Object.keys(response.data) : [],
+          });
+        } else {
+          console.log(`[Category ${selectedCategory}] ✓ Found ${newProducts.length} products`);
+        }
+      }
 
       set((state) => {
         const nextPage = currentPage + 1;
@@ -79,6 +152,10 @@ const useItemStore = create((set, get) => ({
         const updatedProducts = page === 1 
           ? newProducts 
           : [...state.products, ...newProducts];
+
+        if (__DEV__ && updatedProducts.length === 0 && page === 1) {
+          console.warn(`[Category ${selectedCategory}] ⚠️ No products found after parsing!`);
+        }
 
         return {
           products: updatedProducts,
@@ -92,6 +169,14 @@ const useItemStore = create((set, get) => ({
       const errorMessage = error?.response?.data?.message 
         || error?.message 
         || "تعذر تحميل المنتجات";
+      
+      if (__DEV__) {
+        console.error(`[Category ${selectedCategory}] Error fetching products:`, {
+          status: error?.response?.status,
+          message: errorMessage,
+          error: error?.response?.data,
+        });
+      }
       
       set({ 
         isProductsLoading: false, 

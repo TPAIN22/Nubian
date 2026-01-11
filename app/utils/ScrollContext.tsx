@@ -26,3 +26,5 @@ export const useScroll = () => {
   return context;
 };
 
+// Default export for route compatibility
+export default ScrollProvider;

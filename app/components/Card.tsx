@@ -16,6 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
 import { getFinalPrice, getOriginalPrice, hasDiscount, calculateDiscountPercentage, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
+import { navigateToProduct } from "@/utils/deepLinks";
 
 interface item {
   _id: string;
@@ -49,15 +50,8 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     : 0;
 
   const handleClick = (item: item) => {
-    router.push({
-      pathname: '/details/[details]',
-      params: {
-        details: String(item._id),
-        name: item.name || '',
-        price: String(finalPrice),
-        image: item.images?.[0] || '',
-      },
-    } as any);
+    // Use universal deep-linking system
+    navigateToProduct(item._id, item);
     // Defer any heavy work until after interactions & frame rendered
     requestAnimationFrame(() => {
       setTimeout(() => setProduct(item), 0);
@@ -84,8 +78,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     <Pressable
       onPressIn={() => {
         try {
-          // Prefetch first image (route types are strict; use object form if needed)
-          (router as any)?.prefetch?.({ pathname: '/details/[details]', params: { details: String(item._id) } });
+          // Prefetch first image
           if (typeof imageUri === 'string' && imageUri) {
             RNImage.prefetch(imageUri).catch(() => {});
           }

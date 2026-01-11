@@ -6,6 +6,8 @@ export default function _layout() {
   return (
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ header: () => <AppHeader showNotifications={false} /> }}>
+          <Stack.Screen name="[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="store/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="editProfile" options={{ headerShown: false }} />
           <Stack.Screen name="notification" options={{ headerShown: false }} />
           <Stack.Screen name="details/[details]" options={{ headerShown: false }} />

@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import { useTheme } from "@/providers/ThemeProvider";
 import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/cartUtils";
 import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
+import { navigateToProduct } from "@/utils/deepLinks";
 
  const CartItem = React.memo(function CartItem({
   item,
@@ -27,15 +28,29 @@ import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPric
   
   return (
     <View style={[styles.container, { backgroundColor: Colors.cardBackground }]}>
-      <View style={styles.imgContainer}>
+      <TouchableOpacity 
+        style={styles.imgContainer}
+        onPress={() => {
+          if (item?.product?._id) {
+            navigateToProduct(item.product._id, item.product);
+          }
+        }}
+      >
         <Image
           source={imageSource}
           style={styles.productImage}
           contentFit="cover"
         />
-      </View>
+      </TouchableOpacity>
       <View style={styles.details}>
-        <View style={styles.nameAndSize}>
+        <TouchableOpacity
+          style={styles.nameAndSize}
+          onPress={() => {
+            if (item?.product?._id) {
+              navigateToProduct(item.product._id, item.product);
+            }
+          }}
+        >
           <Text style={[styles.productName, { color: Colors.text.gray }]}>
             {item?.product?.name || "Product Name"}
           </Text>
@@ -50,7 +65,7 @@ import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPric
               </Text>
             )
           )}
-        </View>
+        </TouchableOpacity>
         <View style={styles.priceAndQuantity}>
           <View style={[styles.quantity, { backgroundColor: Colors.surface }]}>
             <TouchableOpacity

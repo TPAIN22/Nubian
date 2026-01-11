@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/ui/text";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import AddToCartButton from "../../components/AddToCartButton";
 import { useProductFetch } from "@/hooks/useProductFetch";
 import { Image } from "expo-image";
@@ -33,11 +33,116 @@ import {
   isProductAvailable 
 } from "@/utils/cartUtils";
 import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
+import { useRecommendationStore } from "@/store/useRecommendationStore";
+import { HomeProduct } from "@/app/_api/recommendations.api";
+import ItemCard from "../../components/Card";
+import ItemCardSkeleton from "../../components/ItemCardSkeleton";
+import { navigateToProduct, navigateToStore } from "@/utils/deepLinks";
 
 const { width: screenWidth } = Dimensions.get("window");
+const CARD_WIDTH = screenWidth * 0.45;
 
 // Pre-calculate styles outside component to avoid recreation
 const imageHeight = screenWidth * 1.1;
+
+/* ───────────────────────────── Recommendation Section Component ───────────────────────────── */
+
+interface RecommendationSectionProps {
+  title: string;
+  products: HomeProduct[];
+  colors: any;
+  isLoading?: boolean;
+  router: any;
+}
+
+const RecommendationSection = memo(({ 
+  title, 
+  products, 
+  colors, 
+  isLoading = false,
+  router 
+}: RecommendationSectionProps) => {
+  if (isLoading) {
+    return (
+      <View style={recommendationStyles.section}>
+        <View style={recommendationStyles.sectionHeader}>
+          <View style={[recommendationStyles.accentBar, { backgroundColor: colors.primary }]} />
+          <Text style={[recommendationStyles.sectionTitle, { color: colors.text.gray }]}>
+            {title}
+          </Text>
+        </View>
+        <FlatList
+          horizontal
+          data={[1, 2, 3, 4]}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          renderItem={() => (
+            <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+              <ItemCardSkeleton />
+            </View>
+          )}
+          keyExtractor={(_, index) => `${title}-skeleton-${index}`}
+        />
+      </View>
+    );
+  }
+
+  if (products.length === 0) return null;
+
+  return (
+    <View style={recommendationStyles.section}>
+      <View style={recommendationStyles.sectionHeader}>
+        <View style={[recommendationStyles.accentBar, { backgroundColor: colors.primary }]} />
+        <Text style={[recommendationStyles.sectionTitle, { color: colors.text.gray }]}>
+          {title}
+        </Text>
+      </View>
+      <FlatList
+        horizontal
+        data={products}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+        renderItem={({ item }) => (
+          <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+            <ItemCard
+              item={item}
+              handleSheetChanges={() => {}}
+              handlePresentModalPress={() => navigateToProduct(item._id, item)}
+            />
+          </View>
+        )}
+        keyExtractor={(item, index) => `${title}-${item._id}-${index}`}
+      />
+    </View>
+  );
+});
+
+const recommendationStyles = StyleSheet.create({
+  section: {
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  accentBar: {
+    width: 4,
+    height: 20,
+    borderRadius: 2,
+    marginRight: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
+
+RecommendationSection.displayName = 'RecommendationSection';
+
+/* ───────────────────────────── Main Component ───────────────────────────── */
 
 export default function Details() {
   const { theme } = useTheme();
@@ -111,6 +216,23 @@ export default function Details() {
   const router = useRouter();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
   const { getToken } = useAuth();
+  
+  // Fetch product recommendations
+  const {
+    productRecommendations,
+    isProductRecommendationsLoading,
+    fetchProductRecommendations,
+  } = useRecommendationStore();
+  
+  const recommendations = productRecommendations[productId];
+  const isLoadingRecommendations = isProductRecommendationsLoading[productId];
+  
+  // Fetch recommendations when product loads
+  useEffect(() => {
+    if (productId) {
+      fetchProductRecommendations(productId);
+    }
+  }, [productId, fetchProductRecommendations]);
 
   // Use product directly or fallback to optimistic data
   const viewProduct = useMemo(() => {
@@ -616,6 +738,66 @@ export default function Details() {
 
           {/* Review Section (deferred) */}
           {showDeferred ? <Review productId={viewProduct._id} /> : null}
+
+          {/* Recommendation Sections */}
+          {showDeferred && recommendations && (
+            <>
+              {/* Similar Items */}
+              {recommendations.similarItems && recommendations.similarItems.length > 0 && (
+                <RecommendationSection
+                  title={i18n.t('similarItems') || 'Similar Items'}
+                  products={recommendations.similarItems}
+                  colors={Colors}
+                  isLoading={isLoadingRecommendations}
+                  router={router}
+                />
+              )}
+
+              {/* Frequently Bought Together */}
+              {recommendations.frequentlyBoughtTogether && recommendations.frequentlyBoughtTogether.length > 0 && (
+                <RecommendationSection
+                  title={i18n.t('frequentlyBoughtTogether') || 'Frequently Bought Together'}
+                  products={recommendations.frequentlyBoughtTogether}
+                  colors={Colors}
+                  isLoading={isLoadingRecommendations}
+                  router={router}
+                />
+              )}
+
+              {/* You May Also Like */}
+              {recommendations.youMayAlsoLike && recommendations.youMayAlsoLike.length > 0 && (
+                <RecommendationSection
+                  title={i18n.t('youMayAlsoLike') || 'You May Also Like'}
+                  products={recommendations.youMayAlsoLike}
+                  colors={Colors}
+                  isLoading={isLoadingRecommendations}
+                  router={router}
+                />
+              )}
+
+              {/* Cheaper Alternatives */}
+              {recommendations.cheaperAlternatives && recommendations.cheaperAlternatives.length > 0 && (
+                <RecommendationSection
+                  title={i18n.t('cheaperAlternatives') || 'Cheaper Alternatives'}
+                  products={recommendations.cheaperAlternatives}
+                  colors={Colors}
+                  isLoading={isLoadingRecommendations}
+                  router={router}
+                />
+              )}
+
+              {/* From the Same Store */}
+              {recommendations.fromSameStore && recommendations.fromSameStore.length > 0 && (
+                <RecommendationSection
+                  title={i18n.t('fromSameStore') || 'From the Same Store'}
+                  products={recommendations.fromSameStore}
+                  colors={Colors}
+                  isLoading={isLoadingRecommendations}
+                  router={router}
+                />
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
 

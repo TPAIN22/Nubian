@@ -1,17 +1,17 @@
 import {
   View,
-  Pressable,
   FlatList,
   StyleSheet,
   Dimensions,
   RefreshControl,
-  Animated,
   StatusBar,
+  ScrollView,
+  I18nManager,
+  Pressable,
 } from "react-native";
 import { Text } from "@/components/ui/text";
-import { useCallback, useEffect, useRef, useState, memo, useMemo } from "react";
-import { useRouter, useFocusEffect } from "expo-router";
-import useItemStore from "@/store/useItemStore";
+import { useCallback, useEffect, useRef, useState, memo } from "react";
+import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import ItemCard from "../components/Card";
@@ -23,302 +23,460 @@ import {
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import BottomSheet from "../components/BottomSheet";
-import i18n from "@/utils/i18n";
-import axiosInstance from "@/utils/axiosInstans";
-import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/locales/brandColors";
 import { useScrollStore } from "@/store/useScrollStore";
 import { useTheme } from "@/providers/ThemeProvider";
+import BannerSkeleton from "../components/BannerSkeleton";
+import { useHomeQuery } from "../_hooks/useHomeQuery";
+import { HomeProduct, HomeCategory, HomeStore } from "../_api/home.api";
+import ItemCardSkeleton from "../components/ItemCardSkeleton";
+import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  navigateToCategory,
+  navigateToStore,
+  navigateBanner,
+  navigateToTrending,
+  navigateToFlashDeals,
+  navigateToNewArrivals,
+  navigateToForYou,
+} from "@/utils/deepLinks";
 
-const { width, height } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CARD_WIDTH = SCREEN_WIDTH * 0.45;
 
+/* ───────────────────────────── Banner Carousel ───────────────────────────── */
 
-const BannerItem = memo(({ item, index, colors }: any) => {
-  const scaleAnim = useRef(new Animated.Value(0.99)).current;
+const BannerCarousel = memo(
+  ({ banners, colors }: { banners: any[]; colors: any }) => {
+    const isRTL = I18nManager.isRTL;
+    const flatListRef = useRef<FlatList>(null);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const intervalRef = useRef<any>(null);
 
-  useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      delay: index * 100,
-      useNativeDriver: true,
-      tension: 40,
-      friction: 7,
-    }).start();
-  }, []);
+    const performScroll = useCallback((index: number) => {
+      if (!flatListRef.current) return;
+      flatListRef.current.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0,
+      });
+    }, []);
+
+    const startAutoScroll = useCallback(() => {
+      if (banners.length <= 1) return;
+      clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => {
+        setActiveIndex((current) => {
+          const next = current + 1 >= banners.length ? 0 : current + 1;
+          performScroll(next);
+          return next;
+        });
+      }, 3500);
+    }, [banners.length, performScroll]);
+
+    const stopAutoScroll = () => clearInterval(intervalRef.current);
+
+    useEffect(() => {
+      startAutoScroll();
+      return stopAutoScroll;
+    }, [startAutoScroll]);
+
+    const onMomentumScrollEnd = (e: any) => {
+      const offset = e.nativeEvent.contentOffset.x;
+      const newIndex = Math.round(offset / SCREEN_WIDTH);
+      setActiveIndex(newIndex);
+    };
+
+    if (banners.length === 0) return null;
+
+    return (
+      <View style={styles.bannersSection}>
+        <FlatList
+          ref={flatListRef}
+          data={banners}
+          horizontal
+          pagingEnabled
+          key={`banners-${banners.length}-${isRTL}`}
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onMomentumScrollEnd}
+          onScrollBeginDrag={stopAutoScroll}
+          onScrollEndDrag={startAutoScroll}
+          getItemLayout={(_, index) => ({
+            length: SCREEN_WIDTH,
+            offset: SCREEN_WIDTH * index,
+            index,
+          })}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => navigateBanner(item)}
+              style={{ width: SCREEN_WIDTH, height: 300 }}
+            >
+              <Image
+                source={{ uri: item.image }}
+                style={styles.bannerImage}
+                contentFit="cover"
+                transition={200}
+              />
+              <LinearGradient
+                colors={[
+                  "transparent",
+                  colors.overlayDark || "rgba(0,0,0,0.8)",
+                ]}
+                style={styles.bannerOverlay}
+              />
+              {(item.title || item.description) && (
+                <View style={styles.bannerContent}>
+                  {item.title && (
+                    <Text style={[styles.bannerTitle, { color: colors.text.white }]}>
+                      {item.title}
+                    </Text>
+                  )}
+                  {item.description && (
+                    <Text style={[styles.bannerDescription, { color: colors.text.white }]}>
+                      {item.description}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </Pressable>
+          )}
+          keyExtractor={(item, index) => item._id || index.toString()}
+        />
+
+        {banners.length > 1 && (
+          <View
+            style={[styles.pagination, isRTL && { flexDirection: "row-reverse" }]}
+          >
+            {banners.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor:
+                      i === activeIndex
+                        ? colors.primary
+                        : "rgba(255,255,255,0.3)",
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }
+);
+
+/* ───────────────────────────── Category Grid ───────────────────────────── */
+
+const CategoryGrid = memo(({ categories, colors }: { categories: HomeCategory[]; colors: any }) => {
+  if (categories.length === 0) return null;
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <View style={styles.bannerContainer}>
-        <Image
-          source={{ uri: item.image }}
-          style={styles.bannerImage}
-          contentFit="cover"
-          transition={300}
-        />
-        <LinearGradient
-          colors={["transparent", colors.overlayDark]}
-          style={styles.bannerOverlay}
-        />
+    <View style={styles.categoryGridSection}>
+      <View style={styles.sectionHeader}>
+        <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
+        <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
+          Categories
+        </Text>
       </View>
-    </Animated.View>
+        <FlatList
+          data={categories}
+          numColumns={4}
+          scrollEnabled={false}
+          contentContainerStyle={styles.categoryGrid}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.categoryItem}
+              onPress={() => navigateToCategory(item._id, item)}
+            >
+              <View style={[styles.categoryIconContainer, { backgroundColor: colors.surface }]}>
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.categoryIcon}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <Ionicons name="grid-outline" size={24} color={colors.primary} />
+                )}
+              </View>
+              <Text style={[styles.categoryName, { color: colors.text.gray }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+            </Pressable>
+          )}
+          keyExtractor={(item, index) => `category-${item._id}-${index}`}
+        />
+    </View>
   );
 });
 
-const SectionHeader = memo(({ title, colors }: any) => (
-  <View style={styles.sectionHeader}>
-    <View style={styles.titleContainer}>
-      <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
-      <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>{title}</Text>
+/* ───────────────────────────── Product Section ───────────────────────────── */
+
+interface ProductSectionProps {
+  title: string;
+  products: HomeProduct[];
+  colors: any;
+  isLoading?: boolean;
+  onViewAll?: () => void;
+}
+
+const ProductSection = memo(({ 
+  title, 
+  products, 
+  colors, 
+  isLoading = false,
+  onViewAll 
+}: ProductSectionProps) => {
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+
+  if (isLoading) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
+          <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
+            {title}
+          </Text>
+        </View>
+        <FlatList
+          horizontal
+          data={[1, 2, 3, 4]}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          renderItem={() => (
+            <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+              <ItemCardSkeleton />
+            </View>
+          )}
+          keyExtractor={(_, index) => `${title}-skeleton-${index}`}
+        />
+      </View>
+    );
+  }
+
+  if (products.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
+        <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
+          {title}
+        </Text>
+        {onViewAll && (
+          <Pressable onPress={onViewAll} style={styles.viewAllButton}>
+            <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </Pressable>
+        )}
+      </View>
+      <FlatList
+        horizontal
+        data={products}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+        renderItem={({ item }) => (
+          <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+            <ItemCard
+              item={item}
+              handlePresentModalPress={() =>
+                bottomSheetModalRef.current?.present()
+              }
+            />
+          </View>
+        )}
+        keyExtractor={(item, index) => `${title}-${item._id}-${index}`}
+      />
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={["70%"]}
+        backdropComponent={(p) => (
+          <BottomSheetBackdrop
+            {...p}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+          />
+        )}
+      >
+        <BottomSheetView style={{ flex: 1 }}>
+          <BottomSheet />
+        </BottomSheetView>
+      </BottomSheetModal>
     </View>
-  </View>
-));
+  );
+});
+
+/* ───────────────────────────── Store Highlights ───────────────────────────── */
+
+const StoreHighlights = memo(({ stores, colors }: { stores: HomeStore[]; colors: any }) => {
+  if (stores.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
+        <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
+          Top Stores
+        </Text>
+      </View>
+      <FlatList
+        horizontal
+        data={stores}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => navigateToStore(item._id, item)}
+          >
+            <View style={[styles.storeCard, { backgroundColor: colors.cardBackground }]}>
+              <View style={[styles.storeIconContainer, { backgroundColor: colors.surface }]}>
+                <Ionicons name="storefront" size={32} color={colors.primary} />
+              </View>
+              <Text style={[styles.storeName, { color: colors.text.gray }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <View style={styles.storeRating}>
+                <Ionicons name="star" size={14} color={colors.warning} />
+                <Text style={[styles.storeRatingText, { color: colors.text.veryLightGray }]}>
+                  {item.rating.toFixed(1)}
+                </Text>
+              </View>
+              {item.verified && (
+                <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
+                  <Ionicons name="checkmark-circle" size={12} color={colors.text.white} />
+                  <Text style={[styles.verifiedText, { color: colors.text.white }]}>Verified</Text>
+                </View>
+              )}
+            </View>
+          </Pressable>
+        )}
+        keyExtractor={(item, index) => `store-${item._id}-${index}`}
+      />
+    </View>
+  );
+});
+
+/* ───────────────────────────── Main Component ───────────────────────────── */
 
 function IndexContent() {
   const {
-    getCategories,
+    banners,
     categories,
-    products,
-    getAllProducts,
-    setIsTabBarVisible,
+    trending,
+    flashDeals,
+    newArrivals,
+    forYou,
+    stores,
+    isLoading,
+    isRefreshing,
     error,
-    isProductsLoading,
-  } = useItemStore();
-  const router = useRouter();
-  const [refreshing, setRefreshing] = useState(false);
-  const [banners, setBanners] = useState<any[]>([]);
+    refresh,
+  } = useHomeQuery();
+
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const scrollY = useRef(new Animated.Value(0)).current;
   const { setScrollY } = useScrollStore();
   const { theme } = useTheme();
   const Colors = theme.colors;
-  const isFetchingRef = useRef(false);
-  const lastFetchTimeRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 3000; // Minimum 3 seconds between fetches
-
-  const handlePresentModalPress = useCallback(() => {
-    bottomSheetModalRef.current?.present();
-  }, []);
-
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) setIsTabBarVisible(true);
-    },
-    [setIsTabBarVisible]
-  );
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-      />
-    ),
-    []
-  );
-
-  const fetchData = useCallback(async (forceBanners = false) => {
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastFetchTimeRef.current;
-    
-    // Prevent multiple simultaneous requests
-    if (isFetchingRef.current) {
-      return;
-    }
-    
-    // Throttle: Don't fetch if last fetch was less than MIN_FETCH_INTERVAL ago
-    // But always fetch banners if forceBanners is true
-    if (!forceBanners && timeSinceLastFetch < MIN_FETCH_INTERVAL && lastFetchTimeRef.current > 0) {
-      return;
-    }
-    
-    isFetchingRef.current = true;
-    lastFetchTimeRef.current = now;
-    setRefreshing(true);
-    try {
-      // Always fetch banners, but conditionally fetch categories/products
-      const promises: Promise<any>[] = [axiosInstance.get("/banners")];
-      
-      // Only fetch categories/products if we don't have them
-      if (categories.length === 0) {
-        promises.unshift(getCategories());
-      } else {
-        promises.unshift(Promise.resolve(null));
-      }
-      
-      if (products.length === 0) {
-        promises.splice(1, 0, getAllProducts());
-      } else {
-        promises.splice(1, 0, Promise.resolve(null));
-      }
-      
-      const [, , bannersRes] = await Promise.all(promises);
-      // Extract banners from response - handle both direct array and wrapped response
-      const bannersData = bannersRes?.data?.data || bannersRes?.data || [];
-      setBanners(Array.isArray(bannersData) ? bannersData.filter((b: any) => b.isActive !== false) : []);
-    } catch (e) {
-      // If banners fetch fails, keep existing banners if any
-      // Only clear banners if this was a forced fetch (screen focus)
-      if (forceBanners) {
-        // Keep existing banners on error to avoid flickering
-      }
-    } finally {
-      setRefreshing(false);
-      isFetchingRef.current = false;
-    }
-  }, [getCategories, getAllProducts, categories.length, products.length]);
-
-  useEffect(() => {
-    // Initial fetch on mount
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Refetch banners when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      // Always refetch banners when screen is focused
-      fetchData(true);
-    }, [fetchData])
-  );
-
-
-  const renderProductItem = useCallback(
-    ({ item }: any) => (
-      <ItemCard
-        item={item}
-        handlePresentModalPress={handlePresentModalPress}
-        handleSheetChanges={handleSheetChanges}
-      />
-    ),
-    [handlePresentModalPress, handleSheetChanges]
-  );
-
-  const renderBanner = useCallback(({ item, index }: any) => (
-    <BannerItem item={item} index={index} colors={Colors} />
-  ), [Colors]);
-
-  const keyExtractor = useCallback((item: any) => item._id, []);
-
-  const ListHeader = useCallback(
-    () => (
-      <View style={[styles.listHeaderContainer, { backgroundColor: Colors.surface }]}>
-        {/* Top Gradient Header */}
-        <LinearGradient
-          colors={[Colors.primary, Colors.gold, "transparent"]}
-          style={styles.topGradient}
-        />
-
-        {/* Featured Banners */}
-        {banners.length > 0 && (
-          <View style={styles.bannersSection}>
-            <FlatList
-              data={banners}
-              renderItem={renderBanner}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={keyExtractor}
-              contentContainerStyle={styles.horizontalListBanner}
-              snapToInterval={width}
-              decelerationRate="fast"
-              pagingEnabled={true}
-              style={styles.bannerFlatList}
-            />
-          </View>
-        )}
-
-
-        {/* Latest Products Header */}
-        <View style={styles.latestProductsSection}>
-          <SectionHeader
-            title={i18n.t("latestProducts")}
-            colors={Colors}
-          />
-        </View>
-
-        {/* Error Message */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={[styles.errorText, { color: Colors.error }]}>{error}</Text>
-          </View>
-        )}
-
-        {/* Empty State */}
-        {!isProductsLoading && products.length === 0 && !error && (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="cube-outline" size={64} color={Colors.text.veryLightGray} />
-            <Text style={[styles.emptyText, { color: Colors.text.veryLightGray }]}>
-              {i18n.t("noProductsAvailable") || "لا توجد منتجات متاحة"}
-            </Text>
-          </View>
-        )}
-      </View>
-    ),
-    [banners, router, keyExtractor, renderBanner, Colors, error, products.length, isProductsLoading]
-  );
-
-  const getItemLayout = useCallback(
-    (_data: any, index: number) => {
-      const itemHeight = width * 0.45 * 1.3 + 16;
-      return {
-        length: itemHeight,
-        offset: itemHeight * Math.floor(index / 2),
-        index,
-      };
-    },
-    []
-  );
+  const handleRefresh = useCallback(() => {
+    refresh();
+  }, [refresh]);
 
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: Colors.surface }]}>
-      <StatusBar barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
+    <GestureHandlerRootView
+      style={[styles.container, { backgroundColor: Colors.surface }]}
+    >
+      <StatusBar
+        barStyle={theme.mode === "dark" ? "light-content" : "dark-content"}
+        translucent
+      />
       <BottomSheetModalProvider>
-        <Animated.FlatList
-          data={products}
-          renderItem={renderProductItem}
-          keyExtractor={keyExtractor}
-          numColumns={2}
-          columnWrapperStyle={styles.productsRow}
-          ListHeaderComponent={ListHeader}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          initialNumToRender={6}
-          updateCellsBatchingPeriod={50}
-          getItemLayout={getItemLayout}
+        <ScrollView
+          onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
-          style={{ backgroundColor: Colors.surface }}
-          contentContainerStyle={{ backgroundColor: Colors.surface, paddingHorizontal: 0 }}
-          onScroll={(event) => {
-            const offsetY = event.nativeEvent.contentOffset.y;
-            setScrollY(offsetY);
-            // Also update animated value
-            scrollY.setValue(offsetY);
-          }}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={fetchData}
-              colors={[Colors.primary]}
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
               tintColor={Colors.primary}
-              progressBackgroundColor={Colors.cardBackground}
             />
           }
-        />
+        >
+          <LinearGradient
+            colors={[Colors.primary, "transparent"]}
+            style={styles.topGradient}
+          />
 
+          {/* Hero Banner */}
+          {isLoading ? (
+            <BannerSkeleton />
+          ) : (
+            <BannerCarousel banners={banners} colors={Colors} />
+          )}
+
+          {/* Category Grid */}
+          <CategoryGrid categories={categories} colors={Colors} />
+
+          {/* Trending Now */}
+          <ProductSection
+            title="Trending Now"
+            products={trending}
+            colors={Colors}
+            isLoading={isLoading}
+            onViewAll={navigateToTrending}
+          />
+
+          {/* Flash Deals */}
+          <ProductSection
+            title="Flash Deals"
+            products={flashDeals}
+            colors={Colors}
+            isLoading={isLoading}
+            onViewAll={navigateToFlashDeals}
+          />
+
+          {/* For You */}
+          <ProductSection
+            title="For You"
+            products={forYou}
+            colors={Colors}
+            isLoading={isLoading}
+            onViewAll={navigateToForYou}
+          />
+
+          {/* New Arrivals */}
+          <ProductSection
+            title="New Arrivals"
+            products={newArrivals}
+            colors={Colors}
+            isLoading={isLoading}
+            onViewAll={navigateToNewArrivals}
+          />
+
+          {/* Store Highlights */}
+          <StoreHighlights stores={stores} colors={Colors} />
+
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={[styles.errorText, { color: Colors.danger }]}>{error}</Text>
+            </View>
+          )}
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
         <BottomSheetModal
           ref={bottomSheetModalRef}
-          onChange={handleSheetChanges}
           snapPoints={["70%"]}
-          backgroundStyle={[styles.bottomSheetBackground, { backgroundColor: Colors.cardBackground }]}
-          handleIndicatorStyle={[styles.bottomSheetIndicator, { backgroundColor: Colors.gray[300] }]}
-          backdropComponent={renderBackdrop}
-          enablePanDownToClose
+          backdropComponent={(p) => (
+            <BottomSheetBackdrop
+              {...p}
+              disappearsOnIndex={-1}
+              appearsOnIndex={0}
+            />
+          )}
         >
-          <BottomSheetView style={styles.contentContainer}>
+          <BottomSheetView style={{ flex: 1 }}>
             <BottomSheet />
           </BottomSheetView>
         </BottomSheetModal>
@@ -328,131 +486,145 @@ function IndexContent() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    flex: 1,
-    alignItems: "center",
-  },
-  listHeaderContainer: {
-    paddingHorizontal: 0,
-    marginHorizontal: 0,
-    width: '100%',
-  },
+  container: { flex: 1 },
   topGradient: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
+    width: SCREEN_WIDTH,
+    height: 300,
     opacity: 0.15,
-    zIndex: -1,
   },
-  bannersSection: {
-    width: width + 32,
-    marginLeft: -16,
-    marginRight: -16,
-    marginBottom: 8,
-    overflow: 'hidden',
-  },
-  bannerFlatList: {
-    marginHorizontal: 0,
-    paddingHorizontal: 0,
-    flexGrow: 0,
-  },
-  horizontalListBanner: {
-    paddingHorizontal: 0,
-    marginHorizontal: 0,
-  },
-  bannerContainer: {
-    width: width,
-    height: 250,
-    overflow: "hidden",
-    alignSelf: 'stretch',
-  },
-  bannerImage: {
-    width: width,
-    height: "100%",
-    flex: 1,
-  },
+  bannersSection: { height: 300, position: "relative" },
+  bannerImage: { width: SCREEN_WIDTH, height: 300 },
   bannerOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
+    height: 100,
   },
-  heroSection: {
-    height: height * 0.22,
-    marginHorizontal: 16,
-    overflow: "hidden",
-    borderRadius: 20,
+  bannerContent: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
   },
-  latestProductsSection: {
-    marginTop: 8,
-    marginBottom: 20,
+  bannerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
   },
-  productsRow: {
+  bannerDescription: {
+    fontSize: 14,
+    opacity: 0.9,
+  },
+  pagination: {
+    position: "absolute",
+    bottom: 20,
+    width: "100%",
+    flexDirection: "row",
     justifyContent: "center",
-    gap: width * 0.04,
-    paddingHorizontal: 12,
-    marginBottom: 4,
+    gap: 8,
   },
-  separator: {
-    height: 10,
-  },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  section: { marginTop: 25 },
   sectionHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
     paddingHorizontal: 16,
-  },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    marginBottom: 12,
     gap: 10,
   },
-  accentBar: {
-    width: 3,
-    height: 24,
-    borderRadius: 2,
+  accentBar: { width: 4, height: 22, borderRadius: 2 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", flex: 1 },
+  viewAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: -0.5,
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
-  bottomSheetBackground: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+  categoryGridSection: {
+    marginTop: 25,
+    paddingHorizontal: 16,
   },
-  bottomSheetIndicator: {
-    width: 48,
-    height: 5,
-    borderRadius: 3,
+  categoryGrid: {
+    gap: 16,
+  },
+  categoryItem: {
+    flex: 1,
+    alignItems: "center",
+    maxWidth: "25%",
+  },
+  categoryIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  categoryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  categoryName: {
+    fontSize: 11,
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  storeCard: {
+    width: 120,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginRight: 12,
+  },
+  storeIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  storeName: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  storeRating: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 4,
+  },
+  storeRatingText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: "600",
   },
   errorContainer: {
     padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "rgba(255, 0, 0, 0.1)",
+    alignItems: "center",
   },
   errorText: {
     fontSize: 14,
-    textAlign: "center",
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 16,
-    textAlign: "center",
   },
 });
 

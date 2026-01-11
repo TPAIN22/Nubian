@@ -9,7 +9,7 @@ import { getToken } from './tokenManager';
 // Force local server in development, even if EXPO_PUBLIC_API_URL is set
 // This ensures we always use the local dev server when running locally
 const baseURL = __DEV__ 
-  ? "http://192.168.0.115:5000/api"  // Always use local server in development
+  ? "http://10.249.101.83:5000/api"  // Always use local server in development
   : (process.env.EXPO_PUBLIC_API_URL || "https://nubian-lne4.onrender.com/api");
 
 // إعدادات التخزين المؤقت

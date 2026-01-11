@@ -3,7 +3,7 @@ import { Text } from "@/components/ui/text";
 import { Image as RNImage } from 'react-native';
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -16,6 +16,10 @@ import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
+import { navigateToProduct, navigateToSearch } from "@/utils/deepLinks";
+
+// Note: The explore page handles sort parameters from deep links
+// When navigating with sort=trending, it shows trending products sorted by visibility/order count
 
 
 interface Product {
@@ -165,8 +169,32 @@ const ProductCard = React.memo(({ item, index, onPress, getCardAnimation, animat
 
 const SearchPage = () => {
   const router = useRouter();
+  const params = useLocalSearchParams<{ sort?: string; discounted?: string; recommendation?: string; categoryId?: string }>();
   const { theme } = useTheme();
   const Colors = theme.colors;
+  
+  // Get page title based on params
+  const pageTitle = useMemo(() => {
+    if (params.discounted === 'true') {
+      return i18n.t('flashDeals') || 'Flash Deals';
+    }
+    if (params.sort === 'trending') {
+      return i18n.t('trending') || 'Trending';
+    }
+    if (params.sort === 'new') {
+      return i18n.t('newArrivals') || 'New Arrivals';
+    }
+    if (params.sort === 'best') {
+      return i18n.t('bestSellers') || 'Best Sellers';
+    }
+    if (params.sort === 'rating') {
+      return i18n.t('topRated') || 'Top Rated';
+    }
+    if (params.recommendation === 'home') {
+      return i18n.t('forYou') || 'For You';
+    }
+    return i18n.t('explore') || 'Explore';
+  }, [params]);
   // const { trackEvent, getRecommendations, isLoading: smartSystemsLoading } = useSmartSystems();
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -304,7 +332,7 @@ const SearchPage = () => {
     }
   }, [resetProducts, getAllProducts]);
 
-  // Initial load of products
+  // Initial load of products - handle URL params
   useEffect(() => {
     let isMounted = true;
     
@@ -313,6 +341,11 @@ const SearchPage = () => {
       
       setIsLoading(true);
       try {
+        // Handle URL params
+        if (params.categoryId) {
+          setSelectedCategory(params.categoryId);
+        }
+        
         await Promise.all([
           getAllProducts(),
           fetchCategories(),
@@ -333,7 +366,7 @@ const SearchPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [getAllProducts, fetchCategories, hasInitialized, loadRecommendations]);
+  }, [getAllProducts, fetchCategories, hasInitialized, loadRecommendations, params.categoryId]);
 
   // تتبع البحث عند تغيير مصطلح البحث
   useEffect(() => {
@@ -342,7 +375,7 @@ const SearchPage = () => {
     }
   }, [searchTerm, handleSearch]);
 
-  // Filter and sort products
+  // Filter and sort products - handle URL params
   const filteredProducts = useMemo(() => {
     try {
       let tempProducts = [...(products || [])];
@@ -352,6 +385,15 @@ const SearchPage = () => {
         tempProducts = tempProducts.filter((product: Product) =>
           product.name?.toLowerCase().includes(searchTerm.toLowerCase().trim())
         );
+      }
+      
+      // Handle discounted filter from URL params
+      if (params.discounted === 'true') {
+        tempProducts = tempProducts.filter((product: Product) => {
+          // Filter products with discount
+          const hasDiscount = (product as any).discountPrice && (product as any).discountPrice < (product as any).price;
+          return hasDiscount;
+        });
       }
       
       // Filter by selected category (from modal)
@@ -385,8 +427,22 @@ const SearchPage = () => {
         );
       }
       
-      // Sort by price
-      if (sortByHighestPrice) {
+      // Sort by URL params or local state
+      if (params.sort === 'trending') {
+        // Sort by visibility score if available, otherwise by popularity
+        tempProducts.sort((a: Product, b: Product) => {
+          const scoreA = (a as any).visibilityScore || (a as any).orderCount || 0;
+          const scoreB = (b as any).visibilityScore || (b as any).orderCount || 0;
+          return scoreB - scoreA;
+        });
+      } else if (params.sort === 'new') {
+        // Sort by creation date
+        tempProducts.sort((a: Product, b: Product) => {
+          const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+          const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+      } else if (sortByHighestPrice) {
         tempProducts.sort((a: Product, b: Product) => {
           const priceA = typeof a.price === 'number' && !isNaN(a.price) ? a.price : 0;
           const priceB = typeof b.price === 'number' && !isNaN(b.price) ? b.price : 0;
@@ -405,7 +461,7 @@ const SearchPage = () => {
       console.error('Error filtering products:', error);
       return [];
     }
-  }, [products, searchTerm, selectedCategory, showAvailableOnly, sortByHighestPrice, sortByLowestPrice, filterCategory]);
+  }, [products, searchTerm, selectedCategory, showAvailableOnly, sortByHighestPrice, sortByLowestPrice, filterCategory, params.sort, params.discounted]);
 
   // Render product item with enhanced design
   const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => {
@@ -417,16 +473,8 @@ const SearchPage = () => {
           try {
             // تتبع عرض المنتج
             handleProductView(item);
-            // Validate price before passing
-            const validPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
-            router.push({
-              pathname: `/details/${item._id}`,
-              params: {
-                name: item.name || '',
-                price: String(validPrice),
-                image: item.images?.[0] || '',
-              },
-            });
+            // Use universal deep-linking system
+            navigateToProduct(item._id, item);
             requestAnimationFrame(() => setProduct(item));
           } catch (error) {
             console.error('Error navigating to product details:', error);
@@ -487,6 +535,14 @@ const SearchPage = () => {
     <View style={[enhancedStyles.container, { backgroundColor: Colors.surface }]}>      
       {/* Header with Search */}
       <View style={[enhancedStyles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.borderLight }]}>
+        {/* Page Title */}
+        {pageTitle !== 'Explore' && (
+          <View style={enhancedStyles.headerTop}>
+            <Text style={[enhancedStyles.headerTitle, { color: Colors.text.gray }]}>
+              {pageTitle}
+            </Text>
+          </View>
+        )}
         
         
         {/* Enhanced Search Input */}
@@ -765,7 +821,7 @@ const SearchPage = () => {
   );
 };
 
-// Enhanced Styles
+// Enhanced Styles - Note: Cannot use Colors directly in StyleSheet.create, must use inline styles
 const enhancedStyles = StyleSheet.create({
   container: {
     flex: 1,
@@ -773,21 +829,21 @@ const enhancedStyles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 2,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
   },
   headerTop: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: Colors.text.gray,
     textAlign: 'center',
+    marginBottom: 8,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: Colors.text.mediumGray,
     textAlign: 'center',
     marginTop: 4,
   },
