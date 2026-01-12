@@ -1,4 +1,4 @@
-import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from '../_api/home.api';
+import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from '../api/home.api';
 
 /**
  * Home Service - Business logic layer for home screen data

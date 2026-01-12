@@ -59,6 +59,15 @@ const useItemStore = create((set, get) => ({
     set({ isProductsLoading: true, error: null });
 
     try {
+      // Validate category ID format (MongoDB ObjectId)
+      if (selectedCategory && !/^[0-9a-fA-F]{24}$/.test(selectedCategory)) {
+        set({ 
+          isProductsLoading: false, 
+          error: "معرف الفئة غير صالح" 
+        });
+        return;
+      }
+
       const response = await axiosInstance.get("/products", {
         params: { 
           page, 
@@ -69,6 +78,12 @@ const useItemStore = create((set, get) => ({
 
       // Debug: Log the API response structure
       if (__DEV__) {
+        console.log(`[Category ${selectedCategory}] Products API Request:`, {
+          category: selectedCategory,
+          page,
+          limit: 50,
+          isValidObjectId: /^[0-9a-fA-F]{24}$/.test(selectedCategory),
+        });
         console.log(`[Category ${selectedCategory}] Products API Response:`, {
           responseType: typeof response.data,
           isArray: Array.isArray(response.data),
@@ -166,15 +181,32 @@ const useItemStore = create((set, get) => ({
         };
       });
     } catch (error) {
-      const errorMessage = error?.response?.data?.message 
+      let errorMessage = error?.response?.data?.message 
         || error?.message 
         || "تعذر تحميل المنتجات";
+      
+      // Handle validation errors specifically
+      if (error?.response?.status === 400) {
+        const validationError = error?.response?.data?.error;
+        if (validationError?.code === 'VALIDATION_ERROR') {
+          errorMessage = validationError?.message || "معرف الفئة غير صالح";
+          
+          if (__DEV__) {
+            console.error(`[Category ${selectedCategory}] Validation Error:`, {
+              details: validationError?.details,
+              categoryId: selectedCategory,
+              isValidFormat: /^[0-9a-fA-F]{24}$/.test(selectedCategory),
+            });
+          }
+        }
+      }
       
       if (__DEV__) {
         console.error(`[Category ${selectedCategory}] Error fetching products:`, {
           status: error?.response?.status,
           message: errorMessage,
           error: error?.response?.data,
+          categoryId: selectedCategory,
         });
       }
       

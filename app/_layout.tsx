@@ -1,3 +1,4 @@
+import 'react-native-reanimated';
 import { useState, useEffect, useCallback } from "react";
 import { Stack } from "expo-router";
 import "./global.css";

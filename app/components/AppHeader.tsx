@@ -5,10 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  StatusBar,
   Pressable,
-  StatusBarStyle,
   } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,14 +79,11 @@ function useHeaderState() {
   const isRTL = I18nManager.isRTL;
   const isDark = theme.mode === 'dark';
   
-  const topPadding = Math.max(
-    insets.top,
-    Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0
-  );
+  const topPadding = insets.top;
 
   const statusBarStyle = isScrolled 
-    ? (isDark ? 'light-content' : 'dark-content') 
-    : 'light-content';
+    ? (isDark ? 'light' : 'dark') 
+    : 'light';
 
   const iconColor = isScrolled ? theme.colors.text.primary : '#FFFFFF';
 
@@ -309,11 +305,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <View style={[styles.container, { paddingTop: state.topPadding }]}>
-      <StatusBar
-        barStyle={state.statusBarStyle as StatusBarStyle}
-        backgroundColor="transparent"
-        translucent
-      />
+      <StatusBar style={state.statusBarStyle} />
 
       {/* Gradient background */}
       <LinearGradient

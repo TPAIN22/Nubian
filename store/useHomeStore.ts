@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from '../app/_api/home.api';
-import { HomeService } from '../app/_services/home.service';
-import { getHomeRecommendations } from '../app/_api/recommendations.api';
+import { HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from '../api/home.api';
+import { HomeService } from '../services/home.service';
+import { getHomeRecommendations } from '../api/recommendations.api';
 
 interface HomeState {
   // Data

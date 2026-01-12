@@ -3,7 +3,6 @@
     "name": "Nubian",
     "slug": "Nubian",
     "version": "1.0.2",
-    "orientation": "portrait",
     "icon": "./assets/images/screen.png",
     "scheme": "sdnubian",
     "userInterfaceStyle": "automatic",
@@ -29,10 +28,6 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/screen.png",
         "backgroundColor": "#ffffff"
-      },
-      "notification": {
-        "icon": "./assets/images/notification-icon.png",
-        "color": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
       "package": "dev.expo.nubian",
@@ -80,10 +75,16 @@
           },
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24,
+            "resizeableActivity": true,
+            "windowSoftInputMode": "adjustResize"
           }
         }
       ],
+      "./plugins/withAndroid15Compliance",
       "expo-font",
       "expo-notifications",
       "expo-web-browser",

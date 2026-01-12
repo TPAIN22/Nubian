@@ -4,14 +4,12 @@ import {
   StyleSheet,
   Dimensions,
   RefreshControl,
-  StatusBar,
   ScrollView,
   I18nManager,
   Pressable,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useCallback, useEffect, useRef, useState, memo } from "react";
-import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import ItemCard from "../components/Card";
@@ -26,8 +24,8 @@ import BottomSheet from "../components/BottomSheet";
 import { useScrollStore } from "@/store/useScrollStore";
 import { useTheme } from "@/providers/ThemeProvider";
 import BannerSkeleton from "../components/BannerSkeleton";
-import { useHomeQuery } from "../_hooks/useHomeQuery";
-import { HomeProduct, HomeCategory, HomeStore } from "../_api/home.api";
+import { useHomeQuery } from "@/hooks/useHomeQuery";
+import { HomeProduct, HomeCategory, HomeStore } from "@/api/home.api";
 import ItemCardSkeleton from "../components/ItemCardSkeleton";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -39,18 +37,22 @@ import {
   navigateToNewArrivals,
   navigateToForYou,
 } from "@/utils/deepLinks";
+import useTracking from "@/hooks/useTracking";
+import { useResponsive } from "@/hooks/useResponsive";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = SCREEN_WIDTH * 0.45;
 
 /* ───────────────────────────── Banner Carousel ───────────────────────────── */
 
 const BannerCarousel = memo(
   ({ banners, colors }: { banners: any[]; colors: any }) => {
     const isRTL = I18nManager.isRTL;
+    const { window } = useResponsive();
+    const screenWidth = window.width;
     const flatListRef = useRef<FlatList>(null);
     const [activeIndex, setActiveIndex] = useState(0);
     const intervalRef = useRef<any>(null);
+    const { trackEvent } = useTracking();
 
     const performScroll = useCallback((index: number) => {
       if (!flatListRef.current) return;
@@ -82,7 +84,7 @@ const BannerCarousel = memo(
 
     const onMomentumScrollEnd = (e: any) => {
       const offset = e.nativeEvent.contentOffset.x;
-      const newIndex = Math.round(offset / SCREEN_WIDTH);
+      const newIndex = Math.round(offset / screenWidth);
       setActiveIndex(newIndex);
     };
 
@@ -101,14 +103,20 @@ const BannerCarousel = memo(
           onScrollBeginDrag={stopAutoScroll}
           onScrollEndDrag={startAutoScroll}
           getItemLayout={(_, index) => ({
-            length: SCREEN_WIDTH,
-            offset: SCREEN_WIDTH * index,
+            length: screenWidth,
+            offset: screenWidth * index,
             index,
           })}
           renderItem={({ item }) => (
             <Pressable
-              onPress={() => navigateBanner(item)}
-              style={{ width: SCREEN_WIDTH, height: 300 }}
+              onPress={() => {
+                trackEvent('banner_click', {
+                  bannerId: item._id,
+                  screen: 'home',
+                });
+                navigateBanner(item);
+              }}
+              style={{ width: screenWidth, height: screenWidth * 0.5 }}
             >
               <Image
                 source={{ uri: item.image }}
@@ -170,6 +178,7 @@ const BannerCarousel = memo(
 /* ───────────────────────────── Category Grid ───────────────────────────── */
 
 const CategoryGrid = memo(({ categories, colors }: { categories: HomeCategory[]; colors: any }) => {
+  const { trackEvent } = useTracking();
   if (categories.length === 0) return null;
 
   return (
@@ -188,7 +197,13 @@ const CategoryGrid = memo(({ categories, colors }: { categories: HomeCategory[];
           renderItem={({ item }) => (
             <Pressable
               style={styles.categoryItem}
-              onPress={() => navigateToCategory(item._id, item)}
+              onPress={() => {
+                trackEvent('category_open', {
+                  categoryId: item._id,
+                  screen: 'home',
+                });
+                navigateToCategory(item._id, item);
+              }}
             >
               <View style={[styles.categoryIconContainer, { backgroundColor: colors.surface }]}>
                 {item.image ? (
@@ -229,6 +244,8 @@ const ProductSection = memo(({
   isLoading = false,
   onViewAll 
 }: ProductSectionProps) => {
+  const { window } = useResponsive();
+  const cardWidth = window.width * 0.45;
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   if (isLoading) {
@@ -246,7 +263,7 @@ const ProductSection = memo(({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={() => (
-            <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+            <View style={{ width: cardWidth, marginRight: 12 }}>
               <ItemCardSkeleton />
             </View>
           )}
@@ -278,7 +295,7 @@ const ProductSection = memo(({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
         renderItem={({ item }) => (
-          <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+          <View style={{ width: cardWidth, marginRight: 12 }}>
             <ItemCard
               item={item}
               handlePresentModalPress={() =>
@@ -311,6 +328,7 @@ const ProductSection = memo(({
 /* ───────────────────────────── Store Highlights ───────────────────────────── */
 
 const StoreHighlights = memo(({ stores, colors }: { stores: HomeStore[]; colors: any }) => {
+  const { trackEvent } = useTracking();
   if (stores.length === 0) return null;
 
   return (
@@ -328,7 +346,13 @@ const StoreHighlights = memo(({ stores, colors }: { stores: HomeStore[]; colors:
         contentContainerStyle={{ paddingHorizontal: 16 }}
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => navigateToStore(item._id, item)}
+            onPress={() => {
+              trackEvent('store_open', {
+                storeId: item._id,
+                screen: 'home',
+              });
+              navigateToStore(item._id, item);
+            }}
           >
             <View style={[styles.storeCard, { backgroundColor: colors.cardBackground }]}>
               <View style={[styles.storeIconContainer, { backgroundColor: colors.surface }]}>
@@ -387,10 +411,6 @@ function IndexContent() {
     <GestureHandlerRootView
       style={[styles.container, { backgroundColor: Colors.surface }]}
     >
-      <StatusBar
-        barStyle={theme.mode === "dark" ? "light-content" : "dark-content"}
-        translucent
-      />
       <BottomSheetModalProvider>
         <ScrollView
           onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
@@ -493,14 +513,14 @@ const styles = StyleSheet.create({
     height: 300,
     opacity: 0.15,
   },
-  bannersSection: { height: 300, position: "relative" },
+  bannersSection: { height: 200, position: "relative" },
   bannerImage: { width: SCREEN_WIDTH, height: 300 },
   bannerOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 100,
+    minHeight: 300,
   },
   bannerContent: {
     position: "absolute",

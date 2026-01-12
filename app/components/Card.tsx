@@ -17,6 +17,7 @@ import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
 import { getFinalPrice, getOriginalPrice, hasDiscount, calculateDiscountPercentage, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 import { navigateToProduct } from "@/utils/deepLinks";
+import useTracking from "@/hooks/useTracking";
 
 interface item {
   _id: string;
@@ -38,6 +39,7 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
   const { getToken } = useAuth();
   const inWishlist = isInWishlist(item._id);
+  const { trackEvent } = useTracking();
 
   // price = original price, discountPrice = final selling price (after discount)
   const originalPrice = getOriginalPrice(item);
@@ -50,6 +52,12 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
     : 0;
 
   const handleClick = (item: item) => {
+    // Track product click
+    trackEvent('product_click', {
+      productId: item._id,
+      screen: 'home',
+    });
+    
     // Use universal deep-linking system
     navigateToProduct(item._id, item);
     // Defer any heavy work until after interactions & frame rendered
@@ -71,6 +79,11 @@ function ItemCard({ item, handleSheetChanges, handlePresentModalPress }: any) {
       removeFromWishlist(item._id, token);
     } else {
       addToWishlist(item, token);
+      // Track wishlist add
+      trackEvent('wishlist_add', {
+        productId: item._id,
+        screen: 'home',
+      });
     }
   };
 

@@ -5,11 +5,6 @@ module.exports = function (api) {
       ["babel-preset-expo", { jsxImportSource: "nativewind" }]
     ],
     plugins: [
-      // إزالة console.log في الإنتاج
-      process.env.NODE_ENV === 'production' && [
-        'transform-remove-console',
-        { exclude: ['error', 'warn'] }
-      ],
       // تحسين imports
       [
         'module-resolver',
@@ -25,8 +20,13 @@ module.exports = function (api) {
           }
         }
       ],
-      // تحسين React Native
+      // إزالة console.log في الإنتاج
+      ...(process.env.NODE_ENV === 'production' ? [[
+        'transform-remove-console',
+        { exclude: ['error', 'warn'] }
+      ]] : []),
+      // react-native-reanimated plugin MUST be last - do not move this!
       'react-native-reanimated/plugin'
-    ].filter(Boolean)
+    ]
   };
 };

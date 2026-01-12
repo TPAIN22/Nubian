@@ -13,6 +13,7 @@ import { useUser } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
 import useItemStore from "@/store/useItemStore";
 import i18n from "@/utils/i18n";
+import useTracking from "@/hooks/useTracking";
 import type { Product, SelectedAttributes } from "@/types/cart.types";
 import { 
   validateRequiredAttributes, 
@@ -45,6 +46,7 @@ const AddToCartButton = ({
   const { isSignedIn } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const { setSignInModelVisible } = useItemStore();
+  const { trackEvent } = useTracking();
 
   // Get translated title dynamically
   const buttonTitle = title || i18n.t('addToCart');
@@ -170,6 +172,12 @@ const AddToCartButton = ({
         selectedSize || '',
         selectedAttributes
       );
+
+      // Track add to cart event
+      trackEvent('add_to_cart', {
+        productId: product._id,
+        screen: 'product_details',
+      });
 
       // Refresh cart to update badge
       setTimeout(async () => {

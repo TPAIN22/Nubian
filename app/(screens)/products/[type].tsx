@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useExploreStore } from "@/store/useExploreStore";
@@ -53,7 +53,6 @@ const ProductCard = React.memo(({
 }) => {
   const { theme } = useTheme();
   const colors = theme.colors;
-  // Wishlist functionality can be added later if needed
 
   return (
     <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
@@ -118,8 +117,9 @@ const ProductCard = React.memo(({
 
 ProductCard.displayName = 'ProductCard';
 
-const SearchPage = () => {
-  const params = useLocalSearchParams<{ sort?: string; discounted?: string; recommendation?: string; categoryId?: string }>();
+const ProductsScreen = () => {
+  const params = useLocalSearchParams<{ type: string }>();
+  const router = useRouter();
   const { theme } = useTheme();
   const colors = theme.colors;
   const { trackEvent } = useTracking();
@@ -143,25 +143,56 @@ const SearchPage = () => {
     setSort,
   } = useExploreStore();
 
-  // Category store
-  const { categories, fetchCategories, loading: categoriesLoading } = useCategoryStore();
-
   // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  // Page title
-  const pageTitle = useMemo(() => {
-    if (params.discounted === 'true') return i18n.t('flashDeals') || 'Flash Deals';
-    if (params.sort === 'trending') return i18n.t('trending') || 'Trending';
-    if (params.sort === 'new') return i18n.t('newArrivals') || 'New Arrivals';
-    if (params.sort === 'best') return i18n.t('bestSellers') || 'Best Sellers';
-    if (params.sort === 'rating') return i18n.t('topRated') || 'Top Rated';
-    if (params.recommendation === 'home') return i18n.t('forYou') || 'For You';
-    return i18n.t('explore') || 'Explore';
-  }, [params]);
+  // Get page title and sort based on type
+  const { pageTitle, sortType } = useMemo(() => {
+    const type = params.type || 'trending';
+    switch (type) {
+      case 'trending':
+        return { 
+          pageTitle: i18n.t('trending') || 'Trending Now', 
+          sortType: 'trending' as ExploreSort 
+        };
+      case 'flash-deals':
+        return { 
+          pageTitle: i18n.t('flashDeals') || 'Flash Deals', 
+          sortType: 'recommended' as ExploreSort 
+        };
+      case 'new-arrivals':
+        return { 
+          pageTitle: i18n.t('newArrivals') || 'New Arrivals', 
+          sortType: 'new' as ExploreSort 
+        };
+      case 'for-you':
+        return { 
+          pageTitle: i18n.t('forYou') || 'For You', 
+          sortType: 'recommended' as ExploreSort 
+        };
+      case 'best-sellers':
+        return { 
+          pageTitle: i18n.t('bestSellers') || 'Best Sellers', 
+          sortType: 'best_sellers' as ExploreSort 
+        };
+      case 'top-rated':
+        return { 
+          pageTitle: i18n.t('topRated') || 'Top Rated', 
+          sortType: 'rating' as ExploreSort 
+        };
+      default:
+        return { 
+          pageTitle: i18n.t('products') || 'Products', 
+          sortType: 'recommended' as ExploreSort 
+        };
+    }
+  }, [params.type]);
+
+  // Category store
+  const { categories, fetchCategories } = useCategoryStore();
 
   // Handlers
   const handleProductView = useCallback((product: Product | ExploreProduct) => {
@@ -171,9 +202,9 @@ const SearchPage = () => {
     trackEvent('product_view', {
       productId: product._id,
       ...(categoryId && { categoryId }),
-      screen: 'explore',
+      screen: params.type || 'products',
     });
-  }, [trackEvent]);
+  }, [trackEvent, params.type]);
 
   const handleAddToCart = useCallback(async (product: Product | ExploreProduct) => {
     try {
@@ -184,17 +215,17 @@ const SearchPage = () => {
       trackEvent('add_to_cart', {
         productId: product._id,
         ...(categoryId && { categoryId }),
-        screen: 'explore',
+        screen: params.type || 'products',
       });
     } catch (error) {
       console.error('Error adding to cart:', error);
     }
-  }, [addToCart, trackEvent]);
+  }, [addToCart, trackEvent, params.type]);
 
   const handleSortChange = useCallback((newSort: ExploreSort) => {
-    trackEvent('sort_change', { sort: newSort, screen: 'explore' });
+    trackEvent('sort_change', { sort: newSort, screen: params.type || 'products' });
     setSort(newSort);
-  }, [trackEvent, setSort]);
+  }, [trackEvent, setSort, params.type]);
 
   const openFilterModal = useCallback(() => {
     setFilterCategory(filters.category || null);
@@ -210,60 +241,56 @@ const SearchPage = () => {
     const newFilters: any = {};
     if (filterCategory) newFilters.category = filterCategory;
     if (showAvailableOnly) newFilters.inStock = true;
-    if (params.discounted === 'true') newFilters.discount = true;
+    if (params.type === 'flash-deals') newFilters.discount = true;
     
-    trackEvent('filter_apply', { filters: JSON.stringify(newFilters), screen: 'explore' });
+    trackEvent('filter_apply', { filters: JSON.stringify(newFilters), screen: params.type || 'products' });
     closeFilterModal();
     setFilters(newFilters);
-  }, [filterCategory, showAvailableOnly, params.discounted, setFilters, trackEvent, closeFilterModal]);
+  }, [filterCategory, showAvailableOnly, params.type, setFilters, trackEvent, closeFilterModal]);
 
   const clearAllFilters = useCallback(() => {
     setFilterCategory(null);
     setShowAvailableOnly(false);
-    trackEvent('filter_clear', { screen: 'explore' });
+    trackEvent('filter_clear', { screen: params.type || 'products' });
     closeFilterModal();
     useExploreStore.getState().clearFilters();
-  }, [trackEvent, closeFilterModal]);
+  }, [trackEvent, closeFilterModal, params.type]);
 
   const handleLoadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
-    trackEvent('explore_load_more', { screen: 'explore' });
+    trackEvent('products_load_more', { screen: params.type || 'products' });
     await loadMoreProducts();
-  }, [isLoadingMore, hasMore, loadMoreProducts, trackEvent]);
+  }, [isLoadingMore, hasMore, loadMoreProducts, trackEvent, params.type]);
 
   const onRefresh = useCallback(async () => {
-    trackEvent('explore_refresh', { screen: 'explore' });
+    trackEvent('products_refresh', { screen: params.type || 'products' });
     await refreshProducts();
-  }, [refreshProducts, trackEvent]);
+  }, [refreshProducts, trackEvent, params.type]);
 
   // Initial load
   useEffect(() => {
-    const initializeExplore = async () => {
+    const initializeProducts = async () => {
       fetchCategories();
       
-      const initialSort: ExploreSort = 
-        params.sort === 'trending' ? 'trending' :
-        params.sort === 'new' ? 'new' :
-        params.sort === 'best' ? 'best_sellers' :
-        params.sort === 'rating' ? 'rating' :
-        params.discounted === 'true' ? 'recommended' :
-        'recommended';
-
       const initialFilters: any = {};
-      if (params.categoryId) initialFilters.category = params.categoryId;
-      if (params.discounted === 'true') initialFilters.discount = true;
+      if (params.type === 'flash-deals') {
+        initialFilters.discount = true;
+      }
 
       await fetchProducts({
         ...initialFilters,
-        sort: initialSort,
+        sort: sortType,
         page: 1,
       });
 
-      trackEvent('explore_view', { screen: 'explore', sort: initialSort });
+      trackEvent('products_view', { 
+        screen: params.type || 'products',
+        sort: sortType 
+      });
     };
 
-    initializeExplore();
-  }, []);
+    initializeProducts();
+  }, [params.type, sortType]);
 
   // Filtered products
   const filteredProducts = useMemo(() => {
@@ -305,7 +332,7 @@ const SearchPage = () => {
 
   // Empty component
   const ListEmptyComponent = useCallback(() => {
-    if (isLoading || categoriesLoading) {
+    if (isLoading) {
       return (
         <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -352,150 +379,154 @@ const SearchPage = () => {
         </Text>
       </View>
     );
-  }, [searchTerm, isLoading, categoriesLoading, exploreError, onRefresh, colors]);
+  }, [searchTerm, isLoading, exploreError, onRefresh, colors]);
+
+  // Header component that will scroll with content
+  const ListHeaderComponent = useCallback(() => (
+    <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
+      <View style={styles.headerTop}>
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text.gray} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text.gray }]}>
+          {pageTitle}
+        </Text>
+        <View style={{ width: 24 }} />
+      </View>
+      
+      {/* Search */}
+      <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground }]}>
+        <Ionicons name="search" size={20} color={colors.text.mediumGray} style={styles.searchIcon} />
+        <TextInput
+          placeholder={i18n.t('searchProducts')}
+          style={[styles.searchInput, { color: colors.text.gray }]}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          placeholderTextColor={colors.text.veryLightGray}
+        />
+        {searchTerm.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchTerm("")} style={styles.searchClearButton}>
+            <Ionicons name="close-circle" size={20} color={colors.text.lightGray} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Filter and Sort */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.primary }]}
+          onPress={openFilterModal}
+        >
+          <Ionicons name="funnel-outline" size={18} color={colors.primary} />
+          <Text style={[styles.filterText, { color: colors.primary }]}>
+            {String(i18n.t('filter') || 'Filter')}
+          </Text>
+          {(showAvailableOnly || filterCategory) && (
+            <View style={[styles.filterBadge, { backgroundColor: colors.danger || colors.primary }]} />
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.sortButton, { borderColor: colors.primary }]}
+          onPress={() => {
+            if (sort === 'recommended') handleSortChange('price_low');
+            else if (sort === 'price_low') handleSortChange('price_high');
+            else handleSortChange('recommended');
+          }}
+        >
+          <Ionicons 
+            name={sort === 'price_high' ? "arrow-down" : sort === 'price_low' ? "arrow-up" : "funnel-outline"} 
+            size={18} 
+            color={colors.primary} 
+          />
+          <Text style={[styles.sortText, { color: colors.primary }]}>
+            {String(
+              sort === 'price_high' ? (i18n.t('highestPrice') || 'Highest Price') : 
+              sort === 'price_low' ? (i18n.t('lowestPrice') || 'Lowest Price') : 
+              (i18n.t('sort') || 'Sort')
+            )}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  ), [pageTitle, searchTerm, sort, showAvailableOnly, filterCategory, colors, router, openFilterModal, handleSortChange]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
-          {pageTitle !== 'Explore' && (
-            <View style={styles.headerTop}>
-              <Text style={[styles.headerTitle, { color: colors.text.gray }]}>
-                {pageTitle}
+      {/* Products List with scrollable header */}
+      <FlatList
+        data={filteredProducts}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={ListHeaderComponent}
+        contentContainerStyle={[
+          styles.listContainer,
+          filteredProducts.length === 0 && { flex: 1, justifyContent: 'center' }
+        ]}
+        numColumns={2}
+        columnWrapperStyle={filteredProducts.length > 0 ? styles.columnWrapper : undefined}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+        ListEmptyComponent={ListEmptyComponent}
+        ListFooterComponent={
+          isLoadingMore ? (
+            <View style={styles.footerContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.footerText, { color: colors.text.lightGray }]}>
+                {String(i18n.t('loading') || 'Loading')}
               </Text>
             </View>
-          )}
-          
-          {/* Search */}
-          <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground }]}>
-            <Ionicons name="search" size={20} color={colors.text.mediumGray} style={styles.searchIcon} />
-            <TextInput
-              placeholder={i18n.t('searchProducts')}
-              style={[styles.searchInput, { color: colors.text.gray }]}
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-              placeholderTextColor={colors.text.veryLightGray}
-            />
-            {searchTerm.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchTerm("")} style={styles.searchClearButton}>
-                <Ionicons name="close-circle" size={20} color={colors.text.lightGray} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Filter and Sort */}
-          <View style={styles.filterContainer}>
-            <TouchableOpacity
-              style={[styles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.primary }]}
-              onPress={openFilterModal}
-            >
-              <Ionicons name="funnel-outline" size={18} color={colors.primary} />
-              <Text style={[styles.filterText, { color: colors.primary }]}>
-                {String(i18n.t('filter') || 'Filter')}
+          ) : !hasMore && filteredProducts.length > 0 ? (
+            <View style={styles.footerContainer}>
+              <Text style={[styles.footerText, { color: colors.text.lightGray }]}>
+                {String(i18n.t('allProductsShown') || 'All products shown')}
               </Text>
-              {(showAvailableOnly || filterCategory) && (
-                <View style={[styles.filterBadge, { backgroundColor: colors.danger || colors.primary }]} />
-              )}
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.sortButton, { borderColor: colors.primary }]}
-              onPress={() => {
-                if (sort === 'recommended') handleSortChange('price_low');
-                else if (sort === 'price_low') handleSortChange('price_high');
-                else handleSortChange('recommended');
-              }}
-            >
-              <Ionicons 
-                name={sort === 'price_high' ? "arrow-down" : sort === 'price_low' ? "arrow-up" : "funnel-outline"} 
-                size={18} 
-                color={colors.primary} 
-              />
-              <Text style={[styles.sortText, { color: colors.primary }]}>
-                {String(
-                  sort === 'price_high' ? (i18n.t('highestPrice') || 'Highest Price') : 
-                  sort === 'price_low' ? (i18n.t('lowestPrice') || 'Lowest Price') : 
-                  sort === 'trending' ? (i18n.t('trending') || 'Trending') :
-                  sort === 'new' ? (i18n.t('newArrivals') || 'New Arrivals') :
-                  sort === 'best_sellers' ? (i18n.t('bestSellers') || 'Best Sellers') :
-                  sort === 'rating' ? (i18n.t('topRated') || 'Top Rated') :
-                  (i18n.t('sort') || 'Sort')
-                )}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+            </View>
+          ) : null
+        }
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={6}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={6}
+      />
 
-        {/* Products List */}
-        <FlatList
-          data={filteredProducts}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={[
-            styles.listContainer,
-            filteredProducts.length === 0 && { flex: 1, justifyContent: 'center' }
-          ]}
-          numColumns={2}
-          columnWrapperStyle={filteredProducts.length > 0 ? styles.columnWrapper : undefined}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.4}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
-            />
-          }
-          ListEmptyComponent={ListEmptyComponent}
-          ListFooterComponent={
-            isLoadingMore ? (
-              <View style={styles.footerContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={[styles.footerText, { color: colors.text.lightGray }]}>
-                  {String(i18n.t('loading') || 'Loading')}
-                </Text>
-              </View>
-            ) : !hasMore && filteredProducts.length > 0 ? (
-              <View style={styles.footerContainer}>
-                <Text style={[styles.footerText, { color: colors.text.lightGray }]}>
-                  {String(i18n.t('allProductsShown') || 'All products shown')}
-                </Text>
-              </View>
-            ) : null
-          }
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={6}
-          showsVerticalScrollIndicator={false}
-          initialNumToRender={6}
-        />
-
-        {/* Filter Modal */}
-        <Modal
-          visible={showFilterModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={closeFilterModal}
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeFilterModal}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={closeFilterModal}
         >
           <Pressable 
-            style={styles.modalOverlay}
-            onPress={closeFilterModal}
+            style={[styles.modalContent, { backgroundColor: colors.background || '#FFFFFF' }]}
+            onPress={(e) => e.stopPropagation()}
           >
-            <Pressable 
-              style={[styles.modalContent, { backgroundColor: colors.background || '#FFFFFF' }]}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={[styles.modalHeader, { borderBottomColor: colors.borderLight }]}>
-                <Text style={[styles.modalTitle, { color: colors.text.gray }]}>
-                  {String(i18n.t('filterOptions') || 'Filter Options')}
-                </Text>
-                <TouchableOpacity onPress={closeFilterModal}>
-                  <Ionicons name="close" size={24} color={colors.text.mediumGray} />
-                </TouchableOpacity>
-              </View>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.borderLight }]}>
+              <Text style={[styles.modalTitle, { color: colors.text.gray }]}>
+                {String(i18n.t('filterOptions') || 'Filter Options')}
+              </Text>
+              <TouchableOpacity onPress={closeFilterModal}>
+                <Ionicons name="close" size={24} color={colors.text.mediumGray} />
+              </TouchableOpacity>
+            </View>
 
-              <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
+            <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
               {/* Available Only */}
               <TouchableOpacity
                 style={[styles.filterOption, { backgroundColor: colors.surface }]}
@@ -608,36 +639,36 @@ const SearchPage = () => {
                   ))}
                 </ScrollView>
               </View>
-              </ScrollView>
+            </ScrollView>
 
-              {/* Action Buttons */}
-              <View style={styles.modalActions}>
-                <TouchableOpacity 
-                  onPress={clearAllFilters} 
-                  style={[styles.clearButton, { borderColor: colors.borderMedium, backgroundColor: colors.surface }]}
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                onPress={clearAllFilters} 
+                style={[styles.clearButton, { borderColor: colors.borderMedium, backgroundColor: colors.surface }]}
+              >
+                <Text style={[styles.clearButtonText, { color: colors.text.gray }]}>
+                  {String(i18n.t('clear') || 'Clear')}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={applyFilters} 
+                style={styles.applyButton}
+              >
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark || colors.primary]}
+                  style={styles.applyButtonGradient}
                 >
-                  <Text style={[styles.clearButtonText, { color: colors.text.gray }]}>
-                    {String(i18n.t('clear') || 'Clear')}
+                  <Text style={styles.applyButtonText}>
+                    {String(i18n.t('applyFilters') || 'Apply Filters')}
                   </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  onPress={applyFilters} 
-                  style={styles.applyButton}
-                >
-                  <LinearGradient
-                    colors={[colors.primary, colors.primaryDark || colors.primary]}
-                    style={styles.applyButtonGradient}
-                  >
-                    <Text style={styles.applyButtonText}>
-                      {String(i18n.t('applyFilters') || 'Apply Filters')}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            </Pressable>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </Pressable>
-        </Modal>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -652,15 +683,22 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
+    marginBottom: 0,
   },
   headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
+  },
+  backButton: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 8,
+    flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -724,6 +762,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 12,
+    paddingTop: 0,
   },
   columnWrapper: {
     justifyContent: 'space-between',
@@ -855,6 +894,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    paddingBottom: 20,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -961,17 +1011,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
-    paddingBottom: 20,
-  },
 });
 
-export default SearchPage;
+export default ProductsScreen;

@@ -21,6 +21,7 @@ export const ROUTES = {
   STORE: '/(screens)/store/[id]',
   COLLECTION: '/(screens)/[id]', // Can be extended later for collections
   SEARCH: '/(tabs)/explor',
+  PRODUCTS: '/(screens)/products/[type]', // New products screen for headlines
   CART: '/(tabs)/cart',
   PROFILE: '/(tabs)/profile',
   ORDERS: '/(screens)/order',
@@ -174,42 +175,60 @@ export function navigateToWishlist(): void {
  * Navigate to trending products
  */
 export function navigateToTrending(): void {
-  navigateToSearch({ sort: 'trending' });
+  router.push({
+    pathname: ROUTES.PRODUCTS,
+    params: { type: 'trending' },
+  } as any);
 }
 
 /**
  * Navigate to flash deals (discounted products)
  */
 export function navigateToFlashDeals(): void {
-  navigateToSearch({ discounted: true });
+  router.push({
+    pathname: ROUTES.PRODUCTS,
+    params: { type: 'flash-deals' },
+  } as any);
 }
 
 /**
  * Navigate to new arrivals
  */
 export function navigateToNewArrivals(): void {
-  navigateToSearch({ sort: 'new' });
+  router.push({
+    pathname: ROUTES.PRODUCTS,
+    params: { type: 'new-arrivals' },
+  } as any);
 }
 
 /**
  * Navigate to best sellers
  */
 export function navigateToBestSellers(): void {
-  navigateToSearch({ sort: 'best' });
+  router.push({
+    pathname: ROUTES.PRODUCTS,
+    params: { type: 'best-sellers' },
+  } as any);
 }
 
 /**
  * Navigate to top rated products
  */
 export function navigateToTopRated(): void {
-  navigateToSearch({ sort: 'rating' });
+  router.push({
+    pathname: ROUTES.PRODUCTS,
+    params: { type: 'top-rated' },
+  } as any);
 }
 
 /**
  * Navigate to "For You" recommendations
  */
 export function navigateToForYou(): void {
-  navigateToSearch({ sort: 'trending' }); // Can be customized based on recommendation API
+  router.push({
+    pathname: ROUTES.PRODUCTS,
+    params: { type: 'for-you' },
+  } as any);
 }
 
 // ============================================================================

@@ -5,20 +5,23 @@ import { useAuth, useClerk } from '@clerk/clerk-expo';
 import { ActivityIndicator, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import useTracking from '@/hooks/useTracking';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SSOCallback() {
-  const { sessionId, isLoaded, isSignedIn } = useAuth();
+  const { sessionId, isLoaded, isSignedIn, userId } = useAuth();
   const { setActive } = useClerk();
   const router = useRouter();
+  const { mergeSession } = useTracking();
 
   useEffect(() => {
     const finalizeSession = async () => {
       
       if (!isLoaded) return;
-      if (isSignedIn && sessionId) {
-        
+      if (isSignedIn && sessionId && userId) {
+        // Merge guest session with user account
+        await mergeSession();
         router.replace('/');
         return;
       }
@@ -29,6 +32,10 @@ export default function SSOCallback() {
           
           await setActive({ session: pending });
           await AsyncStorage.removeItem('pendingSessionId');
+          // Merge guest session with user account
+          if (userId) {
+            await mergeSession();
+          }
           router.replace('/');
         } catch (err) {
           
@@ -39,7 +46,7 @@ export default function SSOCallback() {
     };
 
     finalizeSession();
-  }, [isLoaded, sessionId, isSignedIn]);
+  }, [isLoaded, sessionId, isSignedIn, userId, mergeSession]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

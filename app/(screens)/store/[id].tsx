@@ -17,7 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Card from '../../components/Card';
 import axiosInstance from '@/utils/axiosInstans';
-import { HomeProduct } from '@/app/_api/home.api';
+import { HomeProduct } from '@/api/home.api';
 import { navigateToProduct } from '@/utils/deepLinks';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

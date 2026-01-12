@@ -3,170 +3,55 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Dimensions,
   Modal,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
-  Platform,
+  I18nManager,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/ui/text";
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
-import AddToCartButton from "../../components/AddToCartButton";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useProductFetch } from "@/hooks/useProductFetch";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Review from "../../components/Review";
-import { Image as RNImage, InteractionManager, I18nManager } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import Colors from "@/locales/brandColors";
+import { Image as RNImage, InteractionManager } from "react-native";
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
-import type { SelectedAttributes, ProductAttribute, ProductVariant } from "@/types/cart.types";
+import type { SelectedAttributes } from "@/types/cart.types";
 import { 
-  mergeSizeAndAttributes, 
   findMatchingVariant,
   getProductStock,
   isProductAvailable 
 } from "@/utils/cartUtils";
 import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 import { useRecommendationStore } from "@/store/useRecommendationStore";
-import { HomeProduct } from "@/app/_api/recommendations.api";
-import ItemCard from "../../components/Card";
-import ItemCardSkeleton from "../../components/ItemCardSkeleton";
-import { navigateToProduct, navigateToStore } from "@/utils/deepLinks";
-
-const { width: screenWidth } = Dimensions.get("window");
-const CARD_WIDTH = screenWidth * 0.45;
-
-// Pre-calculate styles outside component to avoid recreation
-const imageHeight = screenWidth * 1.1;
-
-/* ───────────────────────────── Recommendation Section Component ───────────────────────────── */
-
-interface RecommendationSectionProps {
-  title: string;
-  products: HomeProduct[];
-  colors: any;
-  isLoading?: boolean;
-  router: any;
-}
-
-const RecommendationSection = memo(({ 
-  title, 
-  products, 
-  colors, 
-  isLoading = false,
-  router 
-}: RecommendationSectionProps) => {
-  if (isLoading) {
-    return (
-      <View style={recommendationStyles.section}>
-        <View style={recommendationStyles.sectionHeader}>
-          <View style={[recommendationStyles.accentBar, { backgroundColor: colors.primary }]} />
-          <Text style={[recommendationStyles.sectionTitle, { color: colors.text.gray }]}>
-            {title}
-          </Text>
-        </View>
-        <FlatList
-          horizontal
-          data={[1, 2, 3, 4]}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-          renderItem={() => (
-            <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
-              <ItemCardSkeleton />
-            </View>
-          )}
-          keyExtractor={(_, index) => `${title}-skeleton-${index}`}
-        />
-      </View>
-    );
-  }
-
-  if (products.length === 0) return null;
-
-  return (
-    <View style={recommendationStyles.section}>
-      <View style={recommendationStyles.sectionHeader}>
-        <View style={[recommendationStyles.accentBar, { backgroundColor: colors.primary }]} />
-        <Text style={[recommendationStyles.sectionTitle, { color: colors.text.gray }]}>
-          {title}
-        </Text>
-      </View>
-      <FlatList
-        horizontal
-        data={products}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        renderItem={({ item }) => (
-          <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
-            <ItemCard
-              item={item}
-              handleSheetChanges={() => {}}
-              handlePresentModalPress={() => navigateToProduct(item._id, item)}
-            />
-          </View>
-        )}
-        keyExtractor={(item, index) => `${title}-${item._id}-${index}`}
-      />
-    </View>
-  );
-});
-
-const recommendationStyles = StyleSheet.create({
-  section: {
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  accentBar: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
-    marginRight: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});
-
-RecommendationSection.displayName = 'RecommendationSection';
+import useTracking from "@/hooks/useTracking";
+import { CURRENCY, COLORS, PRODUCT_DETAILS_CONFIG } from "@/constants/productDetails";
+import { ProductHeader } from "@/app/components/ProductDetails/ProductHeader";
+import { ProductImageCarousel } from "@/app/components/ProductDetails/ProductImageCarousel";
+import { ProductAttributes } from "@/app/components/ProductDetails/ProductAttributes";
+import { ProductActions } from "@/app/components/ProductDetails/ProductActions";
+import { ProductRecommendations } from "@/app/components/ProductDetails/ProductRecommendations";
 
 /* ───────────────────────────── Main Component ───────────────────────────── */
 
 export default function Details() {
   const { theme } = useTheme();
-  const Colors = theme.colors;
-  const insets = useSafeAreaInsets();
+  const colors = theme.colors;
   const { details, name, price, image } = useLocalSearchParams();
   const productId = details ? String(details) : '';
   
   // Direct product fetching instead of store
   const { product, isLoading, error } = useProductFetch(productId);
   
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  // For flexible attributes system
-  const [selectedAttributesState, setSelectedAttributesState] = useState<SelectedAttributes>({});
+  // Consolidated state management - single source of truth for attributes
+  const [selectedAttributes, setSelectedAttributes] = useState<SelectedAttributes>({});
   
-  // Build selected attributes object for cart (merge legacy size/color with new attributes)
-  const selectedAttributes = useMemo<SelectedAttributes>(() => {
-    const attrs: SelectedAttributes = { ...selectedAttributesState };
-    // Legacy support: add size and color if selected
-    if (selectedSize) attrs.size = selectedSize;
-    if (selectedColor) attrs.color = selectedColor;
-    return attrs;
-  }, [selectedSize, selectedColor, selectedAttributesState]);
+  // Legacy support: extract size and color from attributes for backward compatibility
+  const selectedSize = useMemo(() => selectedAttributes.size || null, [selectedAttributes]);
+  const selectedColor = useMemo(() => selectedAttributes.color || null, [selectedAttributes]);
   
   // Get product attributes (for variant-based products)
   const productAttributes = useMemo(() => {
@@ -182,7 +67,6 @@ export default function Details() {
   }, [product, selectedAttributes]);
   
   // Get current price (final selling price) and original price
-  // price = original price, discountPrice = final selling price
   const currentPrice = useMemo(() => {
     return getFinalPrice(product, matchingVariant || undefined);
   }, [product, matchingVariant]);
@@ -206,16 +90,16 @@ export default function Details() {
     if (!product) return false;
     return isProductAvailable(product, selectedAttributes);
   }, [product, selectedAttributes]);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDeferred, setShowDeferred] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   
-  const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
   const { getToken } = useAuth();
+  const { trackEvent } = useTracking();
   
   // Fetch product recommendations
   const {
@@ -234,19 +118,28 @@ export default function Details() {
     }
   }, [productId, fetchProductRecommendations]);
 
+  // Track product view
+  useEffect(() => {
+    if (product && product._id) {
+      trackEvent('product_view', {
+        productId: product._id,
+        screen: 'product_details',
+      });
+    }
+  }, [product?._id, trackEvent]);
+
   // Use product directly or fallback to optimistic data
   const viewProduct = useMemo(() => {
     if (product) {
       // Return product with default values for missing fields
       return {
-        _id: product._id,
+        ...product,
         name: product.name || '',
         price: product.price || 0,
-        discountPrice: product.discountPrice,
         images: product.images || [],
         stock: product.stock || 0,
         sizes: product.sizes || [],
-        colors: (product as any).colors || [],
+        colors: product.colors || [],
         description: product.description || '',
         attributes: product.attributes || [],
         variants: product.variants || [],
@@ -264,7 +157,7 @@ export default function Details() {
         sizes: [],
         colors: [],
         description: '',
-      };
+      } as any;
     }
     
     return null;
@@ -275,25 +168,37 @@ export default function Details() {
     if (viewProduct?.colors && Array.isArray(viewProduct.colors) && viewProduct.colors.length > 0) {
       return viewProduct.colors;
     }
-    return []; // Return empty array if no colors
+    return [];
   }, [viewProduct?.colors]);
   
   const inWishlist = useMemo(() => {
-    return viewProduct?._id ? isInWishlist(viewProduct._id) : false;
+    return viewProduct?._id ? (isInWishlist(viewProduct._id) ?? false) : false;
   }, [viewProduct?._id, isInWishlist]);
 
+  // Image prefetching with proper error handling
   useEffect(() => {
     if (typeof image === 'string' && image) {
-      RNImage.prefetch(image).catch(() => {});
+      RNImage.prefetch(image).catch((err) => {
+        if (__DEV__) console.warn('Image prefetch failed:', err);
+      });
     }
-    // Prefetch next 1-2 images after first render if product exists
+    // Prefetch next images after first render if product exists
     const timeout = setTimeout(() => {
       try {
-        const rest = viewProduct?.images?.slice(1, 3) || [];
+        const rest = viewProduct?.images?.slice(
+          PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX,
+          PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX + PRODUCT_DETAILS_CONFIG.PREFETCH_IMAGE_COUNT
+        ) || [];
         rest.forEach((uri: string) => {
-          if (uri) RNImage.prefetch(uri).catch(() => {});
+          if (uri) {
+            RNImage.prefetch(uri).catch((err) => {
+              if (__DEV__) console.warn('Image prefetch failed:', err);
+            });
+          }
         });
-      } catch {}
+      } catch (err) {
+        if (__DEV__) console.warn('Error prefetching images:', err);
+      }
     }, 0);
     return () => clearTimeout(timeout);
   }, [image, viewProduct?.images]);
@@ -308,26 +213,14 @@ export default function Details() {
 
   const formattedFinalPrice = useMemo(() => {
     if (!currentPrice) return '';
-    return formatPriceUtil(currentPrice, 'SDG');
+    return formatPriceUtil(currentPrice, CURRENCY);
   }, [currentPrice]);
   
   const formattedOriginalPrice = useMemo(() => {
     if (!originalPrice || !productHasDiscount) return '';
-    return formatPriceUtil(originalPrice, 'SDG');
+    return formatPriceUtil(originalPrice, CURRENCY);
   }, [originalPrice, productHasDiscount]);
 
-
-  // Defer initial size selection to avoid blocking interaction
-  useEffect(() => {
-    if (viewProduct?.sizes && viewProduct.sizes.length > 0) {
-      const task = InteractionManager.runAfterInteractions(() => {
-        setSelectedSize(viewProduct.sizes[0] || null);
-      });
-      return () => task.cancel();
-    }
-    return undefined;
-  }, [viewProduct?.sizes]);
-  
   // Initialize attribute selections for variant-based products
   useEffect(() => {
     if (productAttributes && productAttributes.length > 0) {
@@ -336,23 +229,46 @@ export default function Details() {
         if (attr.type === 'select' && attr.options && attr.options.length > 0) {
           // Auto-select first option for required attributes
           if (attr.required) {
-            initialAttrs[attr.name] = attr.options[0];
+            const firstOption = attr.options[0];
+            if (firstOption) {
+              initialAttrs[attr.name] = firstOption;
+            }
           }
         }
       });
-      setSelectedAttributesState(initialAttrs);
+      setSelectedAttributes(initialAttrs);
     }
   }, [productAttributes]);
   
+  // Defer initial size selection to avoid blocking interaction
+  useEffect(() => {
+    if (viewProduct?.sizes && viewProduct.sizes.length > 0 && !selectedAttributes.size) {
+      const firstSize = viewProduct.sizes[0];
+      if (firstSize) {
+        const task = InteractionManager.runAfterInteractions(() => {
+          setSelectedAttributes(prev => ({ ...prev, size: firstSize }));
+        });
+        return () => task.cancel();
+      }
+    }
+    return undefined;
+  }, [viewProduct?.sizes, selectedAttributes.size]);
+  
   // Set initial color selection only if colors are available
   useEffect(() => {
-    if (availableColors && availableColors.length > 0 && !selectedColor) {
-      setSelectedColor(availableColors[0]);
+    if (availableColors && availableColors.length > 0 && !selectedAttributes.color) {
+      const firstColor = availableColors[0];
+      if (firstColor) {
+        setSelectedAttributes(prev => ({ ...prev, color: firstColor }));
+      }
     } else if (!availableColors || availableColors.length === 0) {
       // Clear selection if no colors available
-      setSelectedColor(null);
+      setSelectedAttributes(prev => {
+        const { color, ...rest } = prev;
+        return rest;
+      });
     }
-  }, [availableColors, selectedColor]);
+  }, [availableColors, selectedAttributes.color]);
   
   // Handle wishlist toggle
   const handleWishlistPress = useCallback(async () => {
@@ -373,19 +289,7 @@ export default function Details() {
     }
   }, [viewProduct, inWishlist, getToken, addToWishlist, removeFromWishlist, wishlistLoading]);
 
-  // Optimize viewable items callback
-  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setCurrentImageIndex(viewableItems[0].index);
-    }
-  }, []);
-
-  // Memoize viewability config
-  const viewabilityConfig = useMemo(() => ({
-    itemVisiblePercentThreshold: 50
-  }), []);
-
-  // Optimize image modal handlers
+  // Image modal handlers
   const openImageModal = useCallback((uri: string) => {
     setSelectedImage(uri);
     setModalVisible(true);
@@ -395,205 +299,27 @@ export default function Details() {
     setModalVisible(false);
   }, []);
 
-  // Optimize size selection
-  const onSizeSelect = useCallback((size: string) => {
-    setSelectedSize(size);
-    // Also update attributes state for variant-based products
-    setSelectedAttributesState(prev => ({ ...prev, size }));
+  // Attribute selection handlers
+  const handleSizeSelect = useCallback((size: string) => {
+    setSelectedAttributes(prev => ({ ...prev, size }));
   }, []);
 
+  const handleColorSelect = useCallback((color: string) => {
+    setSelectedAttributes(prev => ({ ...prev, color }));
+  }, []);
 
-  // Memoized components
-  const [firstImageLoaded, setFirstImageLoaded] = useState(false);
-  const renderImageItem = useCallback(({ item: uri, index }: { item: string; index: number }) => {
-    const showOverlay = index === 0 && !firstImageLoaded;
-    return (
-      <TouchableOpacity
-        style={styles.imageWrapper}
-        onPress={() => openImageModal(uri)}
-        activeOpacity={0.8}
-      >
-        <Image
-          source={{ uri }}
-          alt="صورة المنتج"
-          contentFit="contain"
-          style={styles.productImage}
-          cachePolicy="memory-disk"
-          priority="high"
-          onLoad={() => {
-            if (index === 0) setFirstImageLoaded(true);
-          }}
-        />
-        {showOverlay && (
-          <View style={styles.imageLoaderOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="#f0b745" />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }, [openImageModal, firstImageLoaded]);
-
-  const renderPagination = useCallback(() => {
-    if (!viewProduct?.images || viewProduct.images.length <= 1) return null;
-    
-    return (
-      <View style={styles.pagination}>
-        {viewProduct.images.map((_ : any, index: number) => (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              { backgroundColor: Colors.text.white },
-              index === currentImageIndex && styles.activeDot
-            ]}
-          />
-        ))}
-      </View>
-    );
-  }, [viewProduct?.images, currentImageIndex]);
-
-  const renderSizeSelector = useCallback(() => {
-    if (!viewProduct?.sizes || viewProduct.sizes.length === 0) return null;
-    
-    return (
-      <View style={[styles.sizesContainer, { backgroundColor: Colors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>{i18n.t('chooseSize') || 'Size'}</Text>
-        <View style={[styles.sizesRow, I18nManager.isRTL && styles.sizesRowRTL]}>
-          {viewProduct.sizes.map((size: string, index: number) => (
-            <Pressable
-              key={index}
-              style={[
-                styles.sizeBox,
-                { 
-                  backgroundColor: Colors.cardBackground,
-                  borderColor: Colors.borderLight,
-                },
-                size === selectedSize && {
-                  backgroundColor: Colors.primary,
-                  borderColor: Colors.primary,
-                },
-              ]}
-              onPress={() => onSizeSelect(size)}
-            >
-              <Text
-                style={[
-                  styles.sizeText,
-                  { color: Colors.text.gray },
-                  size === selectedSize && { color: Colors.text.white },
-                ]}
-              >
-                {size}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-    );
-  }, [viewProduct?.sizes, selectedSize, onSizeSelect]);
-  
-  const renderColorSelector = useCallback(() => {
-    // Don't show color selector if no colors available
-    if (!availableColors || availableColors.length === 0) {
-      return null;
-    }
-    
-    return (
-      <View style={[styles.colorsContainer, { backgroundColor: Colors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>{i18n.t('color') || 'Color'}</Text>
-        <View style={[styles.colorsRow, I18nManager.isRTL && styles.colorsRowRTL]}>
-          {availableColors.map((color: string, index: number) => (
-            <Pressable
-              key={index}
-              style={[
-                styles.colorSwatch,
-                { borderColor: 'transparent' },
-                color === selectedColor && { borderColor: Colors.text.gray },
-              ]}
-              onPress={() => {
-                setSelectedColor(color);
-                // Also update attributes state
-                setSelectedAttributesState(prev => ({ ...prev, color }));
-              }}
-            >
-              <View style={[styles.colorCircle, { backgroundColor: color, borderColor: Colors.borderLight }]} />
-            </Pressable>
-          ))}
-        </View>
-      </View>
-    );
-  }, [availableColors, selectedColor, Colors]);
-  
-  // Render flexible attributes selector for variant-based products
-  const renderAttributesSelector = useCallback(() => {
-    if (!productAttributes || productAttributes.length === 0) {
-      return null;
-    }
-    
-    return (
-      <>
-        {productAttributes.map((attr: ProductAttribute) => {
-          // Skip if it's size or color (handled separately for legacy support)
-          if (attr.name === 'size' || attr.name === 'color') {
-            return null;
-          }
-          
-          if (attr.type === 'select' && attr.options && attr.options.length > 0) {
-            return (
-              <View key={attr.name} style={[styles.attributesContainer, { backgroundColor: Colors.cardBackground }]}>
-                <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>
-                  {attr.displayName || attr.name} {attr.required && '*'}
-                </Text>
-                <View style={[styles.sizesRow, I18nManager.isRTL && styles.sizesRowRTL]}>
-                  {attr.options.map((option: string, index: number) => {
-                    const isSelected = selectedAttributesState[attr.name] === option;
-                    return (
-                      <Pressable
-                        key={index}
-                        style={[
-                          styles.sizeBox,
-                          { 
-                            backgroundColor: Colors.cardBackground,
-                            borderColor: Colors.borderLight,
-                          },
-                          isSelected && {
-                            backgroundColor: Colors.primary,
-                            borderColor: Colors.primary,
-                          },
-                        ]}
-                        onPress={() => {
-                          setSelectedAttributesState(prev => ({ ...prev, [attr.name]: option }));
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.sizeText,
-                            { color: Colors.text.gray },
-                            isSelected && { color: Colors.text.white },
-                          ]}
-                        >
-                          {option}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            );
-          }
-          
-          return null;
-        })}
-      </>
-    );
-  }, [productAttributes, selectedAttributesState, Colors]);
-
+  const handleAttributeSelect = useCallback((attrName: string, value: string) => {
+    setSelectedAttributes(prev => ({ ...prev, [attrName]: value }));
+  }, []);
 
   // Show loading state while fetching product
   if (isLoading && !viewProduct) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={[styles.loadingText, { color: Colors.text.veryLightGray }]}>{i18n.t('loading') || 'Loading...'}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.surface }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text.veryLightGray }]}>
+          {i18n.t('loading') || 'Loading...'}
+        </Text>
       </View>
     );
   }
@@ -601,16 +327,22 @@ export default function Details() {
   // Show error state if fetch failed and no fallback data
   if (error && !viewProduct) {
     return (
-      <View style={[styles.errorContainer, { backgroundColor: Colors.surface }]}>
-        <Text style={[styles.errorText, { color: Colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+      <View style={[styles.errorContainer, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.errorText, { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
           {i18n.t('errorLoadingProduct') || 'Error loading product'}
         </Text>
-        <Text style={[styles.errorSubText, { color: Colors.text.veryLightGray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{error}</Text>
+        <Text style={[styles.errorSubText, { color: colors.text.veryLightGray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+          {error}
+        </Text>
         <Pressable
-          style={[styles.backButton, { backgroundColor: Colors.accent }]}
-          onPress={() => router.replace("/(screens)")}
+          style={[styles.backButton, { backgroundColor: colors.accent }]}
+          onPress={() => router.replace("/(tabs)")}
+          accessibilityLabel="Back to home"
+          accessibilityRole="button"
         >
-          <Text style={[styles.backButtonText, { color: Colors.text.white }]}>{i18n.t('backToHome') || 'Back to Home'}</Text>
+          <Text style={[styles.backButtonText, { color: colors.text.white }]}>
+            {i18n.t('backToHome') || 'Back to Home'}
+          </Text>
         </Pressable>
       </View>
     );
@@ -619,32 +351,27 @@ export default function Details() {
   // Early return for no product at all (no params either)
   if (!viewProduct || !viewProduct._id) {
     return (
-      <View style={[styles.errorContainer, { backgroundColor: Colors.surface }]}>
-        <Text style={[styles.errorText, { color: Colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+      <View style={[styles.errorContainer, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.errorText, { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
           {i18n.t('noProductAvailable') || 'No product available'}
         </Text>
         <Pressable
-          style={[styles.backButton, { backgroundColor: Colors.accent }]}
-          onPress={() => router.replace("/(screens)")}
+          style={[styles.backButton, { backgroundColor: colors.accent }]}
+          onPress={() => router.replace("/(tabs)")}
+          accessibilityLabel="Back to home"
+          accessibilityRole="button"
         >
-          <Text style={[styles.backButtonText, { color: Colors.text.white }]}>{i18n.t('backToHome') || 'Back to Home'}</Text>
+          <Text style={[styles.backButtonText, { color: colors.text.white }]}>
+            {i18n.t('backToHome') || 'Back to Home'}
+          </Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: Colors.surface }, I18nManager.isRTL && styles.headerRTL]}>
-        <Text style={[styles.brandName, { color: Colors.text.gray }]}>Nubian</Text>
-        <TouchableOpacity 
-          style={styles.cartIconButton}
-          onPress={() => router.push("/(tabs)/cart")}
-        >
-          <Ionicons name="bag-outline" size={24} color={Colors.text.gray} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <ProductHeader colors={colors} />
 
       <ScrollView
         style={styles.scrollView}
@@ -652,202 +379,111 @@ export default function Details() {
         bounces={false}
         removeClippedSubviews={true}
       >
-        {/* Image Section */}
-        <View style={styles.imageSection}>
-          <View style={styles.imageContainer}>
-            <FlatList
-              data={viewProduct.images}
-              keyExtractor={(item, index) => {
-                // Create a unique, stable key that handles duplicate URLs
-                // For product images, the list is static (from product data, doesn't reorder)
-                // So using index is safe and ensures uniqueness even with duplicate URLs
-                // Format: "url-index" ensures both uniqueness and stability for static lists
-                const url = item || `image-${index}`;
-                return `${url}-${index}`;
-              }}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              renderItem={renderImageItem}
-              ref={flatListRef}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig}
-              pagingEnabled
-              initialNumToRender={1}
-              getItemLayout={(_, index) => ({
-                length: screenWidth,
-                offset: screenWidth * index,
-                index,
-              })}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={3}
-              windowSize={5}
-            />
-            
-            {showDeferred ? renderPagination() : null}
-          </View>
-        </View>
+        <ProductImageCarousel
+          images={viewProduct.images}
+          colors={colors}
+          onImagePress={openImageModal}
+        />
 
-        {/* Product Details */}
-        <View style={[styles.productDetails, { backgroundColor: Colors.surface }]}>
+        <View style={[styles.productDetails, { backgroundColor: colors.surface }]}>
           {/* Product Name and Price */}
-          <View style={[styles.productInfoCard, { backgroundColor: Colors.cardBackground }]}>
-            <Text style={[styles.productName, { color: Colors.text.gray }]}>{viewProduct.name}</Text>
+          <View style={[styles.productInfoCard, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.productName, { color: colors.text.gray }]}>
+              {viewProduct.name}
+            </Text>
             <View style={styles.priceContainer}>
               {productHasDiscount && (
-                <Text style={[styles.originalPrice, { color: Colors.text.veryLightGray }]}>
+                <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
                   {formattedOriginalPrice}
                 </Text>
               )}
-              <Text style={[styles.price, { color: Colors.text.gray }]}>{formattedFinalPrice}</Text>
+              <Text style={[styles.price, { color: colors.text.gray }]}>
+                {formattedFinalPrice}
+              </Text>
             </View>
           </View>
 
           {/* Description */}
           {viewProduct.description && (
-            <View style={[styles.descriptionSection, { backgroundColor: Colors.cardBackground }]}>
-              <Text style={[styles.descriptionTitle, { color: Colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+            <View style={[styles.descriptionSection, { backgroundColor: colors.cardBackground }]}>
+              <Text style={[styles.descriptionTitle, { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
                 {i18n.t('description') || 'Description'}
               </Text>
-              <Text style={[styles.description, { color: Colors.text.veryLightGray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+              <Text style={[styles.description, { color: colors.text.veryLightGray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
                 {viewProduct.description}
               </Text>
             </View>
           )}
 
-          {/* Size Selector (legacy support) */}
-          {renderSizeSelector()}
-
-          {/* Color Selector (legacy support) */}
-          {renderColorSelector()}
-          
-          {/* Flexible Attributes Selector (for variant-based products) */}
-          {renderAttributesSelector()}
+          {/* Attributes Selector */}
+          <ProductAttributes
+            sizes={viewProduct.sizes}
+            colors={availableColors}
+            selectedSize={selectedSize}
+            selectedColor={selectedColor}
+            onSizeSelect={handleSizeSelect}
+            onColorSelect={handleColorSelect}
+            attributes={productAttributes}
+            selectedAttributes={selectedAttributes}
+            onAttributeSelect={handleAttributeSelect}
+            themeColors={colors}
+          />
           
           {/* Stock Display */}
-          {viewProduct && (
-            <View style={[styles.stockContainer, { backgroundColor: Colors.cardBackground }]}>
-              <Text style={[styles.stockText, { color: Colors.text.gray }]}>
-                {i18n.t('stock') || 'Stock'}: {currentStock > 0 ? (
-                  <Text style={{ color: Colors.primary, fontWeight: '600' }}>{currentStock}</Text>
-                ) : (
-                  <Text style={{ color: '#ff4444', fontWeight: '600' }}>{i18n.t('outOfStock') || 'Out of Stock'}</Text>
-                )}
-              </Text>
-            </View>
-          )}
+          <View style={[styles.stockContainer, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.stockText, { color: colors.text.gray }]}>
+              {i18n.t('stock') || 'Stock'}: {currentStock > 0 ? (
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>
+                  {currentStock}
+                </Text>
+              ) : (
+                <Text style={{ color: COLORS.ERROR_RED, fontWeight: '600' }}>
+                  {i18n.t('outOfStock') || 'Out of Stock'}
+                </Text>
+              )}
+            </Text>
+          </View>
 
           {/* Review Section (deferred) */}
-          {showDeferred ? <Review productId={viewProduct._id} /> : null}
+          {showDeferred && <Review productId={viewProduct._id} />}
 
           {/* Recommendation Sections */}
           {showDeferred && recommendations && (
-            <>
-              {/* Similar Items */}
-              {recommendations.similarItems && recommendations.similarItems.length > 0 && (
-                <RecommendationSection
-                  title={i18n.t('similarItems') || 'Similar Items'}
-                  products={recommendations.similarItems}
-                  colors={Colors}
-                  isLoading={isLoadingRecommendations}
-                  router={router}
-                />
-              )}
-
-              {/* Frequently Bought Together */}
-              {recommendations.frequentlyBoughtTogether && recommendations.frequentlyBoughtTogether.length > 0 && (
-                <RecommendationSection
-                  title={i18n.t('frequentlyBoughtTogether') || 'Frequently Bought Together'}
-                  products={recommendations.frequentlyBoughtTogether}
-                  colors={Colors}
-                  isLoading={isLoadingRecommendations}
-                  router={router}
-                />
-              )}
-
-              {/* You May Also Like */}
-              {recommendations.youMayAlsoLike && recommendations.youMayAlsoLike.length > 0 && (
-                <RecommendationSection
-                  title={i18n.t('youMayAlsoLike') || 'You May Also Like'}
-                  products={recommendations.youMayAlsoLike}
-                  colors={Colors}
-                  isLoading={isLoadingRecommendations}
-                  router={router}
-                />
-              )}
-
-              {/* Cheaper Alternatives */}
-              {recommendations.cheaperAlternatives && recommendations.cheaperAlternatives.length > 0 && (
-                <RecommendationSection
-                  title={i18n.t('cheaperAlternatives') || 'Cheaper Alternatives'}
-                  products={recommendations.cheaperAlternatives}
-                  colors={Colors}
-                  isLoading={isLoadingRecommendations}
-                  router={router}
-                />
-              )}
-
-              {/* From the Same Store */}
-              {recommendations.fromSameStore && recommendations.fromSameStore.length > 0 && (
-                <RecommendationSection
-                  title={i18n.t('fromSameStore') || 'From the Same Store'}
-                  products={recommendations.fromSameStore}
-                  colors={Colors}
-                  isLoading={isLoadingRecommendations}
-                  router={router}
-                />
-              )}
-            </>
+            <ProductRecommendations
+              recommendations={recommendations}
+              isLoading={isLoadingRecommendations ?? false}
+              colors={colors}
+            />
           )}
         </View>
       </ScrollView>
 
       {/* Fixed Bottom Buttons */}
-      <View style={[
-        styles.bottomContainer, 
-        { 
-          paddingBottom: Math.max(insets.bottom, 20),
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.borderLight,
-        }
-      ]}>
-        <View style={[styles.actionButtonsRow, I18nManager.isRTL && styles.actionButtonsRowRTL]}>
-          <View style={styles.addToCartButtonWrapper}>
-            <AddToCartButton
-              product={viewProduct}
-              selectedSize={selectedSize ?? ""}
-              selectedAttributes={selectedAttributes}
-              buttonStyle={[
-                styles.addToCartButton,
-                !isAvailable && styles.disabledButton,
-              ]}
-              disabled={!isAvailable}
-            />
-          </View>
-          <Pressable
-            style={[styles.wishlistButton, wishlistLoading && styles.wishlistButtonDisabled]}
-            onPress={handleWishlistPress}
-            disabled={wishlistLoading}
-          >
-            {wishlistLoading ? (
-              <ActivityIndicator size="small" color="#1a1a1a" />
-            ) : (
-              <Text style={styles.wishlistButtonText}>{i18n.t('wishlist') || 'Wishlist'}</Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
+      <ProductActions
+        product={viewProduct}
+        selectedSize={selectedSize}
+        selectedAttributes={selectedAttributes}
+        isAvailable={isAvailable}
+        wishlistLoading={wishlistLoading}
+        inWishlist={inWishlist}
+        onWishlistPress={handleWishlistPress}
+        themeColors={colors}
+      />
 
       {/* Full Screen Image Modal */}
       <Modal
         visible={modalVisible}
         transparent={true}
         onRequestClose={closeImageModal}
-        animationType="fade" // Faster animation
+        animationType="fade"
+        accessibilityViewIsModal={true}
       >
         <View style={styles.modalContainer}>
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={closeImageModal}
+            accessibilityLabel="Close image"
+            accessibilityRole="button"
           >
             <Text style={styles.modalCloseText}>✕</Text>
           </TouchableOpacity>
@@ -857,6 +493,7 @@ export default function Details() {
               style={styles.modalImage}
               contentFit="contain"
               cachePolicy="memory-disk"
+              accessibilityLabel="Product image"
             />
           )}
         </View>
@@ -864,34 +501,13 @@ export default function Details() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
-  },
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 16,
-  },
-  headerRTL: {
-    flexDirection: 'row-reverse',
-  },
-  brandName: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  cartIconButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -929,58 +545,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  
-  // Image Section
-  imageSection: {
-    position: 'relative',
-  },
-  imageContainer: {
-    height: imageHeight,
-    position: 'relative',
-  },
-  imageWrapper: {
-    width: screenWidth,
-    height: '100%',
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 0,
-  },
-  imageLoaderOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.6)'
-  },
-  pagination: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    width: 8,
-    height: 8,
-  },
-  
-  // Product Details
   productDetails: {
     paddingBottom: 120,
   },
@@ -1014,8 +578,6 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
-  
-  // Description
   descriptionSection: {
     paddingHorizontal: 20,
     paddingVertical: 20,
@@ -1025,98 +587,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 12,
   },
-  descriptionContainer: {
-    marginTop: 8,
-  },
   description: {
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 4,
   },
-  expandButton: {
-    marginTop: 8,
-  },
-  expandButtonText: {
-    color: "#30a1a7",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  
-  // Size Selector
-  sizesContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 16,
-    color: "#1a1a1a",
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
-  },
-  sizesRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  sizesRowRTL: {
-    flexDirection: 'row-reverse',
-  },
-  sizeBox: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  selectedSizeBox: {
-  },
-  sizeText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  selectedSizeText: {
-  },
-  
-  // Color Selector
-  colorsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  colorsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  colorsRowRTL: {
-    flexDirection: 'row-reverse',
-  },
-  colorSwatch: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 2,
-  },
-  selectedColorSwatch: {
-  },
-  colorCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-  },
-  
-  // Attributes Container
-  attributesContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  
-  // Stock Display
   stockContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -1127,55 +602,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
-  
-  // Bottom Container
-  bottomContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 12,
-    paddingTop: 16,
-    paddingBottom: 20,
-    borderTopWidth: 1,
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionButtonsRowRTL: {
-    flexDirection: 'row-reverse',
-  },
-  addToCartButtonWrapper: {
-    flex: 1,
-  },
-  addToCartButton: {
-    borderRadius: 8,
-    paddingVertical: 10,
-  },
-  disabledButton: {
-  },
-  wishlistButton: {
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    minWidth: 100,
-  },
-  wishlistButtonDisabled: {
-    opacity: 0.6,
-  },
-  wishlistButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  
-  // Modal
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
+    backgroundColor: COLORS.MODAL_BACKGROUND,
     justifyContent: 'center',
     alignItems: 'center',
   },

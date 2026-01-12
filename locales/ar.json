@@ -11,7 +11,7 @@
   "searchProducts": "ابحث عن منتج",
   "notifications": "الإشعارات",
   "hasStock": "متوفر",
-  
+  "stock": "المخزون",
   "notificationsPreferences": "تفضيلات الإشعارات",
   "notificationsPreferencesSubtitle": "اختر الإشعارات التي تريد تلقيها. سيقوم النظام تلقائياً بإرسال الإشعارات المناسبة لك.",
   "notificationsPreferencesTitle": "تفضيلات الإشعارات",
@@ -286,5 +286,21 @@
   "merchantAlerts": "تنبيهات التاجر",
   "storeUpdatesInventoryAlerts": "تحديثات المتجر، تنبيهات المخزون، وإشعارات التاجر",
   "saving": "جاري الحفظ...",
-  "systemAutoDetermine": "سيقوم النظام تلقائياً بتحديد ما إذا كنت تاجراً أو عميلاً وإرسال الإشعارات المناسبة."
+  "systemAutoDetermine": "سيقوم النظام تلقائياً بتحديد ما إذا كنت تاجراً أو عميلاً وإرسال الإشعارات المناسبة.",
+  "undefinedProduct": "منتج",
+  "noResults": "لا توجد نتائج",
+  "noProducts": "لا توجد منتجات",
+  "tryNewSearch": "جرب مصطلح بحث مختلف",
+  "noProductsFound": "لم يتم العثور على منتجات. جرب تعديل الفلاتر.",
+  "highestPrice": "أعلى سعر",
+  "lowestPrice": "أقل سعر",
+  "filterOptions": "خيارات التصفية",
+  "availableOnly": "المتاح فقط",
+  "sortByPrice": "ترتيب حسب السعر",
+  "recommended": "موصى به",
+  "filterByCategory": "تصفية حسب الفئة",
+  "category": "الفئة",
+  "allCategories": "جميع الفئات",
+  "clear": "مسح",
+  "applyFilters": "تطبيق الفلاتر"
 } 

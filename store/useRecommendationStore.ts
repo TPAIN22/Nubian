@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { HomeProduct, HomeRecommendations, ProductRecommendations } from '../app/_api/recommendations.api';
+import { HomeProduct, HomeRecommendations, ProductRecommendations } from '../api/recommendations.api';
 import {
   getHomeRecommendations,
   getProductRecommendations,
   getCartRecommendations,
-} from '../app/_api/recommendations.api';
+} from '../api/recommendations.api';
 
 interface RecommendationState {
   // Home recommendations

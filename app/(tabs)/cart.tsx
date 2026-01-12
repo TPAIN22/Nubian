@@ -24,6 +24,7 @@ import type { CouponValidationResult } from '../components/CouponInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
+import useTracking from "@/hooks/useTracking";
 
 export default function CartScreen() {
   const { theme } = useTheme();
@@ -34,6 +35,7 @@ export default function CartScreen() {
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [isProcessing] = useState(false);
   const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null);
+  const { trackEvent } = useTracking();
 
 
   /*const handlePresentModalPress = useCallback(() => {
@@ -84,8 +86,15 @@ export default function CartScreen() {
 
   const deleteItem = useCallback(async (item: any) => {
     const attributes = extractCartItemAttributes(item);
+    
+    // Track remove from cart
+    trackEvent('remove_from_cart', {
+      productId: item.product._id,
+      screen: 'cart',
+    });
+    
     await removeFromCart(item.product._id, attributes.size || '', attributes);
-  }, [removeFromCart]);
+  }, [removeFromCart, trackEvent]);
 
   const handleContinueShopping = () => {
     router.replace("/");

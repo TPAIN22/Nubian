@@ -21,6 +21,7 @@ import { useUser } from "@clerk/clerk-expo";
 import i18n from "@/utils/i18n";
 import { ScrollView } from "react-native-gesture-handler";
 import Colors from "@/locales/brandColors";
+import useTracking from "@/hooks/useTracking";
 
 type PaymentMethod = "cash" | "card";
 
@@ -41,6 +42,7 @@ export default function CheckOutModal({
   const { user } = useUser();
   const { createOrder } = useOrderStore();
   const { clearCart, cart } = useCartStore();
+  const { trackEvent } = useTracking();
   const [couponResult, setCouponResult] =
     useState<CouponValidationResult | null>(null);
 
@@ -144,7 +146,22 @@ export default function CheckOutModal({
       };
       
       if (token) {
-        await createOrder(orderPayload, token);
+        const order = await createOrder(orderPayload, token);
+        
+        // Track purchase event
+        if (cart?.products) {
+          const orderId = order?._id || order?.id || null;
+          cart.products.forEach((item) => {
+            trackEvent('purchase', {
+              productId: item.product._id,
+              orderId: orderId,
+              screen: 'checkout',
+              price: item.product.price || item.product.discountPrice || 0,
+              quantity: item.quantity,
+            });
+          });
+        }
+        
         await clearCart();
         Alert.alert("نجح", "تم تأكيد الطلب بنجاح!");
         handleClose();
