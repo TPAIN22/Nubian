@@ -13,6 +13,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import useOrderStore from "@/store/orderStore";
 import CouponInput, { CouponValidationResult } from "./CouponInput";
+import CouponRecommendations from "./CouponRecommendations";
 import { useAuth } from "@clerk/clerk-expo";
 import useCartStore from "@/store/useCartStore";
 import useAddressStore from "@/store/addressStore";
@@ -22,6 +23,7 @@ import i18n from "@/utils/i18n";
 import { ScrollView } from "react-native-gesture-handler";
 import Colors from "@/locales/brandColors";
 import useTracking from "@/hooks/useTracking";
+import { useColors } from "@/hooks/useColors";
 
 type PaymentMethod = "cash" | "card";
 
@@ -30,8 +32,7 @@ export default function CheckOutModal({
 }: {
   handleClose: () => void;
 }) {
-  const { theme } = useTheme();
-  const Colors = theme.colors;
+  const Colors = useColors();
   const {
     addresses,
     fetchAddresses,
@@ -156,7 +157,7 @@ export default function CheckOutModal({
               productId: item.product._id,
               orderId: orderId,
               screen: 'checkout',
-              price: item.product.price || item.product.discountPrice || 0,
+              price: item.product.finalPrice || item.product.discountPrice || item.product.price || 0,
               quantity: item.quantity,
             });
           });
@@ -308,7 +309,13 @@ export default function CheckOutModal({
             </View>
             <View style={styles.paymentContent}>
               <Text style={styles.paymentTitle}>التحويل البنكي</Text>
-              <Text style={styles.paymentDesc}>حول مبلغ {cart.totalPrice} وأرفق صورة الإيصال</Text>
+              <Text style={styles.paymentDesc}>
+                حول مبلغ {
+                  couponResult && couponResult.valid && couponResult.finalAmount
+                    ? couponResult.finalAmount.toFixed(2)
+                    : cart.totalPrice
+                } وأرفق صورة الإيصال
+              </Text>
               {paymentMethod === "card" && (
                 <View style={styles.paymentDetail}>
                   <Text style={styles.paymentDetail}>
@@ -355,6 +362,30 @@ export default function CheckOutModal({
           )}
         </View>
 
+        {/* Coupon Recommendations */}
+        {cart && cart.products && cart.products.length > 0 && cart.totalPrice > 0 && (
+          <CouponRecommendations
+            cartItems={cart.products}
+            orderAmount={cart.totalPrice || 0}
+            onCouponSelect={(coupon) => {
+              // Auto-fill the coupon input with selected recommendation
+              const validationResult: CouponValidationResult = {
+                code: coupon.code,
+                valid: true,
+                type: coupon.type,
+                value: coupon.value,
+                discountAmount: coupon.discountPreview?.discountAmount || 0,
+                originalAmount: coupon.discountPreview?.originalAmount || cart.totalPrice,
+                finalAmount: coupon.discountPreview?.finalAmount || cart.totalPrice,
+                minOrderAmount: coupon.minOrderAmount,
+                maxDiscount: coupon.maxDiscount,
+                message: 'Coupon selected from recommendations',
+              };
+              setCouponResult(validationResult);
+            }}
+          />
+        )}
+
         {/* Coupon Section */}
         {cart && cart.products && cart.products.length > 0 && (
           <CouponInput
@@ -363,6 +394,8 @@ export default function CheckOutModal({
               categoryId: item.product.category,
             }))}
             userId={user?.id || ""}
+            orderAmount={cart.totalPrice || 0}
+            cartItems={cart.products}
             onValidate={setCouponResult}
           />
         )}
@@ -371,18 +404,14 @@ export default function CheckOutModal({
         {couponResult && couponResult.valid && cart && cart.totalPrice && (
           <View style={styles.priceSection}>
             <Text style={styles.discountText}>
-              الخصم: {couponResult.discountValue}{" "}
-              {couponResult.discountType === "percentage" ? "%" : "ج.س"}
+              الخصم: {couponResult.discountAmount?.toFixed(2) || 0} ج.س
+              {couponResult.type === "percentage" && ` (${couponResult.value}%)`}
             </Text>
             <Text style={styles.totalText}>
               المجموع بعد الخصم:{" "}
-              {Math.max(
-                0,
-                cart.totalPrice -
-                  (couponResult.discountType === "percentage"
-                    ? (cart.totalPrice * couponResult.discountValue) / 100
-                    : couponResult.discountValue)
-              )}{" "}
+              {couponResult.finalAmount?.toFixed(2) || 
+                Math.max(0, (couponResult.originalAmount || cart.totalPrice) - (couponResult.discountAmount || 0))
+              }{" "}
               ج.س
             </Text>
           </View>

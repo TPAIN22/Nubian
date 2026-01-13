@@ -37,85 +37,7 @@ interface Product {
   discountPrice?: number;
 }
 
-const DEFAULT_IMAGE = "https://placehold.jp/3d4070/ffffff/150x150.png";
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = width / 2 - 20;
-
-// Product Card Component
-const ProductCard = React.memo(({ 
-  item, 
-  onPress, 
-  onAddToCart 
-}: {
-  item: Product;
-  onPress: () => void;
-  onAddToCart: (product: Product) => void;
-}) => {
-  const { theme } = useTheme();
-  const colors = theme.colors;
-
-  return (
-    <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
-      <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-        <View style={styles.cardImageContainer}>
-          <Image
-            source={{ uri: item.images?.[0] || DEFAULT_IMAGE }}
-            style={styles.cardImage}
-            contentFit="cover"
-            transition={200}
-          />
-          {(item.stock || 0) <= 5 && (item.stock || 0) > 0 && (
-            <View style={[styles.stockBadge, { backgroundColor: colors.warning }]}>
-              <Text style={styles.stockText}>
-                {i18n.t('remainingStock', { count: item.stock }) || `${item.stock} remaining`}
-              </Text>
-            </View>
-          )}
-          {(item.stock || 0) === 0 && (
-            <View style={[styles.outOfStockOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-              <Text style={styles.outOfStockText}>{i18n.t('outOfStock') || 'Out of Stock'}</Text>
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.cardInfo}>
-          <Text style={[styles.cardName, { color: colors.text.gray }]} numberOfLines={2}>
-            {String(item.name || (i18n.t('undefinedProduct') || 'Product'))}
-          </Text>
-          
-          <View style={styles.cardBottom}>
-            <View style={styles.priceContainer}>
-              <Text style={[styles.currency, { color: colors.text.mediumGray }]}>
-                {i18n.t('currency') || '$'}
-              </Text>
-              <Text style={[styles.price, { color: colors.primary }]}>
-                {typeof item.price === 'number' && !isNaN(item.price) ? item.price.toFixed(2) : '0.00'}
-              </Text>
-            </View>
-            
-            <TouchableOpacity 
-              style={[
-                styles.addButton,
-                { backgroundColor: colors.primary },
-                (item.stock || 0) === 0 && { backgroundColor: colors.gray?.[300] || '#CCCCCC' }
-              ]}
-              disabled={(item.stock || 0) === 0}
-              onPress={() => onAddToCart(item)}
-            >
-              <Ionicons 
-                name="add" 
-                size={18} 
-                color={(item.stock || 0) === 0 ? colors.text.lightGray : colors.text.white} 
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
-});
-
-ProductCard.displayName = 'ProductCard';
+import ProductCard from "../../components/ProductCard";
 
 const ProductsScreen = () => {
   const params = useLocalSearchParams<{ type: string }>();
@@ -309,9 +231,9 @@ const ProductsScreen = () => {
         navigateToProduct(item._id, item);
         setProduct(item);
       }}
-      onAddToCart={handleAddToCart}
+      showWishlist={false}
     />
-  ), [handleProductView, handleAddToCart, setProduct]);
+  ), [handleProductView, setProduct]);
 
   const keyExtractor = useCallback((item: Product | ExploreProduct) => item._id || Math.random().toString(), []);
 
@@ -766,87 +688,7 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: 'space-between',
-  },
-  cardContainer: {
-    width: CARD_WIDTH,
-    borderRadius: 16,
-    marginBottom: 16,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-  cardImageContainer: {
-    position: 'relative',
-    height: 180,
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  stockBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  stockText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  outOfStockOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  outOfStockText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cardInfo: {
-    padding: 12,
-  },
-  cardName: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    lineHeight: 20,
-    textAlign: 'right',
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  currency: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 3,
+    gap: 12,
   },
   emptyContainer: {
     flex: 1,

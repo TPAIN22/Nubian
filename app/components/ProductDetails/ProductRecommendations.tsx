@@ -79,6 +79,7 @@ const RecommendationSection = memo(({
                 });
                 navigateToProduct(item._id, item);
               }}
+              cardWidth={CARD_WIDTH}
             />
           </View>
         )}

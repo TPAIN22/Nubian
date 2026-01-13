@@ -7,6 +7,7 @@ import {
   ScrollView,
   I18nManager,
   Pressable,
+  useWindowDimensions,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useCallback, useEffect, useRef, useState, memo } from "react";
@@ -245,7 +246,10 @@ const ProductSection = memo(({
   onViewAll 
 }: ProductSectionProps) => {
   const { window } = useResponsive();
-  const cardWidth = window.width * 0.45;
+  const { width: screenWidth } = useWindowDimensions();
+  // Calculate responsive card width for horizontal scroll
+  // Use 45% of screen width for horizontal lists
+  const cardWidth = screenWidth * 0.45;
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   if (isLoading) {
@@ -301,6 +305,7 @@ const ProductSection = memo(({
               handlePresentModalPress={() =>
                 bottomSheetModalRef.current?.present()
               }
+              cardWidth={cardWidth}
             />
           </View>
         )}

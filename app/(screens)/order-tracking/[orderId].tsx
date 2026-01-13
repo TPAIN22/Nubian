@@ -18,6 +18,15 @@ interface Order {
   id: string | number;
   status: string;
   createdAt?: string;
+  totalAmount?: number;
+  finalAmount?: number;
+  discountAmount?: number;
+  couponDetails?: {
+    code: string;
+    type: string;
+    value: number;
+    discountAmount: number;
+  };
   productsDetails?: Array<{
     productId: string | null;
     name: string;
@@ -150,6 +159,27 @@ export default function OrderTracking() {
         </View>
       </View>
 
+      {/* Coupon Information */}
+      {order.couponDetails && order.couponDetails.code && (
+        <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
+          <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>معلومات الكوبون</Text>
+          <View style={styles.couponInfo}>
+            <Text style={[styles.couponLabel, { color: Colors.text.veryLightGray }]}>كود الكوبون:</Text>
+            <Text style={[styles.couponCode, { color: Colors.primary }]}>{order.couponDetails.code}</Text>
+          </View>
+          {order.discountAmount > 0 && (
+            <View style={styles.couponInfo}>
+              <Text style={[styles.couponLabel, { color: Colors.text.veryLightGray }]}>قيمة الخصم:</Text>
+              <Text style={[styles.discountValue, { color: Colors.success }]}>
+                {typeof order.discountAmount === 'number' && !isNaN(order.discountAmount) 
+                  ? order.discountAmount.toFixed(2) 
+                  : '0.00'} ج.س
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
         <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>تفاصيل المنتجات</Text>
         {order.productsDetails && order.productsDetails.length > 0 ? (
@@ -158,7 +188,7 @@ export default function OrderTracking() {
               <Text style={[styles.productName, { color: Colors.text.gray }]}>{item.name}</Text>
               <Text style={[styles.productQuantity, { color: Colors.text.veryLightGray }]}>الكمية: {item.quantity}</Text>
               <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
-                السعر: {typeof item.price === 'number' && !isNaN(item.price) ? item.price.toFixed(2) : '0.00'} ر.س
+                السعر: {typeof item.price === 'number' && !isNaN(item.price) ? item.price.toFixed(2) : '0.00'} ج.س
               </Text>
             </View>
           ))
@@ -166,6 +196,41 @@ export default function OrderTracking() {
           <Text style={[styles.noProductsText, { color: Colors.text.veryLightGray }]}>لا توجد منتجات في هذا الطلب.</Text>
         )}
       </View>
+
+      {/* Order Summary */}
+      {order.totalAmount && (
+        <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
+          <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>ملخص الطلب</Text>
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>المجموع الفرعي:</Text>
+            <Text style={[styles.summaryValue, { color: Colors.text.gray }]}>
+              {typeof order.totalAmount === 'number' && !isNaN(order.totalAmount) 
+                ? order.totalAmount.toFixed(2) 
+                : '0.00'} ج.س
+            </Text>
+          </View>
+          {order.discountAmount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>الخصم:</Text>
+              <Text style={[styles.summaryValue, { color: Colors.success }]}>
+                -{typeof order.discountAmount === 'number' && !isNaN(order.discountAmount) 
+                  ? order.discountAmount.toFixed(2) 
+                  : '0.00'} ج.س
+              </Text>
+            </View>
+          )}
+          <View style={[styles.summaryRow, styles.totalRow]}>
+            <Text style={[styles.summaryLabel, { color: Colors.text.gray, fontWeight: 'bold' }]}>المجموع الكلي:</Text>
+            <Text style={[styles.summaryValue, { color: Colors.primary, fontWeight: 'bold', fontSize: 18 }]}>
+              {typeof order.finalAmount === 'number' && !isNaN(order.finalAmount) 
+                ? order.finalAmount.toFixed(2) 
+                : (typeof order.totalAmount === 'number' && !isNaN(order.totalAmount) 
+                  ? order.totalAmount.toFixed(2) 
+                  : '0.00')} ج.س
+            </Text>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -304,5 +369,43 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     paddingVertical: 10,
+  },
+  couponInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  couponLabel: {
+    fontSize: 14,
+  },
+  couponCode: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+  },
+  discountValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  summaryLabel: {
+    fontSize: 14,
+  },
+  summaryValue: {
+    fontSize: 14,
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    marginTop: 8,
+    paddingTop: 12,
   },
 });

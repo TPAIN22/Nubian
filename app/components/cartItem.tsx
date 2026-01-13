@@ -1,4 +1,4 @@
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, I18nManager } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, I18nManager, useWindowDimensions } from "react-native";
 import { Text } from "@/components/ui/text";
 import React from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -17,10 +17,14 @@ import { navigateToProduct } from "@/utils/deepLinks";
 }: any) {
   const { theme } = useTheme();
   const Colors = theme.colors;
+  const { width: screenWidth } = useWindowDimensions();
   const PLACEHOLDER_IMAGE =
     "https://placehold.co/80x100/eeeeee/aaaaaa?text=No+Image";
 
   const imageSource = item?.product?.images?.[0] || PLACEHOLDER_IMAGE;
+  
+  // Responsive image size based on screen width
+  const imageSize = screenWidth < 360 ? 80 : screenWidth < 600 ? 100 : 120;
   
   // Extract attributes from cart item (handles both new and legacy formats)
   const attributes = extractCartItemAttributes(item);
@@ -38,7 +42,7 @@ import { navigateToProduct } from "@/utils/deepLinks";
       >
         <Image
           source={imageSource}
-          style={styles.productImage}
+          style={[styles.productImage, { width: imageSize, aspectRatio: 1 }]}
           contentFit="cover"
         />
       </TouchableOpacity>
@@ -51,7 +55,7 @@ import { navigateToProduct } from "@/utils/deepLinks";
             }
           }}
         >
-          <Text style={[styles.productName, { color: Colors.text.gray }]}>
+          <Text style={[styles.productName, { color: Colors.text.gray }]} numberOfLines={2}>
             {item?.product?.name || "Product Name"}
           </Text>
           {attributesText ? (
@@ -103,7 +107,7 @@ import { navigateToProduct } from "@/utils/deepLinks";
                       {formatPriceUtil(totalOriginalPrice)}
                     </Text>
                   )}
-                  <Text style={[styles.price, { color: Colors.success }]}>
+                  <Text style={[styles.price, { color: Colors.success }]} numberOfLines={1}>
                     {formatPriceUtil(totalFinalPrice)}
                   </Text>
                 </>
@@ -145,8 +149,6 @@ const styles = StyleSheet.create({
   },
 
   productImage: {
-    width: 100,
-    height: 120,
     borderRadius: 8,
   },
 
@@ -173,6 +175,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap", // Allow wrapping on very small screens
+    gap: 8,
   },
   quantity: {
     flexDirection: "row",
@@ -199,10 +203,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginLeft: 22,
+    flexShrink: 0, // Never shrink price container
+    minWidth: 80, // Ensure price is always visible
   },
   price: {
     fontSize: 14,
     fontWeight: "700",
+    flexShrink: 0, // Never shrink price text
   },
   originalPriceText: {
     fontSize: 12,

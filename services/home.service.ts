@@ -86,13 +86,17 @@ export class HomeService {
   }
 
   /**
-   * Get final price (discount price if available, otherwise regular price)
+   * Get final price (smart pricing: finalPrice > discountPrice > price)
    */
   static getFinalPrice(product: HomeProduct): number {
+    // Use smart pricing: finalPrice > discountPrice > price
+    if (product.finalPrice && product.finalPrice > 0) {
+      return product.finalPrice;
+    }
     if (product.discountPrice > 0 && product.discountPrice < product.price) {
       return product.discountPrice;
     }
-    return product.price;
+    return product.price || 0;
   }
 
   /**

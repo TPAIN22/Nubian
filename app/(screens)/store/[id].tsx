@@ -7,6 +7,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -20,8 +21,7 @@ import axiosInstance from '@/utils/axiosInstans';
 import { HomeProduct } from '@/api/home.api';
 import { navigateToProduct } from '@/utils/deepLinks';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.45;
+// Card width will be calculated responsively
 
 interface Store {
   _id: string;
@@ -43,6 +43,8 @@ export default function StoreScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  const CARD_WIDTH = screenWidth * 0.45;
   
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<HomeProduct[]>([]);
@@ -362,7 +364,7 @@ export default function StoreScreen() {
               contentContainerStyle={styles.productsGrid}
               columnWrapperStyle={styles.productsRow}
               renderItem={({ item }) => (
-                <View style={{ width: CARD_WIDTH, marginBottom: 16, marginHorizontal: 8 }}>
+                <View style={{ flex: 1, marginBottom: 16, marginHorizontal: 8 }}>
                   <Card
                     item={item}
                     handleSheetChanges={() => {}}

@@ -210,10 +210,32 @@ export default function Order() {
             </View>
           </View>
 
+          {/* Coupon Information */}
+          {order.couponDetails && order.couponDetails.code && (
+            <View style={[styles.couponSection, { borderTopColor: Colors.borderLight }]}>
+              <Text style={[styles.couponLabel, { color: Colors.text.gray }]}>كوبون الخصم:</Text>
+              <Text style={[styles.couponCode, { color: Colors.primary }]}>{order.couponDetails.code}</Text>
+              {order.discountAmount > 0 && (
+                <Text style={[styles.discountAmount, { color: Colors.success }]}>
+                  خصم: {formatCurrency(order.discountAmount)}
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* المجموع */}
           <View style={[styles.totalSection, { borderTopColor: Colors.borderLight }]}>
             <Text style={[styles.totalLabel, { color: Colors.text.gray }]}>المجموع الكلي:</Text>
-            <Text style={[styles.totalAmount, { color: Colors.success }]}>{formatCurrency(order.totalAmount)}</Text>
+            <Text style={[styles.totalAmount, { color: Colors.success }]}>
+              {formatCurrency(order.finalAmount || order.totalAmount)}
+            </Text>
+            {order.discountAmount > 0 && (
+              <View style={styles.originalTotal}>
+                <Text style={[styles.originalTotalText, { color: Colors.text.veryLightGray }]}>
+                  قبل الخصم: {formatCurrency(order.totalAmount)}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* التفاصيل الموسعة */}

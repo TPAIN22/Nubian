@@ -30,8 +30,12 @@ export interface ProductVariant {
   _id?: string;
   sku: string;
   attributes: Record<string, string>;
-  price: number;
-  discountPrice?: number;
+  price: number; // Legacy field - use merchantPrice if available
+  merchantPrice?: number; // Base price set by merchant
+  nubianMarkup?: number; // Base markup percentage (default 10%)
+  dynamicMarkup?: number; // Dynamic markup calculated by system (0-50%)
+  finalPrice?: number; // Calculated final price (merchantPrice + markups)
+  discountPrice?: number; // Legacy discount price
   stock: number;
   images?: string[];
   isActive: boolean;
@@ -44,8 +48,14 @@ export interface Product {
   _id: string;
   name: string;
   description?: string;
-  price?: number; // Optional for variant-based products
-  discountPrice?: number;
+  // Smart pricing fields
+  merchantPrice?: number; // Base price set by merchant
+  nubianMarkup?: number; // Base markup percentage (default 10%)
+  dynamicMarkup?: number; // Dynamic markup calculated by system (0-50%)
+  finalPrice?: number; // Calculated final price (merchantPrice + markups)
+  // Legacy pricing fields
+  price?: number; // Optional for variant-based products (maps to merchantPrice)
+  discountPrice?: number; // Legacy discount price
   images: string[];
   stock?: number; // Optional for variant-based products (calculated from variants)
   sizes?: string[]; // Legacy field
@@ -57,6 +67,21 @@ export interface Product {
   averageRating?: number;
   reviews?: string[];
   isActive?: boolean;
+  // Tracking fields (24-hour metrics)
+  trackingFields?: {
+    views24h?: number;
+    cartCount24h?: number;
+    sales24h?: number;
+    favoritesCount?: number;
+  };
+  // Ranking fields
+  rankingFields?: {
+    visibilityScore?: number;
+    priorityScore?: number;
+    featured?: boolean;
+    conversionRate?: number;
+    storeRating?: number;
+  };
   createdAt?: string;
   updatedAt?: string;
 }
