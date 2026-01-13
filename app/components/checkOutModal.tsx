@@ -24,6 +24,7 @@ import { ScrollView } from "react-native-gesture-handler";
 import Colors from "@/locales/brandColors";
 import useTracking from "@/hooks/useTracking";
 import { useColors } from "@/hooks/useColors";
+import { uploadImageToImageKit } from "@/utils/imageKitUpload";
 
 type PaymentMethod = "cash" | "card";
 
@@ -57,6 +58,7 @@ export default function CheckOutModal({
   // Payment method states
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [transferImage, setTransferImage] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     getToken().then((token) => fetchAddresses(token));
@@ -130,6 +132,8 @@ export default function CheckOutModal({
     }
 
     setIsLoading(true);
+    let uploadedImageUrl: string | null = null;
+
     try {
       const token = await getToken();
       const selectedAddress = addresses.find(
@@ -137,17 +141,38 @@ export default function CheckOutModal({
       );
       if (!selectedAddress) throw new Error("العنوان غير موجود");
       
+      // Upload payment proof image to ImageKit if provided
+      if (transferImage && paymentMethod === "card") {
+        try {
+          setUploadingImage(true);
+          uploadedImageUrl = await uploadImageToImageKit(transferImage);
+          console.log("Image uploaded to ImageKit:", uploadedImageUrl);
+        } catch (uploadError: any) {
+          console.error("Failed to upload image:", uploadError);
+          Alert.alert(
+            "خطأ في رفع الصورة",
+            uploadError.message || "فشل رفع صورة التحويل البنكي. يرجى المحاولة مرة أخرى."
+          );
+          setIsLoading(false);
+          setUploadingImage(false);
+          return;
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+      
       const orderPayload = {
         deliveryAddress: selectedAddress,
         paymentMethod: paymentMethod,
-        ...(transferImage && { transferProof: transferImage }),
+        ...(uploadedImageUrl && { transferProof: uploadedImageUrl }),
         ...(couponResult && couponResult.valid
           ? { couponCode: couponResult.code }
           : {}),
       };
       
       if (token) {
-        const order = await createOrder(orderPayload, token);
+        // Token is automatically added by axios interceptor
+        const order = await createOrder(orderPayload);
         
         // Track purchase event
         if (cart?.products) {
