@@ -6,8 +6,13 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import axiosInstance from "@/utils/axiosInstans";
-import type { Cart, AddToCartRequest, UpdateCartItemRequest, RemoveFromCartRequest } from "@/types/cart.types";
-import { mergeSizeAndAttributes, extractCartItemAttributes } from "@/utils/cartUtils";
+import type {
+  Cart,
+  AddToCartRequest,
+  UpdateCartItemRequest,
+  RemoveFromCartRequest,
+} from "@/types/cart.types";
+import { mergeSizeAndAttributes, normalizeAttributes } from "@/utils/cartUtils";
 
 interface CartStore {
   // State
@@ -20,23 +25,80 @@ interface CartStore {
   clearError: () => void;
   clearCart: () => void;
   fetchCart: () => Promise<void>;
+
   addToCart: (
     productId: string,
     quantity: number,
     size?: string,
     attributes?: Record<string, string>
   ) => Promise<void>;
+
   updateCartItemQuantity: (
     productId: string,
     quantity: number,
     size?: string,
     attributes?: Record<string, string>
   ) => Promise<void>;
+
   removeFromCart: (
     productId: string,
     size?: string,
     attributes?: Record<string, string>
   ) => Promise<void>;
+}
+
+function safeParseCartResponse(responseData: any): Cart | null {
+  // Backend returns { success: true, data: {...cart...} } OR cart object directly
+  const cartData =
+    responseData &&
+    typeof responseData === "object" &&
+    "data" in responseData
+      ? responseData.data
+      : responseData;
+
+  return cartData && typeof cartData === "object" ? (cartData as Cart) : null;
+}
+
+/**
+ * ✅ Build payload in one place to ensure:
+ * - attributes are normalized (lowercase keys, trimmed values)
+ * - size always matches attributes.size if present
+ * - don't send empty attributes / empty size
+ */
+function buildCartPayload(
+  input: {
+    productId: string;
+    quantity?: number;
+    size?: string;
+    attributes?: Record<string, string>;
+  },
+  mode: "add" | "update" | "remove"
+): AddToCartRequest | UpdateCartItemRequest | RemoveFromCartRequest {
+  const rawMerged = mergeSizeAndAttributes(input.size ?? "", input.attributes ?? {});
+  const mergedAttributes = normalizeAttributes(rawMerged); // ✅ مهم جداً
+
+  // ✅ prefer size from attributes (source of truth)
+  const resolvedSize = mergedAttributes.size ?? "";
+
+  // ✅ do not keep duplicate / conflicting size keys
+  // (normalizeAttributes already lowercases, but just in case)
+  if (resolvedSize) mergedAttributes.size = resolvedSize;
+
+  const base: any = {
+    productId: input.productId,
+  };
+
+  if (mode !== "remove") {
+    base.quantity = input.quantity ?? 1;
+  }
+
+  // send size only if present
+  if (resolvedSize) base.size = resolvedSize;
+
+  // send attributes only if not empty
+  if (Object.keys(mergedAttributes).length > 0) base.attributes = mergedAttributes;
+
+  return base;
 }
 
 // Create store with selector middleware for performance
@@ -58,98 +120,83 @@ const useCartStore = create<CartStore>()(
     fetchCart: async () => {
       if (get().isLoading) return;
       set({ isLoading: true, error: null });
+
       try {
         const response = await axiosInstance.get("/carts");
-        // Backend returns { success: true, data: {...cart...} }
-        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
-        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
-          ? responseData.data 
-          : (responseData as Cart);
         set({
-          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
+          cart: safeParseCartResponse(response.data),
           isLoading: false,
         });
       } catch (error: any) {
-        // Handle 404 (cart not found) as empty cart, not an error
+        // Handle 404 as empty cart
         if (error.response?.status === 404) {
-          const errorMessage = error.response?.data?.message || error.response?.data?.error?.message || '';
-          const errorCode = error.response?.data?.error?.code || '';
+          const errorMessage =
+            error.response?.data?.message ||
+            error.response?.data?.error?.message ||
+            "";
+          const errorCode = error.response?.data?.error?.code || "";
 
-          // Treat any 404 as empty cart (normal case for new users or when cart doesn't exist)
-          // This handles: "Cart not found", "Resource not found", or any other 404
-          // Only exception is if it's explicitly a user/auth issue
-          if (errorMessage.includes("User not found") || errorCode === 'UNAUTHORIZED') {
+          if (errorMessage.includes("User not found") || errorCode === "UNAUTHORIZED") {
             const errorMsg = "خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.";
-            set({
-              cart: null,
-              error: errorMsg,
-              isLoading: false,
-            });
+            set({ cart: null, error: errorMsg, isLoading: false });
             throw error;
           }
-          
-          // For all other 404s (including "Resource not found", "Cart not found"), treat as empty cart
-          set({
-            cart: null,
-            error: null,
-            isLoading: false,
-          });
+
+          set({ cart: null, error: null, isLoading: false });
           return;
         }
-        // For other errors, set error message
-        const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء جلب السلة.";
-        set({
-          cart: null,
-          error: errorMessage,
-          isLoading: false,
-        });
+
+        const errorMessage =
+          error.response?.data?.message ||
+          error?.message ||
+          "حدث خطأ أثناء جلب السلة.";
+
+        set({ cart: null, error: errorMessage, isLoading: false });
         throw error;
       }
     },
 
     // Add product to cart
-    addToCart: async (productId: string, quantity: number, size: string = '', attributes?: Record<string, string>) => {
+    addToCart: async (
+      productId: string,
+      quantity: number,
+      size: string = "",
+      attributes?: Record<string, string>
+    ) => {
       if (get().isUpdating) return;
       set({ isUpdating: true, error: null });
-      try {
-        // Merge size and attributes for backward compatibility
-        const mergedAttributes = mergeSizeAndAttributes(size, attributes);
 
-        const payload: AddToCartRequest = {
-          productId,
-          quantity,
-          ...(size ? { size } : {}),
-          ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
-        };
+      try {
+        const payload = buildCartPayload(
+          { productId, quantity, size, attributes: attributes ?? {} as Record<string, string> },
+          "add"
+        ) as AddToCartRequest;
 
         const response = await axiosInstance.post("/carts/add", payload);
-        // Backend returns { success: true, data: {...cart...} }
-        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
-        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
-          ? responseData.data 
-          : (responseData as Cart);
+
         set({
-          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
+          cart: safeParseCartResponse(response.data),
           isUpdating: false,
         });
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء إضافة المنتج للسلة.";
-        set({
-          error: errorMessage,
-          isUpdating: false,
-        });
+        const errorMessage =
+          error.response?.data?.message ||
+          error?.message ||
+          "حدث خطأ أثناء إضافة المنتج للسلة.";
+
+        set({ error: errorMessage, isUpdating: false });
         throw error;
       }
     },
 
-    // Update cart item quantity
+    // Update cart item quantity (delta or absolute depending on backend)
     updateCartItemQuantity: async (
       productId: string,
       quantity: number,
-      size: string = '',
+      size: string = "",
       attributes?: Record<string, string>
     ) => {
-      if (typeof quantity !== 'number' || quantity === 0) {
+      if (typeof quantity !== "number" || quantity === 0) {
         set({ error: "قيمة الكمية غير صحيحة." });
         return;
       }
@@ -157,83 +204,73 @@ const useCartStore = create<CartStore>()(
       set({ isUpdating: true, error: null });
 
       try {
-        // Merge size and attributes for backward compatibility
-        const mergedAttributes = mergeSizeAndAttributes(size, attributes);
-
-        const payload: UpdateCartItemRequest = {
-          productId,
-          quantity,
-          ...(size ? { size } : {}),
-          ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
-        };
+        const payload = buildCartPayload(
+          { productId, quantity, size, attributes: attributes ?? {} },
+          "update"
+        ) as UpdateCartItemRequest;
 
         const response = await axiosInstance.put("/carts/update", payload);
-        // Backend returns { success: true, data: {...cart...} }
-        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
-        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
-          ? responseData.data 
-          : (responseData as Cart);
+
         set({
-          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
+          cart: safeParseCartResponse(response.data),
           isUpdating: false,
         });
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء تحديث السلة.";
-        set({
-          error: errorMessage,
-          isUpdating: false,
-        });
+        const errorMessage =
+          error.response?.data?.message ||
+          error?.message ||
+          "حدث خطأ أثناء تحديث السلة.";
+
+        set({ error: errorMessage, isUpdating: false });
         throw error;
       }
     },
 
     // Remove from cart
-    removeFromCart: async (productId: string, size: string = '', attributes?: Record<string, string>) => {
+    removeFromCart: async (
+      productId: string,
+      size: string = "",
+      attributes?: Record<string, string>
+    ) => {
       if (get().isUpdating) return;
       set({ isUpdating: true, error: null });
 
       try {
-        // Merge size and attributes for backward compatibility
-        const mergedAttributes = mergeSizeAndAttributes(size, attributes);
-
-        const payload: RemoveFromCartRequest = {
-          productId,
-          ...(size ? { size } : {}),
-          ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
-        };
+        const payload = buildCartPayload(
+          { productId, size, attributes: attributes ?? {} },
+          "remove"
+        ) as RemoveFromCartRequest;
 
         const response = await axiosInstance.delete("/carts/remove", { data: payload });
-        // Backend returns { success: true, data: {...cart...} }
-        const responseData = response.data as { success?: boolean; data?: Cart } | Cart;
-        const cartData = (responseData && typeof responseData === 'object' && 'data' in responseData) 
-          ? responseData.data 
-          : (responseData as Cart);
+
         set({
-          cart: cartData && typeof cartData === 'object' ? (cartData as Cart) : null,
+          cart: safeParseCartResponse(response.data),
           isUpdating: false,
         });
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || error?.message || "حدث خطأ أثناء حذف المنتج من السلة.";
-        set({
-          error: errorMessage,
-          isUpdating: false,
-        });
+        const errorMessage =
+          error.response?.data?.message ||
+          error?.message ||
+          "حدث خطأ أثناء حذف المنتج من السلة.";
+
+        set({ error: errorMessage, isUpdating: false });
         throw error;
       }
     },
   }))
 );
 
-// Optimized selectors to prevent unnecessary re-renders
+// Optimized selectors
 export const useCartItems = () => useCartStore((state) => state.cart?.products || []);
 export const useCartTotal = () => useCartStore((state) => state.cart?.totalPrice || 0);
 export const useCartQuantity = () => useCartStore((state) => state.cart?.totalQuantity || 0);
 export const useCartLoading = () => useCartStore((state) => state.isLoading);
 export const useCartUpdating = () => useCartStore((state) => state.isUpdating);
 export const useCartError = () => useCartStore((state) => state.error);
-export const useIsCartEmpty = () => useCartStore((state) => {
-  const cart = state.cart;
-  return !cart?.products || cart.products.length === 0;
-});
+export const useIsCartEmpty = () =>
+  useCartStore((state) => {
+    const cart = state.cart;
+    return !cart?.products || cart.products.length === 0;
+  });
 
 export default useCartStore;

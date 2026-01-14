@@ -1,60 +1,62 @@
 /**
  * Cart Utility Functions
- * Provides reusable functions for cart operations, attribute handling, and validation
+ * Reusable functions for cart operations, attribute handling, and validation
  */
 
-import {
-  Product,
+import type {
   ProductAttribute,
-  ProductVariant,
-  SelectedAttributes,
   AttributeValidationResult,
-} from '@/types/cart.types';
+} from "@/types/cart.types";
+import type { Product, ProductVariant, SelectedAttributes } from "@/types/cart.types";
+
+
+/** Normalize attribute key: trim + lowercase */
+function normalizeKey(key: any): string {
+  return String(key ?? "").trim().toLowerCase();
+}
 
 /**
  * Normalizes attribute values to ensure consistency
  * Handles null, undefined, empty strings, and string "null"/"undefined"
  */
 export function normalizeAttributeValue(value: any): string {
-  if (value === null || value === undefined) {
-    return '';
-  }
+  if (value === null || value === undefined) return "";
   const stringValue = String(value).trim();
   const lowerValue = stringValue.toLowerCase();
-  if (lowerValue === 'null' || lowerValue === 'undefined' || lowerValue === '') {
-    return '';
-  }
+  if (lowerValue === "null" || lowerValue === "undefined" || lowerValue === "") return "";
   return stringValue;
 }
 
 /**
  * Normalizes an attributes object by normalizing all values
+ * Also normalizes keys to lowercase to avoid Color vs color issues.
  */
 export function normalizeAttributes(attributes: SelectedAttributes | undefined | null): SelectedAttributes {
-  if (!attributes || typeof attributes !== 'object') {
-    return {};
-  }
+  if (!attributes || typeof attributes !== "object") return {};
 
   const normalized: SelectedAttributes = {};
-  for (const [key, value] of Object.entries(attributes)) {
-    const normalizedValue = normalizeAttributeValue(value);
-    // Only include non-empty attributes
-    if (normalizedValue !== '') {
-      normalized[key] = normalizedValue;
-    }
+  for (const [rawKey, rawVal] of Object.entries(attributes)) {
+    const key = normalizeKey(rawKey);
+    const val = normalizeAttributeValue(rawVal);
+
+    if (key && val !== "") normalized[key] = val;
   }
+
+  // ✅ unify common legacy keys (Color -> color)
+  if ((normalized as any).color === undefined && (normalized as any).Color) {
+    (normalized as any).color = (normalized as any).Color;
+    delete (normalized as any).Color;
+  }
+
   return normalized;
 }
 
 /**
  * Converts legacy size field to attributes format
- * Maintains backward compatibility
  */
 export function sizeToAttributes(size: string | undefined | null): SelectedAttributes {
   const normalizedSize = normalizeAttributeValue(size);
-  if (normalizedSize === '') {
-    return {};
-  }
+  if (normalizedSize === "") return {};
   return { size: normalizedSize };
 }
 
@@ -69,8 +71,7 @@ export function mergeSizeAndAttributes(
   const normalizedAttrs = normalizeAttributes(attributes);
   const normalizedSize = normalizeAttributeValue(size);
 
-  // If size is provided and not already in attributes, add it
-  if (normalizedSize !== '' && !normalizedAttrs.size) {
+  if (normalizedSize !== "" && !normalizedAttrs.size) {
     normalizedAttrs.size = normalizedSize;
   }
 
@@ -79,24 +80,14 @@ export function mergeSizeAndAttributes(
 
 /**
  * Generates a unique key for a cart item based on product ID and attributes
- * Used to identify if two cart items are the same (same product + same attributes)
  */
 export function generateCartItemKey(productId: string, attributes: SelectedAttributes | undefined | null): string {
-  if (!productId) {
-    throw new Error('Product ID is required');
-  }
+  if (!productId) throw new Error("Product ID is required");
 
   const normalizedAttrs = normalizeAttributes(attributes);
-
-  // Sort attribute keys for consistent hashing
   const sortedKeys = Object.keys(normalizedAttrs).sort();
+  const attrString = sortedKeys.map((k) => `${k}:${normalizedAttrs[k]}`).join("|");
 
-  // Create a string representation: "key1:value1|key2:value2|..."
-  const attrString = sortedKeys
-    .map(key => `${key}:${normalizedAttrs[key]}`)
-    .join('|');
-
-  // Return key in format: "productId|attr1:val1|attr2:val2"
   return attrString ? `${productId}|${attrString}` : productId;
 }
 
@@ -107,17 +98,14 @@ export function areAttributesEqual(
   attrs1: SelectedAttributes | undefined | null,
   attrs2: SelectedAttributes | undefined | null
 ): boolean {
-  const normalized1 = normalizeAttributes(attrs1);
-  const normalized2 = normalizeAttributes(attrs2);
+  const a = normalizeAttributes(attrs1);
+  const b = normalizeAttributes(attrs2);
 
-  const keys1 = Object.keys(normalized1).sort();
-  const keys2 = Object.keys(normalized2).sort();
+  const keysA = Object.keys(a).sort();
+  const keysB = Object.keys(b).sort();
+  if (keysA.length !== keysB.length) return false;
 
-  if (keys1.length !== keys2.length) {
-    return false;
-  }
-
-  return keys1.every(key => normalized1[key] === normalized2[key]);
+  return keysA.every((k) => a[k] === b[k]);
 }
 
 /**
@@ -127,27 +115,26 @@ export function validateRequiredAttributes(
   productAttributes: ProductAttribute[] | undefined | null,
   selectedAttributes: SelectedAttributes | undefined | null
 ): AttributeValidationResult {
-  if (!productAttributes || !Array.isArray(productAttributes)) {
-    return { valid: true, missing: [] };
-  }
+  if (!productAttributes || !Array.isArray(productAttributes)) return { valid: true, missing: [] };
 
-  const normalizedSelected = normalizeAttributes(selectedAttributes);
-  const required = productAttributes.filter(attr => attr.required === true);
-  const missing = required.filter(
-    attr => !normalizedSelected[attr.name] || normalizedSelected[attr.name].trim() === ''
-  );
+  const selected = normalizeAttributes(selectedAttributes);
+  const required = productAttributes.filter((a) => a.required === true);
+
+  const missing = required.filter((a) => {
+    const key = normalizeKey(a.name);
+    return !selected[key] || selected[key].trim() === "";
+  });
 
   return {
     valid: missing.length === 0,
-    missing: missing.map(attr => attr.displayName || attr.name),
+    missing: missing.map((a) => a.displayName || a.name),
   };
 }
 
 /**
  * Gets all available attributes for a product
- * Returns both legacy (sizes, colors) and new flexible attributes
  */
-export function getProductAttributes(product: Product): {
+export function getProductAttributes(product: Product): { 
   sizes?: string[];
   colors?: string[];
   attributes?: ProductAttribute[];
@@ -159,146 +146,143 @@ export function getProductAttributes(product: Product): {
   };
 }
 
-/**
- * Checks if a product has any selectable attributes
- */
 export function hasSelectableAttributes(product: Product): boolean {
   const attrs = getProductAttributes(product);
   return !!(attrs.sizes || attrs.colors || attrs.attributes);
 }
 
 /**
- * Gets the display text for a cart item's attributes
- * Useful for showing attribute summary in cart UI
+ * Gets display text for attributes
  */
 export function getAttributesDisplayText(attributes: SelectedAttributes | undefined | null): string {
   const normalized = normalizeAttributes(attributes);
-  if (Object.keys(normalized).length === 0) {
-    return '';
-  }
+  if (Object.keys(normalized).length === 0) return "";
 
   return Object.entries(normalized)
-    .map(([key, value]) => {
-      // Capitalize first letter of key
-      const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
-      return `${displayKey}: ${value}`;
-    })
-    .join(', ');
+    .map(([k, v]) => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}`)
+    .join(", ");
 }
 
 /**
  * Extracts attributes from a cart item
- * Handles both new Map format (from backend) and legacy size field
+ * Handles Map (mongoose), object, or legacy size field.
  */
 export function extractCartItemAttributes(item: {
   size?: string;
   attributes?: SelectedAttributes | Map<string, string>;
 }): SelectedAttributes {
-  // If attributes is a Map (from Mongoose), convert it
-  if (item.attributes instanceof Map) {
+  // Map → object
+  if (item?.attributes instanceof Map) {
     const obj: SelectedAttributes = {};
-    for (const [key, value] of item.attributes.entries()) {
-      obj[key] = value;
-    }
+    for (const [k, v] of item.attributes.entries()) obj[normalizeKey(k)] = normalizeAttributeValue(v);
     return normalizeAttributes(obj);
   }
 
-  // If attributes is already an object
-  if (item.attributes && typeof item.attributes === 'object' && !(item.attributes instanceof Map)) {
+  // object
+  if (item?.attributes && typeof item.attributes === "object" && !(item.attributes instanceof Map)) {
     return normalizeAttributes(item.attributes as SelectedAttributes);
   }
 
-  // Fall back to legacy size field
-  if (item.size) {
-    return sizeToAttributes(item.size);
-  }
+  // legacy size
+  if (item?.size) return sizeToAttributes(item.size);
 
   return {};
 }
 
-/**
- * Finds a matching variant for a product based on selected attributes
- */
+/** Normalize variant attributes (Map | object) into {lowerKey: value} */
+function normalizeVariantAttributes(variant: ProductVariant): Record<string, string> {
+  const attrsRaw: any =
+    variant?.attributes instanceof Map
+      ? Object.fromEntries(variant.attributes.entries())
+      : (variant?.attributes ?? {});
+
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(attrsRaw)) {
+    const key = normalizeKey(k);
+    const val = normalizeAttributeValue(v);
+    if (key && val) out[key] = val;
+  }
+
+  // unify Color
+  if (out.color === undefined && (out as any).Color) {
+    out.color = (out as any).Color;
+    delete (out as any).Color;
+  }
+
+  return out;
+}
+
+
+import { normalizeSelectedAttributes } from "@/utils/productUtils";
+
+const safeStr = (v: any) => (v === null || v === undefined ? "" : String(v).trim());
+
 export function findMatchingVariant(
   product: Product,
   selectedAttributes: SelectedAttributes | undefined | null
 ): ProductVariant | null {
-  if (!product.variants || product.variants.length === 0) {
-    return null;
-  }
+  if (!product?.variants?.length) return null;
 
-  const normalizedAttrs = normalizeAttributes(selectedAttributes);
+  const sel = normalizeSelectedAttributes(selectedAttributes);
+  const selKeys = Object.keys(sel);
 
-  // Find variant that matches all selected attributes
-  return product.variants.find(variant => {
-    const variantAttrs = variant.attributes instanceof Map
-      ? Object.fromEntries(variant.attributes)
-      : variant.attributes;
+  // لو مافي أي اختيار، ما ترجع null في الـ details (خليها null عشان الزر يطلب اختيار)
+  if (selKeys.length === 0) return null;
 
-    // Check if all selected attributes match variant attributes
-    const allMatch = Object.keys(normalizedAttrs).every(key => {
-      const variantValue = variantAttrs[key];
-      return variantValue && variantValue === normalizedAttrs[key];
+  for (const variant of product.variants) {
+    const vAttrs =
+      variant.attributes instanceof Map
+        ? Object.fromEntries(variant.attributes.entries())
+        : (variant.attributes as any) || {};
+
+    const normalizedVariantAttrs: Record<string, string> = {};
+    Object.entries(vAttrs).forEach(([k, v]) => {
+      const kk = safeStr(k);
+      const vv = safeStr(v);
+      if (kk && vv) normalizedVariantAttrs[kk] = vv;
     });
 
-    // Also check that variant has no extra required attributes that aren't selected
-    const variantKeys = Object.keys(variantAttrs);
-    const selectedKeys = Object.keys(normalizedAttrs);
-    
-    // For variant to match, all variant attribute keys should be in selected attributes
-    // (unless the product has optional attributes)
-    return allMatch && variantKeys.every(key => selectedKeys.includes(key));
-  }) || null;
+    const vKeys = Object.keys(normalizedVariantAttrs);
+
+    // شرط 1: كل المفاتيح في variant لازم تكون موجودة في selection (عشان combo يكون كامل)
+    const keysOk = vKeys.every((k) => selKeys.includes(k));
+    if (!keysOk) continue;
+
+    // شرط 2: كل قيم selection لازم تطابق variant
+    const valuesOk = selKeys.every((k) => {
+      // لو المستخدم مختار key مش موجود في variant → mismatch
+      if (!(k in normalizedVariantAttrs)) return false;
+      return safeStr(normalizedVariantAttrs[k]) === safeStr(sel[k]);
+    });
+    if (!valuesOk) continue;
+
+    return variant;
+  }
+
+  return null;
 }
 
-/**
- * Gets the stock for a product, considering variants if applicable
- */
-export function getProductStock(
-  product: Product,
-  selectedAttributes: SelectedAttributes | undefined | null
-): number {
-  // If product has variants, find matching variant and return its stock
-  if (product.variants && product.variants.length > 0) {
-    const variant = findMatchingVariant(product, selectedAttributes);
-    if (variant) {
-      return variant.stock || 0;
-    }
-    // If no matching variant found, return 0 (variant not available)
-    return 0;
+export function getProductStock(product: Product, selectedAttributes: SelectedAttributes | undefined | null): number {
+  if (product?.variants?.length) {
+    const v = findMatchingVariant(product, selectedAttributes);
+    return v ? (v.stock || 0) : 0;
   }
-
-  // For simple products, return product stock
-  return product.stock || 0;
+  return product?.stock || 0;
 }
 
-/**
- * Checks if a product/variant is available (has stock and is active)
- */
-export function isProductAvailable(
-  product: Product,
-  selectedAttributes: SelectedAttributes | undefined | null
-): boolean {
-  // If isActive is explicitly false, product is not available
-  // If isActive is undefined/null, assume it's active (backward compatibility)
-  if (product.isActive === false) {
-    return false;
+export function isProductAvailable(product: Product, selectedAttributes: SelectedAttributes | undefined | null): boolean {
+  if (!product) return false;
+  if (product.isActive === false) return false;
+
+  // variant product
+  if (product?.variants?.length) {
+    const v = findMatchingVariant(product, selectedAttributes);
+    if (!v) return false;            // لازم combo صحيح
+    if (v.isActive === false) return false;
+    return (v.stock || 0) > 0;
   }
 
-  // For variant products, check variant availability
-  if (product.variants && product.variants.length > 0) {
-    const variant = findMatchingVariant(product, selectedAttributes);
-    if (!variant) {
-      return false; // No matching variant
-    }
-    // If variant.isActive is explicitly false, it's not available
-    // If undefined/null, assume it's active (backward compatibility)
-    if (variant.isActive === false) {
-      return false;
-    }
-    return (variant.stock || 0) > 0;
-  }
-
-  // For simple products, check product stock
+  // simple product
   return (product.stock || 0) > 0;
 }
+

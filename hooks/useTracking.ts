@@ -1,13 +1,13 @@
-import { useCallback } from 'react';
-import { useAuth } from '@clerk/clerk-expo';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
-import axiosInstance from '@/utils/axiosInstans';
+import { useCallback } from "react";
+import { useAuth } from "@clerk/clerk-expo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+import axiosInstance from "@/utils/axiosInstans";
 
-const SESSION_ID_KEY = 'tracking_session_id';
+const SESSION_ID_KEY = "tracking_session_id";
 const SESSION_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 
-interface TrackingPayload {
+export interface TrackingPayload {
   productId?: string;
   categoryId?: string;
   storeId?: string;
@@ -24,127 +24,108 @@ interface TrackingPayload {
   [key: string]: any;
 }
 
-/**
- * Get or create a session ID for tracking
- */
+type StoredSession = {
+  sessionId: string;
+  timestamp: number;
+};
+
+/** Get or create a session ID for tracking */
 const getSessionId = async (): Promise<string> => {
   try {
     const stored = await AsyncStorage.getItem(SESSION_ID_KEY);
     if (stored) {
-      const { sessionId, timestamp } = JSON.parse(stored);
-      // Check if session is still valid (30 minutes)
-      if (Date.now() - timestamp < SESSION_EXPIRY_MS) {
-        return sessionId;
+      const parsed: StoredSession = JSON.parse(stored);
+      if (parsed?.sessionId && parsed?.timestamp) {
+        // session valid؟
+        if (Date.now() - parsed.timestamp < SESSION_EXPIRY_MS) {
+          return parsed.sessionId;
+        }
       }
     }
-    // Create new session ID
-    const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    await AsyncStorage.setItem(SESSION_ID_KEY, JSON.stringify({
-      sessionId: newSessionId,
-      timestamp: Date.now(),
-    }));
+
+    const newSessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    const toStore: StoredSession = { sessionId: newSessionId, timestamp: Date.now() };
+    await AsyncStorage.setItem(SESSION_ID_KEY, JSON.stringify(toStore));
     return newSessionId;
-  } catch (error) {
-    // Fallback to in-memory session ID if storage fails
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  } catch {
+    // fallback: no storage
+    return `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 };
 
-/**
- * Get device information
- */
 const getDeviceInfo = (): string => {
-  return Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
+  if (Platform.OS === "ios") return "ios";
+  if (Platform.OS === "android") return "android";
+  return "web";
 };
 
-/**
- * Hook for tracking user events
- */
 export const useTracking = () => {
-  const { userId, getToken } = useAuth();
+  const { userId } = useAuth();
 
-  /**
-   * Track an event
-   */
-  const trackEvent = useCallback(async (
-    eventName: string,
-    payload: TrackingPayload = {}
-  ) => {
-    try {
-      const sessionId = await getSessionId();
-      const device = getDeviceInfo();
-      
-      // Determine screen name from payload or use default
-      const screen = payload.screen || 'unknown';
+  const trackEvent = useCallback(
+    async (eventName: string, payload: TrackingPayload = {}) => {
+      try {
+        const sessionId = await getSessionId();
+        const device = getDeviceInfo();
+        const screen = payload.screen || "unknown";
 
-      const eventData = {
-        event: eventName,
-        userId: userId || null,
-        sessionId,
-        productId: payload.productId || null,
-        categoryId: payload.categoryId || null,
-        storeId: payload.storeId || null,
-        searchQuery: payload.searchQuery || null,
-        screen,
-        timestamp: new Date().toISOString(),
-        device,
-        ...payload,
-      };
+        const eventData = {
+          event: eventName,
+          userId: userId || null,
+          sessionId,
+          productId: payload.productId || null,
+          categoryId: payload.categoryId || null,
+          storeId: payload.storeId || null,
+          searchQuery: payload.searchQuery || null,
+          screen,
+          timestamp: new Date().toISOString(),
+          device,
+          ...payload,
+        };
 
-      // Remove undefined values
-      const cleanEventData = Object.fromEntries(
-        Object.entries(eventData).filter(([_, value]) => value !== undefined)
-      );
+        // remove undefined values (keep nulls)
+        const cleanEventData = Object.fromEntries(
+          Object.entries(eventData).filter(([, value]) => value !== undefined)
+        );
 
-      // Fire and forget - don't block UI
-      axiosInstance.post('/tracking/event', cleanEventData).catch((error) => {
-        // Silently fail - tracking should never break the app
+        // Fire-and-forget (never block UI)
+        axiosInstance.post("/tracking/event", cleanEventData).catch((err: any) => {
+          if (__DEV__) console.warn("Tracking error:", err?.message || err);
+        });
+
         if (__DEV__) {
-          console.warn('Tracking error:', error.message);
+          console.log("📊 Tracking event:", eventName, cleanEventData);
         }
-      });
-
-      if (__DEV__) {
-        console.log('📊 Tracking event:', eventName, cleanEventData);
+      } catch (err) {
+        if (__DEV__) console.warn("Tracking error:", err);
       }
-    } catch (error) {
-      // Silently fail - tracking should never break the app
-      if (__DEV__) {
-        console.warn('Tracking error:', error);
-      }
-    }
-  }, [userId, getToken]);
+    },
+    [userId] // ✅ مهم: شيل getToken لأنه غير مستخدم وكان سبب infinity
+  );
 
-  /**
-   * Merge guest session with user account on login
-   */
   const mergeSession = useCallback(async () => {
     if (!userId) return;
-    
+
     try {
-      const sessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
-      if (sessionId) {
-        const sessionData = JSON.parse(sessionId);
-        // Notify backend to merge session data
-        await axiosInstance.post('/tracking/merge-session', {
-          sessionId: sessionData.sessionId,
+      const stored = await AsyncStorage.getItem(SESSION_ID_KEY);
+      if (!stored) return;
+
+      const parsed: StoredSession = JSON.parse(stored);
+      if (!parsed?.sessionId) return;
+
+      // notify backend to merge
+      axiosInstance
+        .post("/tracking/merge-session", {
+          sessionId: parsed.sessionId,
           userId,
-        }).catch(() => {
-          // Silently fail
-        });
-      }
-    } catch (error) {
-      // Silently fail
-      if (__DEV__) {
-        console.warn('Session merge error:', error);
-      }
+        })
+        .catch(() => {});
+    } catch (err) {
+      if (__DEV__) console.warn("Session merge error:", err);
     }
   }, [userId]);
 
-  return {
-    trackEvent,
-    mergeSession,
-  };
+  return { trackEvent, mergeSession };
 };
 
 export default useTracking;

@@ -1,3 +1,4 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   ActivityIndicator,
@@ -8,121 +9,164 @@ import {
   Alert,
 } from "react-native";
 import { Text } from "@/components/ui/text";
-import { useCallback, useRef, useEffect, useState } from "react";
 import useCartStore from "@/store/useCartStore";
 import CartItem from "../components/cartItem";
 import Chekout from "../components/chekoutBotton";
-import { extractCartItemAttributes } from "@/utils/cartUtils";
-import BottomSheet, {
-  BottomSheetModal,
-  BottomSheetView,
-} from "@gorhom/bottom-sheet";
-import CheckOutModal from "../components/checkOutModal";
+import { normalizeAttributes } from "@/utils/cartUtils";
+import { BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
 import i18n from "@/utils/i18n";
-import type { CouponValidationResult } from '../components/CouponInput';
-import { LinearGradient } from 'expo-linear-gradient';
-import Colors from "@/locales/brandColors";
+import type { CouponValidationResult } from "../components/CouponInput";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/providers/ThemeProvider";
 import useTracking from "@/hooks/useTracking";
+import { useFocusEffect } from "@react-navigation/native";
+import CheckOutModal from "../components/checkOutModal";
+
+type CartLine = {
+  product: { _id: string };
+  attributes?: any;
+  size?: string;
+  quantity?: number;
+};
 
 export default function CartScreen() {
   const { theme } = useTheme();
-  const Colors = theme.colors;
-  const { fetchCart, cart, isLoading, isUpdating, updateCartItemQuantity, removeFromCart, error, clearError } =
-    useCartStore();
+  const colors = theme.colors;
+
   const router = useRouter();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["90%"], []);
+  const handleSheetDismiss = useCallback(() => {
+    bottomSheetModalRef.current?.dismiss();
+  }, []);
+
+   const handlePresentModalPress = useCallback(() => {
+      router.push("/checkout"); // أو المسار الصحيح حسب مكان الملف
+    }, [router]);
+  
+
+  const {
+    fetchCart,
+    cart,
+    isLoading,
+    isUpdating,
+    updateCartItemQuantity,
+    removeFromCart,
+    error,
+    clearError,
+  } = useCartStore();
+
   const [isProcessing] = useState(false);
   const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null);
+
   const { trackEvent } = useTracking();
-
-
-  /*const handlePresentModalPress = useCallback(() => {
-   router.push("../../components/checkOutModal");
-  }, []);
-
-  const handleSheetChanges = useCallback((index: number) => {
-    if (index === -1) {
-      bottomSheetModalRef.current?.dismiss();
-    }
-  }, []);*/
-
-  const handlePresentModalPress = useCallback(() => {
-    Alert.alert("قريبا ...", "تم نفاذ الكمية سيتم توفير منتجات جديدة قريبا", [{ text: "حسنا", onPress: () => { } }]);
-  }, []);
-
-
-  useEffect(() => {
-    const fetchCartData = async () => {
-      try {
-        await fetchCart();
-      } catch (error: any) {
-        // Error handling (404 for cart not found is handled as empty cart)
-      }
-    };
-    fetchCartData();
-  }, []);
-
-  const increment = useCallback(async (item: any) => {
-    const attributes = extractCartItemAttributes(item);
-    await updateCartItemQuantity(
-      item.product._id,
-      1,
-      attributes.size || '',
-      attributes
-    );
-  }, [updateCartItemQuantity]);
-
-  const decrement = useCallback(async (item: any) => {
-    const attributes = extractCartItemAttributes(item);
-    await updateCartItemQuantity(
-      item.product._id,
-      -1,
-      attributes.size || '',
-      attributes
-    );
-  }, [updateCartItemQuantity]);
-
-  const deleteItem = useCallback(async (item: any) => {
-    const attributes = extractCartItemAttributes(item);
-    
-    // Track remove from cart
-    trackEvent('remove_from_cart', {
-      productId: item.product._id,
-      screen: 'cart',
-    });
-    
-    await removeFromCart(item.product._id, attributes.size || '', attributes);
-  }, [removeFromCart, trackEvent]);
-
-  const handleContinueShopping = () => {
-    router.replace("/");
-  };
-
-  useEffect(() => {
-    if (cart?.products) {
-      const cartTotal = cart.totalPrice || 0;
-    }
-  }, [cart?.products?.length, cart?.totalPrice]);
 
   const isCartEmpty = !cart?.products || !Array.isArray(cart.products) || cart.products.length === 0;
 
+  // ✅ دا الأفضل بدل useEffect([]): يحدث كل مرة الشاشة تتفتح
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+
+      (async () => {
+        try {
+          await fetchCart();
+        } catch {
+          // لو 404 cart not found تعاملها كـ empty cart (زي ما عندك)
+        }
+      })();
+
+      return () => {
+        mounted = false;
+      };
+    }, [fetchCart])
+  );
+  
+
+  // ✅ helper ثابت لاستخراج attributes + size
+  const getLineAttrs = useCallback((item: CartLine) => {
+    const attrs = normalizeAttributes(item?.attributes);
+    const size = attrs.size || item.size || "";
+    return { attrs, size };
+  }, []);
+
+  const increment = useCallback(
+    async (item: CartLine) => {
+      if (!item?.product?._id) return;
+      const { attrs, size } = getLineAttrs(item);
+
+      await updateCartItemQuantity(item.product._id, 1, size, attrs);
+
+      trackEvent("cart_qty_increase", {
+        productId: item.product._id,
+        screen: "cart",
+      });
+    },
+    [updateCartItemQuantity, getLineAttrs, trackEvent]
+  );
+
+  const decrement = useCallback(
+    async (item: CartLine) => {
+      if (!item?.product?._id) return;
+      const { attrs, size } = getLineAttrs(item);
+
+      await updateCartItemQuantity(item.product._id, -1, size, attrs);
+
+      trackEvent("cart_qty_decrease", {
+        productId: item.product._id,
+        screen: "cart",
+      });
+    },
+    [updateCartItemQuantity, getLineAttrs, trackEvent]
+  );
+
+  const deleteItem = useCallback(
+    async (item: CartLine) => {
+      if (!item?.product?._id) return;
+      const { attrs, size } = getLineAttrs(item);
+
+      trackEvent("remove_from_cart", {
+        productId: item.product._id,
+        screen: "cart",
+      });
+
+      await removeFromCart(item.product._id, size, attrs);
+    },
+    [removeFromCart, getLineAttrs, trackEvent]
+  );
+
+  const handleContinueShopping = useCallback(() => {
+    router.replace("/");
+  }, [router]);
+
+  // ✅ total after coupon
+  const finalTotal = useMemo(() => {
+    const base = cart?.totalPrice ?? 0;
+    if (!couponResult?.valid || !couponResult.discountValue) return base;
+
+    if (couponResult.discountType === "percentage") {
+      return Math.max(0, base - (base * couponResult.discountValue) / 100);
+    }
+    return Math.max(0, base - couponResult.discountValue);
+  }, [cart?.totalPrice, couponResult]);
+
+  // Loading
   if (isLoading) {
     return (
-      <View style={{flex:1 , alignItems:"center" ,justifyContent:'center'}}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={[styles.center, { backgroundColor: colors.surface }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
-        
     );
   }
 
-  // Show error message if there's an error (but not for empty cart)
+  // Error (لكن ما نظهره لو cart فاضي)
   if (error && !isCartEmpty) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: Colors.surface }]}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
         <View style={styles.emptyContent}>
-          <Text style={[styles.emptyTitle, { color: Colors.error }]}>{error}</Text>
+          <Text style={[styles.emptyTitle, { color: colors.error }]}>{error}</Text>
+
           <TouchableOpacity
             style={styles.continueShoppingButton}
             onPress={() => {
@@ -131,12 +175,9 @@ export default function CartScreen() {
             }}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={[Colors.primary, Colors.primary]}
-              style={styles.buttonGradient}
-            >
-              <Text style={[styles.continueShoppingText, { color: Colors.text.white }]}>
-                {i18n.t('tryAgain') || 'حاول مرة أخرى'}
+            <LinearGradient colors={[colors.primary, colors.primary]} style={styles.buttonGradient}>
+              <Text style={[styles.continueShoppingText, { color: colors.text.white }]}>
+                {i18n.t("tryAgain") || "حاول مرة أخرى"}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -145,19 +186,21 @@ export default function CartScreen() {
     );
   }
 
+  // Empty cart
   if (isCartEmpty) {
     return (
-      <View
-        style={[styles.emptyContainer, { backgroundColor: Colors.surface }]}
-      >
-          <View style={styles.emptyContent}>
-          <View style={[styles.emptyIconContainer, { backgroundColor: Colors.cardBackground }]}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+        <View style={styles.emptyContent}>
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.cardBackground }]}>
             <Text style={styles.emptyIcon}>🛒</Text>
           </View>
 
-          <Text style={[styles.emptyTitle, { color: Colors.text.gray }]}>{i18n.t('cartEmpty')}</Text>
-          <Text style={[styles.emptySubtitle, { color: Colors.text.veryLightGray }]}>
-            {i18n.t('cartEmptySubtitle')}
+          <Text style={[styles.emptyTitle, { color: colors.text.gray }]}>
+            {i18n.t("cartEmpty") || "السلة فارغة"}
+          </Text>
+
+          <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
+            {i18n.t("cartEmptySubtitle") || "ابدأ التسوق وأضف منتجات للسلة"}
           </Text>
 
           <TouchableOpacity
@@ -165,11 +208,10 @@ export default function CartScreen() {
             onPress={handleContinueShopping}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={[Colors.primary, Colors.primary]}
-              style={styles.buttonGradient}
-            >
-              <Text style={[styles.continueShoppingText, { color: Colors.text.white }]}>{i18n.t('startShopping')}</Text>
+            <LinearGradient colors={[colors.primary, colors.primary]} style={styles.buttonGradient}>
+              <Text style={[styles.continueShoppingText, { color: colors.text.white }]}>
+                {i18n.t("startShopping") || "ابدأ التسوق"}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -177,132 +219,69 @@ export default function CartScreen() {
     );
   }
 
+  // processing
   if (isProcessing) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: Colors.surface }]}>
-      <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={[styles.center, { backgroundColor: colors.surface }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  const finalTotal = couponResult && couponResult.valid 
-    ? Math.max(0, cart.totalPrice - (couponResult.discountType === 'percentage' 
-        ? (cart.totalPrice * couponResult.discountValue / 100) 
-        : couponResult.discountValue))
-    : cart.totalPrice;
-
   return (
-    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-        <View style={[styles.cartContent, { backgroundColor: Colors.surface }]}>
-          <FlatList
-            data={Array.isArray(cart.products) ? cart.products : []}
-            renderItem={({ item }) => (
-              item && item.product && item.product._id ? (
-                <View style={styles.cartItemWrapper}>
-                  <CartItem
-                    isUpdating={isUpdating}
-                    item={item}
-                    deleteItem={deleteItem}
-                    increment={increment}
-                    decrement={decrement}
-                  />
-                </View>
-              ) : null
-            )}
-            keyExtractor={(item, idx) => (item && item.product && item.product._id) ? item.product._id : String(idx)}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContainer}
-          />  
-        </View>
-        <View style={styles.checkoutSection}>
-          <Chekout
-            total={finalTotal}
-            handleCheckout={handlePresentModalPress}
-          />
-        </View>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <View style={[styles.cartContent, { backgroundColor: colors.surface }]}>
+        <FlatList
+          data={Array.isArray(cart.products) ? cart.products : []}
+          renderItem={({ item }) =>
+            item && item.product && item.product._id ? (
+              <View style={styles.cartItemWrapper}>
+                <CartItem
+                  isUpdating={isUpdating}
+                  item={item}
+                  deleteItem={deleteItem}
+                  increment={increment}
+                  decrement={decrement}
+                />
+              </View>
+            ) : null
+          }
+          keyExtractor={(item: any, idx) => (item?.product?._id ? item.product._id : String(idx))}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+        />
+      </View>
+
+      <View style={[styles.checkoutSection, { backgroundColor: colors.surface }]}>
+        <Chekout total={finalTotal} handleCheckout={handlePresentModalPress} /> 
+      </View>
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        index={0}
+        enablePanDownToClose
+        backgroundStyle={{ backgroundColor: colors.surface }}
+        handleIndicatorStyle={{ backgroundColor: colors.gray?.[400] ?? "#9CA3AF" }}
+      >
+        <BottomSheetView style={{ flex: 1 }}>
+          <CheckOutModal handleClose={handleSheetDismiss} />
+        </BottomSheetView>
+      </BottomSheetModal>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
-    marginTop:10,
+    marginTop: 10,
     flex: 1,
   },
-  // Header Styles
-  headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 25,
-    backgroundColor: undefined, 
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  center: {
+    flex: 1,
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12, // smaller padding
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  itemCountBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
     justifyContent: "center",
-    alignItems: "center",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  itemCount: {
-    fontSize: 12,
-    fontWeight: "600",
   },
 
-  // Loading Styles
-  centeredContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  centeredContainerLight: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingCard: {
-    padding: 30,
-    borderRadius: 20,
-    alignItems: "center",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  loadingCardLight: {
-    padding: 30,
-    borderRadius: 20,
-    alignItems: "center",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 15,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  loadingTextLight: {
-    fontSize: 16,
-    marginTop: 15,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-
-  // Empty Cart Styles
   emptyContainer: {
     flex: 1,
   },
@@ -350,7 +329,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Cart Content Styles
   cartContent: {
     flex: 1,
   },
@@ -360,100 +338,14 @@ const styles = StyleSheet.create({
   },
   cartItemWrapper: {
     marginHorizontal: 15,
-    padding:4,
+    padding: 4,
     borderRadius: 8,
-    margin:4
-    
+    margin: 4,
   },
 
-  // Coupon Section
-  couponSection: {
-    marginHorizontal: 15,
-    marginVertical: 10,
-  },
-  discountCard: {
-    marginHorizontal: 15,
-    marginBottom: 10,
-    borderRadius: 15,
-    overflow: 'hidden',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  discountGradient: {
-    padding: 15,
-    alignItems: 'center',
-  },
-  discountLabel: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  finalTotalLabel: {
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-
-  // Checkout Section
   checkoutSection: {
     paddingHorizontal: 20,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    
-  },
-  totalCard: {
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  totalAmount: {
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  originalPriceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-  },
-  originalPriceLabel: {
-    fontSize: 14,
-  },
-  originalPriceAmount: {
-    fontSize: 16,
-    textDecorationLine: 'line-through',
-  },
-
-  // Bottom Sheet Styles
-  bottomSheetBackground: {
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  bottomSheetIndicator: {
-    width: 50,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  bottomSheetContent: {
-    flex: 1,
-    padding: 20,
   },
 });

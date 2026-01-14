@@ -108,7 +108,7 @@ function AppLoaderWithClerk() {
             type: "info",
             text1: i18n.t("updateErrorTitle"),
             text2: i18n.t("updateErrorMessage"),
-            visibilityTime: 3000,
+            visibilityTime: 1000,
           });
           setIsUpdateChecking(false);
         }
@@ -211,6 +211,7 @@ function AppLoaderWithClerk() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="(screens)" />
+            <Stack.Screen name="checkout" />
           </Stack>
           <Toast />
         </>

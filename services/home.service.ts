@@ -1,133 +1,143 @@
-import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from '../api/home.api';
+import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from "../api/home.api";
 
-/**
- * Home Service - Business logic layer for home screen data
- */
+type VariantLike = {
+  stock?: number;
+  isActive?: boolean;
+  finalPrice?: number;
+  merchantPrice?: number;
+  price?: number;
+  discountPrice?: number; // compare-at
+};
+
 export class HomeService {
-  /**
-   * Get all home screen data
-   */
   static async fetchHomeData(): Promise<HomeData> {
     return getHomeData();
   }
 
-  /**
-   * Filter products by availability
-   * Respects: stock, isActive, merchant status
-   */
-  static filterAvailableProducts(products: HomeProduct[]): HomeProduct[] {
-    if (!Array.isArray(products) || products.length === 0) {
-      return [];
+  /** ✅ هل المنتج عنده variants؟ */
+  static hasVariants(product: HomeProduct): boolean {
+    return Array.isArray((product as any).variants) && (product as any).variants.length > 0;
+  }
+
+  /** ✅ stock الحقيقي: لو في variants = مجموع/أو وجود ستوك في أي variant active */
+  static hasStock(product: HomeProduct): boolean {
+    const p: any = product;
+
+    // product inactive => not available
+    if (p.isActive === false) return false;
+
+    // variant-based
+    if (this.hasVariants(product)) {
+      return (p.variants as VariantLike[]).some((v) => (v?.isActive !== false) && ((v?.stock ?? 0) > 0));
     }
 
-    return products.filter(product => {
-      // Check merchant status first (if product has merchant)
-      if (product.merchant && product.merchant.status !== 'APPROVED') {
-        return false;
-      }
-
-      // Check if product has stock (main or variant)
-      const hasMainStock = (product.stock || 0) > 0;
-      const hasVariantStock = product.variants?.some(
-        v => (v.stock || 0) > 0 && v.isActive !== false
-      ) || false;
-
-      return hasMainStock || hasVariantStock;
-    }).map(product => {
-      // Enrich products with missing fields if needed (for recommendations API)
-      if (product.hasStock === undefined) {
-        product.hasStock = product.stock > 0 || (product.variants?.some(
-          v => v.stock > 0 && v.isActive !== false
-        ) || false);
-      }
-      if (product.finalPrice === undefined) {
-        product.finalPrice = this.getFinalPrice(product);
-      }
-      if (product.discount === undefined) {
-        const price = product.price || 0;
-        const discountPrice = product.discountPrice || 0;
-        product.discount = discountPrice > 0 && price > discountPrice
-          ? Math.round(((price - discountPrice) / price) * 100)
-          : 0;
-      }
-      return product;
-    });
+    // simple
+    return (p.stock ?? 0) > 0;
   }
 
-  /**
-   * Get active categories only
-   */
-  static filterActiveCategories(categories: HomeCategory[]): HomeCategory[] {
-    return categories.filter(cat => cat.image); // Only categories with images
-  }
-
-  /**
-   * Get active banners only
-   */
-  static filterActiveBanners(banners: HomeBanner[]): HomeBanner[] {
-    return banners.filter(banner => banner.image);
-  }
-
-  /**
-   * Get verified stores only
-   */
-  static filterVerifiedStores(stores: HomeStore[]): HomeStore[] {
-    return stores.filter(store => store.verified);
-  }
-
-  /**
-   * Calculate discount percentage
-   */
-  static calculateDiscount(price: number, discountPrice: number): number {
-    if (!discountPrice || discountPrice >= price || price === 0) {
-      return 0;
-    }
-    return Math.round(((price - discountPrice) / price) * 100);
-  }
-
-  /**
-   * Get final price (smart pricing: finalPrice > discountPrice > price)
-   */
+  /** ✅ final selling price: variant? product? */
+  
   static getFinalPrice(product: HomeProduct): number {
-    // Use smart pricing: finalPrice > discountPrice > price
-    if (product.finalPrice && product.finalPrice > 0) {
-      return product.finalPrice;
+    const p: any = product;
+  
+    // variant-based products: show the lowest dynamic finalPrice among active + in-stock variants
+    if (Array.isArray(p.variants) && p.variants.length > 0) {
+      const eligible = p.variants.filter(
+        (v: any) => v?.isActive !== false && (v?.stock ?? 0) > 0
+      );
+  
+      const list = eligible.length ? eligible : p.variants.filter((v: any) => v?.isActive !== false);
+  
+      let best = Infinity;
+      for (const v of list) {
+        // ✅ dynamic pricing first
+        const val = v?.finalPrice ?? v?.merchantPrice ?? v?.price ?? 0;
+        if (val > 0 && val < best) best = val;
+      }
+      return Number.isFinite(best) && best !== Infinity ? best : 0;
     }
-    if (product.discountPrice > 0 && product.discountPrice < product.price) {
-      return product.discountPrice;
-    }
-    return product.price || 0;
+  
+    // simple product: show dynamic finalPrice directly
+    return p.finalPrice ?? p.merchantPrice ?? p.price ?? 0;
+  }  
+
+  /** ✅ original/compare-at price (old price) */
+  static getOriginalPrice(product: HomeProduct): number {
+    const p: any = product;
+  
+    // simple product
+    const current = this.getFinalPrice(product);
+    const old = p.discountPrice ?? 0;
+    return old > 0 ? Math.max(old, current) : current;
   }
 
-  /**
-   * Check if product is in flash deal
-   */
+  /** ✅ discount % */
+  static calculateDiscountFromPrices(original: number, current: number): number {
+    if (!original || original <= 0) return 0;
+    if (!current || current <= 0) return 0;
+    if (current >= original) return 0;
+    return Math.round(((original - current) / original) * 100);
+  }
+  /** ✅ Filter products by availability (stock + active + merchant approved) */
+  static filterAvailableProducts(products: HomeProduct[]): HomeProduct[] {
+    if (!Array.isArray(products) || products.length === 0) return [];
+
+    return products
+      .filter((product) => {
+        const p: any = product;
+
+        // merchant gate
+        if (p.merchant && p.merchant.status && p.merchant.status !== "APPROVED") return false;
+
+        // product active + stock
+        return this.hasStock(product);
+      })
+      .map((product) => {
+        // ✅ enrich without mutating original
+        const p: any = product;
+        const finalPrice = this.getFinalPrice(product);
+        const originalPrice = this.getOriginalPrice(product);
+        const discount = this.calculateDiscountFromPrices(originalPrice, finalPrice);
+
+        return {
+          ...product,
+          hasStock: this.hasStock(product),
+          finalPrice,
+          // keep discountPrice as compare-at (old price) as-is, don't overwrite
+          discount,
+        } as HomeProduct;
+      });
+  }
+
+  static filterActiveCategories(categories: HomeCategory[]): HomeCategory[] {
+    return Array.isArray(categories) ? categories.filter((cat) => !!cat.image) : [];
+  }
+
+  static filterActiveBanners(banners: HomeBanner[]): HomeBanner[] {
+    return Array.isArray(banners) ? banners.filter((banner) => !!banner.image) : [];
+  }
+
+  static filterVerifiedStores(stores: HomeStore[]): HomeStore[] {
+    return Array.isArray(stores) ? stores.filter((store) => !!store.verified) : [];
+  }
+
   static isFlashDeal(product: HomeProduct): boolean {
-    return product.discount > 0 && product.hasStock;
+    const p: any = product;
+    return (p.discount ?? 0) > 0 && (p.hasStock ?? this.hasStock(product));
   }
 
-  /**
-   * Sort products by discount percentage (highest first)
-   */
   static sortByDiscount(products: HomeProduct[]): HomeProduct[] {
-    return [...products].sort((a, b) => b.discount - a.discount);
+    return [...products].sort((a: any, b: any) => (b.discount ?? 0) - (a.discount ?? 0));
   }
 
-  /**
-   * Sort products by rating (highest first)
-   */
   static sortByRating(products: HomeProduct[]): HomeProduct[] {
-    return [...products].sort((a, b) => b.averageRating - a.averageRating);
+    return [...products].sort((a: any, b: any) => (b.averageRating ?? 0) - (a.averageRating ?? 0));
   }
 
-  /**
-   * Sort products by newest (createdAt)
-   */
   static sortByNewest(products: HomeProduct[]): HomeProduct[] {
-    // Assuming products have createdAt field
-    return [...products].sort((a, b) => {
-      const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
-      const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+    return [...products].sort((a: any, b: any) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     });
   }

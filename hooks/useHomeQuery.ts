@@ -1,12 +1,9 @@
-import { useEffect } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
-import { useHomeStore } from '@/store/useHomeStore';
+import { useEffect, useRef, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
+import { useHomeStore } from "@/store/useHomeStore";
 
-/**
- * Hook to fetch and manage home screen data
- * Automatically fetches on mount and when screen comes into focus
- */
+const STALE_MS = 5 * 60 * 1000;
+
 export const useHomeQuery = () => {
   const {
     banners,
@@ -22,26 +19,34 @@ export const useHomeQuery = () => {
     fetchHomeData,
     refreshHomeData,
     clearError,
+    lastFetchedAt, // 👈 هنضيفها في الستور
   } = useHomeStore();
 
-  // Fetch on mount
-  useEffect(() => {
-    fetchHomeData();
-  }, []);
+  const didInitialFetchRef = useRef(false);
 
-  // Refresh when screen comes into focus
+  // Fetch on mount (مرة واحدة فقط)
+  useEffect(() => {
+    if (didInitialFetchRef.current) return;
+    didInitialFetchRef.current = true;
+
+    // لو عندك بيانات موجودة وما stale ما تعمل fetch
+    const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
+    if ((banners.length === 0 && !isLoading) || (isStale && !isLoading)) {
+      fetchHomeData();
+    }
+  }, [fetchHomeData, banners.length, isLoading, lastFetchedAt]);
+
+  // Focus refresh — فقط لو stale أو في error
   useFocusEffect(
     useCallback(() => {
-      // Only refresh if data is stale (older than 5 minutes)
-      const shouldRefresh = !isLoading && (banners.length === 0 || error);
-      if (shouldRefresh) {
-        fetchHomeData();
-      }
-    }, [isLoading, banners.length, error])
+      const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
+      const shouldRefresh = !isLoading && !isRefreshing && (error || isStale);
+
+      if (shouldRefresh) fetchHomeData();
+    }, [fetchHomeData, isLoading, isRefreshing, error, lastFetchedAt])
   );
 
   return {
-    // Data
     banners,
     categories,
     trending,
@@ -49,13 +54,9 @@ export const useHomeQuery = () => {
     newArrivals,
     forYou,
     stores,
-    
-    // Loading states
     isLoading,
     isRefreshing,
     error,
-    
-    // Actions
     refetch: fetchHomeData,
     refresh: refreshHomeData,
     clearError,

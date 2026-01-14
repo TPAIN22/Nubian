@@ -1,10 +1,16 @@
-import { View, StyleSheet, Pressable, ActivityIndicator, I18nManager } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text } from '@/components/ui/text';
-import AddToCartButton from '../AddToCartButton';
-import i18n from '@/utils/i18n';
-import type { Product, SelectedAttributes } from '@/types/cart.types';
-import type { LightColors, DarkColors } from '@/theme';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+  I18nManager,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text } from "@/components/ui/text";
+import AddToCartButton from "../AddToCartButton";
+import i18n from "@/utils/i18n";
+import type { Product, SelectedAttributes } from "@/types/cart.types";
+import type { LightColors, DarkColors } from "@/theme";
 
 interface ProductActionsProps {
   product: Product;
@@ -40,21 +46,34 @@ export const ProductActions = ({
         },
       ]}
     >
-      <View style={[styles.actionButtonsRow, I18nManager.isRTL && styles.actionButtonsRowRTL]}>
+      <View
+        style={[
+          styles.actionButtonsRow,
+          I18nManager.isRTL && styles.actionButtonsRowRTL,
+        ]}
+      >
         <View style={styles.addToCartButtonWrapper}>
           <AddToCartButton
             product={product}
-            selectedSize={selectedSize ?? ''}
-            selectedAttributes={selectedAttributes}
-            buttonStyle={[styles.addToCartButton, !isAvailable && styles.disabledButton]}
+            selectedSize={selectedSize ?? ""} // ممكن تخليها زي ما هي للباكورد
+            selectedAttributes={selectedAttributes} // ✅ دا الأساس
+            buttonStyle={[
+              styles.addToCartButton,
+              !isAvailable && styles.disabledButton,
+            ]}
             disabled={!isAvailable}
           />
         </View>
         <Pressable
-          style={[styles.wishlistButton, wishlistLoading && styles.wishlistButtonDisabled]}
+          style={[
+            styles.wishlistButton,
+            wishlistLoading && styles.wishlistButtonDisabled,
+          ]}
           onPress={onWishlistPress}
           disabled={wishlistLoading}
-          accessibilityLabel={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          accessibilityLabel={
+            inWishlist ? "Remove from wishlist" : "Add to wishlist"
+          }
           accessibilityRole="button"
           accessibilityState={{ disabled: wishlistLoading }}
         >
@@ -62,7 +81,7 @@ export const ProductActions = ({
             <ActivityIndicator size="small" color={themeColors.text.dark} />
           ) : (
             <Text style={styles.wishlistButtonText}>
-              {i18n.t('wishlist') || 'Wishlist'}
+              {i18n.t("wishlist") || "Wishlist"}
             </Text>
           )}
         </Pressable>
@@ -73,7 +92,7 @@ export const ProductActions = ({
 
 const styles = StyleSheet.create({
   bottomContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -83,11 +102,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   actionButtonsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   actionButtonsRowRTL: {
-    flexDirection: 'row-reverse',
+    flexDirection: "row-reverse",
   },
   addToCartButtonWrapper: {
     flex: 1,
@@ -103,8 +122,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 24,
     paddingVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     minWidth: 100,
   },
@@ -113,6 +132,6 @@ const styles = StyleSheet.create({
   },
   wishlistButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

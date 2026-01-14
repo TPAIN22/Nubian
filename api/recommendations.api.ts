@@ -1,5 +1,5 @@
-import axiosInstance from '@/utils/axiosInstans';
-import { HomeProduct } from './home.api';
+import axiosInstance from "@/utils/axiosInstans";
+import { HomeProduct } from "./home.api";
 
 export interface ProductRecommendations {
   similarItems: HomeProduct[];
@@ -17,33 +17,69 @@ export interface HomeRecommendations {
   brandsYouLove: HomeProduct[];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function withRetry<T>(fn: () => Promise<T>, retries = 1, delayMs = 350): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    const status = error?.response?.status;
+    if (status === 429 && retries > 0) {
+      await sleep(delayMs);
+      return withRetry(fn, retries - 1, delayMs * 2);
+    }
+    throw error;
+  }
+}
+
+function unwrapData<T>(response: any): T {
+  const data = response?.data?.data ?? response?.data;
+  if (!data) throw new Error("Invalid response structure");
+  return data as T;
+}
+
+function safeList(list: any): HomeProduct[] {
+  if (!Array.isArray(list)) return [];
+  // فلتر: لازم يكون في _id (أو id حسب أنواعك)
+  return list.filter((p) => p && (p._id || (p as any).id));
+}
+
+function excludeProduct(list: HomeProduct[], productId?: string) {
+  if (!productId) return list;
+  return list.filter((p: any) => (p?._id ?? p?.id) !== productId);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APIs
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Fetch home page recommendations
  * GET /api/recommendations/home
  */
 export const getHomeRecommendations = async (): Promise<HomeRecommendations> => {
   try {
-    const response = await axiosInstance.get('/recommendations/home');
-    
-    const data = response.data?.data || response.data;
-    
-    if (!data) {
-      throw new Error('Invalid response structure');
-    }
+    const response = await withRetry(() => axiosInstance.get("/recommendations/home"), 1);
+
+    const data = unwrapData<any>(response);
 
     return {
-      forYou: data.forYou || [],
-      trending: data.trending || [],
-      flashDeals: data.flashDeals || [],
-      newArrivals: data.newArrivals || [],
-      brandsYouLove: data.brandsYouLove || [],
+      forYou: safeList(data.forYou),
+      trending: safeList(data.trending),
+      flashDeals: safeList(data.flashDeals),
+      newArrivals: safeList(data.newArrivals),
+      brandsYouLove: safeList(data.brandsYouLove),
     };
   } catch (error: any) {
-    console.error('Error fetching home recommendations:', error);
+    console.error("Error fetching home recommendations:", error);
     throw new Error(
-      error?.response?.data?.message || 
-      error?.message || 
-      'Failed to load home recommendations'
+      error?.response?.data?.message ||
+        error?.message ||
+        "Failed to load home recommendations"
     );
   }
 };
@@ -54,27 +90,26 @@ export const getHomeRecommendations = async (): Promise<HomeRecommendations> => 
  */
 export const getProductRecommendations = async (productId: string): Promise<ProductRecommendations> => {
   try {
-    const response = await axiosInstance.get(`/recommendations/product/${productId}`);
-    
-    const data = response.data?.data || response.data;
-    
-    if (!data) {
-      throw new Error('Invalid response structure');
-    }
+    const response = await withRetry(
+      () => axiosInstance.get(`/recommendations/product/${productId}`),
+      1
+    );
+
+    const data = unwrapData<any>(response);
 
     return {
-      similarItems: data.similarItems || [],
-      frequentlyBoughtTogether: data.frequentlyBoughtTogether || [],
-      youMayAlsoLike: data.youMayAlsoLike || [],
-      cheaperAlternatives: data.cheaperAlternatives || [],
-      fromSameStore: data.fromSameStore || [],
+      similarItems: excludeProduct(safeList(data.similarItems), productId),
+      frequentlyBoughtTogether: excludeProduct(safeList(data.frequentlyBoughtTogether), productId),
+      youMayAlsoLike: excludeProduct(safeList(data.youMayAlsoLike), productId),
+      cheaperAlternatives: excludeProduct(safeList(data.cheaperAlternatives), productId),
+      fromSameStore: excludeProduct(safeList(data.fromSameStore), productId),
     };
   } catch (error: any) {
-    console.error('Error fetching product recommendations:', error);
+    console.error("Error fetching product recommendations:", error);
     throw new Error(
-      error?.response?.data?.message || 
-      error?.message || 
-      'Failed to load product recommendations'
+      error?.response?.data?.message ||
+        error?.message ||
+        "Failed to load product recommendations"
     );
   }
 };
@@ -85,21 +120,18 @@ export const getProductRecommendations = async (productId: string): Promise<Prod
  */
 export const getCartRecommendations = async (): Promise<HomeProduct[]> => {
   try {
-    const response = await axiosInstance.get('/recommendations/cart');
-    
-    const data = response.data?.data || response.data;
-    
-    if (!data || !Array.isArray(data)) {
-      throw new Error('Invalid response structure');
-    }
+    const response = await withRetry(() => axiosInstance.get("/recommendations/cart"), 1);
+    const data = unwrapData<any>(response);
 
-    return data;
+    // cart endpoint يرجّع Array
+    if (!Array.isArray(data)) throw new Error("Invalid response structure");
+    return safeList(data);
   } catch (error: any) {
-    console.error('Error fetching cart recommendations:', error);
+    console.error("Error fetching cart recommendations:", error);
     throw new Error(
-      error?.response?.data?.message || 
-      error?.message || 
-      'Failed to load cart recommendations'
+      error?.response?.data?.message ||
+        error?.message ||
+        "Failed to load cart recommendations"
     );
   }
 };
@@ -110,21 +142,20 @@ export const getCartRecommendations = async (): Promise<HomeProduct[]> => {
  */
 export const getUserRecommendations = async (userId: string): Promise<HomeProduct[]> => {
   try {
-    const response = await axiosInstance.get(`/recommendations/user/${userId}`);
-    
-    const data = response.data?.data || response.data;
-    
-    if (!data || !Array.isArray(data)) {
-      throw new Error('Invalid response structure');
-    }
+    const response = await withRetry(
+      () => axiosInstance.get(`/recommendations/user/${userId}`),
+      1
+    );
+    const data = unwrapData<any>(response);
 
-    return data;
+    if (!Array.isArray(data)) throw new Error("Invalid response structure");
+    return safeList(data);
   } catch (error: any) {
-    console.error('Error fetching user recommendations:', error);
+    console.error("Error fetching user recommendations:", error);
     throw new Error(
-      error?.response?.data?.message || 
-      error?.message || 
-      'Failed to load user recommendations'
+      error?.response?.data?.message ||
+        error?.message ||
+        "Failed to load user recommendations"
     );
   }
 };

@@ -46,9 +46,9 @@ export default function EditProfile() {
           firstName: firstName ?? null, 
           lastName: lastName ?? null 
         });
-        Toast.show({ type:'success', text1:'تم تغيير الأسم في' });
+        Toast.show({ type:'success', text1:'تم تغيير الأسم في', visibilityTime: 1000 });
       } catch (err) {
-        Toast.show({ type:'error', text1:'فشل تغيير الأسم' });
+        Toast.show({ type:'error', text1:'فشل تغيير الأسم', visibilityTime: 1000 });
       }
       finally {
         setIsEditing(false);

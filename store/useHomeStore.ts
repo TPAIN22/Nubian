@@ -1,24 +1,23 @@
-import { create } from 'zustand';
-import { HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from '../api/home.api';
-import { HomeService } from '../services/home.service';
-import { getHomeRecommendations } from '../api/recommendations.api';
+import { create } from "zustand";
+import { HomeService } from "../services/home.service";
+import { getHomeRecommendations } from "../api/recommendations.api";
 
 interface HomeState {
-  // Data
-  banners: HomeBanner[];
-  categories: HomeCategory[];
-  trending: HomeProduct[];
-  flashDeals: HomeProduct[];
-  newArrivals: HomeProduct[];
-  forYou: HomeProduct[];
-  stores: HomeStore[];
+  banners: any[];
+  categories: any[];
+  trending: any[];
+  flashDeals: any[];
+  newArrivals: any[];
+  forYou: any[];
+  stores: any[];
 
-  // Loading states
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
 
-  // Actions
+  lastFetchedAt: number | null;   // ✅ جديد
+  inFlight: Promise<void> | null; // ✅ dedupe
+
   fetchHomeData: () => Promise<void>;
   refreshHomeData: () => Promise<void>;
   clearError: () => void;
@@ -36,99 +35,115 @@ const initialState = {
   isLoading: false,
   isRefreshing: false,
   error: null,
+  lastFetchedAt: null,
+  inFlight: null,
 };
 
 export const useHomeStore = create<HomeState>((set, get) => ({
   ...initialState,
 
   fetchHomeData: async () => {
-    const { isLoading } = get();
-    if (isLoading) return; // Prevent duplicate calls
+    const { isLoading, inFlight } = get();
+    if (isLoading && inFlight) return inFlight; // ✅ dedupe
 
-    set({ isLoading: true, error: null });
+    const task = (async () => {
+      set({ isLoading: true, error: null });
 
-    try {
-      // Fetch banners, categories, and stores from home endpoint
-      // Fetch product recommendations from recommendations API
-      const [homeData, recommendations] = await Promise.all([
-        HomeService.fetchHomeData(),
-        getHomeRecommendations().catch(() => null), // Fallback gracefully if recommendations fail
-      ]);
+      try {
+        const [homeData, recommendations] = await Promise.all([
+          HomeService.fetchHomeData(),
+          getHomeRecommendations().catch(() => null),
+        ]);
 
-      // Filter banners, categories, and stores from home data
-      const activeCategories = HomeService.filterActiveCategories(homeData.categories);
-      const activeBanners = HomeService.filterActiveBanners(homeData.banners);
-      const verifiedStores = HomeService.filterVerifiedStores(homeData.stores);
+        const activeCategories = HomeService.filterActiveCategories(homeData.categories);
+        const activeBanners = HomeService.filterActiveBanners(homeData.banners);
+        const verifiedStores = HomeService.filterVerifiedStores(homeData.stores);
 
-      // Use recommendations API for product sections (AI-powered)
-      // Fallback to home data if recommendations fail or return empty arrays
-      const hasRecommendations = recommendations && 
-        (recommendations.trending?.length > 0 || recommendations.forYou?.length > 0 || 
-         recommendations.flashDeals?.length > 0 || recommendations.newArrivals?.length > 0);
-      
-      const trending = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.trending || [])
-        : HomeService.filterAvailableProducts(homeData.trending || []);
-      const flashDeals = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.flashDeals || [])
-        : HomeService.filterAvailableProducts(homeData.flashDeals || []);
-      const newArrivals = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.newArrivals || [])
-        : HomeService.filterAvailableProducts(homeData.newArrivals || []);
-      const forYou = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.forYou || [])
-        : HomeService.filterAvailableProducts(homeData.forYou || []);
+        const hasRecommendations =
+          recommendations &&
+          (recommendations.trending?.length ||
+            recommendations.forYou?.length ||
+            recommendations.flashDeals?.length ||
+            recommendations.newArrivals?.length);
 
-      set({
-        banners: activeBanners,
-        categories: activeCategories,
-        trending,
-        flashDeals,
-        newArrivals,
-        forYou,
-        stores: verifiedStores,
-        isLoading: false,
-        error: null,
-      });
-    } catch (error: any) {
-      set({
-        isLoading: false,
-        error: error?.message || 'Failed to load home data',
-      });
-    }
+        const trending = hasRecommendations
+          ? HomeService.filterAvailableProducts(recommendations.trending || [])
+          : HomeService.filterAvailableProducts(homeData.trending || []);
+
+        const flashDeals = hasRecommendations
+          ? HomeService.filterAvailableProducts(recommendations.flashDeals || [])
+          : HomeService.filterAvailableProducts(homeData.flashDeals || []);
+
+        const newArrivals = hasRecommendations
+          ? HomeService.filterAvailableProducts(recommendations.newArrivals || [])
+          : HomeService.filterAvailableProducts(homeData.newArrivals || []);
+
+        const forYou = hasRecommendations
+          ? HomeService.filterAvailableProducts(recommendations.forYou || [])
+          : HomeService.filterAvailableProducts(homeData.forYou || []);
+
+        set({
+          banners: activeBanners,
+          categories: activeCategories,
+          trending,
+          flashDeals,
+          newArrivals,
+          forYou,
+          stores: verifiedStores,
+          isLoading: false,
+          error: null,
+          lastFetchedAt: Date.now(), // ✅
+        });
+      } catch (error: any) {
+        set({
+          isLoading: false,
+          error: error?.message || "Failed to load home data",
+        });
+      } finally {
+        set({ inFlight: null }); // ✅
+      }
+    })();
+
+    set({ inFlight: task });
+    return task;
   },
 
   refreshHomeData: async () => {
+    // ✅ refresh ما يعمل duplicate لو في fetch شغال
+    const { inFlight } = get();
+    if (inFlight) return inFlight;
+
     set({ isRefreshing: true, error: null });
 
     try {
-      // Fetch banners, categories, and stores from home endpoint
-      // Fetch product recommendations from recommendations API
       const [homeData, recommendations] = await Promise.all([
         HomeService.fetchHomeData(),
-        getHomeRecommendations().catch(() => null), // Fallback gracefully if recommendations fail
+        getHomeRecommendations().catch(() => null),
       ]);
 
-      // Filter banners, categories, and stores from home data
       const activeCategories = HomeService.filterActiveCategories(homeData.categories);
       const activeBanners = HomeService.filterActiveBanners(homeData.banners);
       const verifiedStores = HomeService.filterVerifiedStores(homeData.stores);
 
-      // Use recommendations API for product sections (AI-powered)
-      // Fallback to home data if recommendations fail or return empty arrays
-      const hasRecommendations = recommendations && 
-        (recommendations.trending?.length > 0 || recommendations.forYou?.length > 0 || 
-         recommendations.flashDeals?.length > 0 || recommendations.newArrivals?.length > 0);
-      
+      const hasRecommendations =
+        recommendations &&
+        (recommendations.trending?.length ||
+          recommendations.forYou?.length ||
+          recommendations.flashDeals?.length ||
+          recommendations.newArrivals?.length);
+
       const trending = hasRecommendations
         ? HomeService.filterAvailableProducts(recommendations.trending || [])
         : HomeService.filterAvailableProducts(homeData.trending || []);
+
       const flashDeals = hasRecommendations
         ? HomeService.filterAvailableProducts(recommendations.flashDeals || [])
         : HomeService.filterAvailableProducts(homeData.flashDeals || []);
+
       const newArrivals = hasRecommendations
         ? HomeService.filterAvailableProducts(recommendations.newArrivals || [])
         : HomeService.filterAvailableProducts(homeData.newArrivals || []);
+
       const forYou = hasRecommendations
         ? HomeService.filterAvailableProducts(recommendations.forYou || [])
         : HomeService.filterAvailableProducts(homeData.forYou || []);
@@ -143,16 +158,16 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         stores: verifiedStores,
         isRefreshing: false,
         error: null,
+        lastFetchedAt: Date.now(), // ✅
       });
     } catch (error: any) {
       set({
         isRefreshing: false,
-        error: error?.message || 'Failed to refresh home data',
+        error: error?.message || "Failed to refresh home data",
       });
     }
   },
 
   clearError: () => set({ error: null }),
-
   reset: () => set(initialState),
 }));

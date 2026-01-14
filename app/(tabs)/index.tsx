@@ -37,6 +37,7 @@ import {
   navigateToFlashDeals,
   navigateToNewArrivals,
   navigateToForYou,
+  navigateToProduct,
 } from "@/utils/deepLinks";
 import useTracking from "@/hooks/useTracking";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -303,7 +304,7 @@ const ProductSection = memo(({
             <ItemCard
               item={item}
               handlePresentModalPress={() =>
-                bottomSheetModalRef.current?.present()
+                navigateToProduct(item._id, item)
               }
               cardWidth={cardWidth}
             />
