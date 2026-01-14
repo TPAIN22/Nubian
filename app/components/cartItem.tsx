@@ -10,18 +10,14 @@ import React, { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { useTheme } from "@/providers/ThemeProvider";
-
-
-import {
-  extractCartItemAttributes,
-  getAttributesDisplayText,
-} from "@/utils/cartUtils";
+import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/cartUtils";
 
 import {
   getFinalPrice,
   getOriginalPrice,
   hasDiscount,
   formatPrice as formatPriceUtil,
+  PriceOptions,
 } from "@/utils/priceUtils";
 
 import { navigateToProduct } from "@/utils/deepLinks";
@@ -60,15 +56,15 @@ const CartItem = React.memo(function CartItem({
 
   const priceOptions = useMemo(
     () => ({
-      strategy: "selectedAttributes" as const,
-      selectedAttributes: attributes,
+      selectedAttributes: attributes, // ✅ دا الأساس
       clampToZero: true,
-      // لو عايز تحسب حتى لو out of stock (بس في cart غالباً لا)
       includeOutOfStockVariants: true,
       includeInactiveVariants: false,
+      strategy: "lowest" as const, // ✅ fallback لو ما حصل match
     }),
     [attributes]
   );
+  
 
   const finalUnit = useMemo(
     () => getFinalPrice(item?.product, priceOptions),

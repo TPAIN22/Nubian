@@ -508,16 +508,10 @@ const styles = StyleSheet.create({
   },
   addReviewBox: {
     marginTop: 24,
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.darkBackground,
     borderRadius: 12,
     padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    
   },
   addReviewHeader: {
     marginBottom: 20,
@@ -525,7 +519,7 @@ const styles = StyleSheet.create({
   addReviewTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text.gray,
+    color: Colors.text.white,
     marginBottom: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
@@ -540,7 +534,7 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.gray,
+    color: Colors.text.white,
     marginBottom: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
@@ -569,7 +563,7 @@ const styles = StyleSheet.create({
   commentLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text.gray,
+    color: Colors.text.white,
     marginBottom: 8,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },

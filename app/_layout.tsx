@@ -211,7 +211,7 @@ function AppLoaderWithClerk() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="(screens)" />
-            <Stack.Screen name="checkout" />
+            <Stack.Screen name="(screens)/checkout" />
           </Stack>
           <Toast />
         </>

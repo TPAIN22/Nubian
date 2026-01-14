@@ -1,82 +1,56 @@
 // utils/priceUtils.ts
 import type { SelectedAttributes } from "@/types/cart.types";
-import { findMatchingVariant } from "@/utils/cartUtils";
-
-/** Strategy for picking which variant's price to show */
-export type PricePickStrategy =
-  | "direct"
-  | "selectedAttributes"
-  | "firstActive"
-  | "lowest"
-  | "highest";
+import { findMatchingVariant, normalizeAttributes } from "@/utils/cartUtils";
 
 export type ProductVariant = {
   _id?: string;
-
-  // smart
-  merchantPrice?: number;
   finalPrice?: number;
-
-  // legacy
+  merchantPrice?: number;
   price?: number;
   discountPrice?: number;
-
   stock?: number;
   isActive?: boolean;
-
   attributes?: Record<string, string> | Map<string, string>;
 };
 
 export type ProductLike = {
   _id?: string;
-
-  // smart
-  merchantPrice?: number;
   finalPrice?: number;
-
-  // legacy
+  merchantPrice?: number;
   price?: number;
   discountPrice?: number;
-
   stock?: number;
-
+  isActive?: boolean;
   variants?: ProductVariant[];
 };
 
+export type PriceStrategy = "lowest" | "firstActive";
+
 export type PriceOptions = {
-  strategy?: PricePickStrategy;
-
-  /** resolve by selected attributes (Details screen) */
-  selectedAttributes?: SelectedAttributes;
-
-  /** pass resolved variant directly */
+  selectedAttributes?: SelectedAttributes; // ✅ ATTRIBUTES only
   variant?: ProductVariant | null;
 
+  strategy?: PriceStrategy; // ✅ B: أفضل واحد (default lowest)
   includeInactiveVariants?: boolean;
   includeOutOfStockVariants?: boolean;
   clampToZero?: boolean;
 };
 
-const DEFAULTS = {
-  // ✅ أفضل default لتفادي فلاش/سعر غلط لما ما في selectedAttributes
-  strategy: "firstActive" as PricePickStrategy,
+const DEFAULTS: Required<
+  Pick<PriceOptions, "strategy" | "includeInactiveVariants" | "includeOutOfStockVariants" | "clampToZero">
+> = {
+  strategy: "lowest",
   includeInactiveVariants: false,
   includeOutOfStockVariants: false,
   clampToZero: true,
 };
 
-function clamp(n: number, clampToZero: boolean) {
-  if (!Number.isFinite(n)) return clampToZero ? 0 : n;
-  return clampToZero ? Math.max(0, n) : n;
-}
+const safeNum = (v: any, fb = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fb;
+};
 
-function basePriceFromVariant(v: ProductVariant): number {
-  return v.finalPrice ?? v.merchantPrice ?? v.price ?? 0;
-}
-
-function basePriceFromProduct(p: ProductLike): number {
-  return p.finalPrice ?? p.merchantPrice ?? p.price ?? 0;
-}
+const clamp = (n: number, clampToZero: boolean) => (clampToZero ? Math.max(0, safeNum(n, 0)) : safeNum(n, 0));
 
 function isEligibleVariant(v: ProductVariant, opts: typeof DEFAULTS) {
   const activeOk = opts.includeInactiveVariants ? true : v.isActive !== false;
@@ -84,56 +58,28 @@ function isEligibleVariant(v: ProductVariant, opts: typeof DEFAULTS) {
   return activeOk && stockOk;
 }
 
-function pickVariant(product: ProductLike, options?: PriceOptions): ProductVariant | null {
-  const opts = { ...DEFAULTS, ...(options ?? {}) };
-  const variants = Array.isArray(product.variants) ? product.variants : [];
-  if (!variants.length) return null;
+/**
+ * ✅ selling price (backend-first)
+ * A: يعتمد على finalPrice من الباكند
+ * - fallback فقط لو بيانات قديمة: discountPrice -> merchantPrice/price
+ */
+function resolveSellingPrice(obj: ProductLike | ProductVariant): number {
+  const finalPrice = safeNum((obj as any).finalPrice, 0);
+  if (finalPrice > 0) return finalPrice;
 
-  // 1) direct
-  if (options?.variant) return options.variant;
+  // legacy fallback only
+  const discountPrice = safeNum((obj as any).discountPrice, 0);
+  if (discountPrice > 0) return discountPrice;
 
-  // 2) selectedAttributes
-  if (options?.strategy === "selectedAttributes" && options?.selectedAttributes) {
-    const v = findMatchingVariant(product as any, options.selectedAttributes as any) as any;
-    return v ?? null;
-  }
+  return safeNum((obj as any).merchantPrice, safeNum((obj as any).price, 0));
+}
 
-  // 3) eligible list
-  const eligible = variants.filter((v) => isEligibleVariant(v, opts));
-  const list = eligible.length ? eligible : variants;
-
-  if ((options?.strategy ?? opts.strategy) === "firstActive") {
-    return list.find((v) => v.isActive !== false) ?? list[0] ?? null;
-  }
-
-  if ((options?.strategy ?? opts.strategy) === "highest") {
-    let best: ProductVariant | null = null;
-    let bestVal = -Infinity;
-    for (const v of list) {
-      const val = basePriceFromVariant(v);
-      if (val > bestVal) {
-        bestVal = val;
-        best = v;
-      }
-    }
-    return best ?? list[0] ?? null;
-  }
-
-  if ((options?.strategy ?? opts.strategy) === "lowest") {
-    let best: ProductVariant | null = null;
-    let bestVal = Infinity;
-    for (const v of list) {
-      const val = basePriceFromVariant(v);
-      if (val > 0 && val < bestVal) {
-        bestVal = val;
-        best = v;
-      }
-    }
-    return best ?? list[0] ?? null;
-  }
-
-  // default fallback
-  return list[0] ?? null;
+/**
+ * ✅ compare-at/original price (strike-through)
+ * المرجع: merchantPrice (أو price كـ legacy)
+ */
+function resolveOriginalPrice(obj: ProductLike | ProductVariant): number {
+  return safeNum((obj as any).merchantPrice, safeNum((obj as any).price, 0));
 }
 
 /** ✅ final selling price */
@@ -141,47 +87,97 @@ export function getFinalPrice(product?: ProductLike | null, options: PriceOption
   const opts = { ...DEFAULTS, ...(options ?? {}) };
   if (!product) return 0;
 
-  // لو المستخدم مرسل selectedAttributes → استخدمها
-  const strategy =
-    options.strategy ??
-    (options.selectedAttributes ? "selectedAttributes" : DEFAULTS.strategy);
+  const variants = Array.isArray(product.variants) ? product.variants : [];
 
-  const v = pickVariant(product, { ...options, strategy });
-  const value = v ? basePriceFromVariant(v) : basePriceFromProduct(product);
+  // 1) direct variant passed (explicit)
+  if (options.variant) {
+    return clamp(resolveSellingPrice(options.variant), opts.clampToZero);
+  }
 
-  return clamp(value, opts.clampToZero);
+  // 2) selectedAttributes -> match variant (ATTRIBUTES only)
+  if (options.selectedAttributes && variants.length) {
+    const sel = normalizeAttributes(options.selectedAttributes);
+    const v = findMatchingVariant(product as any, sel) as any;
+    if (v) return clamp(resolveSellingPrice(v), opts.clampToZero);
+  }
+
+  // 3) no selection -> pick best variant based on strategy
+  if (variants.length) {
+    const poolEligible = variants.filter((v) => isEligibleVariant(v, opts));
+    const pool = poolEligible.length ? poolEligible : variants;
+
+    if (opts.strategy === "firstActive") {
+      // أول variant active (ولو مافي، أول واحد وخلاص)
+      const first = pool.find((v) => v.isActive !== false) ?? pool[0];
+      return clamp(resolveSellingPrice(first as ProductVariant), opts.clampToZero);
+    }
+
+    // default: "lowest" => أقل finalPrice eligible
+    let best = Infinity;
+    for (const v of pool) {
+      const val = safeNum((v as any).finalPrice, Infinity);
+      if (val > 0 && val < best) best = val;
+    }
+    if (best !== Infinity) return clamp(best, opts.clampToZero);
+
+    // fallback لو finalPrice مش موجودة إطلاقاً
+    let bestFallback = Infinity;
+    for (const v of pool) {
+      const val = resolveSellingPrice(v);
+      if (val > 0 && val < bestFallback) bestFallback = val;
+    }
+    return clamp(bestFallback === Infinity ? 0 : bestFallback, opts.clampToZero);
+  }
+
+  // 4) simple product
+  return clamp(resolveSellingPrice(product), opts.clampToZero);
 }
 
-/** ✅ original/compare-at price (legacy discountPrice treated as old price) */
+/** ✅ original price for strike-through */
 export function getOriginalPrice(product?: ProductLike | null, options: PriceOptions = {}): number {
   const opts = { ...DEFAULTS, ...(options ?? {}) };
   if (!product) return 0;
 
   const current = getFinalPrice(product, options);
+  const variants = Array.isArray(product.variants) ? product.variants : [];
 
-  const strategy =
-    options.strategy ??
-    (options.selectedAttributes ? "selectedAttributes" : DEFAULTS.strategy);
+  let original = 0;
 
-  const v = pickVariant(product, { ...options, strategy });
-  const originalRaw = v ? (v.discountPrice ?? 0) : (product.discountPrice ?? 0);
+  if (options.variant) {
+    original = resolveOriginalPrice(options.variant);
+  } else if (options.selectedAttributes && variants.length) {
+    const v = findMatchingVariant(product as any, normalizeAttributes(options.selectedAttributes)) as any;
+    original = v ? resolveOriginalPrice(v) : 0;
+  } else if (variants.length) {
+    // خت strike-through بناءً على نفس variant اللي بنعرض سعره
+    if (opts.strategy === "firstActive") {
+      const first = variants.find((v) => v.isActive !== false) ?? variants[0];
+      original = resolveOriginalPrice(first as ProductLike | ProductVariant as any);
+    } else {
+      // lowest: original لِـ variant الأقل finalPrice
+      let bestV: any = null;
+      let best = Infinity;
+      for (const v of variants) {
+        const fp = safeNum((v as any).finalPrice, Infinity);
+        if (fp > 0 && fp < best) {
+          best = fp;
+          bestV = v;
+        }
+      }
+      original = bestV ? resolveOriginalPrice(bestV as ProductLike | ProductVariant) : 0;
+    }
+  } else {
+    original = resolveOriginalPrice(product as ProductLike | ProductVariant as any);
+  }
 
-  if (!originalRaw || originalRaw <= 0) return clamp(current, opts.clampToZero);
-
-  return clamp(Math.max(originalRaw, current), opts.clampToZero);
+  if (!original || original <= 0) return clamp(current, opts.clampToZero);
+  return clamp(Math.max(original, current), opts.clampToZero);
 }
 
 export function hasDiscount(product?: ProductLike | null, options: PriceOptions = {}): boolean {
   const current = getFinalPrice(product, options);
   const original = getOriginalPrice(product, options);
   return original > current;
-}
-
-export function calculateDiscountPercentage(original: number, current: number): number {
-  if (!original || original <= 0) return 0;
-  if (!current || current <= 0) return 0;
-  if (current >= original) return 0;
-  return Math.round(((original - current) / original) * 100);
 }
 
 export function formatPrice(amount: number, currency: string = "SDG") {

@@ -1,163 +1,158 @@
+import React, { useMemo } from "react";
 import { View, StyleSheet, Pressable, I18nManager } from "react-native";
 import { Text } from "@/components/ui/text";
-import i18n from "@/utils/i18n";
 import type { ProductAttribute, SelectedAttributes } from "@/types/cart.types";
 import type { LightColors, DarkColors } from "@/theme";
+import { normalizeAttributes } from "@/utils/cartUtils";
 
-interface ProductAttributesProps {
-  // Legacy support
+type VariantLike = {
+  attributes?: any; // Record | Map | unknown
+  isActive?: boolean;
+  stock?: number;
+};
+
+type ProductLike = {
   sizes?: string[];
   colors?: string[];
-  selectedSize?: string | null;
-  selectedColor?: string | null;
-  onSizeSelect?: (size: string) => void;
-  onColorSelect?: (color: string) => void;
+  variants?: VariantLike[];
+};
 
-  // New flexible attributes
+interface Props {
+  product?: ProductLike | null;
   attributes?: ProductAttribute[];
   selectedAttributes: SelectedAttributes;
-  onAttributeSelect?: (attrName: string, value: string) => void;
-
+  onAttributeSelect: (attrName: string, value: string) => void;
   themeColors: LightColors | DarkColors;
+  optionsMap?: Record<string, string[]>;
+  pleaseSelectText?: string;
 }
 
-const normalizeKey = (k: string) => (k || "").trim(); // مهم: نفس مفتاح الـ DB بالضبط
+const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
+
+const attrsToObject = (attrs: any): Record<string, string> => {
+  if (!attrs) return {};
+  if (attrs instanceof Map) return Object.fromEntries(attrs.entries());
+  if (Array.isArray(attrs)) {
+    // support odd shapes: [{key:'size', value:'S'}]
+    const o: Record<string, string> = {};
+    for (const it of attrs) {
+      if (it?.key && it?.value) o[String(it.key)] = String(it.value);
+    }
+    return o;
+  }
+  if (typeof attrs === "object") return attrs as Record<string, string>;
+  return {};
+};
 
 export const ProductAttributes = ({
-  sizes,
-  colors: availableColors,
-  selectedSize,
-  selectedColor,
-  onSizeSelect,
-  onColorSelect,
+  product,
   attributes,
   selectedAttributes,
   onAttributeSelect,
   themeColors,
-}: ProductAttributesProps) => {
-  const hasLegacySizes = Array.isArray(sizes) && sizes.length > 0;
-  const hasLegacyColors = Array.isArray(availableColors) && availableColors.length > 0;
+  optionsMap = {},
+  pleaseSelectText = "Please select",
+}: Props) => {
+  if (!attributes?.length) return null;
 
-  const renderSizeSelector = () => {
-    if (!hasLegacySizes) return null;
+  const normalizedSelected = useMemo(
+    () => normalizeAttributes(selectedAttributes),
+    [selectedAttributes]
+  );
 
-    return (
-      <View style={[styles.container, { backgroundColor: themeColors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: themeColors.text.gray }]}>
-          {i18n.t("chooseSize") || "Size"}
-        </Text>
+  // ✅ derive options from variants
+  const derivedFromVariants = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    const variants = Array.isArray((product as any)?.variants) ? (product as any).variants : [];
 
-        <View style={[styles.row, I18nManager.isRTL && styles.rowRTL]}>
-          {sizes!.map((size, index) => {
-            const isSelected = size === selectedSize || selectedAttributes.size === size;
+    for (const v of variants) {
+      if (v?.isActive === false) continue;
+      const obj = attrsToObject(v?.attributes);
 
-            return (
-              <Pressable
-                key={`${size}-${index}`}
-                style={[
-                  styles.optionBox,
-                  { backgroundColor: themeColors.cardBackground, borderColor: themeColors.borderLight },
-                  isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
-                ]}
-                onPress={() => {
-                  onSizeSelect?.(size);
-                  // ✅ توحيد المصدر: دا أهم سطر
-                  onAttributeSelect?.("size", size);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.optionText,
-                    { color: themeColors.text.gray },
-                    isSelected && { color: themeColors.text.white },
-                  ]}
-                >
-                  {size}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
+      for (const [k, val] of Object.entries(obj)) {
+        const key = String(k).trim().toLowerCase();
+        if (!key) continue;
+        out[key] = out[key] ? [...out[key], String(val)] : [String(val)];
+      }
+    }
 
-  const renderColorSelector = () => {
-    if (!hasLegacyColors) return null;
+    for (const k of Object.keys(out)) out[k] = uniq(out[k] || []).sort();
+    return out;
+  }, [product]);
 
-    return (
-      <View style={[styles.container, { backgroundColor: themeColors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: themeColors.text.gray }]}>
-          {i18n.t("color") || "Color"}
-        </Text>
+  // ✅ legacy fallback (sizes/colors on product)
+  const legacyOptions = useMemo(() => {
+    return {
+      size: uniq(Array.isArray((product as any)?.sizes) ? (product as any).sizes : []),
+      color: uniq(Array.isArray((product as any)?.colors) ? (product as any).colors : []),
+    };
+  }, [product]);
 
-        <View style={[styles.row, I18nManager.isRTL && styles.rowRTL]}>
-          {availableColors!.map((color, index) => {
-            const isSelected = color === selectedColor || selectedAttributes.color === color;
+  return (
+    <>
+      {attributes.map((attr, idx) => {
+        const keyLower = String(attr.name ?? "").trim().toLowerCase();
+        if (!keyLower) return null;
 
-            return (
-              <Pressable
-                key={`${color}-${index}`}
-                style={[
-                  styles.colorSwatch,
-                  { borderColor: "transparent" },
-                  isSelected && { borderColor: themeColors.text.gray },
-                ]}
-                onPress={() => {
-                  onColorSelect?.(color);
-                  // ✅ توحيد المصدر
-                  onAttributeSelect?.("color", color);
-                }}
-              >
-                <View
-                  style={[
-                    styles.colorCircle,
-                    { backgroundColor: color, borderColor: themeColors.borderLight },
-                  ]}
-                />
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
+        const attrOptions = Array.isArray((attr as any).options) ? (attr as any).options : [];
 
-  const renderAttributesSelector = () => {
-    if (!attributes || attributes.length === 0) return null;
+        // ✅ options priority:
+        // 1) attr.options
+        // 2) optionsMap
+        // 3) derived from variants
+        // 4) legacy sizes/colors
+        const options =
+          (attrOptions.length ? attrOptions : null) ??
+          (optionsMap[keyLower]?.length ? optionsMap[keyLower] : null) ??
+          (derivedFromVariants[keyLower]?.length ? derivedFromVariants[keyLower] : null) ??
+          ((legacyOptions as any)[keyLower]?.length ? (legacyOptions as any)[keyLower] : []);
 
-    return (
-      <>
-        {attributes.map((attr) => {
-          const key = normalizeKey(attr.name);
+        const currentValue = normalizedSelected[keyLower] ?? "";
+        const required = (attr as any).required === true;
+        const showMissing = required && !currentValue;
 
-          // ✅ ما تعمل skip للـ size/color إلا إذا أنت بتعرضهم legacy فعلاً
-          if (key === "size" && hasLegacySizes) return null;
-          if (key === "color" && hasLegacyColors) return null;
+        return (
+          <View
+            key={`${keyLower}-${idx}`}
+            style={[styles.container, { backgroundColor: themeColors.cardBackground }]}
+          >
+            <Text style={[styles.sectionTitle, { color: themeColors.text.gray }]}>
+              {attr.displayName || attr.name} {required ? "*" : ""}
+            </Text>
 
-          // ما نعرضش attributes مالها options
-          const options = Array.isArray(attr.options) ? attr.options : [];
-          if (options.length === 0) return null;
-
-          return (
-            <View key={key} style={[styles.container, { backgroundColor: themeColors.cardBackground }]}>
-              <Text style={[styles.sectionTitle, { color: themeColors.text.gray }]}>
-                {attr.displayName || key} {attr.required && "*"}
+            {showMissing ? (
+              <Text style={[styles.hint, { color: themeColors.error }]}>
+                {pleaseSelectText}: {attr.displayName || attr.name}
               </Text>
+            ) : null}
 
+            {options.length === 0 ? (
+              <Text style={[styles.hint, { color: themeColors.text.veryLightGray }]}>
+                {`No options found for "${keyLower}"`}
+              </Text>
+            ) : (
               <View style={[styles.row, I18nManager.isRTL && styles.rowRTL]}>
-                {options.map((option, index) => {
-                  const isSelected = selectedAttributes[key] === option;
+                {options.map((option: string) => {
+                  const opt = String(option);
+                  const isSelected = currentValue === opt;
 
                   return (
                     <Pressable
-                      key={`${option}-${index}`}
+                      key={`${keyLower}-${opt}`}
                       style={[
                         styles.optionBox,
-                        { backgroundColor: themeColors.cardBackground, borderColor: themeColors.borderLight },
-                        isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
+                        {
+                          backgroundColor: themeColors.cardBackground,
+                          borderColor: themeColors.borderLight,
+                        },
+                        isSelected && {
+                          backgroundColor: themeColors.primary,
+                          borderColor: themeColors.primary,
+                        },
                       ]}
-                      onPress={() => onAttributeSelect?.(key, option)}
+                      onPress={() => onAttributeSelect(keyLower, opt)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
                     >
                       <Text
                         style={[
@@ -166,24 +161,16 @@ export const ProductAttributes = ({
                           isSelected && { color: themeColors.text.white },
                         ]}
                       >
-                        {option}
+                        {opt}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
-            </View>
-          );
-        })}
-      </>
-    );
-  };
-
-  return (
-    <>
-      {renderSizeSelector()}
-      {renderColorSelector()}
-      {renderAttributesSelector()}
+            )}
+          </View>
+        );
+      })}
     </>
   );
 };
@@ -193,7 +180,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 16,
+    marginBottom: 10,
+    textAlign: I18nManager.isRTL ? "right" : "left",
+  },
+  hint: {
+    fontSize: 12,
+    marginBottom: 10,
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
   row: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
@@ -201,20 +193,10 @@ const styles = StyleSheet.create({
   optionBox: {
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    minWidth: 80,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    minWidth: 70,
     alignItems: "center",
   },
   optionText: { fontSize: 14, fontWeight: "600" },
-  colorSwatch: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 2,
-  },
-  colorCircle: { width: 36, height: 36, borderRadius: 18, borderWidth: 1 },
 });

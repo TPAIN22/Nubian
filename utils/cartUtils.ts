@@ -1,14 +1,11 @@
-/**
- * Cart Utility Functions
- * Reusable functions for cart operations, attribute handling, and validation
- */
 
 import type {
   ProductAttribute,
   AttributeValidationResult,
+  Product,
+  ProductVariant,
+  SelectedAttributes,
 } from "@/types/cart.types";
-import type { Product, ProductVariant, SelectedAttributes } from "@/types/cart.types";
-
 
 /** Normalize attribute key: trim + lowercase */
 function normalizeKey(key: any): string {
@@ -42,7 +39,8 @@ export function normalizeAttributes(attributes: SelectedAttributes | undefined |
     if (key && val !== "") normalized[key] = val;
   }
 
-  // ✅ unify common legacy keys (Color -> color)
+  // ✅ unify legacy key variants
+  // (بعد normalizeKey ما مفروض تبقى موجودة، لكن نخليها احتياط)
   if ((normalized as any).color === undefined && (normalized as any).Color) {
     (normalized as any).color = (normalized as any).Color;
     delete (normalized as any).Color;
@@ -134,10 +132,10 @@ export function validateRequiredAttributes(
 /**
  * Gets all available attributes for a product
  */
-export function getProductAttributes(product: Product): { 
-  sizes?: string[];
-  colors?: string[];
-  attributes?: ProductAttribute[];
+export function getProductAttributes(product: Product): {
+  sizes: string[] | undefined;
+  colors: string[] | undefined;
+  attributes: ProductAttribute[] | undefined;
 } {
   return {
     sizes: product.sizes && product.sizes.length > 0 ? product.sizes : undefined,
@@ -174,7 +172,9 @@ export function extractCartItemAttributes(item: {
   // Map → object
   if (item?.attributes instanceof Map) {
     const obj: SelectedAttributes = {};
-    for (const [k, v] of item.attributes.entries()) obj[normalizeKey(k)] = normalizeAttributeValue(v);
+    for (const [k, v] of item.attributes.entries()) {
+      obj[normalizeKey(k)] = normalizeAttributeValue(v);
+    }
     return normalizeAttributes(obj);
   }
 
@@ -203,68 +203,61 @@ function normalizeVariantAttributes(variant: ProductVariant): Record<string, str
     if (key && val) out[key] = val;
   }
 
-  // unify Color
-  if (out.color === undefined && (out as any).Color) {
-    out.color = (out as any).Color;
-    delete (out as any).Color;
-  }
-
   return out;
 }
 
+/**
+ * Find variant that matches selected attributes.
+ * - returns null if no selection (Details should force selection)
+ * - matches by exact equality on all keys of variant (and also ensures selection doesn't include extra keys missing in variant)
+ */
+export function findMatchingVariant(product: any, selected: Record<string, any>) {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (!variants.length) return null;
 
-import { normalizeSelectedAttributes } from "@/utils/productUtils";
+  const sel: Record<string, string> = {};
+  for (const [k, v] of Object.entries(selected || {})) {
+    const key = String(k).trim().toLowerCase();
+    const val = String(v ?? "").trim().toLowerCase();
+    if (key && val) sel[key] = val;
+  }
 
-const safeStr = (v: any) => (v === null || v === undefined ? "" : String(v).trim());
+  // لو ما في اختيار، ما تحاول تطابق (خليها null عشان UI يطلب اختيار)
+  if (!Object.keys(sel).length) return null;
 
-export function findMatchingVariant(
-  product: Product,
-  selectedAttributes: SelectedAttributes | undefined | null
-): ProductVariant | null {
-  if (!product?.variants?.length) return null;
+  const toObj = (attrs: any): Record<string, string> => {
+    if (!attrs) return {};
+    if (attrs instanceof Map) return Object.fromEntries(attrs.entries());
+    if (typeof attrs === "object") return attrs;
+    return {};
+  };
 
-  const sel = normalizeSelectedAttributes(selectedAttributes);
-  const selKeys = Object.keys(sel);
+  for (const v of variants) {
+    if (v?.isActive === false) continue;
 
-  // لو مافي أي اختيار، ما ترجع null في الـ details (خليها null عشان الزر يطلب اختيار)
-  if (selKeys.length === 0) return null;
+    const attrsObj = toObj(v?.attributes);
+    const norm: Record<string, string> = {};
+    for (const [k, val] of Object.entries(attrsObj)) {
+      norm[String(k).trim().toLowerCase()] = String(val ?? "").trim().toLowerCase();
+    }
 
-  for (const variant of product.variants) {
-    const vAttrs =
-      variant.attributes instanceof Map
-        ? Object.fromEntries(variant.attributes.entries())
-        : (variant.attributes as any) || {};
-
-    const normalizedVariantAttrs: Record<string, string> = {};
-    Object.entries(vAttrs).forEach(([k, v]) => {
-      const kk = safeStr(k);
-      const vv = safeStr(v);
-      if (kk && vv) normalizedVariantAttrs[kk] = vv;
-    });
-
-    const vKeys = Object.keys(normalizedVariantAttrs);
-
-    // شرط 1: كل المفاتيح في variant لازم تكون موجودة في selection (عشان combo يكون كامل)
-    const keysOk = vKeys.every((k) => selKeys.includes(k));
-    if (!keysOk) continue;
-
-    // شرط 2: كل قيم selection لازم تطابق variant
-    const valuesOk = selKeys.every((k) => {
-      // لو المستخدم مختار key مش موجود في variant → mismatch
-      if (!(k in normalizedVariantAttrs)) return false;
-      return safeStr(normalizedVariantAttrs[k]) === safeStr(sel[k]);
-    });
-    if (!valuesOk) continue;
-
-    return variant;
+    let ok = true;
+    for (const key of Object.keys(sel)) {
+      if (!norm[key] || norm[key] !== sel[key]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return v;
   }
 
   return null;
 }
 
+
 export function getProductStock(product: Product, selectedAttributes: SelectedAttributes | undefined | null): number {
   if (product?.variants?.length) {
-    const v = findMatchingVariant(product, selectedAttributes);
+    const v = findMatchingVariant(product, selectedAttributes as Record<string, any>);
     return v ? (v.stock || 0) : 0;
   }
   return product?.stock || 0;
@@ -272,12 +265,12 @@ export function getProductStock(product: Product, selectedAttributes: SelectedAt
 
 export function isProductAvailable(product: Product, selectedAttributes: SelectedAttributes | undefined | null): boolean {
   if (!product) return false;
-  if (product.isActive === false) return false;
+  if ((product as any).isActive === false) return false;
 
   // variant product
   if (product?.variants?.length) {
-    const v = findMatchingVariant(product, selectedAttributes);
-    if (!v) return false;            // لازم combo صحيح
+    const v = findMatchingVariant(product, selectedAttributes as Record<string, any>);
+    if (!v) return false; // لازم combo صحيح
     if (v.isActive === false) return false;
     return (v.stock || 0) > 0;
   }
@@ -285,4 +278,3 @@ export function isProductAvailable(product: Product, selectedAttributes: Selecte
   // simple product
   return (product.stock || 0) > 0;
 }
-

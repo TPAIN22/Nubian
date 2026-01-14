@@ -83,10 +83,21 @@ const ProductCard = React.memo(
       []
     );
 
-    const finalPrice = useMemo(() => getFinalPrice(item as any, { strategy: "lowest" }), [item]);
-    const originalPrice = useMemo(() => getOriginalPrice(item as any, { strategy: "lowest" }), [item]);
-    const productHasDiscount = useMemo(() => hasDiscount(item as any, { strategy: "lowest" }), [item]);    
-
+    const finalPrice = useMemo(
+      () => getFinalPrice(item as any, priceOpts),
+      [item, priceOpts]
+    );
+    
+    const originalPrice = useMemo(
+      () => getOriginalPrice(item as any, priceOpts),
+      [item, priceOpts]
+    );
+    
+    const productHasDiscount = useMemo(
+      () => hasDiscount(item as any, priceOpts),
+      [item, priceOpts]
+    );
+    
     const handleClick = useCallback(() => {
       if (onPress) return onPress();
 

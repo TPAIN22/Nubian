@@ -1,5 +1,7 @@
 // utils/productUtils.ts
 import type { SelectedAttributes } from "@/types/cart.types";
+import type { Product,  } from "@/types/cart.types";
+import { normalizeAttributes } from "@/utils/cartUtils";
 
 export type VariantLike = {
   _id?: any;
@@ -47,39 +49,53 @@ export type ProductLike = {
   merchant?: any; // null or object
 };
 
-const safeStr = (v: any) => (v === null || v === undefined ? "" : String(v).trim());
-const safeNum = (v: any, fb = 0) => {
+export const safeStr = (v: unknown) => String(v ?? "").trim();
+export const safeNum = (v: unknown, fb = 0) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fb;
 };
 
+/** normalize keys same as cartUtils: trim + lowercase */
+export const normalizeKey = (k: unknown) => safeStr(k).toLowerCase();
+
+/** unify legacy keys (Color -> color, Size -> size) */
+const unifyCommonKeys = (obj: Record<string, string>) => {
+  // color
+  if (obj.color === undefined && (obj as any).Color) {
+    obj.color = (obj as any).Color;
+    delete (obj as any).Color;
+  }
+  // size
+  if (obj.size === undefined && (obj as any).Size) {
+    obj.size = (obj as any).Size;
+    delete (obj as any).Size;
+  }
+  return obj;
+};
+
 export const cleanImages = (images: any): string[] => {
   if (!Array.isArray(images)) return [];
-  return images
-    .map((x) => safeStr(x))
-    .filter((x) => x.length > 0);
+  return images.map((x) => safeStr(x)).filter((x) => x.length > 0);
 };
 
 export const normalizeAttributesObject = (
   attrs: Record<string, any> | Map<string, any> | undefined | null
 ): Record<string, string> => {
   if (!attrs) return {};
+
   let obj: Record<string, any> = {};
+  if (attrs instanceof Map) obj = Object.fromEntries(attrs.entries());
+  else if (typeof attrs === "object") obj = attrs as any;
 
-  if (attrs instanceof Map) {
-    obj = Object.fromEntries(attrs.entries());
-  } else if (typeof attrs === "object") {
-    obj = attrs as any;
-  }
-
-  // normalize values & drop empties
+  // ✅ normalize keys + values + drop empties
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(obj)) {
-    const key = safeStr(k);
+    const key = normalizeKey(k);
     const val = safeStr(v);
     if (key && val) out[key] = val;
   }
-  return out;
+
+  return unifyCommonKeys(out);
 };
 
 export const normalizeVariant = (v: VariantLike) => {
@@ -101,9 +117,68 @@ export const normalizeVariant = (v: VariantLike) => {
     discountPrice: safeNum((v as any).discountPrice, 0),
   };
 };
+////////////////----------------------------------------////////////////////
+
+
+
+// productUtils.ts
+// utils/buildAttributeOptions.ts
+
+
+// utils/productUtils.ts
+export function buildAttributeOptions(product: any): Record<string, string[]> {
+  if (!product) return {};
+
+  const map: Record<string, Set<string>> = {};
+
+  // 1) seed from product.attributes.options
+  const attrs = Array.isArray(product.attributes) ? product.attributes : [];
+  for (const a of attrs) {
+    const key = String(a?.name ?? "").trim().toLowerCase();
+    if (!key) continue;
+
+    if (!map[key]) map[key] = new Set<string>();
+
+    const opts = Array.isArray(a?.options) ? a.options : [];
+    for (const v of opts) {
+      const val = String(v ?? "").trim();
+      if (val) map[key].add(val);
+    }
+  }
+
+  // 2) derive from variants.attributes (Map or object)
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  for (const v of variants) {
+    const attrsObj =
+      v?.attributes instanceof Map
+        ? Object.fromEntries(v.attributes.entries())
+        : (v?.attributes ?? {});
+
+    if (!attrsObj || typeof attrsObj !== "object") continue;
+
+    for (const [k0, v0] of Object.entries(attrsObj)) {
+      const key = String(k0 ?? "").trim().toLowerCase();
+      const val = String(v0 ?? "").trim();
+      if (!key || !val) continue;
+
+      if (!map[key]) map[key] = new Set<string>();
+      map[key].add(val);
+    }
+  }
+
+  // 3) convert set->sorted array
+  const out: Record<string, string[]> = {};
+  for (const [k, set] of Object.entries(map)) {
+    out[k] = Array.from(set);
+  }
+
+  return out;
+}
+
+
+/////////////////////---------------------------------//////////////////////////
 
 export const normalizeCategory = (cat: any) => {
-  // ممكن يجي string objectId
   if (!cat) return { _id: "", id: "", name: "" };
   if (typeof cat === "string") return { _id: cat, id: cat, name: "" };
   const id = safeStr(cat.id || cat._id);
@@ -136,7 +211,7 @@ export const normalizeProduct = (p: ProductLike) => {
   const variants = variantsRaw.map(normalizeVariant);
 
   // stock: لو المنتج variant-based الأفضل تعتمد aggregate stock من variants
-  const aggregateStock = variants.reduce((sum: number, v: VariantLike) => sum + (v.stock || 0), 0);
+  const aggregateStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
   const stock = safeNum((p as any).stock, 0);
   const finalStock = variants.length ? aggregateStock : stock;
 
@@ -170,14 +245,16 @@ export const normalizeProduct = (p: ProductLike) => {
   };
 };
 
-// helper: attributes selection normalization
+// helper: attributes selection normalization (✅ keys lowercased + unify Color/Size)
 export const normalizeSelectedAttributes = (attrs?: SelectedAttributes | null) => {
   const out: Record<string, string> = {};
   if (!attrs) return out;
-  Object.entries(attrs).forEach(([k, v]) => {
-    const key = safeStr(k);
+
+  for (const [k, v] of Object.entries(attrs)) {
+    const key = normalizeKey(k);
     const val = safeStr(v);
     if (key && val) out[key] = val;
-  });
-  return out;
+  }
+
+  return unifyCommonKeys(out);
 };

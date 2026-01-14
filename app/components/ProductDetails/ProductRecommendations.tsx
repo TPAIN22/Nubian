@@ -1,7 +1,7 @@
 import { View, StyleSheet, FlatList } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { memo } from 'react';
-import { HomeProduct } from '@/api/recommendations.api';
+import type { Product } from '@/types/cart.types';
 import ItemCard from '../Card';
 import ItemCardSkeleton from '../ItemCardSkeleton';
 import { navigateToProduct } from '@/utils/deepLinks';
@@ -14,7 +14,7 @@ const { CARD_WIDTH } = PRODUCT_DETAILS_CONFIG;
 
 interface RecommendationSectionProps {
   title: string;
-  products: HomeProduct[];
+  products: Product[];
   colors: LightColors | DarkColors;
   isLoading?: boolean;
 }
@@ -93,11 +93,11 @@ RecommendationSection.displayName = 'RecommendationSection';
 
 interface ProductRecommendationsProps {
   recommendations: {
-    similarItems?: HomeProduct[];
-    frequentlyBoughtTogether?: HomeProduct[];
-    youMayAlsoLike?: HomeProduct[];
-    cheaperAlternatives?: HomeProduct[];
-    fromSameStore?: HomeProduct[];
+    similarItems?: Product[];
+    frequentlyBoughtTogether?: Product[];
+    youMayAlsoLike?: Product[];
+    cheaperAlternatives?: Product[];
+    fromSameStore?: Product[];
   } | null;
   isLoading: boolean;
   colors: LightColors | DarkColors;

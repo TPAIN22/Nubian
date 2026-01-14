@@ -14,8 +14,7 @@ import type { LightColors, DarkColors } from "@/theme";
 
 interface ProductActionsProps {
   product: Product;
-  selectedSize?: string | null;
-  selectedAttributes: SelectedAttributes;
+  selectedAttributes: SelectedAttributes; // ✅ attributes-only
   isAvailable: boolean;
   wishlistLoading: boolean;
   inWishlist: boolean;
@@ -25,7 +24,6 @@ interface ProductActionsProps {
 
 export const ProductActions = ({
   product,
-  selectedSize,
   selectedAttributes,
   isAvailable,
   wishlistLoading,
@@ -55,7 +53,6 @@ export const ProductActions = ({
         <View style={styles.addToCartButtonWrapper}>
           <AddToCartButton
             product={product}
-            selectedSize={selectedSize ?? ""} // ممكن تخليها زي ما هي للباكورد
             selectedAttributes={selectedAttributes} // ✅ دا الأساس
             buttonStyle={[
               styles.addToCartButton,
@@ -64,23 +61,26 @@ export const ProductActions = ({
             disabled={!isAvailable}
           />
         </View>
+
         <Pressable
           style={[
             styles.wishlistButton,
+            {
+              borderColor: themeColors.borderLight,
+              backgroundColor: themeColors.cardBackground,
+            },
             wishlistLoading && styles.wishlistButtonDisabled,
           ]}
           onPress={onWishlistPress}
           disabled={wishlistLoading}
-          accessibilityLabel={
-            inWishlist ? "Remove from wishlist" : "Add to wishlist"
-          }
+          accessibilityLabel={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
           accessibilityRole="button"
           accessibilityState={{ disabled: wishlistLoading }}
         >
           {wishlistLoading ? (
             <ActivityIndicator size="small" color={themeColors.text.dark} />
           ) : (
-            <Text style={styles.wishlistButtonText}>
+            <Text style={[styles.wishlistButtonText, { color: themeColors.text.gray }]}>
               {i18n.t("wishlist") || "Wishlist"}
             </Text>
           )}
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    minWidth: 100,
+    minWidth: 110,
   },
   wishlistButtonDisabled: {
     opacity: 0.6,
