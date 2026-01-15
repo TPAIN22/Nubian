@@ -1,42 +1,7 @@
-import axiosInstance from '@/utils/axiosInstans';
+import axiosInstance from "@/services/api/client";
+import type { ProductDTO } from "@/domain/product/product.types";
 
-export interface ExploreProduct {
-  _id: string;
-  id?: string;
-  name: string;
-  description?: string;
-  price: number;
-  discountPrice?: number;
-  stock?: number;
-  images?: string[];
-  averageRating?: number;
-  category?: {
-    _id: string;
-    name: string;
-  };
-  merchant?: {
-    _id: string;
-    businessName: string;
-    status: string;
-  };
-  // Ranking scores
-  exploreScore?: number;
-  rankingScore?: number;
-  visibilityScore?: number;
-  userAffinityScore?: number;
-  trendingBoost?: number;
-  discountBoost?: number;
-  // Filterable attributes
-  sizes?: string[];
-  colors?: string[];
-  variants?: Array<{
-    _id: string;
-    attributes: Record<string, string>;
-    price: number;
-    discountPrice?: number;
-    stock: number;
-  }>;
-}
+export type ExploreProduct = ProductDTO;
 
 export interface ExploreFilters {
   // Price range

@@ -1,4 +1,4 @@
-import React, {
+import {
   useState,
   useEffect,
   useMemo,
@@ -15,92 +15,38 @@ import {
   ActivityIndicator,
   I18nManager,
   InteractionManager,
+  Image as RNImage,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
-import { Image as RNImage } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useProductFetch } from "@/hooks/useProductFetch";
 import useWishlistStore from "@/store/wishlistStore";
-import { useAuth } from "@clerk/clerk-expo";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
 
-import type {
-  ProductAttribute,
-  ProductVariant,
-  SelectedAttributes,
-} from "@/types/cart.types";
-import {
-  findMatchingVariant,
-  getProductStock,
-  normalizeAttributes,
-} from "@/utils/cartUtils";
-import { buildAttributeOptions } from "@/utils/productUtils";
-import {
-  getFinalPrice,
-  getOriginalPrice,
-  hasDiscount,
-  formatPrice,
-} from "@/utils/priceUtils";
+import type { SelectedAttributes } from "@/domain/product/product.selectors";
+import { getAttributeOptions, normalizeSelectedAttributes } from "@/domain/product/product.selectors";
+import type { NormalizedProduct } from "@/domain/product/product.normalize";
+import { matchVariant, pickDisplayVariant } from "@/domain/variant/variant.match";
+import { isVariantSelectable } from "@/domain/product/product.guards";
+import { resolvePrice, getDisplayPrice } from "@/domain/pricing/pricing.engine";
+import { formatPrice } from "@/utils/priceUtils";
 
 import { useRecommendationStore } from "@/store/useRecommendationStore";
-import useTracking from "@/hooks/useTracking";
+import { useTracking } from "@/hooks/useTracking";
 import {
   CURRENCY,
   COLORS,
   PRODUCT_DETAILS_CONFIG,
 } from "@/constants/productDetails";
 
-import { ProductHeader } from "@/app/components/ProductDetails/ProductHeader";
-import { ProductImageCarousel } from "@/app/components/ProductDetails/ProductImageCarousel";
-import { ProductAttributes } from "@/app/components/ProductDetails/ProductAttributes";
-import Review from "../../components/Review";
-import { ProductRecommendations } from "@/app/components/ProductDetails/ProductRecommendations";
-import { ProductActions } from "@/app/components/ProductDetails/ProductActions";
-
-/** --------- local lightweight types --------- */
-type VariantLike = {
-  _id?: string;
-  merchantPrice?: number;
-  finalPrice?: number;
-  price?: number;
-  discountPrice?: number;
-  stock?: number;
-  images?: string[];
-  isActive?: boolean;
-  attributes?: Record<string, string> | Map<string, string>;
-};
-
-type ProductLike = {
-  _id: string;
-  name?: string;
-  description?: string;
-  images?: string[];
-  stock?: number;
-  isActive?: boolean;
-  variants?: ProductVariant[] | VariantLike[];
-  attributes?: ProductAttribute[];
-  merchantPrice?: number;
-  finalPrice?: number;
-  price?: number;
-  discountPrice?: number;
-};
-
-function toLowerKey(s: any) {
-  return String(s ?? "")
-    .trim()
-    .toLowerCase();
-}
-
-function uniqStrings(arr: any[]) {
-  const set = new Set<string>();
-  for (const v of arr) {
-    const val = String(v ?? "").trim();
-    if (val) set.add(val);
-  }
-  return Array.from(set);
-}
+import { ProductHeader } from "@/components/ProductDetails/ProductHeader";
+import { ProductImageCarousel } from "@/components/ProductDetails/ProductImageCarousel";
+import { ProductAttributes } from "@/components/ProductDetails/ProductAttributes";
+import Review from "@/components/Review";
+import { ProductRecommendations } from "@/components/ProductDetails/ProductRecommendations";
+import { ProductActions } from "@/components/ProductDetails/ProductActions";
 
 export default function Details() {
   const { theme } = useTheme();
@@ -114,7 +60,6 @@ export default function Details() {
 
   const { addToWishlist, removeFromWishlist, isInWishlist } =
     useWishlistStore();
-  const { getToken } = useAuth();
   const { trackEvent } = useTracking();
 
   const [selectedAttributes, setSelectedAttributes] =
@@ -141,43 +86,94 @@ export default function Details() {
 
   // track once per product
   useEffect(() => {
-    const id = (product as any)?._id;
+    const id = (product as any)?.id;
     if (!id) return;
     if (lastTrackedRef.current === id) return;
     lastTrackedRef.current = id;
     trackEvent("product_view", { productId: id, screen: "product_details" });
-  }, [(product as any)?._id, trackEvent]);
+  }, [(product as any)?.id, trackEvent]);
 
-  /** viewProduct fallback */
-  const viewProduct = useMemo<ProductLike | null>(() => {
-    if (product) return product as any;
+  const viewProduct = product as NormalizedProduct | null;
 
-    const name = params.name ? String(params.name) : "";
-    const price = params.price ? Number(params.price) : 0;
-    const image = params.image ? String(params.image) : "";
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() =>
+      setShowDeferred(true)
+    );
+    return () => task.cancel();
+  }, []);
 
-    if (productId && (name || price || image)) {
-      return {
-        _id: productId,
-        name,
-        price,
-        merchantPrice: price,
-        finalPrice: price,
-        images: image ? [image] : [],
-        stock: 1,
-        description: "",
-        variants: [],
-        attributes: [],
-        isActive: true,
-      };
-    }
-    return null;
-  }, [product, productId, params.name, params.price, params.image]);
+  const productAttributes = useMemo(() => viewProduct?.attributeDefs ?? [], [viewProduct]);
 
-  const productImages = useMemo(
-    () => viewProduct?.images || [],
-    [viewProduct?.images]
+  const normalizedSelection = useMemo(
+    () => normalizeSelectedAttributes(selectedAttributes),
+    [selectedAttributes]
   );
+
+  const optionsMap = useMemo(() => (viewProduct ? getAttributeOptions(viewProduct) : {}), [viewProduct]);
+
+  /** ✅ auto-init required attributes when options exist (regardless of type) */
+  useEffect(() => {
+    if (!productAttributes.length) return;
+
+    setSelectedAttributes((prev: SelectedAttributes) => {
+      const next: SelectedAttributes = { ...prev };
+      let changed = false;
+
+      for (const attr of productAttributes) {
+        const key = String(attr.name ?? "")
+          .trim()
+          .toLowerCase();
+
+        const options = optionsMap[key] || [];
+
+        // deterministic auto-select ONLY if backend provides exactly one option
+        if (attr.required && options.length === 1) {
+          if (!(next as any)[key]) {
+            (next as any)[key] = options[0]!;
+            changed = true;
+          }
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [productAttributes, optionsMap]);
+
+  const matchingVariant = useMemo(
+    () => (viewProduct ? matchVariant(viewProduct, normalizedSelection) : null),
+    [viewProduct, normalizedSelection]
+  );
+
+  const displayVariant = useMemo(
+    () => {
+      if (!viewProduct) return null;
+      if (matchingVariant) return matchingVariant;
+      const picked = pickDisplayVariant(viewProduct);
+      return picked || null;
+    },
+    [viewProduct, matchingVariant]
+  );
+
+  const productImages = useMemo(() => {
+    if (!viewProduct) return [];
+
+    // Start with current selection's images if available
+    const selectionImages =
+      displayVariant?.images && displayVariant.images.length > 0
+        ? displayVariant.images
+        : [];
+
+    // Collect all unique images from product and ALL variants
+    const allImages = [
+      ...(viewProduct.images || []),
+      ...(viewProduct.variants || []).flatMap((v) => v.images || []),
+    ].filter((img): img is string => !!img && typeof img === "string");
+
+    // De-duplicate while preserving order (selection first, then others)
+    const uniqueImages = Array.from(new Set([...selectionImages, ...allImages]));
+
+    return uniqueImages.length > 0 ? uniqueImages : [];
+  }, [viewProduct, displayVariant?.images]);
 
   // Prefetch images
   useEffect(() => {
@@ -200,146 +196,34 @@ export default function Details() {
     return () => clearTimeout(timeout);
   }, [productImages]);
 
+  // ✅ If user hasn't selected attributes yet, preload with displayVariant attrs to show price/stock and enable add-to-cart
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() =>
-      setShowDeferred(true)
-    );
-    return () => task.cancel();
-  }, []);
+    if (!displayVariant) return;
+    // if already selected something, skip
+    if (Object.keys(selectedAttributes || {}).length > 0) return;
 
-  const productAttributes = useMemo(
-    () => (viewProduct?.attributes || []) as ProductAttribute[],
-    [viewProduct?.attributes]
+    const attrs = displayVariant.attributes || {};
+    const lower: SelectedAttributes = {};
+    Object.entries(attrs).forEach(([k, v]) => {
+      const key = String(k).trim().toLowerCase();
+      const val = String(v ?? "").trim();
+      if (key && val) (lower as any)[key] = val;
+    });
+    if (Object.keys(lower).length > 0) {
+      setSelectedAttributes(lower);
+    }
+  }, [displayVariant, selectedAttributes]);
+
+  
+
+  const pricing = useMemo(
+    () => (viewProduct ? resolvePrice({ product: viewProduct, selectedVariant: matchingVariant || displayVariant }) : null),
+    [viewProduct, matchingVariant, displayVariant]
   );
 
-  /** ✅ normalize selection (keys lowercase) */
-  const normalizedSelection = useMemo(
-    () => normalizeAttributes(selectedAttributes),
-    [selectedAttributes]
-  );
-
-  /** ✅ optionsMap derived (attributes -> variants -> legacy) */
-  const optionsMap = useMemo(() => {
-    const p: any = viewProduct;
-    const base = buildAttributeOptions(p) || {};
-
-    // Ensure attribute options exist even if attr.type === "text"
-    // Pull from variants.attributes
-    const variants = Array.isArray(p?.variants) ? p.variants : [];
-    for (const v of variants) {
-      const attrs = v?.attributes;
-      let obj: Record<string, any> = {};
-      if (attrs instanceof Map) obj = Object.fromEntries(attrs.entries());
-      else if (attrs && typeof attrs === "object") obj = attrs;
-
-      for (const [k, val] of Object.entries(obj)) {
-        const key = toLowerKey(k);
-        if (!key) continue;
-        base[key] = base[key] || [];
-        base[key].push(String(val ?? "").trim());
-      }
-    }
-
-    // legacy fallback
-    if (Array.isArray(p?.sizes) && p.sizes.length) {
-      base["size"] = uniqStrings([...(base["size"] || []), ...p.sizes]);
-    }
-    if (Array.isArray(p?.colors) && p.colors.length) {
-      base["color"] = uniqStrings([...(base["color"] || []), ...p.colors]);
-    }
-
-    // de-dupe
-    for (const k of Object.keys(base)) {
-      base[k] = uniqStrings(base[k] || []);
-    }
-
-    return base as Record<string, string[]>;
-  }, [viewProduct]);
-
-  /** ✅ auto-init required attributes when options exist (regardless of type) */
-  useEffect(() => {
-    if (!productAttributes.length) return;
-
-    setSelectedAttributes((prev) => {
-      const next: SelectedAttributes = { ...prev };
-      let changed = false;
-
-      for (const attr of productAttributes) {
-        const key = String(attr.name ?? "")
-          .trim()
-          .toLowerCase();
-
-        const options =
-          (Array.isArray(attr.options) && attr.options.length
-            ? attr.options
-            : optionsMap[key]) || [];
-
-        // ✅ هنا التعديل: شيلنا شرط attr.type === "select"
-        if (attr.required && options.length > 0) {
-          if (!(next as any)[key]) {
-            (next as any)[key] = options[0]!;
-            changed = true;
-          }
-        }
-      }
-
-      return changed ? next : prev;
-    });
-  }, [productAttributes, optionsMap]);
-
-  /** ✅ resolve variant based on normalizedSelection */
-  const matchingVariant = useMemo<VariantLike | null>(() => {
-    const variants = (viewProduct as any)?.variants;
-    if (!Array.isArray(variants) || variants.length === 0) return null;
-    return findMatchingVariant(
-      viewProduct as any,
-      normalizedSelection as any
-    ) as any;
-  }, [viewProduct, normalizedSelection]);
-
-  // debug (remove later)
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log("selection:", normalizedSelection);
-    // eslint-disable-next-line no-console
-    console.log(
-      "matchingVariant:",
-      matchingVariant?._id,
-      matchingVariant?.finalPrice,
-      matchingVariant?.stock
-    );
-  }, [normalizedSelection, matchingVariant]);
-
-  /** ✅ pricing (variant-first) */
-  const currentPrice = useMemo(() => {
-    return getFinalPrice(viewProduct as any, {
-      selectedAttributes: normalizedSelection as any,
-      variant: matchingVariant ?? null,
-      includeOutOfStockVariants: true,
-      includeInactiveVariants: false,
-      clampToZero: true,
-    });
-  }, [viewProduct, normalizedSelection, matchingVariant]);
-
-  const originalPrice = useMemo(() => {
-    return getOriginalPrice(viewProduct as any, {
-      selectedAttributes: normalizedSelection as any,
-      variant: matchingVariant ?? null,
-      includeOutOfStockVariants: true,
-      includeInactiveVariants: false,
-      clampToZero: true,
-    });
-  }, [viewProduct, normalizedSelection, matchingVariant]);
-
-  const productHasDiscount = useMemo(() => {
-    return hasDiscount(viewProduct as any, {
-      selectedAttributes: normalizedSelection as any,
-      variant: matchingVariant ?? null,
-      includeOutOfStockVariants: true,
-      includeInactiveVariants: false,
-      clampToZero: true,
-    });
-  }, [viewProduct, normalizedSelection, matchingVariant]);
+  const currentPrice = pricing?.final ?? 0;
+  const originalPrice = pricing?.original ?? pricing?.merchant ?? 0;
+  const productHasDiscount = (pricing?.discount?.amount ?? 0) > 0;
 
   const formattedFinalPrice = useMemo(
     () => formatPrice(currentPrice, CURRENCY),
@@ -350,18 +234,11 @@ export default function Details() {
     [originalPrice, productHasDiscount]
   );
 
-  /** ✅ stock + availability (variant-first, strict) */
   const currentStock = useMemo(() => {
-    if (!viewProduct) return 0;
-    // if variants exist, prefer matchingVariant stock
-    if (
-      Array.isArray(viewProduct.variants) &&
-      viewProduct.variants.length > 0
-    ) {
-      return matchingVariant ? matchingVariant.stock ?? 0 : 0;
-    }
-    return getProductStock(viewProduct as any, normalizedSelection as any);
-  }, [viewProduct, normalizedSelection, matchingVariant]);
+    if (displayVariant) return displayVariant.stock ?? 0;
+    if (viewProduct && viewProduct.simple?.stock != null) return Number(viewProduct.simple.stock ?? 0);
+    return 0;
+  }, [displayVariant, viewProduct]);
 
   /** ✅ required attributes missing? */
   const missingRequiredAttributes = useMemo(() => {
@@ -369,7 +246,7 @@ export default function Details() {
     const missing: string[] = [];
 
     for (const attr of productAttributes) {
-      const key = toLowerKey(attr.name);
+      const key = String(attr.name ?? "").trim().toLowerCase();
       if (!attr.required) continue;
 
       const val = (normalizedSelection as any)[key];
@@ -384,46 +261,37 @@ export default function Details() {
     if (!viewProduct) return false;
     if ((viewProduct as any)?.isActive === false) return false;
     if (missingRequiredAttributes.length > 0) return false;
-
-    const variants = (viewProduct as any)?.variants;
-    const hasVariants = Array.isArray(variants) && variants.length > 0;
-
-    // لو عنده variants لازم نلقى matchingVariant
-    if (hasVariants) {
+    // If product has variants, require valid matching selectable variant
+    if (viewProduct.variants.length > 0) {
       if (!matchingVariant) return false;
-      return (
-        (matchingVariant.stock ?? 0) > 0 && matchingVariant.isActive !== false
-      );
+      return isVariantSelectable(matchingVariant);
     }
-
-    // لو ما عنده variants اعتمد على stock
-    return (viewProduct.stock ?? 0) > 0;
+    // Simple product: rely on simple stock
+    const stock = Number(viewProduct.simple?.stock ?? 0);
+    return stock > 0;
   }, [viewProduct, missingRequiredAttributes.length, matchingVariant]);
 
   /** wishlist */
   const inWishlist = useMemo(() => {
-    return viewProduct?._id ? isInWishlist(viewProduct._id) ?? false : false;
-  }, [viewProduct?._id, isInWishlist]);
+    return viewProduct?.id ? isInWishlist(viewProduct.id) ?? false : false;
+  }, [viewProduct?.id, isInWishlist]);
 
   const handleWishlistPress = useCallback(async () => {
-    if (!viewProduct?._id || wishlistLoading) return;
+    if (!viewProduct?.id || wishlistLoading) return;
 
     setWishlistLoading(true);
     try {
-      const token = await getToken();
-      if (!token) return;
-
-      if (inWishlist) await removeFromWishlist(viewProduct._id, token);
-      else await addToWishlist(viewProduct as any, token);
+      // axios interceptor already attaches auth token
+      if (inWishlist) await removeFromWishlist(viewProduct.id);
+      else await addToWishlist({ ...(viewProduct as any), _id: viewProduct.id });
     } catch (e) {
       console.error("wishlist error:", e);
     } finally {
       setWishlistLoading(false);
     }
   }, [
-    viewProduct?._id,
+    viewProduct?.id,
     wishlistLoading,
-    getToken,
     inWishlist,
     removeFromWishlist,
     addToWishlist,
@@ -439,7 +307,7 @@ export default function Details() {
   const handleAttributeSelect = useCallback(
     (attrName: string, value: string) => {
       const keyLower = attrName.trim().toLowerCase();
-      setSelectedAttributes((prev) => {
+      setSelectedAttributes((prev: SelectedAttributes) => {
         if ((prev as any)[keyLower] === value) return prev;
         return { ...prev, [keyLower]: value };
       });
@@ -503,7 +371,7 @@ export default function Details() {
     );
   }
 
-  if (!viewProduct?._id) {
+  if (!viewProduct?.id) {
     return (
       <View
         style={[styles.errorContainer, { backgroundColor: colors.surface }]}
@@ -571,9 +439,16 @@ export default function Details() {
                   {formattedOriginalPrice}
                 </Text>
               )}
-              <Text style={[styles.price, { color: colors.text.gray }]}>
-                {formattedFinalPrice}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                {pricing?.requiresSelection && (
+                  <Text style={{ fontSize: 14, color: colors.text.veryLightGray, marginRight: 4 }}>
+                    {i18n.t("from") || "From"}
+                  </Text>
+                )}
+                <Text style={[styles.price, { color: colors.text.gray }]}>
+                  {formattedFinalPrice}
+                </Text>
+              </View>
             </View>
 
             {missingRequiredAttributes.length > 0 && (
@@ -619,12 +494,10 @@ export default function Details() {
 
           {/* ✅ Attributes */}
           <ProductAttributes
-            product={viewProduct as any}
-            attributes={productAttributes}
+            product={viewProduct}
             selectedAttributes={selectedAttributes}
             onAttributeSelect={handleAttributeSelect}
             themeColors={colors}
-            optionsMap={optionsMap}
             pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
           />
 
@@ -654,7 +527,7 @@ export default function Details() {
             colors={colors}
           />
 
-          {showDeferred && <Review productId={viewProduct?._id} />}
+          {showDeferred && <Review productId={viewProduct?.id} />}
         </View>
       </ScrollView>
 

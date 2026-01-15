@@ -1,4 +1,5 @@
-import axiosInstance from '@/utils/axiosInstans';
+import axiosInstance from "@/services/api/client";
+import type { ProductDTO } from "@/domain/product/product.types";
 
 export interface HomeBanner {
   _id: string;
@@ -25,50 +26,8 @@ export interface HomeCategory {
   slug?: string; // URL-friendly identifier (e.g., "electronics", "clothing")
 }
 
-export interface HomeProduct {
-  _id: string;
-  id?: string; // Universal ID (maps to _id)
-  name: string;
-  description: string;
-  price: number;
-  discountPrice: number;
-  discount: number;
-  finalPrice: number;
-  stock: number;
-  hasStock: boolean;
-  images: string[];
-  averageRating: number;
-  category: {
-    _id: string;
-    id?: string;
-    name: string;
-    slug?: string;
-    type?: 'category';
-  };
-  merchant?: {
-    _id: string;
-    id?: string;
-    businessName: string;
-    status: string;
-    type?: 'store';
-    slug?: string;
-  };
-  featured?: boolean;
-  priorityScore?: number;
-  // Deep linking fields
-  type?: 'product'; // Entity type
-  slug?: string; // URL-friendly identifier (e.g., "iphone-14-pro-max")
-  variants?: Array<{
-    _id: string;
-    id?: string;
-    sku: string;
-    price: number;
-    discountPrice: number;
-    stock: number;
-    isActive: boolean;
-    attributes: Record<string, string>;
-  }>;
-}
+// Backend Product schema is the source of truth for all product fields.
+export type HomeProduct = ProductDTO;
 
 export interface HomeStore {
   _id: string;

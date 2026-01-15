@@ -1,9 +1,6 @@
-import axiosInstance from './axiosInstans';
-import * as FileSystem from 'expo-file-system';
+import axiosInstance from "@/services/api/client";
+import * as FileSystem from "expo-file-system/legacy";
 
-/**
- * ImageKit upload authentication parameters
- */
 interface ImageKitAuthParams {
   token: string;
   expire: number;
@@ -12,80 +9,119 @@ interface ImageKitAuthParams {
   urlEndpoint?: string;
 }
 
-/**
- * Upload image to ImageKit using base64 (recommended for React Native)
- * @param imageUri - Local file URI from expo-image-picker
- * @returns ImageKit URL of the uploaded image
- */
-export const uploadImageToImageKit = async (
-  imageUri: string
-): Promise<string> => {
-  try {
-    // Step 1: Get authentication parameters from backend
-    const authResponse = await axiosInstance.get('/upload/imagekit-auth');
-    
-    if (!authResponse.data?.success) {
-      throw new Error(
-        authResponse.data?.message || 'Failed to get upload authentication'
-      );
+type AnyObj = Record<string, any>;
+
+function pickAuthParams(payload: AnyObj): ImageKitAuthParams | null {
+  const candidates: AnyObj[] = [];
+
+  if (payload && typeof payload === "object") candidates.push(payload);
+  if (payload?.data && typeof payload.data === "object") candidates.push(payload.data);
+  if (payload?.data?.data && typeof payload.data.data === "object") candidates.push(payload.data.data);
+  if (payload?.auth && typeof payload.auth === "object") candidates.push(payload.auth);
+  if (payload?.data?.auth && typeof payload.data.auth === "object") candidates.push(payload.data.auth);
+
+  for (const c of candidates) {
+    const token = c?.token;
+    const expire = c?.expire;
+    const signature = c?.signature;
+    const publicKey = c?.publicKey;
+    const urlEndpoint = c?.urlEndpoint;
+
+    if (
+      typeof token === "string" &&
+      typeof signature === "string" &&
+      typeof publicKey === "string" &&
+      (typeof expire === "number" || typeof expire === "string")
+    ) {
+      return {
+        token,
+        signature,
+        publicKey,
+        expire: typeof expire === "string" ? Number(expire) : expire,
+        urlEndpoint,
+      };
     }
-
-    const authParams: ImageKitAuthParams = authResponse.data.data;
-
-    // Step 2: Read the image file as base64
-    const base64 = await FileSystem.readAsStringAsync(imageUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    // Get file name from URI
-    const fileName = `payment-proof-${Date.now()}.jpg`;
-    
-    // Step 3: Upload to ImageKit using base64
-    // ImageKit accepts base64 data URLs
-    const uploadData = {
-      file: `data:image/jpeg;base64,${base64}`,
-      fileName: fileName,
-      publicKey: authParams.publicKey,
-      signature: authParams.signature,
-      expire: authParams.expire,
-      token: authParams.token,
-      folder: '/payment-proofs/',
-      useUniqueFileName: true,
-    };
-
-    const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(uploadData),
-    });
-
-    if (!uploadResponse.ok) {
-      const errorData = await uploadResponse.json().catch(() => ({}));
-      throw new Error(
-        errorData.message || `Upload failed with status ${uploadResponse.status}`
-      );
-    }
-
-    const result = await uploadResponse.json();
-    
-    // Extract URL from response
-    const imageUrl = result.url || result.filePath;
-    
-    if (!imageUrl) {
-      throw new Error('Upload succeeded but no URL returned from ImageKit');
-    }
-
-    // Return full URL (ImageKit usually returns full URLs)
-    return imageUrl.startsWith('http') 
-      ? imageUrl 
-      : `${authParams.urlEndpoint || 'https://ik.imagekit.io'}/${imageUrl.replace(/^\//, '')}`;
-  } catch (error: any) {
-    console.error('ImageKit upload error:', error);
-    throw new Error(
-      error.message || 'Failed to upload image to ImageKit'
-    );
   }
-};
 
+  return null;
+}
+
+function guessMimeFromUri(uri: string) {
+  const u = uri.toLowerCase();
+  if (u.endsWith(".png")) return "image/png";
+  if (u.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
+
+function guessExtFromMime(mime: string) {
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return "jpg";
+}
+
+export const uploadImageToImageKit = async (imageUri: string): Promise<string> => {
+  // 1) auth
+  const authResponse = await axiosInstance.get("/upload/imagekit-auth");
+  const authParams = pickAuthParams(authResponse?.data);
+
+  if (!authParams) {
+    const preview = JSON.stringify(authResponse?.data ?? {}, null, 2).slice(0, 1500);
+    console.error("ImageKit auth response invalid:", preview);
+    throw new Error("IMAGEKIT_AUTH_INVALID_RESPONSE");
+  }
+
+  // 2) base64
+  const mime = guessMimeFromUri(imageUri);
+  const ext = guessExtFromMime(mime);
+
+  const base64 = await FileSystem.readAsStringAsync(imageUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  // IMPORTANT: ImageKit expects "file" to be either
+  // - binary file (multipart)
+  // - base64 string (NOT necessarily data URL, but data URL works too)
+  // We'll send multipart/form-data with file as data URL (works reliably).
+  const fileName = `payment-proof-${Date.now()}.${ext}`;
+
+  // 3) multipart upload
+  const form = new FormData();
+  form.append("file", `data:${mime};base64,${base64}` as any);
+  form.append("fileName", fileName as any);
+  form.append("publicKey", authParams.publicKey as any);
+  form.append("signature", authParams.signature as any);
+  form.append("expire", String(authParams.expire) as any);
+  form.append("token", authParams.token as any);
+  form.append("folder", "/payment-proofs/" as any);
+  form.append("useUniqueFileName", "true" as any);
+
+  const uploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+    method: "POST",
+    // ⚠️ لا تحدد Content-Type هنا — fetch هيضيف boundary تلقائيًا
+    body: form,
+  });
+
+  const json = await uploadRes.json().catch(() => ({} as AnyObj));
+
+  if (!uploadRes.ok) {
+    const msg =
+      json?.message ||
+      json?.error?.message ||
+      json?.error ||
+      `Upload failed with status ${uploadRes.status}`;
+    console.error("ImageKit upload failed:", json);
+    throw new Error(msg);
+  }
+
+  const url: string | undefined = json?.url || json?.filePath;
+
+  if (!url) {
+    console.error("ImageKit upload response missing url:", json);
+    throw new Error("UPLOAD_SUCCEEDED_BUT_NO_URL");
+  }
+
+  if (url.startsWith("http")) return url;
+
+  const endpoint = authParams.urlEndpoint || "https://ik.imagekit.io";
+  return `${endpoint}/${String(url).replace(/^\//, "")}`;
+};

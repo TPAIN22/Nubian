@@ -1,6 +1,6 @@
 import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import CheckOutModal from "../components/checkOutModal"; // عدّل المسار حسب مشروعك
+import CheckOutModal from "@/components/checkOutModal";
 import { useTheme } from "@/providers/ThemeProvider";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { HomeProduct, HomeRecommendations, ProductRecommendations } from '../api/recommendations.api';
+import type { HomeProduct } from "../api/home.api";
+import { HomeRecommendations, ProductRecommendations } from '../api/recommendations.api';
 import {
   getHomeRecommendations,
   getProductRecommendations,

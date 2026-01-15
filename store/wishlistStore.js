@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import axiosInstance from '@/utils/axiosInstans';
+import axiosInstance from "@/services/api/client";
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

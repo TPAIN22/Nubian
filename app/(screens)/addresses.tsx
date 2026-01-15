@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button, ScrollView } from 'react-native';
+import { useEffect, useRef, useState } from "react";
+import type { FC } from "react";
+import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView } from "react-native";
 import { Text } from '@/components/ui/text';
 import useAddressStore from '@/store/addressStore';
 import { useAuth } from '@clerk/clerk-expo';
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import i18n from '../components/../../utils/i18n';
+import i18n from "@/utils/i18n";
 import { useTheme } from '@/providers/ThemeProvider';
 
 interface Address {
@@ -26,14 +26,14 @@ interface AddressFormProps {
   initialValues?: Omit<Address, '_id'> | undefined;
 }
 
-const AddressForm: React.FC<AddressFormProps> = ({ visible, onClose, onSubmit, initialValues }) => {
+const AddressForm: FC<AddressFormProps> = ({ visible, onClose, onSubmit, initialValues }) => {
   const { theme } = useTheme();
   const Colors = theme.colors;
   const [form, setForm] = useState<Omit<Address, '_id'>>(initialValues || {
     name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const inputRefs = React.useRef<any>({});
+  const inputRefs = useRef<Record<string, any>>({});
 
   useEffect(() => {
     setForm(initialValues || {

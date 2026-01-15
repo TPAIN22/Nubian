@@ -1,5 +1,5 @@
-import axiosInstance from "@/utils/axiosInstans";
-import { HomeProduct } from "./home.api";
+import axiosInstance from "@/services/api/client";
+import type { HomeProduct } from "./home.api";
 
 export interface ProductRecommendations {
   similarItems: HomeProduct[];

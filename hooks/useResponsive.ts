@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dimensions, ScaledSize, Platform } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import { useWindowDimensions } from 'react-native';
 
 /**
@@ -11,7 +11,7 @@ export function useResponsive() {
   const [screen, setScreen] = useState(Dimensions.get('screen'));
 
   useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window, screen }) => {
+    const subscription = Dimensions.addEventListener('change', ({ screen }) => {
       setScreen(screen);
     });
 
@@ -87,7 +87,7 @@ export function useResponsive() {
  * Hook for responsive font sizes
  */
 export function useResponsiveFontSize(baseSize: number): number {
-  const { isTablet, isLargeScreen, spacingMultiplier } = useResponsive();
+  const { isTablet, isLargeScreen } = useResponsive();
   
   if (isTablet) {
     return baseSize * 1.2;

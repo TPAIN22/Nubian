@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { Stack } from "expo-router";
-import AppHeader from "../components/AppHeader";
+import AppHeader from "@/components/AppHeader";
 
 export default function _layout() {
   return (
@@ -14,6 +14,8 @@ export default function _layout() {
           <Stack.Screen name="details/[details]" options={{ headerShown: false }} />
           <Stack.Screen name="order" options={{ headerShown: false }} />
           <Stack.Screen name="addresses" options={{ headerShown: false }} />
+          <Stack.Screen name="checkout" options={{ headerShown: false }} />
+          <Stack.Screen name="order-success" options={{ headerShown: false }} />
           <Stack.Screen name="order-tracking/[orderId]" options={{ headerShown: false }} />
         </Stack>
       </View>

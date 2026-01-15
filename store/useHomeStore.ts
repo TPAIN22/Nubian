@@ -44,11 +44,12 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
   fetchHomeData: async () => {
     const { isLoading, inFlight } = get();
-    if (isLoading && inFlight) return inFlight; // ✅ dedupe
+    if (isLoading && inFlight) return inFlight;
+
+    // ✅ Set loading IMMEDIATELY before starting the task
+    set({ isLoading: true, error: null });
 
     const task = (async () => {
-      set({ isLoading: true, error: null });
-
       try {
         const [homeData, recommendations] = await Promise.all([
           HomeService.fetchHomeData(),
@@ -92,15 +93,16 @@ export const useHomeStore = create<HomeState>((set, get) => ({
           stores: verifiedStores,
           isLoading: false,
           error: null,
-          lastFetchedAt: Date.now(), // ✅
+          lastFetchedAt: Date.now(),
         });
       } catch (error: any) {
         set({
           isLoading: false,
           error: error?.message || "Failed to load home data",
+          lastFetchedAt: Date.now(), // ✅ Update even on error to prevent focus loop
         });
       } finally {
-        set({ inFlight: null }); // ✅
+        set({ inFlight: null });
       }
     })();
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import axiosInstance from '../utils/axiosInstans';
+import axiosInstance from "@/services/api/client";
 
 const useCategoryStore = create((set) => ({
   categories: [],

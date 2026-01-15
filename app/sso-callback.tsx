@@ -5,7 +5,7 @@ import { useAuth, useClerk } from '@clerk/clerk-expo';
 import { ActivityIndicator, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import useTracking from '@/hooks/useTracking';
+import { useTracking } from '@/hooks/useTracking';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -37,8 +37,8 @@ export default function SSOCallback() {
             await mergeSession();
           }
           router.replace('/');
-        } catch (err) {
-          
+        } catch {
+          // ignore
         }
       } else {
         

@@ -12,15 +12,7 @@ import Colors from "@/locales/brandColors";
 
 const { width, height } = Dimensions.get('window');
 
-export default function index() {
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * Onboarding screen
- * This screen is shown when the user first opens the app
- * It provides a brief introduction to the app and allows the user to skip the onboarding process
- * @returns {JSX.Element} The onboarding screen component
- */
-/*******  abe69220-3771-4f71-a99b-0a6ebb644a30  *******/  
+export default function OnboardingIndex() {
   const router = useRouter();
 
   const handleSkip = () => {

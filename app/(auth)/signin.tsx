@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Alert, ActivityIndicator, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Text } from '@/components/ui/text';
 import * as WebBrowser from 'expo-web-browser';
@@ -16,6 +16,7 @@ const AuthSheet = () => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
+  const [emailAddressId, setEmailAddressId] = useState<string | null>(null);
   
   const router = useRouter();
   const { startSSOFlow } = useSSO();
@@ -67,11 +68,13 @@ const AuthSheet = () => {
       });
 
       // الحصول على email address ID من الـ response
-      const emailAddressId = signInAttempt.supportedFirstFactors?.find(
-        (factor: any) => factor.strategy === 'email_code'
-      )?.emailAddressId;
+      const emailFactor = signInAttempt.supportedFirstFactors?.find(
+        (factor) => factor.strategy === "email_code"
+      );
+      const emailAddressIdFromFactor =
+        (emailFactor as any)?.emailAddressId ?? (emailFactor as any)?.email_address_id ?? null;
 
-      if (!emailAddressId) {
+      if (!emailAddressIdFromFactor) {
         Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
         return;
       }
@@ -79,10 +82,11 @@ const AuthSheet = () => {
       // طلب إرسال كود تحقق
       await signIn.prepareFirstFactor({
         strategy: 'email_code',
-        emailAddressId: emailAddressId,
+        emailAddressId: emailAddressIdFromFactor,
       });
 
       Alert.alert('📩', i18n.t('emailSend'));
+      setEmailAddressId(emailAddressIdFromFactor);
       setPendingVerification(true);
     } catch (err: any) {
       const errorMessage = err.errors?.[0]?.message || i18n.t('failedToSignIn');
@@ -130,17 +134,18 @@ const AuthSheet = () => {
       setLoading('email');
       await signIn.prepareFirstFactor({
         strategy: 'email_code',
-        emailAddressId: signIn.supportedFirstFactors?.find(
-          (factor: any) => factor.strategy === 'email_code'
-        )?.emailAddressId,
+        emailAddressId:
+          emailAddressId ??
+          ((signIn.supportedFirstFactors?.find((factor) => factor.strategy === "email_code") as any)
+            ?.emailAddressId ?? ""),
       });
       Alert.alert('✅', i18n.t('codeResent'));
-    } catch (err: any) {
+    } catch {
       Alert.alert(i18n.t('error'), i18n.t('resendFailed'));
     } finally {
       setLoading(null);
     }
-  }, [isLoaded, signIn]);
+  }, [emailAddressId, isLoaded, signIn]);
 
   return (
     <View style={styles.container}>

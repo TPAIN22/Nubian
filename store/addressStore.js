@@ -1,21 +1,34 @@
 import { create } from 'zustand';
-import axiosInstance from '@/utils/axiosInstans';
+import axiosInstance from "@/services/api/client";
 
 const useAddressStore = create((set, get) => ({
   addresses: [],
   isLoading: false,
   error: null,
+  inFlight: null,
 
   // جلب العناوين من الباكند
-  // Token is automatically added by axios interceptor
   fetchAddresses: async () => {
+    const { isLoading, inFlight } = get();
+    if (isLoading && inFlight) return inFlight;
+
     set({ isLoading: true, error: null });
-    try {
-      const res = await axiosInstance.get('/addresses');
-      set({ addresses: res.data, isLoading: false });
-    } catch (error) {
-      set({ error: error?.response?.data?.message || error.message, isLoading: false });
-    }
+    const task = (async () => {
+      try {
+        const res = await axiosInstance.get('/addresses');
+        set({ addresses: res.data, isLoading: false, error: null });
+        return res.data;
+      } catch (error) {
+        const msg = error?.response?.data?.message || error.message;
+        set({ error: msg, isLoading: false });
+        throw error;
+      } finally {
+        set({ inFlight: null });
+      }
+    })();
+
+    set({ inFlight: task });
+    return task;
   },
 
   // إضافة عنوان
@@ -23,12 +36,15 @@ const useAddressStore = create((set, get) => ({
   addAddress: async (address) => {
     set({ isLoading: true, error: null });
     try {
-      // حذف حقل user إذا كان موجوداً
       const { user, ...addressData } = address;
       const res = await axiosInstance.post('/addresses', addressData);
-      set({ addresses: [res.data, ...get().addresses], isLoading: false });
+      const newAddress = res.data;
+      set({ addresses: [newAddress, ...get().addresses], isLoading: false });
+      return newAddress;
     } catch (error) {
-      set({ error: error?.response?.data?.message || error.message, isLoading: false });
+      const msg = error?.response?.data?.message || error.message;
+      set({ error: msg, isLoading: false });
+      throw error;
     }
   },
 
@@ -37,8 +53,10 @@ const useAddressStore = create((set, get) => ({
   updateAddress: async (id, address) => {
     set({ isLoading: true, error: null });
     try {
-      // حذف حقل user إذا كان موجوداً
       const { user, ...addressData } = address;
+      if (!addressData.phone || !addressData.whatsapp) {
+        throw new Error("رقم الهاتف وواتساب مطلوبان");
+      }
       const res = await axiosInstance.put(`/addresses/${id}`, addressData);
       set({ addresses: get().addresses.map(a => a._id === id ? res.data : a), isLoading: false });
     } catch (error) {

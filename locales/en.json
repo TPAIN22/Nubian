@@ -303,5 +303,8 @@
   "allCategories": "All Categories",
   "clear": "Clear",
   "applyFilters": "Apply Filters",
-  "category": "Category"
+  "category": "Category",
+  "from": "From",
+  "pleaseSelect": "Please select",
+  "continueShopping": "Continue Shopping"
 } 

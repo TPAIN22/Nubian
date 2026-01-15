@@ -3,9 +3,10 @@ import { View, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { Text } from '@/components/ui/text';
 import useWishlistStore from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
-import ProductCard from '../components/Card';
+import ProductCard from "@/components/Card";
 import i18n from '@/utils/i18n';
 import { useTheme } from '@/providers/ThemeProvider';
+import { normalizeProduct } from "@/domain/product/product.normalize";
 
 export default function WishlistTab() {
   const { theme } = useTheme();
@@ -34,7 +35,7 @@ export default function WishlistTab() {
       data={wishlist}
       keyExtractor={item => item._id}
       numColumns={2}
-      renderItem={({ item }) => <ProductCard item={item} />}
+      renderItem={({ item }) => <ProductCard item={normalizeProduct(item as any)} />}
       contentContainerStyle={[styles.list, { backgroundColor: theme.colors.surface }]}
       columnWrapperStyle={styles.colomn}
       style={{ backgroundColor: theme.colors.surface }}

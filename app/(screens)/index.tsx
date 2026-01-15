@@ -3,15 +3,14 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  ActivityIndicator,
 } from "react-native";
 import { Text } from "@/components/ui/text";
-import React, { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import useItemStore from "@/store/useItemStore";
 import NoNetworkScreen from "../NoNetworkScreen";
 import { useNetwork } from "@/providers/NetworkProvider";
-import ItemCard from "../components/Card";
-import ItemCardSkeleton from "../components/ItemCardSkeleton";
+import ItemCard from "@/components/Card";
+import ItemCardSkeleton from "@/components/ItemCardSkeleton";
 import {
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
@@ -20,7 +19,7 @@ import {
   BottomSheetModalProvider,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
-import BottomSheet from "../components/BottomSheet";
+import BottomSheet from "@/components/BottomSheet";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
 
@@ -62,15 +61,15 @@ export default function Index() {
     handleSheetChanges(-1);
   }, [getAllProducts, setIsTabBarVisible, handleSheetChanges]);
 
-  if (!isConnected && !isNetworkChecking) {
-    return <NoNetworkScreen onRetry={retryNetworkCheck} />;
-  }
-
   const onEndReachedHandler = useCallback(() => {
     if (!isProductsLoading && hasMore) {
       loadMoreAllProducts();
     }
   }, [loadMoreAllProducts, hasMore, isProductsLoading]);
+
+  if (!isConnected && !isNetworkChecking) {
+    return <NoNetworkScreen onRetry={retryNetworkCheck} />;
+  }
 
   return (
     <GestureHandlerRootView style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
@@ -80,7 +79,7 @@ export default function Index() {
             onEndReachedThreshold={0.4}
             onEndReached={onEndReachedHandler}
             data={isProductsLoading && products.length === 0 ? Array.from({ length: 8 }) : products}
-            renderItem={({ item, index }) => 
+            renderItem={({ item }) => 
               isProductsLoading && products.length === 0 ? (
                 <ItemCardSkeleton />
               ) : (

@@ -3,10 +3,10 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import i18n from "@/utils/i18n";
-import { useAuth } from '@clerk/clerk-expo';
 
 // API base URL - use environment variable or fallback
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nubian-lne4.onrender.com';
+import { resolveApiBaseUrl } from "@/services/api/baseUrl";
+const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Enhanced push token registration with new notification system
@@ -14,7 +14,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nubian-lne4.onr
  * Supports multi-device (multiDevice: true)
  * Auto-cleanup handled by backend (autoCleanup: true)
  */
-export async function registerForPushNotificationsAsync(userId?: string | null) {
+export async function registerForPushNotificationsAsync(_userId?: string | null) {
   try {
     if (!Device.isDevice) {
       alert(i18n.t('pushNotificationsDeviceOnly'));
@@ -80,7 +80,7 @@ export async function registerForPushNotificationsAsync(userId?: string | null) 
     // For now, we'll send without auth (anonymous tokens are allowed)
     
     // Send token to new API endpoint
-    const response = await fetch(`${API_BASE_URL}/api/notifications/tokens`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/tokens`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -159,7 +159,7 @@ export async function registerPushTokenWithAuth(authToken: string) {
     const appVersion = Constants.expoConfig?.version || '1.0.0';
     const osVersion = `${Platform.OS} ${Device.osVersion || ''}`.trim();
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications/tokens`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/tokens`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axiosInstance from '../utils/axiosInstans';
+import axiosInstance from "@/services/api/client";
 
 const API_URL = '/merchant'; // لأن baseURL معرف في axiosInstance
 

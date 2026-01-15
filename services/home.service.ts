@@ -1,13 +1,6 @@
 import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from "../api/home.api";
-
-type VariantLike = {
-  stock?: number;
-  isActive?: boolean;
-  finalPrice?: number;
-  merchantPrice?: number;
-  price?: number;
-  discountPrice?: number; // compare-at
-};
+import { hasAnyActiveStock } from "@/utils/cartUtils";
+import { getDiscountPercent, getFinalPrice, getOriginalPrice } from "@/utils/priceUtils";
 
 export class HomeService {
   static async fetchHomeData(): Promise<HomeData> {
@@ -19,65 +12,11 @@ export class HomeService {
     return Array.isArray((product as any).variants) && (product as any).variants.length > 0;
   }
 
-  /** ✅ stock الحقيقي: لو في variants = مجموع/أو وجود ستوك في أي variant active */
+  /** ✅ stock الحقيقي: availability without attribute selection */
   static hasStock(product: HomeProduct): boolean {
-    const p: any = product;
-
-    // product inactive => not available
-    if (p.isActive === false) return false;
-
-    // variant-based
-    if (this.hasVariants(product)) {
-      return (p.variants as VariantLike[]).some((v) => (v?.isActive !== false) && ((v?.stock ?? 0) > 0));
-    }
-
-    // simple
-    return (p.stock ?? 0) > 0;
+    return hasAnyActiveStock(product as any);
   }
 
-  /** ✅ final selling price: variant? product? */
-  
-  static getFinalPrice(product: HomeProduct): number {
-    const p: any = product;
-  
-    // variant-based products: show the lowest dynamic finalPrice among active + in-stock variants
-    if (Array.isArray(p.variants) && p.variants.length > 0) {
-      const eligible = p.variants.filter(
-        (v: any) => v?.isActive !== false && (v?.stock ?? 0) > 0
-      );
-  
-      const list = eligible.length ? eligible : p.variants.filter((v: any) => v?.isActive !== false);
-  
-      let best = Infinity;
-      for (const v of list) {
-        // ✅ dynamic pricing first
-        const val = v?.finalPrice ?? v?.merchantPrice ?? v?.price ?? 0;
-        if (val > 0 && val < best) best = val;
-      }
-      return Number.isFinite(best) && best !== Infinity ? best : 0;
-    }
-  
-    // simple product: show dynamic finalPrice directly
-    return p.finalPrice ?? p.merchantPrice ?? p.price ?? 0;
-  }  
-
-  /** ✅ original/compare-at price (old price) */
-  static getOriginalPrice(product: HomeProduct): number {
-    const p: any = product;
-  
-    // simple product
-    const current = this.getFinalPrice(product);
-    const old = p.discountPrice ?? 0;
-    return old > 0 ? Math.max(old, current) : current;
-  }
-
-  /** ✅ discount % */
-  static calculateDiscountFromPrices(original: number, current: number): number {
-    if (!original || original <= 0) return 0;
-    if (!current || current <= 0) return 0;
-    if (current >= original) return 0;
-    return Math.round(((original - current) / original) * 100);
-  }
   /** ✅ Filter products by availability (stock + active + merchant approved) */
   static filterAvailableProducts(products: HomeProduct[]): HomeProduct[] {
     if (!Array.isArray(products) || products.length === 0) return [];
@@ -94,10 +33,9 @@ export class HomeService {
       })
       .map((product) => {
         // ✅ enrich without mutating original
-        const p: any = product;
-        const finalPrice = this.getFinalPrice(product);
-        const originalPrice = this.getOriginalPrice(product);
-        const discount = this.calculateDiscountFromPrices(originalPrice, finalPrice);
+        const finalPrice = getFinalPrice(product as any, { strategy: "lowest" });
+        const originalPrice = getOriginalPrice(product as any, { strategy: "lowest" });
+        const discount = getDiscountPercent(originalPrice, finalPrice);
 
         return {
           ...product,

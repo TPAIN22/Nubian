@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import { 
-  ExploreProduct, 
   ExploreFilters, 
   ExploreSort, 
   ExploreParams,
   getExploreProducts 
 } from '../api/explore.api';
+import { normalizeProduct, type NormalizedProduct } from "@/domain/product/product.normalize";
 
 interface ExploreState {
   // Data
-  products: ExploreProduct[];
+  products: NormalizedProduct[];
   total: number;
   page: number;
   limit: number;
@@ -80,10 +80,11 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       };
 
       const response = await getExploreProducts(queryParams);
+      const normalized = (response.data || []).map(normalizeProduct);
 
       // Update state with response and any params that were passed
       set({
-        products: response.data,
+        products: normalized,
         total: response.total,
         page: response.page,
         limit: response.limit,
@@ -124,7 +125,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
 
       const { products } = get();
       set({
-        products: [...products, ...response.data],
+        products: [...products, ...(response.data || []).map(normalizeProduct)],
         page: nextPage,
         hasMore: response.page < response.totalPages,
         isLoadingMore: false,
@@ -151,7 +152,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       });
 
       set({
-        products: response.data,
+        products: (response.data || []).map(normalizeProduct),
         total: response.total,
         page: 1,
         totalPages: response.totalPages,
@@ -170,23 +171,23 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   setFilters: (newFilters: Partial<ExploreFilters>) => {
     // Replace filters completely (don't merge) to allow clearing
     // Remove undefined values to properly clear filters
-    const cleanedFilters: ExploreFilters = {};
-    Object.keys(newFilters).forEach(key => {
-      const value = newFilters[key as keyof ExploreFilters];
-      if (value !== undefined && value !== null && value !== '') {
-        cleanedFilters[key as keyof ExploreFilters] = value;
+    const cleanedFilters: Partial<ExploreFilters> = {};
+    (Object.keys(newFilters) as Array<keyof ExploreFilters>).forEach((key) => {
+      const value = newFilters[key];
+      if (value !== undefined && value !== null && value !== "") {
+        (cleanedFilters as any)[key] = value;
       }
     });
     
-    console.log('Store: Setting filters and fetching from API:', cleanedFilters);
-    
-    set({ filters: cleanedFilters, page: 1 });
+    set({ filters: cleanedFilters as ExploreFilters, page: 1 });
     // Automatically fetch with new filters - this fetches from API
     const { sort, limit } = get();
     // Call fetchProducts which will make API call to /products/explore with filters
-    get().fetchProducts({ ...cleanedFilters, sort, page: 1, limit }).catch(error => {
-      console.error('Error fetching products with filters:', error);
-    });
+    get()
+      .fetchProducts({ ...(cleanedFilters as ExploreFilters), sort, page: 1, limit })
+      .catch((error) => {
+        if (__DEV__) console.warn("Error fetching products with filters:", error);
+      });
   },
 
   setSort: (sort: ExploreSort) => {

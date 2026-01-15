@@ -80,19 +80,7 @@ npm run dev
 
 ### نظام التوصيات الذكي
 
-```javascript
-import SmartRecommendationSystem from './utils/smartRecommendations';
-
-// الحصول على توصيات للمستخدم
-const recommendations = await SmartRecommendationSystem.getAllRecommendations(userId);
-
-// تتبع سلوك المستخدم
-await SmartRecommendationSystem.trackUserBehavior(userId, 'view', {
-  productId: 'product123',
-  category: 'electronics',
-  price: 1500
-});
-```
+> TODO: Re-introduce a production-ready recommendations system (this legacy module was removed during cleanup).
 
 **أنواع التوصيات:**
 - **التوصيات التعاونية**: بناءً على سلوك المستخدمين المشابهين

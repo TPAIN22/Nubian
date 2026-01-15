@@ -302,5 +302,8 @@
   "category": "الفئة",
   "allCategories": "جميع الفئات",
   "clear": "مسح",
-  "applyFilters": "تطبيق الفلاتر"
+  "applyFilters": "تطبيق الفلاتر",
+  "from": "من",
+  "pleaseSelect": "يرجى اختيار",
+  "continueShopping": "العودة للتسوق"
 } 

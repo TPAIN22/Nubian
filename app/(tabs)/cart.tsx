@@ -1,27 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   View,
   ActivityIndicator,
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  Alert,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import useCartStore from "@/store/useCartStore";
-import CartItem from "../components/cartItem";
-import Chekout from "../components/chekoutBotton";
+import CartItem from "@/components/cartItem";
+import Checkout from "@/components/chekoutBotton";
 import { normalizeAttributes } from "@/utils/cartUtils";
-import { BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
 import i18n from "@/utils/i18n";
-import type { CouponValidationResult } from "../components/CouponInput";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/providers/ThemeProvider";
-import useTracking from "@/hooks/useTracking";
+import { useTracking } from "@/hooks/useTracking";
 import { useFocusEffect } from "@react-navigation/native";
-import CheckOutModal from "../components/checkOutModal";
 
 type CartLine = {
   product: { _id: string };
@@ -35,15 +29,9 @@ export default function CartScreen() {
   const colors = theme.colors;
 
   const router = useRouter();
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["90%"], []);
-  const handleSheetDismiss = useCallback(() => {
-    bottomSheetModalRef.current?.dismiss();
-  }, []);
-
-   const handlePresentModalPress = useCallback(() => {
-      router.push("/checkout"); // أو المسار الصحيح حسب مكان الملف
-    }, [router]);
+  const handlePresentModalPress = useCallback(() => {
+    router.push("/checkout");
+  }, [router]);
   
 
   const {
@@ -58,7 +46,6 @@ export default function CartScreen() {
   } = useCartStore();
 
   const [isProcessing] = useState(false);
-  const [couponResult, setCouponResult] = useState<CouponValidationResult | null>(null);
 
   const { trackEvent } = useTracking();
 
@@ -67,8 +54,6 @@ export default function CartScreen() {
   // ✅ دا الأفضل بدل useEffect([]): يحدث كل مرة الشاشة تتفتح
   useFocusEffect(
     useCallback(() => {
-      let mounted = true;
-
       (async () => {
         try {
           await fetchCart();
@@ -78,7 +63,7 @@ export default function CartScreen() {
       })();
 
       return () => {
-        mounted = false;
+        // noop
       };
     }, [fetchCart])
   );
@@ -141,15 +126,7 @@ export default function CartScreen() {
   }, [router]);
 
   // ✅ total after coupon
-  const finalTotal = useMemo(() => {
-    const base = cart?.totalPrice ?? 0;
-    if (!couponResult?.valid || !couponResult.discountValue) return base;
-
-    if (couponResult.discountType === "percentage") {
-      return Math.max(0, base - (base * couponResult.discountValue) / 100);
-    }
-    return Math.max(0, base - couponResult.discountValue);
-  }, [cart?.totalPrice, couponResult]);
+  const finalTotal = cart?.totalPrice ?? 0;
 
   // Loading
   if (isLoading) {
@@ -175,11 +152,11 @@ export default function CartScreen() {
             }}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={[colors.primary, colors.primary]} style={styles.buttonGradient}>
+            <View style={[styles.buttonGradient, { backgroundColor: colors.primary }]}>
               <Text style={[styles.continueShoppingText, { color: colors.text.white }]}>
                 {i18n.t("tryAgain") || "حاول مرة أخرى"}
               </Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -208,11 +185,11 @@ export default function CartScreen() {
             onPress={handleContinueShopping}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={[colors.primary, colors.primary]} style={styles.buttonGradient}>
+            <View style={[styles.buttonGradient, { backgroundColor: colors.primary }]}>
               <Text style={[styles.continueShoppingText, { color: colors.text.white }]}>
                 {i18n.t("startShopping") || "ابدأ التسوق"}
               </Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -253,20 +230,8 @@ export default function CartScreen() {
       </View>
 
       <View style={[styles.checkoutSection, { backgroundColor: colors.surface }]}>
-        <Chekout total={finalTotal} handleCheckout={handlePresentModalPress} /> 
+        <Checkout total={finalTotal} handleCheckout={handlePresentModalPress} /> 
       </View>
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        snapPoints={snapPoints}
-        index={0}
-        enablePanDownToClose
-        backgroundStyle={{ backgroundColor: colors.surface }}
-        handleIndicatorStyle={{ backgroundColor: colors.gray?.[400] ?? "#9CA3AF" }}
-      >
-        <BottomSheetView style={{ flex: 1 }}>
-          <CheckOutModal handleClose={handleSheetDismiss} />
-        </BottomSheetView>
-      </BottomSheetModal>
     </View>
   );
 }

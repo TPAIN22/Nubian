@@ -1,51 +1,62 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import { useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
+import { View, ScrollView, ActivityIndicator, StyleSheet } from "react-native";
 import { Text } from '@/components/ui/text';
-import axiosInstance from '@/utils/axiosInstans';
+import axiosInstance from "@/services/api/client";
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons'; // For icons
 import { useTheme } from '@/providers/ThemeProvider';
 
-// Types for Order and OrderItem (unchanged, but included for completeness)
 interface OrderItem {
-  id: string | number;
+  productId: string | null;
   name: string;
+  price: number;
   quantity: number;
 }
 
+interface SubOrder {
+  _id?: string;
+  merchantId: string;
+  total: number;
+  shippingFee: number;
+  fulfillmentStatus: string;
+  paymentStatus: string;
+}
+
 interface Order {
-  id: string | number;
+  _id: string;
   status: string;
+  paymentStatus: string;
+  paymentMethod: string;
   createdAt?: string;
-  totalAmount?: number;
-  finalAmount?: number;
-  discountAmount?: number;
+  subtotal?: number;
+  shippingFee?: number;
+  total?: number;
+  currency?: string;
+  items?: OrderItem[];
+  subOrders?: SubOrder[];
+  // Backend order schema fields (optional)
   couponDetails?: {
-    code: string;
-    type: string;
-    value: number;
-    discountAmount: number;
+    code?: string;
+    type?: "percentage" | "fixed";
+    value?: number;
+    discountAmount?: number;
   };
-  productsDetails?: Array<{
-    productId: string | null;
-    name: string;
-    price: number;
-    images: any[];
-    category: string;
-    description: string;
-    stock: number;
-    quantity: number;
-    totalPrice: number;
-    isAvailable?: boolean;
-  }>;
+  discountAmount?: number;
+  address?: {
+    name?: string;
+    city?: string;
+    street?: string;
+    phone?: string;
+    whatsapp?: string;
+  };
 }
 
 const ORDER_STATUS = [
-  { key: 'pending', label: 'قيد المعالجة', icon: 'hourglass-outline' },
-  { key: 'shipped', label: 'تم الشحن', icon: 'cube-outline' },
-  { key: 'out_for_delivery', label: 'في الطريق', icon: 'car-outline' },
-  { key: 'delivered', label: 'تم التسليم', icon: 'checkmark-circle-outline' },
+  { key: 'PLACED', label: 'قيد المعالجة', icon: 'hourglass-outline' },
+  { key: 'VERIFIED', label: 'تم الدفع', icon: 'checkmark-done-outline' },
+  { key: 'SHIPPED', label: 'تم الشحن', icon: 'cube-outline' },
+  { key: 'DELIVERED', label: 'تم التسليم', icon: 'checkmark-circle-outline' },
 ];
 
 const fetchOrder = async (orderId: string, token: string): Promise<Order> => {
@@ -54,8 +65,6 @@ const fetchOrder = async (orderId: string, token: string): Promise<Order> => {
   });
   return res.data;
 };
-
-const { width } = Dimensions.get('window');
 
 export default function OrderTracking() {
   const { theme } = useTheme();
@@ -113,14 +122,19 @@ export default function OrderTracking() {
     );
   }
 
-  // Determine the current status index
-  const currentStatusIndex = ORDER_STATUS.findIndex(s => s.key === order.status);
+  const currentStatusIndex = (() => {
+    let stage = 0;
+    if (order.paymentStatus === "VERIFIED") stage = 1;
+    if (order.subOrders?.some((s) => s.fulfillmentStatus === "SHIPPED")) stage = Math.max(stage, 2);
+    if (order.subOrders?.some((s) => s.fulfillmentStatus === "DELIVERED")) stage = 3;
+    return stage;
+  })();
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: Colors.surface }]}>
       <View style={[styles.headerCard, { backgroundColor: Colors.cardBackground }]}>
         <Text style={[styles.title, { color: Colors.text.gray }]}>تتبع الطلب</Text>
-        <Text style={[styles.orderId, { color: Colors.text.veryLightGray }]}>#{order.id}</Text>
+        <Text style={[styles.orderId, { color: Colors.text.veryLightGray }]}>#{order._id}</Text>
         <Text style={[styles.date, { color: Colors.text.veryLightGray }]}>تاريخ الطلب: {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : 'غير متوفر'}</Text>
       </View>
 
@@ -167,7 +181,7 @@ export default function OrderTracking() {
             <Text style={[styles.couponLabel, { color: Colors.text.veryLightGray }]}>كود الكوبون:</Text>
             <Text style={[styles.couponCode, { color: Colors.primary }]}>{order.couponDetails.code}</Text>
           </View>
-          {order.discountAmount > 0 && (
+          {(order.discountAmount ?? 0) > 0 && (
             <View style={styles.couponInfo}>
               <Text style={[styles.couponLabel, { color: Colors.text.veryLightGray }]}>قيمة الخصم:</Text>
               <Text style={[styles.discountValue, { color: Colors.success }]}>
@@ -182,9 +196,9 @@ export default function OrderTracking() {
 
       <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
         <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>تفاصيل المنتجات</Text>
-        {order.productsDetails && order.productsDetails.length > 0 ? (
-          order.productsDetails.map((item: any) => (
-            <View key={item.productId} style={[styles.productItem, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
+        {order.items && order.items.length > 0 ? (
+          order.items.map((item: any) => (
+            <View key={`${item.productId}-${item.name}`} style={[styles.productItem, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
               <Text style={[styles.productName, { color: Colors.text.gray }]}>{item.name}</Text>
               <Text style={[styles.productQuantity, { color: Colors.text.veryLightGray }]}>الكمية: {item.quantity}</Text>
               <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
@@ -198,37 +212,51 @@ export default function OrderTracking() {
       </View>
 
       {/* Order Summary */}
-      {order.totalAmount && (
+      {(order.total ?? order.subtotal) && (
         <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
           <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>ملخص الطلب</Text>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>المجموع الفرعي:</Text>
             <Text style={[styles.summaryValue, { color: Colors.text.gray }]}>
-              {typeof order.totalAmount === 'number' && !isNaN(order.totalAmount) 
-                ? order.totalAmount.toFixed(2) 
+              {typeof order.subtotal === 'number' && !isNaN(order.subtotal) 
+                ? order.subtotal.toFixed(2) 
                 : '0.00'} ج.س
             </Text>
           </View>
-          {order.discountAmount > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>الخصم:</Text>
-              <Text style={[styles.summaryValue, { color: Colors.success }]}>
-                -{typeof order.discountAmount === 'number' && !isNaN(order.discountAmount) 
-                  ? order.discountAmount.toFixed(2) 
-                  : '0.00'} ج.س
-              </Text>
-            </View>
-          )}
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>الشحن:</Text>
+            <Text style={[styles.summaryValue, { color: Colors.text.gray }]}>
+              {typeof order.shippingFee === 'number' && !isNaN(order.shippingFee) 
+                ? order.shippingFee.toFixed(2) 
+                : '0.00'} ج.س
+            </Text>
+          </View>
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={[styles.summaryLabel, { color: Colors.text.gray, fontWeight: 'bold' }]}>المجموع الكلي:</Text>
             <Text style={[styles.summaryValue, { color: Colors.primary, fontWeight: 'bold', fontSize: 18 }]}>
-              {typeof order.finalAmount === 'number' && !isNaN(order.finalAmount) 
-                ? order.finalAmount.toFixed(2) 
-                : (typeof order.totalAmount === 'number' && !isNaN(order.totalAmount) 
-                  ? order.totalAmount.toFixed(2) 
+              {typeof order.total === 'number' && !isNaN(order.total) 
+                ? order.total.toFixed(2) 
+                : (typeof order.subtotal === 'number' && !isNaN(order.subtotal) 
+                  ? order.subtotal.toFixed(2) 
                   : '0.00')} ج.س
             </Text>
           </View>
+        </View>
+      )}
+
+      {order.subOrders && order.subOrders.length > 0 && (
+        <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
+          <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>حالة متاجر البائعين</Text>
+          {order.subOrders.map((sub) => (
+            <View key={sub._id || sub.merchantId} style={[styles.productItem, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
+              <Text style={[styles.productName, { color: Colors.text.gray }]}>تاجر: {sub.merchantId}</Text>
+              <Text style={[styles.productQuantity, { color: Colors.text.veryLightGray }]}>حالة الشحن: {sub.fulfillmentStatus}</Text>
+              <Text style={[styles.productQuantity, { color: Colors.text.veryLightGray }]}>حالة الدفع: {sub.paymentStatus}</Text>
+              <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
+                الإجمالي: {sub.total} (شحن {sub.shippingFee})
+              </Text>
+            </View>
+          ))}
         </View>
       )}
     </ScrollView>

@@ -1,20 +1,19 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import type { FC } from "react";
 import { Tabs } from "expo-router";
 import {
   View,
   Pressable,
   StyleSheet,
-  Text,
   Animated,
   Platform,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useItemStore from "@/store/useItemStore";
-import AppHeader from "../components/AppHeader";
+import AppHeader from "@/components/AppHeader";
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
-import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
 
 interface TabIconProps {
@@ -84,7 +83,7 @@ const WishlistIcon = ({ size, color }: { size: number; color: string }) => (
   </Svg>
 );
 
-const TabIcon: React.FC<TabIconProps> = ({ iconType, focused, label }) => {
+const TabIcon: FC<TabIconProps> = ({ iconType, focused, label }) => {
   const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(focused ? 1.1 : 1)).current;
   const opacityAnim = useRef(new Animated.Value(focused ? 1 : 0.5)).current;
@@ -140,7 +139,7 @@ const TabIcon: React.FC<TabIconProps> = ({ iconType, focused, label }) => {
   };
 
   return (
-    <View style={styles.tabIconContainer}>
+    <View style={styles.tabIconContainer} accessible accessibilityLabel={label}>
       <Animated.View
         style={[
           styles.iconWrapper,
@@ -205,7 +204,7 @@ const CustomTabButton = (props: BottomTabBarButtonProps) => {
       onPress={props.onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={({ pressed }) => [
+      style={() => [
         styles.tabButton,
         props.style,
       ]}

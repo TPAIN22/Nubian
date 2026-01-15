@@ -9,6 +9,7 @@ import {
   Dimensions,
   I18nManager,
   Linking,
+  Switch,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useClerk, useUser } from "@clerk/clerk-expo";
@@ -24,7 +25,6 @@ import GoogleSignInSheet from "@/app/(auth)/signin";
 import i18n, { changeLanguage } from "../../utils/i18n";
 import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
-import { Switch } from "react-native";
 
 const { width } = Dimensions.get("window");
 

@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { StatusBar } from 'expo-status-bar';
 
 export default function GifLoadingScreen({ onAnimationFinish, onMount }) {
   useEffect(() => {

@@ -1,9 +1,8 @@
 'use client';
 import React from 'react';
-import { createIcon } from '@gluestack-ui/icon';
+import { createIcon, PrimitiveIcon, Svg } from '@gluestack-ui/icon';
 import { tva } from '@gluestack-ui/nativewind-utils/tva';
 import { VariantProps } from '@gluestack-ui/nativewind-utils';
-import { PrimitiveIcon, Svg } from '@gluestack-ui/icon';
 
 export const UIIcon = createIcon({
   Root: PrimitiveIcon,
@@ -67,9 +66,11 @@ export const Icon = React.forwardRef<
 type ParameterTypes = Omit<Parameters<typeof createIcon>[0], 'Root'>;
 
 const accessClassName = (style: any) => {
-  const styleObject = Array.isArray(style) ? style[0] : style;
+  const styleObject = Array.isArray(style) ? style?.[0] : style;
+  if (!styleObject || typeof styleObject !== "object") return undefined;
   const keys = Object.keys(styleObject);
-  return styleObject[keys[1]];
+  const key = keys[0];
+  return key ? (styleObject as any)[key] : undefined;
 };
 
 const createIconUI = ({ ...props }: ParameterTypes) => {

@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import axiosInstance from "@/utils/axiosInstans";
+import axiosInstance from "@/services/api/client";
+import { quoteCheckout, createOrder as createOrderApi, uploadPaymentProof, fetchOrders as fetchOrdersApi, fetchOrderById } from "@/services/api/checkout.api";
 
 const useOrderStore = create((set, get) => ({
   orders: [],
@@ -13,24 +14,19 @@ const useOrderStore = create((set, get) => ({
   getUserOrders: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/orders/my-orders");
-      if (!Array.isArray(response.data)) {
-        throw new Error("البيانات المستلمة غير صحيحة");
-      }
-      set({ 
-        orders: response.data, 
+      const response = await fetchOrdersApi();
+      set({
+        orders: response,
         isLoading: false,
-        error: null 
+        error: null,
       });
-      return response.data;
+      return response;
     } catch (error) {
-      if (process.env.NODE_ENV !== 'production') {
-      }
       const errorMessage = error?.response?.data?.message || error?.message || "تعذر تحميل الطلبات";
       set({
         error: errorMessage,
         isLoading: false,
-        orders: []
+        orders: [],
       });
       throw error;
     }
@@ -41,19 +37,19 @@ const useOrderStore = create((set, get) => ({
   getOrderById: async (orderId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/orders/${orderId}`);
-      set({ 
-        selectedOrder: response.data, 
+      const response = await fetchOrderById(orderId);
+      set({
+        selectedOrder: response,
         isLoading: false,
-        error: null 
+        error: null,
       });
-      return response.data;
+      return response;
     } catch (error) {
       const errorMessage = error?.response?.data?.message || error?.message || "Failed to load order details";
       set({
         error: errorMessage,
         isLoading: false,
-        selectedOrder: null
+        selectedOrder: null,
       });
       throw error;
     }
@@ -61,24 +57,36 @@ const useOrderStore = create((set, get) => ({
 
   // إنشاء طلب جديد
   // Token is automatically added by axios interceptor
-  createOrder: async (orderData) => {
+  createOrder: async ({ addressId, items, paymentMethod, transferProof, proofFileUri }) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/orders", orderData);
-      
-      // إضافة الطلب الجديد لبداية القائمة
-      const currentOrders = get().orders;
-      set({ 
-        orders: [response.data, ...currentOrders],
-        isLoading: false,
-        error: null 
+      // 1. Create order with transferProof URL if available
+      const response = await createOrderApi({ 
+        addressId, 
+        items, 
+        paymentMethod,
+        transferProof: transferProof || (proofFileUri?.startsWith('http') ? proofFileUri : null)
       });
-      return response.data;
+      
+      let createdOrder = response;
+      
+      // 2. Fallback: if we only have a local URI and no URL yet, upload it now
+      if (paymentMethod === "BANKAK" && proofFileUri && !proofFileUri.startsWith('http') && createdOrder?._id) {
+        createdOrder = await uploadPaymentProof(createdOrder._id, { uri: proofFileUri });
+      }
+      
+      const currentOrders = get().orders;
+      set({
+        orders: [createdOrder, ...currentOrders],
+        isLoading: false,
+        error: null,
+      });
+      return createdOrder;
     } catch (error) {
       const errorMessage = error?.response?.data?.message || error?.message || "Failed to create order";
       set({
         error: errorMessage,
-        isLoading: false
+        isLoading: false,
       });
       throw error;
     }
@@ -89,27 +97,28 @@ const useOrderStore = create((set, get) => ({
   updateOrderStatus: async (orderId, statusData) => {
     set({ isLoading: true, error: null });
     try {
-      // Backend expects PATCH /orders/:id/status
-      const response = await axiosInstance.patch(`/orders/${orderId}/status`, statusData);
-      
-      // تحديث الطلب في القائمة
+      let endpoint = null;
+      if (statusData?.action === "verify") endpoint = `/orders/${orderId}/verify-transfer`;
+      if (statusData?.action === "reject") endpoint = `/orders/${orderId}/reject-transfer`;
+      if (!endpoint) throw new Error("Invalid action");
+      const response = await axiosInstance.post(endpoint, {});
       const currentOrders = get().orders;
-      const updatedOrders = currentOrders.map(order => 
+      const updatedOrders = currentOrders.map(order =>
         order._id === orderId ? response.data : order
       );
-      
-      set({ 
+
+      set({
         orders: updatedOrders,
         selectedOrder: response.data,
         isLoading: false,
-        error: null 
+        error: null,
       });
       return response.data;
     } catch (error) {
       const errorMessage = error?.response?.data?.message || error?.message || "Failed to update order status";
       set({
         error: errorMessage,
-        isLoading: false
+        isLoading: false,
       });
       throw error;
     }
@@ -118,24 +127,8 @@ const useOrderStore = create((set, get) => ({
   // جلب إحصائيات الطلبات (للأدمن)
   // Token is automatically added by axios interceptor
   getOrderStats: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.get("/orders/stats");
-      set({ 
-        orderStats: response.data, 
-        isLoading: false,
-        error: null 
-      });
-      return response.data;
-    } catch (error) {
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to load order statistics";
-      set({
-        error: errorMessage,
-        isLoading: false,
-        orderStats: null
-      });
-      throw error;
-    }
+    set({ isLoading: false, error: "Not supported in new checkout" });
+    return null;
   },
 
   // تصفية الطلبات حسب الحالة

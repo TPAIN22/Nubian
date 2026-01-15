@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { useEffect, useState } from "react";
+import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, Switch } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@clerk/clerk-expo";
 import { Stack } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/providers/ThemeProvider";
-import { Switch } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getPreferences, updatePreferences, type NotificationPreferences } from "@/utils/notificationService";
 import i18n from "@/utils/i18n";

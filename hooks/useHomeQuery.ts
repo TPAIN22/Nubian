@@ -36,14 +36,15 @@ export const useHomeQuery = () => {
     }
   }, [fetchHomeData, banners.length, isLoading, lastFetchedAt]);
 
-  // Focus refresh — فقط لو stale أو في error
+  // Focus refresh — فقط لو stale. 
+  // ما نضيف error هنا عشان ما نعمل infinite loop لو السيرفر وقع
   useFocusEffect(
     useCallback(() => {
       const isStale = !lastFetchedAt || Date.now() - lastFetchedAt > STALE_MS;
-      const shouldRefresh = !isLoading && !isRefreshing && (error || isStale);
+      const shouldRefresh = !isLoading && !isRefreshing && isStale;
 
       if (shouldRefresh) fetchHomeData();
-    }, [fetchHomeData, isLoading, isRefreshing, error, lastFetchedAt])
+    }, [fetchHomeData, isLoading, isRefreshing, lastFetchedAt])
   );
 
   return {

@@ -5,7 +5,7 @@
 
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import axiosInstance from "@/utils/axiosInstans";
+import axiosInstance from "@/services/api/client";
 import type {
   Cart,
   AddToCartRequest,
@@ -20,6 +20,7 @@ interface CartStore {
   isLoading: boolean;
   error: string | null;
   isUpdating: boolean;
+  inFlight: Promise<void> | null; // ✅ dedupe
 
   // Actions
   clearError: () => void;
@@ -109,6 +110,7 @@ const useCartStore = create<CartStore>()(
     isLoading: false,
     error: null,
     isUpdating: false,
+    inFlight: null,
 
     // Clear error
     clearError: () => set({ error: null }),
@@ -118,42 +120,39 @@ const useCartStore = create<CartStore>()(
 
     // Fetch cart from backend
     fetchCart: async () => {
-      if (get().isLoading) return;
+      const { isLoading, inFlight } = get();
+      if (isLoading && inFlight) return inFlight;
+
       set({ isLoading: true, error: null });
 
-      try {
-        const response = await axiosInstance.get("/carts");
-        set({
-          cart: safeParseCartResponse(response.data),
-          isLoading: false,
-        });
-      } catch (error: any) {
-        // Handle 404 as empty cart
-        if (error.response?.status === 404) {
-          const errorMessage =
-            error.response?.data?.message ||
-            error.response?.data?.error?.message ||
-            "";
-          const errorCode = error.response?.data?.error?.code || "";
-
-          if (errorMessage.includes("User not found") || errorCode === "UNAUTHORIZED") {
-            const errorMsg = "خطأ في المصادقة. يرجى تسجيل الدخول مرة أخرى.";
-            set({ cart: null, error: errorMsg, isLoading: false });
-            throw error;
+      const task = (async () => {
+        try {
+          const response = await axiosInstance.get("/carts");
+          set({
+            cart: safeParseCartResponse(response.data),
+            isLoading: false,
+          });
+        } catch (error: any) {
+          // Handle 404 as empty cart
+          if (error.response?.status === 404) {
+            set({ cart: null, error: null, isLoading: false });
+            return;
           }
 
-          set({ cart: null, error: null, isLoading: false });
-          return;
+          const errorMessage =
+            error.response?.data?.message ||
+            error?.message ||
+            "حدث خطأ أثناء جلب السلة.";
+
+          set({ cart: null, error: errorMessage, isLoading: false });
+          throw error;
+        } finally {
+          set({ inFlight: null });
         }
+      })();
 
-        const errorMessage =
-          error.response?.data?.message ||
-          error?.message ||
-          "حدث خطأ أثناء جلب السلة.";
-
-        set({ cart: null, error: errorMessage, isLoading: false });
-        throw error;
-      }
+      set({ inFlight: task });
+      return task;
     },
 
     // Add product to cart

@@ -43,17 +43,6 @@ class PerformanceMonitor {
     }
   }
 
-  private handlePerformanceEntry(entry: PerformanceEntry) {
-    if (entry.entryType === 'measure') {
-      this.metrics.push({
-        componentName: entry.name,
-        renderTime: entry.duration,
-        mountTime: entry.startTime,
-        timestamp: Date.now(),
-      });
-    }
-  }
-
   // مراقبة أداء المكونات
   measureComponent(componentName: string, callback: () => void) {
     if (!this.isEnabled) {

@@ -20,16 +20,16 @@ import {
   Platform,
   Animated,
 } from "react-native";
-import BottomSheet from "../components/BottomSheet";
+import BottomSheet from "@/components/BottomSheet";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
-import Card from "../components/Card";
+import Card from "@/components/Card";
 import { useTheme } from "@/providers/ThemeProvider";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import i18n from "@/utils/i18n";
-import axiosInstance from "@/utils/axiosInstans";
+import axiosInstance from "@/services/api/client";
 
 const HEADER_HEIGHT = 200;
 
@@ -52,11 +52,6 @@ export default function CategoriesScreen() {
   
   // Validate ID format - must be MongoDB ObjectId (24 hex characters)
   const isValidCategoryId = id && typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id);
-  
-  // Guard: If no valid ID, redirect immediately (before any rendering)
-  if (!isValidCategoryId) {
-    return <Redirect href="/(tabs)" />;
-  }
   const insets = useSafeAreaInsets();
 
   const {
@@ -199,10 +194,6 @@ export default function CategoriesScreen() {
     handleSheetChanges(-1);
   }, [id, selectCategoryAndLoadProducts, setIsTabBarVisible, handleSheetChanges]);
 
-  if (!isConnected && !isNetworkChecking) {
-    return <NoNetworkScreen onRetry={retryNetworkCheck} />;
-  }
-
   const onEndReachedHandler = useCallback(() => {
     if (!isProductsLoading && hasMore && selectedCategory) {
       getProducts();
@@ -240,6 +231,14 @@ export default function CategoriesScreen() {
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     { useNativeDriver: false }
   );
+
+  // Guards (must come after all hooks, to satisfy rules-of-hooks)
+  if (!isValidCategoryId) {
+    return <Redirect href="/(tabs)" />;
+  }
+  if (!isConnected && !isNetworkChecking) {
+    return <NoNetworkScreen onRetry={retryNetworkCheck} />;
+  }
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: Colors.surface }]}>

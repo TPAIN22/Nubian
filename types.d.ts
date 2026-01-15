@@ -25,20 +25,9 @@ declare module '@/store/useCartStore' {
   export default useCartStore;
 }
 
-declare module '@/store/useCategoryStore' {
-  const useCategoryStore: any;
-  export default useCategoryStore;
-}
-
 declare module '@/store/orderStore' {
   const orderStore: any;
   export default orderStore;
-}
-
-// Utils types
-declare module '@/utils/axiosInstans' {
-  const axiosInstance: any;
-  export default axiosInstance;
 }
 
 declare module '@/utils/i18n' {
@@ -46,14 +35,3 @@ declare module '@/utils/i18n' {
   export default i18n;
 }
 
-// Components types
-declare module '@/app/components/*' {
-  const component: any;
-  export default component;
-}
-
-// Styles types
-declare module '@/app/components/styles' {
-  const styles: any;
-  export default styles;
-} 

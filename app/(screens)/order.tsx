@@ -1,6 +1,6 @@
 import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import useOrderStore from "@/store/orderStore";
 import { useAuth } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
@@ -26,7 +26,7 @@ export default function Order() {
       try {
         const token = await getToken();
         await getUserOrders(token);
-      } catch (err) {
+      } catch {
         // يمكن عرض رسالة خطأ إذا لزم الأمر
       }
     };
@@ -37,7 +37,7 @@ export default function Order() {
     try {
       const token = await getToken();
       await getUserOrders(token);
-    } catch (err) {
+    } catch {
       Alert.alert(i18n.t('error'), i18n.t('failedToLoadOrders'));
     }
   };
@@ -307,21 +307,21 @@ export default function Order() {
                             </Text>
                           <View style={styles.productPricing}>
                             {(() => {
-                              // Convert product to Product type for utility functions
-                              const productObj = {
+                              // Ensure normalization
+                              const productObj = normalizeProduct({
                                 _id: product.productId || product._id || '',
                                 name: product.name || '',
-                                price: product.price || 0,
-                                discountPrice: product.discountPrice,
+                                merchantPrice: product.merchantPrice || product.price || 0,
+                                finalPrice: product.price || 0, // In order.productsDetails, 'price' is the final price charged
                                 images: product.images || [],
-                              } as any;
+                                variants: [], // We don't have variants details here, but the price is already captured
+                              } as any);
                               
                               const finalPrice = getFinalPrice(productObj);
                               const originalPrice = getOriginalPrice(productObj);
                               const productHasDiscount = hasDiscount(productObj);
                               const quantity = product.quantity || 1;
                               const totalFinalPrice = finalPrice * quantity;
-                              const totalOriginalPrice = originalPrice * quantity;
                               
                               return (
                                 <>
@@ -461,6 +461,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  couponSection: {
+    paddingTop: 12,
+    marginTop: 8,
+    borderTopWidth: 1,
+  },
+  couponLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  couponCode: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  discountAmount: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   totalSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -468,6 +487,13 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     marginBottom: 8,
+  },
+  originalTotal: {
+    marginTop: 4,
+  },
+  originalTotalText: {
+    fontSize: 12,
+    textDecorationLine: "line-through",
   },
   totalLabel: {
     fontSize: 16,

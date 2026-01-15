@@ -22,15 +22,27 @@
       "@/*": [
         "./*"
       ],
+      "@components/*": [
+        "./components/app/*"
+      ],
       "tailwind.config": [
         "./tailwind.config.js"
+      ],
+      "@gluestack-ui/nativewind-utils/withStyleContext": [
+        "./node_modules/@gluestack-ui/nativewind-utils/withStyleContext/index.d.ts"
+      ],
+      "@gluestack-ui/nativewind-utils/tva": [
+        "./node_modules/@gluestack-ui/nativewind-utils/tva/index.d.ts"
+      ],
+      "@gluestack-ui/nativewind-utils/IsWeb": [
+        "./node_modules/@gluestack-ui/nativewind-utils/IsWeb/index.d.ts"
       ]
     },
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "noUncheckedIndexedAccess": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,

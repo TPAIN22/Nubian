@@ -13,7 +13,7 @@ import { Text } from "@/components/ui/text";
 import { useCallback, useEffect, useRef, useState, memo } from "react";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import ItemCard from "../components/Card";
+import ItemCard from "@/components/Card";
 import {
   BottomSheetModal,
   BottomSheetModalProvider,
@@ -21,13 +21,13 @@ import {
   BottomSheetBackdrop,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import BottomSheet from "../components/BottomSheet";
+import BottomSheet from "@/components/BottomSheet";
 import { useScrollStore } from "@/store/useScrollStore";
 import { useTheme } from "@/providers/ThemeProvider";
-import BannerSkeleton from "../components/BannerSkeleton";
+import BannerSkeleton from "@/components/BannerSkeleton";
 import { useHomeQuery } from "@/hooks/useHomeQuery";
 import { HomeProduct, HomeCategory, HomeStore } from "@/api/home.api";
-import ItemCardSkeleton from "../components/ItemCardSkeleton";
+import ItemCardSkeleton from "@/components/ItemCardSkeleton";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   navigateToCategory,
@@ -39,7 +39,7 @@ import {
   navigateToForYou,
   navigateToProduct,
 } from "@/utils/deepLinks";
-import useTracking from "@/hooks/useTracking";
+import { useTracking } from "@/hooks/useTracking";
 import { useResponsive } from "@/hooks/useResponsive";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -176,6 +176,7 @@ const BannerCarousel = memo(
     );
   }
 );
+BannerCarousel.displayName = "BannerCarousel";
 
 /* ───────────────────────────── Category Grid ───────────────────────────── */
 
@@ -228,6 +229,7 @@ const CategoryGrid = memo(({ categories, colors }: { categories: HomeCategory[];
     </View>
   );
 });
+CategoryGrid.displayName = "CategoryGrid";
 
 /* ───────────────────────────── Product Section ───────────────────────────── */
 
@@ -246,7 +248,6 @@ const ProductSection = memo(({
   isLoading = false,
   onViewAll 
 }: ProductSectionProps) => {
-  const { window } = useResponsive();
   const { width: screenWidth } = useWindowDimensions();
   // Calculate responsive card width for horizontal scroll
   // Use 45% of screen width for horizontal lists
@@ -330,6 +331,7 @@ const ProductSection = memo(({
     </View>
   );
 });
+ProductSection.displayName = "ProductSection";
 
 /* ───────────────────────────── Store Highlights ───────────────────────────── */
 
@@ -387,6 +389,7 @@ const StoreHighlights = memo(({ stores, colors }: { stores: HomeStore[]; colors:
     </View>
   );
 });
+StoreHighlights.displayName = "StoreHighlights";
 
 /* ───────────────────────────── Main Component ───────────────────────────── */
 

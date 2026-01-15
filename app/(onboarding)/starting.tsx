@@ -6,7 +6,6 @@ import {
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import i18n from '../../utils/i18n';
 import Colors from "@/locales/brandColors";
@@ -18,11 +17,6 @@ export default function Starting() {
 
   const handleStart = () => {
     //router.push(`../../(tabs)`);
-    router.push(`./onboard`);
-  };
-
-  const handleSkip = () => {
-   // router.push(`../../(tabs)`);
     router.push(`./onboard`);
   };
 

@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import axiosInstance from '@/utils/axiosInstans';
-import type { Product } from '@/types/cart.types';
+import axiosInstance from "@/services/api/client";
+import type { ProductDTO } from "@/domain/product/product.types";
+import { normalizeProduct, type NormalizedProduct } from "@/domain/product/product.normalize";
 
 interface UseProductFetchReturn {
-  product: Product | null;
+  product: NormalizedProduct | null;
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 export const useProductFetch = (productId: string): UseProductFetchReturn => {
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<NormalizedProduct | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,13 +26,13 @@ export const useProductFetch = (productId: string): UseProductFetchReturn => {
       
       // Backend returns: { success: true, data: { ...product... }, message: "..." }
       // Extract the actual product data from response.data.data
-      const productData = response.data?.data || response.data;
+      const productData = (response.data?.data || response.data) as ProductDTO;
       
       if (!productData || !productData._id) {
         throw new Error('Invalid product data received');
       }
       
-      setProduct(productData);
+      setProduct(normalizeProduct(productData));
     } catch (err: any) {
       const errorMessage = err?.response?.data?.error?.message 
         || err?.response?.data?.message 

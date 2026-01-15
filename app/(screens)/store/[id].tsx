@@ -3,21 +3,18 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Pressable,
   RefreshControl,
-  useWindowDimensions,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@/providers/ThemeProvider';
-import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Card from '../../components/Card';
-import axiosInstance from '@/utils/axiosInstans';
+import Card from "@/components/Card";
+import axiosInstance from "@/services/api/client";
 import { HomeProduct } from '@/api/home.api';
 import { navigateToProduct } from '@/utils/deepLinks';
 
@@ -43,8 +40,6 @@ export default function StoreScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { width: screenWidth } = useWindowDimensions();
-  const CARD_WIDTH = screenWidth * 0.45;
   
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<HomeProduct[]>([]);

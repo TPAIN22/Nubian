@@ -1,7 +1,6 @@
-import Constants from 'expo-constants';
-
 // API base URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://nubian-lne4.onrender.com';
+import { resolveApiBaseUrl } from "@/services/api/baseUrl";
+const API_BASE_URL = resolveApiBaseUrl();
 
 export interface Notification {
   _id: string;
@@ -91,7 +90,7 @@ export async function getNotifications(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications?${params.toString()}`, {
+    const response = await fetch(`${API_BASE_URL}/notifications?${params.toString()}`, {
       method: 'GET',
       headers,
     });
@@ -127,7 +126,7 @@ export async function getUnreadCount(category?: string, authToken?: string | nul
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications/unread?${params.toString()}`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/unread?${params.toString()}`, {
       method: 'GET',
       headers,
     });
@@ -155,7 +154,7 @@ export async function markAsRead(notificationId: string, authToken: string): Pro
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -190,7 +189,7 @@ export async function markMultipleAsRead(
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications/mark-read`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/mark-read`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -222,7 +221,7 @@ export async function getPreferences(authToken: string): Promise<NotificationPre
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications/preferences`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/preferences`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -255,7 +254,7 @@ export async function updatePreferences(
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications/preferences`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/preferences`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -286,7 +285,7 @@ export async function sendTestNotification(authToken: string): Promise<any> {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/notifications/test`, {
+    const response = await fetch(`${API_BASE_URL}/notifications/test`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

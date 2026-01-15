@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useAuth } from "@clerk/clerk-expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import axiosInstance from "@/utils/axiosInstans";
+import axiosInstance from "@/services/api/client";
 
 const SESSION_ID_KEY = "tracking_session_id";
 const SESSION_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
@@ -128,4 +128,3 @@ export const useTracking = () => {
   return { trackEvent, mergeSession };
 };
 
-export default useTracking;

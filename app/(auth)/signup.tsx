@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Alert, ActivityIndicator, StyleSheet, TouchableOpacity, TextInput, I18nManager } from 'react-native';
 import { Text } from '@/components/ui/text';
 import * as WebBrowser from 'expo-web-browser';
@@ -130,7 +130,7 @@ const SignUpSheet = () => {
         strategy: 'email_code',
       });
       Alert.alert('✅', i18n.t('codeResent'));
-    } catch (err: any) {
+    } catch {
       Alert.alert(i18n.t('error'), i18n.t('failedToResendCode'));
     } finally {
       setLoading(null);

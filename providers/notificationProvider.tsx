@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { PropsWithChildren } from "react";
 import { useAuth } from '@clerk/clerk-expo';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, registerPushTokenWithAuth } from '@/utils/pushToken';
-import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 type NotificationContextType = {
@@ -13,7 +13,7 @@ const NotificationContext = createContext<NotificationContextType>({
   expoPushToken: null,
 });
 
-export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
+export const NotificationProvider = ({ children }: PropsWithChildren) => {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const { getToken, userId, isLoaded } = useAuth();
   const hasRegisteredToken = useRef(false);
@@ -36,8 +36,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       });
       
       // Handle deep link navigation
-      const deepLink = response.notification.request.content.data?.deepLink;
-      if (deepLink) {
+      const deepLink = response.notification.request.content.data?.deepLink as unknown;
+      if (typeof deepLink === "string" && deepLink.length > 0) {
         try {
           const url = deepLink.startsWith('/') ? deepLink : `/${deepLink}`;
           

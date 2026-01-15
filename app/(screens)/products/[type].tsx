@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { 
   View, 
   TextInput, 
@@ -7,13 +7,11 @@ import {
   TouchableOpacity, 
   RefreshControl, 
   ActivityIndicator, 
-  Dimensions, 
   ScrollView,
   Modal,
   Pressable
 } from "react-native";
 import { Text } from "@/components/ui/text";
-import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,22 +20,13 @@ import useCategoryStore from "@/store/useCategoryStore";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
 import { navigateToProduct } from "@/utils/deepLinks";
-import useTracking from "@/hooks/useTracking";
-import { ExploreProduct, ExploreSort } from "@/api/explore.api";
+import { useTracking } from "@/hooks/useTracking";
+import { ExploreSort } from "@/api/explore.api";
 import useItemStore from "@/store/useItemStore";
-import useCartStore from "@/store/useCartStore";
+import ProductCard from "@/components/ProductCard";
+import type { NormalizedProduct } from "@/domain/product/product.normalize";
 
-interface Product {
-  _id: string;
-  name: string;
-  price: number;
-  images?: string[];
-  category?: string | { parent?: string; _id?: string; name?: string };
-  stock?: number;
-  discountPrice?: number;
-}
-
-import ProductCard from "../../components/ProductCard";
+type Product = NormalizedProduct;
 
 const ProductsScreen = () => {
   const params = useLocalSearchParams<{ type: string }>();
@@ -46,7 +35,6 @@ const ProductsScreen = () => {
   const colors = theme.colors;
   const { trackEvent } = useTracking();
   const { setProduct } = useItemStore();
-  const addToCart = useCartStore((state: any) => state.addToCart);
   
   // Explore store
   const {
@@ -117,32 +105,13 @@ const ProductsScreen = () => {
   const { categories, fetchCategories } = useCategoryStore();
 
   // Handlers
-  const handleProductView = useCallback((product: Product | ExploreProduct) => {
-    const categoryId = typeof product.category === 'object' && product.category 
-      ? (product.category._id || ('parent' in product.category ? product.category.parent : undefined))
-      : product.category;
-    trackEvent('product_view', {
-      productId: product._id,
-      ...(categoryId && { categoryId }),
-      screen: params.type || 'products',
+  const handleProductView = useCallback((product: Product) => {
+    trackEvent("product_view", {
+      productId: product.id,
+      categoryId: product.categoryId,
+      screen: params.type || "products",
     });
   }, [trackEvent, params.type]);
-
-  const handleAddToCart = useCallback(async (product: Product | ExploreProduct) => {
-    try {
-      await addToCart(product._id, 1);
-      const categoryId = typeof product.category === 'object' && product.category 
-        ? (product.category._id || ('parent' in product.category ? product.category.parent : undefined))
-        : product.category;
-      trackEvent('add_to_cart', {
-        productId: product._id,
-        ...(categoryId && { categoryId }),
-        screen: params.type || 'products',
-      });
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-    }
-  }, [addToCart, trackEvent, params.type]);
 
   const handleSortChange = useCallback((newSort: ExploreSort) => {
     trackEvent('sort_change', { sort: newSort, screen: params.type || 'products' });
@@ -217,7 +186,7 @@ const ProductsScreen = () => {
   // Filtered products
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return products;
-    return products.filter((product: Product | ExploreProduct) =>
+    return products.filter((product: Product) =>
       product.name?.toLowerCase().includes(searchTerm.toLowerCase().trim())
     );
   }, [products, searchTerm]);
@@ -228,14 +197,14 @@ const ProductsScreen = () => {
       item={item}
       onPress={() => {
         handleProductView(item);
-        navigateToProduct(item._id, item);
+        navigateToProduct(item.id, item as any);
         setProduct(item);
       }}
       showWishlist={false}
     />
   ), [handleProductView, setProduct]);
 
-  const keyExtractor = useCallback((item: Product | ExploreProduct) => item._id || Math.random().toString(), []);
+  const keyExtractor = useCallback((item: Product) => item.id || Math.random().toString(), []);
 
   // Flatten categories
   const flatCategories = useMemo(() => {

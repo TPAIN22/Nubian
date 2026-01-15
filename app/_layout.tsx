@@ -11,7 +11,7 @@ import Toast from "react-native-toast-message";
 import * as SplashScreen from "expo-splash-screen";
 import GifLoadingScreen from "./GifLoadingScreen";
 import NoNetworkScreen from "./NoNetworkScreen";
-import { Alert, Platform } from "react-native";
+import { Alert, Platform, View, I18nManager } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import i18n from "@/utils/i18n";
 import { useFonts } from "@/hooks/useFonts";
@@ -19,8 +19,6 @@ import { useFonts } from "@/hooks/useFonts";
 import * as Updates from "expo-updates";
 
 import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
-import { View } from "react-native";
-import { I18nManager } from "react-native";
 import { LanguageProvider } from "@/utils/LanguageContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -103,7 +101,7 @@ function AppLoaderWithClerk() {
           } else {
             setIsUpdateChecking(false);
           }
-        } catch (error) {
+        } catch {
           Toast.show({
             type: "info",
             text1: i18n.t("updateErrorTitle"),
@@ -211,7 +209,6 @@ function AppLoaderWithClerk() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="(screens)" />
-            <Stack.Screen name="(screens)/checkout" />
           </Stack>
           <Toast />
         </>

@@ -6,10 +6,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import Colors from "@/locales/brandColors";
 
-export default function onboard() {
+export default function Onboard() {
   const deviceWidth = Math.round(Dimensions.get("window").width);
   const deviceHeight = Math.round(Dimensions.get("window").height);
-  const { width } = Dimensions.get("window");
 
   const router = useRouter();
   return (
@@ -48,7 +47,7 @@ export default function onboard() {
           style={{
             backgroundColor: Colors.background,
             padding: 15,
-            paddingHorizontal: width * 0.2,
+            paddingHorizontal: deviceWidth * 0.2,
             borderRadius: 6,
           }}
           

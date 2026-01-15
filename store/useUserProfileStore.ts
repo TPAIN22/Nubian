@@ -53,22 +53,6 @@ const initialState = {
   error: null,
 };
 
-const defaultIntelligence: UserIntelligence = {
-  viewedProducts: [],
-  clickedProducts: [],
-  cartEvents: [],
-  searchKeywords: [],
-  purchasedCategories: [],
-  preferredPriceRange: {
-    min: null,
-    max: null,
-  },
-  preferredSizes: [],
-  preferredBrands: [],
-  deviceType: 'mobile',
-  lastActive: new Date(),
-};
-
 export const useUserProfileStore = create<UserProfileState>((set) => ({
   ...initialState,
 

@@ -4,7 +4,7 @@ import { I18nManager, Platform } from 'react-native';
 
 export const LanguageContext = createContext({
   language: 'en' as SupportedLanguage,
-  setLanguage: (lang: SupportedLanguage) => {},
+  setLanguage: (_lang: SupportedLanguage) => {},
 });
 
 export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {

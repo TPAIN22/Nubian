@@ -10,7 +10,7 @@ function checkFileSizes() {
   console.log('📁 فحص أحجام الملفات:');
   
   const appDir = path.join(__dirname, '../app');
-  const componentsDir = path.join(__dirname, '../app/components');
+const componentsDir = path.join(__dirname, '../components/app');
   
   let totalSize = 0;
   let fileCount = 0;
@@ -38,6 +38,8 @@ function checkFileSizes() {
   }
   
   scanDirectory(appDir);
+  // keep this separate so we can spot overweight UI modules quickly
+  scanDirectory(componentsDir);
   
   console.log(`  📊 إجمالي الملفات: ${fileCount}`);
   console.log(`  📊 الحجم الإجمالي: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
