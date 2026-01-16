@@ -51,7 +51,7 @@ export async function uploadPaymentProof(orderId: string, file: { uri: string; n
 }
 
 export async function fetchOrders(): Promise<Order[]> {
-  const res = await apiClient.get("/orders");
+  const res = await apiClient.get("/orders/my-orders");
   return res.data;
 }
 

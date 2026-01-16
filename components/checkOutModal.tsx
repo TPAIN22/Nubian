@@ -583,7 +583,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
       await clearCart();
       handleClose();
 
-      router.replace({
+      router.push({
         pathname: "/order-success",
         params: {
           orderId: order?._id || order?.id,

@@ -10,6 +10,7 @@ import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
 import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
 import { navigateToProduct } from "@/utils/deepLinks";
+import { normalizeProduct } from "@/domain/product/product.normalize";
 
 export default function Order() {
   const { theme } = useTheme();
@@ -24,8 +25,7 @@ export default function Order() {
   useEffect(() => {
     const fetchInitialOrders = async () => {
       try {
-        const token = await getToken();
-        await getUserOrders(token);
+        await getUserOrders();
       } catch {
         // يمكن عرض رسالة خطأ إذا لزم الأمر
       }
@@ -35,8 +35,7 @@ export default function Order() {
 
   const fetchOrders = async () => {
     try {
-      const token = await getToken();
-      await getUserOrders(token);
+      await getUserOrders();
     } catch {
       Alert.alert(i18n.t('error'), i18n.t('failedToLoadOrders'));
     }
