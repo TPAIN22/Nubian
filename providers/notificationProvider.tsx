@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import type { PropsWithChildren } from "react";
 import { useAuth } from '@clerk/clerk-expo';
 import * as Notifications from 'expo-notifications';
@@ -19,6 +19,56 @@ export const NotificationProvider = ({ children }: PropsWithChildren) => {
   const hasRegisteredToken = useRef(false);
   const router = useRouter();
 
+  // Handle notification response navigation
+  const handleNotificationResponse = useCallback((response: any) => {
+    console.log('👆 Notification tapped:', {
+      title: response.notification.request.content.title,
+      data: response.notification.request.content.data,
+    });
+
+    // Handle deep link navigation
+    const deepLink = response.notification.request.content.data?.deepLink as unknown;
+    if (typeof deepLink === "string" && deepLink.length > 0) {
+      try {
+        const url = deepLink.startsWith('/') ? deepLink : `/${deepLink}`;
+
+        // Navigate based on deep link path
+        if (url.startsWith('/orders/')) {
+          // Extract order ID from URL like /orders/123456
+          const orderId = url.split('/orders/')[1];
+          if (orderId) {
+            router.push(`/(screens)/order-tracking/${orderId}` as any);
+          } else {
+            router.push('/(screens)/order' as any); // Fallback to orders list
+          }
+        } else if (url.startsWith('/products/')) {
+          // Extract product ID and navigate to product details
+          const productId = url.split('/products/')[1];
+          if (productId) {
+            router.push({
+              pathname: '/(screens)/details/[details]',
+              params: { details: productId }
+            } as any);
+          }
+        } else if (url.startsWith('/cart')) {
+          router.push('/(tabs)/cart' as any);
+        } else if (url.startsWith('/order-tracking/') || url.startsWith('/order/')) {
+          // Handle order tracking URLs
+          const orderId = url.split('/').pop();
+          if (orderId && orderId !== 'order' && orderId !== 'order-tracking') {
+            router.push(`/(screens)/order-tracking/${orderId}` as any);
+          } else {
+            router.push('/(screens)/order' as any);
+          }
+        } else {
+          router.push(url as any);
+        }
+      } catch (error) {
+        console.error('❌ Error navigating to deep link:', error);
+      }
+    }
+  }, [router]);
+
   // Set up notification listeners
   useEffect(() => {
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
@@ -29,39 +79,13 @@ export const NotificationProvider = ({ children }: PropsWithChildren) => {
       });
     });
 
-    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('👆 Notification tapped:', {
-        title: response.notification.request.content.title,
-        data: response.notification.request.content.data,
-      });
-      
-      // Handle deep link navigation
-      const deepLink = response.notification.request.content.data?.deepLink as unknown;
-      if (typeof deepLink === "string" && deepLink.length > 0) {
-        try {
-          const url = deepLink.startsWith('/') ? deepLink : `/${deepLink}`;
-          
-          // Navigate based on deep link path
-          if (url.startsWith('/orders/')) {
-            router.push(`/(tabs)/orders/${url.split('/orders/')[1]}` as any);
-          } else if (url.startsWith('/products/')) {
-            router.push(`/(tabs)/products/${url.split('/products/')[1]}` as any);
-          } else if (url.startsWith('/cart')) {
-            router.push('/(tabs)/cart' as any);
-          } else {
-            router.push(url as any);
-          }
-        } catch (error) {
-          console.error('❌ Error navigating to deep link:', error);
-        }
-      }
-    });
+    const responseListener = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
 
     return () => {
       notificationListener.remove();
       responseListener.remove();
     };
-  }, []);
+  }, [handleNotificationResponse]);
 
   // Register push token when user is loaded and userId is available
   useEffect(() => {

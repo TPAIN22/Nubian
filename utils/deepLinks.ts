@@ -25,6 +25,7 @@ export const ROUTES = {
   CART: '/(tabs)/cart',
   PROFILE: '/(tabs)/profile',
   ORDERS: '/(screens)/order',
+  ORDER_TRACKING: '/(screens)/order-tracking/[orderId]',
   WISHLIST: '/(tabs)/wishlist',
 } as const;
 
@@ -158,6 +159,25 @@ export function navigateToProfile(): void {
  */
 export function navigateToOrders(): void {
   router.push('/(screens)/order' as any);
+}
+
+/**
+ * Navigate to order tracking
+ * @param orderId - Order ID
+ * @param order - Optional order object
+ */
+export function navigateToOrderTracking(orderId: string, order?: any): void {
+  router.push({
+    pathname: ROUTES.ORDER_TRACKING,
+    params: {
+      orderId,
+      ...(order && {
+        orderId, // Also include for backward compatibility
+        status: order.status || '',
+        total: String(order.total || 0),
+      }),
+    },
+  } as any);
 }
 
 /**
