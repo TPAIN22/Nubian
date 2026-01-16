@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocalSearchParams } from 'expo-router';
 import { View, ScrollView, ActivityIndicator, StyleSheet } from "react-native";
 import { Text } from '@/components/ui/text';
@@ -77,25 +77,63 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  console.log('OrderTracking: Component mounted with orderId:', orderId);
+
+  const lastFetchedOrderId = useRef<string | null>(null);
+  const isFetching = useRef(false);
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (!orderId) return;
+    const fetchOrderData = async () => {
+      console.log('OrderTracking: useEffect triggered with orderId:', orderId);
+
+      if (!orderId) {
+        console.log('OrderTracking: No orderId provided');
+        setLoading(false);
+        return;
+      }
+
+      // Prevent duplicate fetches for the same orderId
+      if (lastFetchedOrderId.current === orderId) {
+        console.log('OrderTracking: Already fetched this orderId, skipping');
+        return;
+      }
+
+      // Prevent concurrent fetches
+      if (isFetching.current) {
+        console.log('OrderTracking: Already fetching, skipping');
+        return;
+      }
+
+      isFetching.current = true;
+      lastFetchedOrderId.current = orderId as string;
       setLoading(true);
+
       try {
+        console.log('OrderTracking: Getting token...');
         const token = await getToken();
-        if (!token) throw new Error('لم يتم العثور على التوكن');
+        if (!token) {
+          console.log('OrderTracking: No token available');
+          throw new Error('لم يتم العثور على التوكن');
+        }
+
+        console.log('OrderTracking: Fetching order data for orderId:', orderId);
         const data = await fetchOrder(orderId as string, token);
+        console.log('OrderTracking: Order data received:', data);
+
         setOrder(data);
         setError(null);
       } catch (err: any) {
+        console.log('OrderTracking: Error fetching order:', err);
         setError(err);
         setOrder(null);
       } finally {
         setLoading(false);
+        isFetching.current = false;
       }
     };
-    fetchData();
-  }, [orderId, getToken]);
+
+    fetchOrderData();
+  }, [orderId]); // Only depend on orderId, getToken is stable from Clerk
 
   if (loading) {
     return (
