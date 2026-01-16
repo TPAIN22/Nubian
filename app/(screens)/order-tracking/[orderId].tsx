@@ -29,11 +29,13 @@ interface Order {
   paymentStatus: string;
   paymentMethod: string;
   createdAt?: string;
-  subtotal?: number;
-  shippingFee?: number;
-  total?: number;
+  orderSummary?: {
+    subtotal: number;
+    discount: number;
+    total: number;
+  };
   currency?: string;
-  items?: OrderItem[];
+  productsDetails?: OrderItem[];
   subOrders?: SubOrder[];
   // Backend order schema fields (optional)
   couponDetails?: {
@@ -93,7 +95,7 @@ export default function OrderTracking() {
       }
     };
     fetchData();
-  }, [orderId]);
+  }, [orderId, getToken]);
 
   if (loading) {
     return (
@@ -124,9 +126,10 @@ export default function OrderTracking() {
 
   const currentStatusIndex = (() => {
     let stage = 0;
-    if (order.paymentStatus === "VERIFIED") stage = 1;
-    if (order.subOrders?.some((s) => s.fulfillmentStatus === "SHIPPED")) stage = Math.max(stage, 2);
-    if (order.subOrders?.some((s) => s.fulfillmentStatus === "DELIVERED")) stage = 3;
+    if (order.paymentStatus === "VERIFIED" || order.paymentStatus === "paid") stage = 1;
+    // For now, we'll use a simpler status logic until subOrders are implemented
+    if (order.status === "shipped") stage = Math.max(stage, 2);
+    if (order.status === "delivered") stage = 3;
     return stage;
   })();
 
@@ -181,7 +184,7 @@ export default function OrderTracking() {
             <Text style={[styles.couponLabel, { color: Colors.text.veryLightGray }]}>كود الكوبون:</Text>
             <Text style={[styles.couponCode, { color: Colors.primary }]}>{order.couponDetails.code}</Text>
           </View>
-          {(order.discountAmount ?? 0) > 0 && (
+          {(order.orderSummary?.discount ?? 0) > 0 && (
             <View style={styles.couponInfo}>
               <Text style={[styles.couponLabel, { color: Colors.text.veryLightGray }]}>قيمة الخصم:</Text>
               <Text style={[styles.discountValue, { color: Colors.success }]}>
@@ -196,8 +199,8 @@ export default function OrderTracking() {
 
       <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
         <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>تفاصيل المنتجات</Text>
-        {order.items && order.items.length > 0 ? (
-          order.items.map((item: any) => (
+        {order.productsDetails && order.productsDetails.length > 0 ? (
+          order.productsDetails.map((item: any) => (
             <View key={`${item.productId}-${item.name}`} style={[styles.productItem, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
               <Text style={[styles.productName, { color: Colors.text.gray }]}>{item.name}</Text>
               <Text style={[styles.productQuantity, { color: Colors.text.veryLightGray }]}>الكمية: {item.quantity}</Text>
@@ -212,38 +215,39 @@ export default function OrderTracking() {
       </View>
 
       {/* Order Summary */}
-      {(order.total ?? order.subtotal) && (
+      {order.orderSummary && (
         <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
           <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>ملخص الطلب</Text>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>المجموع الفرعي:</Text>
             <Text style={[styles.summaryValue, { color: Colors.text.gray }]}>
-              {typeof order.subtotal === 'number' && !isNaN(order.subtotal) 
-                ? order.subtotal.toFixed(2) 
+              {typeof order.orderSummary.subtotal === 'number' && !isNaN(order.orderSummary.subtotal)
+                ? order.orderSummary.subtotal.toFixed(2)
                 : '0.00'} ج.س
             </Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>الشحن:</Text>
-            <Text style={[styles.summaryValue, { color: Colors.text.gray }]}>
-              {typeof order.shippingFee === 'number' && !isNaN(order.shippingFee) 
-                ? order.shippingFee.toFixed(2) 
-                : '0.00'} ج.س
-            </Text>
-          </View>
+          {order.orderSummary.discount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: Colors.text.veryLightGray }]}>الخصم:</Text>
+              <Text style={[styles.summaryValue, { color: Colors.success }]}>
+                -{typeof order.orderSummary.discount === 'number' && !isNaN(order.orderSummary.discount)
+                  ? order.orderSummary.discount.toFixed(2)
+                  : '0.00'} ج.س
+              </Text>
+            </View>
+          )}
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={[styles.summaryLabel, { color: Colors.text.gray, fontWeight: 'bold' }]}>المجموع الكلي:</Text>
             <Text style={[styles.summaryValue, { color: Colors.primary, fontWeight: 'bold', fontSize: 18 }]}>
-              {typeof order.total === 'number' && !isNaN(order.total) 
-                ? order.total.toFixed(2) 
-                : (typeof order.subtotal === 'number' && !isNaN(order.subtotal) 
-                  ? order.subtotal.toFixed(2) 
-                  : '0.00')} ج.س
+              {typeof order.orderSummary.total === 'number' && !isNaN(order.orderSummary.total)
+                ? order.orderSummary.total.toFixed(2)
+                : '0.00'} ج.س
             </Text>
           </View>
         </View>
       )}
 
+      {/* Sub-orders section commented out until backend implements subOrders
       {order.subOrders && order.subOrders.length > 0 && (
         <View style={[styles.detailsCard, { backgroundColor: Colors.cardBackground }]}>
           <Text style={[styles.cardTitle, { color: Colors.text.gray }]}>حالة متاجر البائعين</Text>
@@ -258,7 +262,7 @@ export default function OrderTracking() {
             </View>
           ))}
         </View>
-      )}
+      )} */}
     </ScrollView>
   );
 }
