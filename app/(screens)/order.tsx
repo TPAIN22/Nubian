@@ -1,8 +1,7 @@
-import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable } from "react-native";
+import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable  } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useEffect, useState } from "react";
 import useOrderStore from "@/store/orderStore";
-import { useAuth } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -16,7 +15,6 @@ export default function Order() {
   const { theme } = useTheme();
   const Colors = theme.colors;
   const { getUserOrders, orders, error, isLoading } = useOrderStore();
-  const { getToken } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<{ [key: string]: boolean }>({});
   const router = useRouter();
@@ -376,6 +374,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingTop: 40,
   },
   centerContainer: {
     flex: 1,

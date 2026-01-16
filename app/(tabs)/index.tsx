@@ -28,6 +28,7 @@ import BannerSkeleton from "@/components/BannerSkeleton";
 import { useHomeQuery } from "@/hooks/useHomeQuery";
 import { HomeProduct, HomeCategory, HomeStore } from "@/api/home.api";
 import ItemCardSkeleton from "@/components/ItemCardSkeleton";
+import { normalizeProduct } from "@/domain/product/product.normalize";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   navigateToCategory,
@@ -303,7 +304,7 @@ const ProductSection = memo(({
         renderItem={({ item }) => (
           <View style={{ width: cardWidth, marginRight: 12 }}>
             <ItemCard
-              item={item}
+              item={normalizeProduct(item)}
               handlePresentModalPress={() =>
                 navigateToProduct(item._id, item)
               }
