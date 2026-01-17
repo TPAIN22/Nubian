@@ -1,25 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { 
-  View, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
-  Dimensions, 
-  KeyboardAvoidingView, 
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
   Platform,
   I18nManager,
   Modal,
   Pressable,
-  Alert
+  Alert,
+  Animated
 } from "react-native";
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import Ionicons from "@expo/vector-icons/Ionicons";
 import i18n from '../utils/i18n';
 import { useTheme } from '@/providers/ThemeProvider';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 export interface Address {
   _id?: string;
@@ -59,13 +57,14 @@ const SUDANESE_CITIES = [
 const AddressForm: React.FC<AddressFormProps> = ({ onClose, onSubmit, initialValues, isLoading = false }) => {
   const { theme } = useTheme();
   const colors = theme.colors;
-  
+
   const [form, setForm] = useState<Omit<Address, '_id'>>(initialValues || {
     name: '', city: '', area: '', street: '', building: '', phone: '', whatsapp: '', notes: '', isDefault: false
   });
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   useEffect(() => {
     setForm(initialValues || {
@@ -79,12 +78,10 @@ const AddressForm: React.FC<AddressFormProps> = ({ onClose, onSubmit, initialVal
     if (!form.name.trim()) newErrors.name = true;
     if (!form.city) {
       newErrors.city = true;
-      // Also show an alert if city is missing as it's a dropdown
       Alert.alert("تنبيه", "يرجى اختيار المدينة");
     }
     if (!form.area.trim()) newErrors.area = true;
     
-    // Basic phone validation (allowing 9 or 10 digits)
     const phoneTrimmed = form.phone.trim();
     if (!phoneTrimmed || phoneTrimmed.length < 9) newErrors.phone = true;
     
@@ -104,92 +101,118 @@ const AddressForm: React.FC<AddressFormProps> = ({ onClose, onSubmit, initialVal
   };
 
   const renderInput = (
-    label: string, 
-    value: string, 
-    onChange: (text: string) => void, 
-    placeholder: string, 
-    icon: string, 
+    label: string,
+    value: string,
+    onChange: (text: string) => void,
+    placeholder: string,
+    icon: string,
+    fieldKey: string,
     keyboardType: any = "default",
     error: boolean = false,
     multiline: boolean = false
-  ) => (
-    <View style={styles.fieldContainer}>
-      <Text style={[styles.fieldLabel, { color: error ? colors.error : colors.text.gray }]}>
-        {label}
-      </Text>
-      <View style={[
-        styles.inputWrapper, 
-        { 
-          backgroundColor: colors.surface, 
-          borderColor: error ? colors.error : colors.borderLight,
-          height: multiline ? 100 : 55
-        }
-      ]}>
-        <Ionicons name={icon as any} size={20} color={error ? colors.error : colors.primary} style={styles.inputIcon} />
-        <TextInput
-          style={[styles.input, { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-          placeholder={placeholder}
-          placeholderTextColor={colors.text.veryLightGray}
-          value={value}
-          onChangeText={onChange}
-          keyboardType={keyboardType}
-          multiline={multiline}
-        />
+  ) => {
+    const isFocused = focusedField === fieldKey;
+    
+    return (
+      <View style={styles.fieldContainer}>
+        <Text style={[
+          styles.fieldLabel,
+          { color: error ? colors.error : (isFocused ? colors.primary : colors.text.gray) }
+        ]}>
+          {label}
+        </Text>
+        <View style={[
+          styles.inputWrapper,
+          {
+            backgroundColor: colors.surface,
+            borderColor: error ? colors.error : (isFocused ? colors.primary : colors.borderLight),
+            borderWidth: isFocused ? 1.5 : 1,
+            height: multiline ? 100 : 52
+          }
+        ]}>
+          <Ionicons 
+            name={icon as any} 
+            size={20} 
+            color={error ? colors.error : (isFocused ? colors.primary : colors.text.veryLightGray)} 
+            style={styles.inputIcon} 
+          />
+          <TextInput
+            style={[styles.input, { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
+            placeholder={placeholder}
+            placeholderTextColor={colors.text.veryLightGray}
+            value={value}
+            onChangeText={onChange}
+            keyboardType={keyboardType}
+            multiline={multiline}
+            onFocus={() => setFocusedField(fieldKey)}
+            onBlur={() => setFocusedField(null)}
+            textAlignVertical={multiline ? "top" : "center"}
+          />
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: colors.surface }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.backButton}>
-          <Ionicons name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"} size={24} color={colors.text.gray} />
+      {/* Simplified Header */}
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Ionicons name="close" size={26} color={colors.text.gray} />
         </TouchableOpacity>
-        <Heading size="md" style={{ color: colors.text.gray }}>
+        <Heading size="lg" style={{ color: colors.text.gray, fontWeight: '700' }}>
           {initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}
         </Heading>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.primary }]}>معلومات المستلم</Text>
+        {/* Recipient Section */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
+            <Text style={[styles.cardTitle, { color: colors.text.gray }]}>معلومات المستلم</Text>
+          </View>
+          
           {renderInput(
-            i18n.t('addressForm_recipientName'), 
-            form.name, 
+            i18n.t('addressForm_recipientName'),
+            form.name,
             (text) => setForm(f => ({ ...f, name: text })),
             i18n.t('addressForm_recipientNamePlaceholder'),
             "person-outline",
+            "name",
             "default",
             errors.name
           )}
-          
+
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               {renderInput(
-                i18n.t('addressForm_phone'), 
-                form.phone, 
+                i18n.t('addressForm_phone'),
+                form.phone,
                 (text) => setForm(f => ({ ...f, phone: text })),
                 "0912345678",
                 "call-outline",
+                "phone",
                 "phone-pad",
                 errors.phone
               )}
             </View>
-            <View style={{ width: 15 }} />
+            <View style={{ width: 12 }} />
             <View style={{ flex: 1 }}>
               {renderInput(
-                "واتساب", 
-                form.whatsapp, 
+                "واتساب",
+                form.whatsapp,
                 (text) => setForm(f => ({ ...f, whatsapp: text })),
                 "0912345678",
                 "logo-whatsapp",
+                "whatsapp",
                 "phone-pad",
                 errors.whatsapp
               )}
@@ -197,27 +220,45 @@ const AddressForm: React.FC<AddressFormProps> = ({ onClose, onSubmit, initialVal
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.primary }]}>تفاصيل العنوان</Text>
-          
+        {/* Address Details Section */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="location-outline" size={22} color={colors.primary} />
+            <Text style={[styles.cardTitle, { color: colors.text.gray }]}>تفاصيل العنوان</Text>
+          </View>
+
+          {/* City Picker */}
           <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: errors.city ? colors.error : colors.text.gray }]}>
+            <Text style={[
+              styles.fieldLabel,
+              { color: errors.city ? colors.error : (focusedField === 'city' ? colors.primary : colors.text.gray) }
+            ]}>
               {i18n.t('addressForm_city')}
             </Text>
             <TouchableOpacity
               style={[
-                styles.inputWrapper, 
-                { 
-                  backgroundColor: colors.surface, 
-                  borderColor: errors.city ? colors.error : colors.borderLight,
-                  height: 55
+                styles.inputWrapper,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: errors.city ? colors.error : (focusedField === 'city' ? colors.primary : colors.borderLight),
+                  borderWidth: focusedField === 'city' ? 1.5 : 1,
+                  height: 52
                 }
               ]}
-              onPress={() => setShowCityPicker(true)}
+              onPress={() => {
+                setShowCityPicker(true);
+                setFocusedField('city');
+              }}
+              activeOpacity={0.7}
             >
-              <Ionicons name="location-outline" size={20} color={errors.city ? colors.error : colors.primary} style={styles.inputIcon} />
+              <Ionicons 
+                name="location-outline" 
+                size={20} 
+                color={errors.city ? colors.error : (form.city ? colors.primary : colors.text.veryLightGray)} 
+                style={styles.inputIcon} 
+              />
               <Text style={[
-                styles.selectText, 
+                styles.selectText,
                 { color: form.city ? colors.text.gray : colors.text.veryLightGray }
               ]}>
                 {form.city || i18n.t('addressForm_selectCity')}
@@ -227,11 +268,12 @@ const AddressForm: React.FC<AddressFormProps> = ({ onClose, onSubmit, initialVal
           </View>
 
           {renderInput(
-            i18n.t('addressForm_area'), 
-            form.area, 
+            i18n.t('addressForm_area'),
+            form.area,
             (text) => setForm(f => ({ ...f, area: text })),
             i18n.t('addressForm_areaPlaceholder'),
             "map-outline",
+            "area",
             "default",
             errors.area
           )}
@@ -239,103 +281,144 @@ const AddressForm: React.FC<AddressFormProps> = ({ onClose, onSubmit, initialVal
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               {renderInput(
-                i18n.t('addressForm_street'), 
-                form.street, 
+                i18n.t('addressForm_street'),
+                form.street,
                 (text) => setForm(f => ({ ...f, street: text })),
                 i18n.t('addressForm_streetPlaceholder'),
-                "navigate-outline"
+                "navigate-outline",
+                "street"
               )}
             </View>
-            <View style={{ width: 15 }} />
+            <View style={{ width: 12 }} />
             <View style={{ flex: 1 }}>
               {renderInput(
-                i18n.t('addressForm_building'), 
-                form.building, 
+                i18n.t('addressForm_building'),
+                form.building,
                 (text) => setForm(f => ({ ...f, building: text })),
                 "رقم المبنى",
-                "business-outline"
+                "business-outline",
+                "building"
               )}
             </View>
           </View>
 
           {renderInput(
-            i18n.t('addressForm_notes'), 
-            form.notes || '', 
+            i18n.t('addressForm_notes'),
+            form.notes || '',
             (text) => setForm(f => ({ ...f, notes: text })),
             i18n.t('addressForm_notesPlaceholder'),
-            "chatbubble-ellipses-outline",
+            "chatbubble-outline",
+            "notes",
             "default",
             false,
             true
           )}
         </View>
 
+        {/* Default Address Toggle */}
         <TouchableOpacity
-          style={styles.defaultCheckbox}
+          style={[styles.defaultToggle, { backgroundColor: colors.surface }]}
           onPress={() => setForm(f => ({ ...f, isDefault: !f.isDefault }))}
           activeOpacity={0.7}
         >
-          <View style={[
-            styles.checkbox, 
-            { 
-              borderColor: colors.primary,
-              backgroundColor: form.isDefault ? colors.primary : 'transparent'
-            }
-          ]}>
-            {form.isDefault && <Ionicons name="checkmark" size={16} color="white" />}
+          <View style={styles.defaultToggleContent}>
+            <View style={styles.defaultToggleLeft}>
+              <Ionicons name="star" size={20} color={form.isDefault ? colors.primary : colors.text.veryLightGray} />
+              <Text style={[styles.defaultToggleLabel, { color: colors.text.gray }]}>
+                {i18n.t('addressForm_makeDefault')}
+              </Text>
+            </View>
+            <View style={[
+              styles.switch,
+              {
+                backgroundColor: form.isDefault ? colors.primary : colors.borderLight,
+              }
+            ]}>
+              <View style={[
+                styles.switchThumb,
+                {
+                  transform: [{ translateX: form.isDefault ? 22 : 2 }]
+                }
+              ]} />
+            </View>
           </View>
-          <Text style={[styles.checkboxLabel, { color: colors.text.gray }]}>
-            {i18n.t('addressForm_makeDefault')}
-          </Text>
         </TouchableOpacity>
 
-              <View style={styles.footer}>
-                <TouchableOpacity 
-                  style={[
-                    styles.submitButton, 
-                    { backgroundColor: colors.primary },
-                    isLoading && { opacity: 0.7 }
-                  ]}
-                  onPress={handleSubmit}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.submitButtonText}>
-                    {isLoading ? i18n.t('loading') || "جاري الحفظ..." : (initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add'))}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            { backgroundColor: colors.primary },
+            isLoading && { opacity: 0.6 }
+          ]}
+          onPress={handleSubmit}
+          disabled={isLoading}
+          activeOpacity={0.8}
+        >
+          {isLoading ? (
+            <Text style={styles.submitButtonText}>جاري الحفظ...</Text>
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={22} color="white" style={{ marginLeft: 8 }} />
+              <Text style={styles.submitButtonText}>
+                {initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add')}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* City Picker */}
-      <Modal visible={showCityPicker} animationType="fade" transparent>
-        <View style={styles.pickerOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowCityPicker(false)} />
-          <View style={[styles.pickerContent, { backgroundColor: colors.cardBackground }]}>
-            <View style={[styles.pickerHeader, { borderBottomColor: colors.borderLight }]}>
-              <Text style={[styles.pickerTitle, { color: colors.text.gray }]}>{i18n.t('addressForm_selectCity')}</Text>
+      {/* Enhanced City Picker Modal */}
+      <Modal visible={showCityPicker} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <Pressable 
+            style={StyleSheet.absoluteFill} 
+            onPress={() => {
+              setShowCityPicker(false);
+              setFocusedField(null);
+            }} 
+          />
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHandle, { backgroundColor: colors.borderLight }]} />
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text.gray }]}>
+                {i18n.t('addressForm_selectCity')}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowCityPicker(false);
+                  setFocusedField(null);
+                }}
+              >
+                <Ionicons name="close-circle" size={28} color={colors.text.veryLightGray} />
+              </TouchableOpacity>
             </View>
-            <ScrollView>
-              {SUDANESE_CITIES.map((city) => (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {SUDANESE_CITIES.map((city, index) => (
                 <TouchableOpacity
                   key={city}
                   style={[
                     styles.cityItem,
-                    { borderBottomColor: colors.borderLight },
-                    form.city === city && { backgroundColor: colors.primary + '10' }
+                    form.city === city && { backgroundColor: colors.primary + '08' },
+                    index !== SUDANESE_CITIES.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderLight }
                   ]}
                   onPress={() => {
                     setForm(f => ({ ...f, city }));
                     setShowCityPicker(false);
+                    setFocusedField(null);
                   }}
+                  activeOpacity={0.6}
                 >
                   <Text style={[
                     styles.cityText,
                     { color: colors.text.gray },
-                    form.city === city && { color: colors.primary, fontWeight: 'bold' }
+                    form.city === city && { color: colors.primary, fontWeight: '600' }
                   ]}>
                     {city}
                   </Text>
-                  {form.city === city && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                  {form.city === city && (
+                    <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                  )}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -353,32 +436,45 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingHorizontal: 20,
-    paddingBottom: 15,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
-  backButton: {
-    padding: 8,
+  closeButton: {
+    padding: 4,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    padding: 20,
     paddingBottom: 40,
   },
-  section: {
-    marginBottom: 25,
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  cardHeader: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
   },
   row: {
     flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
   },
   fieldContainer: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   fieldLabel: {
     fontSize: 13,
@@ -389,90 +485,118 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     alignItems: 'center',
-    borderRadius: 15,
-    borderWidth: 1,
-    paddingHorizontal: 15,
+    borderRadius: 12,
+    paddingHorizontal: 14,
   },
   inputIcon: {
-    marginHorizontal: 10,
+    marginHorizontal: 8,
   },
   input: {
     flex: 1,
     fontSize: 15,
     height: '100%',
+    paddingVertical: 8,
   },
   selectText: {
     flex: 1,
     fontSize: 15,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
-  defaultCheckbox: {
+  defaultToggle: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  defaultToggleContent: {
     flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    justifyContent: 'space-between',
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
+  defaultToggleLeft: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 12,
+    gap: 10,
   },
-  checkboxLabel: {
+  defaultToggleLabel: {
     fontSize: 15,
     fontWeight: '500',
   },
-  footer: {
-    marginTop: 10,
+  switch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  switchThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   submitButton: {
-    height: 55,
-    borderRadius: 15,
+    height: 56,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   submitButtonText: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
   },
-  pickerOverlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
-  pickerContent: {
-    width: '90%',
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     maxHeight: '70%',
-    borderRadius: 20,
-    paddingVertical: 15,
   },
-  pickerHeader: {
-    paddingBottom: 15,
-    marginBottom: 5,
-    borderBottomWidth: 1,
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  modalTitle: {
+    fontSize: 19,
+    fontWeight: '700',
   },
   cityItem: {
-    paddingVertical: 15,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
   },
   cityText: {
     fontSize: 16,
