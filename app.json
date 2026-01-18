@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nubian",
     "slug": "Nubian",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "icon": "./assets/images/screen.png",
     "scheme": "sdnubian",
     "userInterfaceStyle": "automatic",
