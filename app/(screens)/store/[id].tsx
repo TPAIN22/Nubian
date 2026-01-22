@@ -403,7 +403,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    padding: 10,
+    fontSize: 24,
     fontWeight: '600',
   },
   scrollView: {
@@ -453,9 +454,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   storeName: {
+    padding: 10,
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 8,
+    marginVertical: 8,
     textAlign: 'center',
   },
   storeDescription: {
@@ -463,6 +465,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 20,
+    padding: 10,
   },
   storeStats: {
     flexDirection: 'row',
@@ -498,6 +501,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   sectionTitle: {
+    padding: 10,
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
@@ -509,6 +513,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   infoText: {
+    padding: 10,
     fontSize: 14,
     flex: 1,
   },

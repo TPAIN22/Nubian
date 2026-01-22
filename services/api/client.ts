@@ -32,7 +32,7 @@ apiClient.interceptors.response.use(
       if (error?.code === "ECONNABORTED") {
         error.message = "Request timeout - the server took too long to respond";
       } else if (error?.code === "ERR_NETWORK" || error?.message === "Network Error") {
-        error.message = `Network error - unable to connect to server at ${error?.config?.baseURL || "unknown"}`;
+        error.message = `Network error - unable to connect to server || "unknown"}`;
       }
     }
     return Promise.reject(error);

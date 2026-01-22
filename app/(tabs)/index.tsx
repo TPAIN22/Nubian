@@ -563,15 +563,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 12,
     gap: 10,
+    textAlign: "center",
   },
   accentBar: { width: 4, height: 22, borderRadius: 2 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", flex: 1 },
+  sectionTitle: { padding: 10, fontSize: 18, fontWeight: "bold", flex: 1,  },
   viewAllButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   viewAllText: {
+    padding: 5,
     fontSize: 14,
     fontWeight: "600",
   },

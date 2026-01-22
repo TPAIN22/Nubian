@@ -617,14 +617,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   price: {
+    padding: 10,
     fontSize: 24,
     fontWeight: "700",
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
   originalPrice: {
+    padding: 10,
     fontSize: 18,
     fontWeight: "400",
     textDecorationLine: "line-through",
+    textAlign: I18nManager.isRTL ? "right" : "left",
   },
 
   missingText: {
@@ -635,11 +638,12 @@ const styles = StyleSheet.create({
   },
 
   descriptionSection: { paddingHorizontal: 20, paddingVertical: 20 },
-  descriptionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
-  description: { fontSize: 14, lineHeight: 22, marginBottom: 4 },
+  descriptionTitle: { padding: 10, fontSize: 16, fontWeight: "600", marginBottom: 12 },
+  description: { padding: 10, fontSize: 14, lineHeight: 22, marginBottom: 4 },
 
   stockContainer: { paddingHorizontal: 20, paddingVertical: 16, marginTop: 8 },
   stockText: {
+    padding: 10,
     fontSize: 16,
     fontWeight: "500",
     textAlign: I18nManager.isRTL ? "right" : "left",

@@ -583,22 +583,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButton: {
-    padding: 4,
+    paddingVertical: 4,
   },
   headerTitle: {
+    paddingVertical: 10,
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
     flex: 1,
+    marginTop: 10,
   },
   searchContainer: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
     borderWidth: 1.5,
     paddingHorizontal: 10,
-    marginBottom: 8,
-    elevation: 3,
+    paddingVertical: 5,
+    marginBottom: 10,
   },
   searchIcon: {
     marginRight: 8,
@@ -615,6 +618,7 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     gap: 10,
+    marginBottom: 10,
   },
   filterButton: {
     flexDirection: 'row',

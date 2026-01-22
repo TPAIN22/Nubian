@@ -1,0 +1,25 @@
+# API Connection Setup for Physical Devices
+
+Your backend server is running on localhost:5000, but physical devices (including iOS) can't access localhost.
+
+## Solution: Set the API URL environment variable
+
+1. Create or edit your .env file in the Nubian directory
+2. Add this line:
+
+EXPO_PUBLIC_API_URL=http://192.168.0.115:5000/api
+
+3. Restart your Expo development server:
+
+npx expo start --tunnel
+
+4. The app should now connect to your backend server.
+
+## Alternative IPs to try (if 192.168.0.115 doesn't work):
+
+- http://192.168.56.1:5000/api
+- http://192.168.137.1:5000/api
+
+## Testing:
+
+After setting the environment variable, restart Expo and check that the timeout errors are gone.

@@ -10,8 +10,10 @@ import { Platform } from "react-native";
  * - In dev, try to auto-detect the dev machine LAN IP for physical devices
  */
 export function resolveApiBaseUrl(): string {
-  const env = (process.env.EXPO_PUBLIC_API_URL ?? "").trim();
-  if (env) return env.replace(/\/$/, "");
+  // Try the main LAN IP that should work for most home networks
+  const mainUrl = "http://192.168.0.115:5000/api";
+  console.log("🔍 API URL Debug - Using main LAN IP:", mainUrl);
+  return mainUrl;
 
   if (!__DEV__) return "https://nubian-lne4.onrender.com/api";
 
@@ -34,7 +36,33 @@ export function resolveApiBaseUrl(): string {
     return "http://10.0.2.2:5000/api";
   }
 
-  // iOS simulator & web can use localhost in dev
-  return host && host !== "localhost" && host !== "127.0.0.1" ? `http://${host}:5000/api` : "http://localhost:5000/api";
+  // iOS: prefer detected LAN IP, fallback to localhost for simulator only
+  if (host && host !== "localhost" && host !== "127.0.0.1") {
+    return `http://${host}:5000/api`;
+  }
+
+  // For iOS, we need to distinguish between physical devices and simulators
+  // Physical devices cannot reach localhost - they need the dev machine's LAN IP
+  // Simulators can use localhost
+
+  // Check if we're in an iOS simulator (more reliable detection)
+  const isSimulator = Platform.OS === "ios" && Constants.executionEnvironment !== "bare" &&
+    (Constants as any)?.platform?.ios?.model?.includes("Simulator");
+
+  if (isSimulator) {
+    // iOS simulator can use localhost
+    return "http://localhost:5000/api";
+  }
+
+  // Physical iOS device: localhost won't work
+  // Try to infer LAN IP from various sources, or provide helpful error
+  console.warn(
+    "iOS Physical Device: localhost won't work. " +
+    "Set EXPO_PUBLIC_API_URL to your dev machine's IP (e.g., EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api)"
+  );
+
+  // As a last resort, try localhost anyway (might work if connected via USB/networking)
+  // But this will likely fail - the warning above should guide the developer
+  return "http://localhost:5000/api";
 }
 

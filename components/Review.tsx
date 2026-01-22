@@ -365,9 +365,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   title: {
+    paddingVertical: 10,
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 24,
+    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   loader: {
     marginVertical: 20,

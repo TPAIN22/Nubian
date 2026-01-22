@@ -77,7 +77,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
             type: "error",
             text1: i18n.t('networkLostTitle'),
             text2: i18n.t('networkLostMessage'),
-            visibilityTime: 4000,
+            visibilityTime: 1000,
             onHide: () => {
               isShowingNoNetworkAlert.current = false;
               setIsConnected(false); // تحديث حالة isConnected في الـ store
@@ -91,7 +91,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
             type: "success",
             text1: i18n.t('networkRestoredTitle'),
             text2: i18n.t('networkRestoredMessage'),
-            visibilityTime: 2000,
+            visibilityTime: 1000,
           });
           isShowingNoNetworkAlert.current = false;
           setIsConnected(true); 

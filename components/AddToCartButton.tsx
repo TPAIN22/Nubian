@@ -120,15 +120,17 @@ const AddToCartButton = ({
             type: "info",
             text1: i18n.t("selectAttributesFirst") || "Please select required attributes",
             text2: requiredValidation.missing.length ? `Missing: ${requiredValidation.missing.join(", ")}` : "",
+            visibilityTime: 1000,
           });
         } else if (availability.reason === "no_variant") {
           Toast.show({
             type: "info",
             text1: "Not available",
             text2: "Please select a valid combination of attributes",
+            visibilityTime: 1000,
           });
         } else if (availability.reason === "out_of_stock") {
-          Toast.show({ type: "error", text1: "Out of stock" });
+          Toast.show({ type: "error", text1: "Out of stock", visibilityTime: 1000 });
         }
       }
       return;
@@ -140,7 +142,7 @@ const AddToCartButton = ({
 
       if (!isSignedIn) {
         setSignInModelVisible(true);
-        Toast.show({ type: "error", text1: i18n.t("pleaseSignInFirst") || "Please sign in first" });
+        Toast.show({ type: "error", text1: i18n.t("pleaseSignInFirst") || "Please sign in first", visibilityTime: 1000 });
         return;
       }
 
@@ -158,10 +160,10 @@ const AddToCartButton = ({
         fetchCart().catch(() => {});
       }, 100);
 
-      Toast.show({ type: "success", text1: i18n.t("addedToCart") || "Added to cart" });
+      Toast.show({ type: "success", text1: i18n.t("addedToCart") || "Added to cart", visibilityTime: 1000 });
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || i18n.t("addToCartError") || "Error";
-      Toast.show({ type: "error", text1: i18n.t("addToCartError") || "Add to cart error", text2: String(msg) });
+      Toast.show({ type: "error", text1: i18n.t("addToCartError") || "Add to cart error", text2: String(msg), visibilityTime: 1000 });
     } finally {
       setIsLoading(false);
     }
