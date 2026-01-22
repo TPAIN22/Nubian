@@ -324,6 +324,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     resizeMode: 'cover', 
+    marginBottom: 54,
   },
 
   googleBtnText: {
@@ -342,12 +343,15 @@ const styles = StyleSheet.create({
     color: '#000',
     textAlign: 'center',
     marginTop: 8,
+    lineHeight: 34,
   },
   subtitle: {
     fontSize: 15,
     color: '#666',
     textAlign: 'center',
     marginBottom: 8,
+    lineHeight: 24,
+    paddingHorizontal: 10,
   },
   btn: {
     height: 52,
@@ -397,7 +401,7 @@ const styles = StyleSheet.create({
   orText: {
     color: '#999',
     paddingHorizontal: 12,
-    fontSize: 14,
+    fontSize: 18,
   },
   input: {
     height: 52,

@@ -15,6 +15,7 @@ import { Alert, Platform, View, I18nManager } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import i18n from "@/utils/i18n";
 import { useFonts } from "@/hooks/useFonts";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import * as Updates from "expo-updates";
 
@@ -44,15 +45,36 @@ function AppLoaderWithClerk() {
   const [isUpdateChecking, setIsUpdateChecking] = useState<boolean>(true);
   const [hasGifStartedDisplaying, setHasGifStartedDisplaying] =
     useState<boolean>(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState<boolean>(true);
 
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
   const { isDark } = useTheme();
   
   // Initialize token manager for API requests
   useTokenManager();
-  
+
   // Load Cairo fonts
   const { fontsLoaded, fontError } = useFonts();
+
+  // Check if user has seen onboarding
+  useEffect(() => {
+    async function checkOnboardingStatus() {
+      try {
+        const value = await AsyncStorage.getItem('hasSeenOnboarding');
+        setHasSeenOnboarding(value === 'true');
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setHasSeenOnboarding(false); // Default to showing onboarding if error
+      } finally {
+        setIsCheckingOnboarding(false);
+      }
+    }
+
+    if (fontsLoaded) {
+      checkOnboardingStatus();
+    }
+  }, [fontsLoaded]);
 
   // Debug font loading
   useEffect(() => {
@@ -107,6 +129,7 @@ function AppLoaderWithClerk() {
             text1: i18n.t("updateErrorTitle"),
             text2: i18n.t("updateErrorMessage"),
             visibilityTime: 1000,
+            autoHide: true,
           });
           setIsUpdateChecking(false);
         }
@@ -139,7 +162,8 @@ function AppLoaderWithClerk() {
         isConnected === true &&
         isLoaded &&
         gifAnimationFinished &&
-        !isUpdateChecking
+        !isUpdateChecking &&
+        !isCheckingOnboarding
       ) {
         await SplashScreen.hideAsync();
       } else if (isConnected === false) {
@@ -154,6 +178,7 @@ function AppLoaderWithClerk() {
     gifAnimationFinished,
     isUpdateChecking,
     hasGifStartedDisplaying,
+    isCheckingOnboarding,
   ]);
 
   const handleRetryNetwork = useCallback(() => {
@@ -178,7 +203,7 @@ function AppLoaderWithClerk() {
     );
   }
 
-  if (!gifAnimationFinished || !isLoaded || isUpdateChecking) {
+  if (!gifAnimationFinished || !isLoaded || isUpdateChecking || isCheckingOnboarding) {
     return (
         <GifLoadingScreen
           onAnimationFinish={onGifFinish}
@@ -203,14 +228,14 @@ function AppLoaderWithClerk() {
                   ? (I18nManager.isRTL ? "slide_from_left" : "slide_from_right")
                   : "fade",
             }}
-            initialRouteName="(onboarding)"
+            initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
           >
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="(screens)" />
           </Stack>
-          <Toast />
+          <Toast autoHide={true} visibilityTime={1000}/>
         </>
         </BottomSheetModalProvider>
         </GestureHandlerRootView>

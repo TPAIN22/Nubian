@@ -320,6 +320,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     resizeMode: 'cover', 
+    marginBottom: 54,
   },
   googleBtnText: {
     color: '#707070',
@@ -337,6 +338,7 @@ const styles = StyleSheet.create({
     color: '#000',
     textAlign: 'center',
     marginTop: 8,
+    lineHeight: 34,
   },
   subtitle: {
     fontSize: 15,

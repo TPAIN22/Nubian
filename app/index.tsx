@@ -11,7 +11,7 @@ export default function Index() {
         AsyncStorage.setItem("hasLaunched", "true");
         setIsFirstLaunch(true);
       } else {
-        setIsFirstLaunch(false);
+        setIsFirstLaunch(true);
       }
     });
   }, []);

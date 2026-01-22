@@ -429,6 +429,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 16,
     marginBottom: 24,
+    marginTop: 24,
   },
   signInImage: {
     width: width * 0.4,
@@ -444,11 +445,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
+    lineHeight: 28,
   },
   signInSubtitle: {
     fontSize: 14,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 24,
+    paddingHorizontal: 10,
   },
   loginButton: {
     flexDirection: "row",
@@ -523,6 +526,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 4,
     textAlign: "left",
+    lineHeight: 34,
   },
   optionsContainer: {
     borderRadius: 16,
@@ -572,6 +576,7 @@ const styles = StyleSheet.create({
   languageButtonText: {
     fontSize: 16,
     fontWeight: "500",
+    lineHeight: 24,
   },
 
   // Logout Styles

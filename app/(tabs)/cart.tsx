@@ -267,12 +267,14 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 60,
     opacity: 0.6,
+    lineHeight: 60,
   },
   emptyTitle: {
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 15,
     textAlign: "center",
+    lineHeight: 38,
   },
   emptySubtitle: {
     fontSize: 16,
@@ -292,6 +294,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
+    lineHeight: 28,
   },
 
   cartContent: {
