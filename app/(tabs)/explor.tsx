@@ -562,11 +562,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 6,
+    paddingVertical: 12,
     fontSize: 16,
     textAlign: 'right',
   },

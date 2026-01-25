@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback } from "react";
 import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, View, ActivityIndicator } from "react-native";
 import useCartStore from "@/store/useCartStore";
 import { useUser } from "@clerk/clerk-expo";
-import Toast from "react-native-toast-message";
 import useItemStore from "@/store/useItemStore";
 import i18n from "@/utils/i18n";
 import { useTracking } from "@/hooks/useTracking";
@@ -15,6 +14,7 @@ import {
   mergeSizeAndAttributes,
   normalizeAttributes,
 } from "@/utils/cartUtils";
+import { toast } from "sonner-native";
 
 type Props = {
   product: NormalizedProduct;
@@ -116,23 +116,17 @@ const AddToCartButton = ({
       // show helpful toast in case user taps fast
       if (!availability.ok) {
         if (availability.reason === "missing_required") {
-          Toast.show({
-            type: "info",
-            text1: i18n.t("selectAttributesFirst") || "Please select required attributes",
-            text2: requiredValidation.missing.length ? `Missing: ${requiredValidation.missing.join(", ")}` : "",
-            visibilityTime: 1000,
-            autoHide: true,
+          toast.info(i18n.t("selectAttributesFirst") || "Please select required attributes", {
+            description: requiredValidation.missing.length ? `Missing: ${requiredValidation.missing.join(", ")}` : "",
           });
         } else if (availability.reason === "no_variant") {
-          Toast.show({
-            type: "info",
-            text1: "Not available",
-            text2: "Please select a valid combination of attributes",
-            visibilityTime: 1000,
-            autoHide: true,
+          toast.info("Not available", {
+            description: "Please select a valid combination of attributes",
           });
         } else if (availability.reason === "out_of_stock") {
-          Toast.show({ type: "error", text1: "Out of stock", visibilityTime: 1000, autoHide: true });
+          toast.error("Out of stock", {
+            description: "Out of stock",
+          });
         }
       }
       return;
@@ -144,7 +138,9 @@ const AddToCartButton = ({
 
       if (!isSignedIn) {
         setSignInModelVisible(true);
-        Toast.show({ type: "error", text1: i18n.t("pleaseSignInFirst") || "Please sign in first", visibilityTime: 1000, autoHide: true });
+        toast.error(i18n.t("pleaseSignInFirst") || "Please sign in first", {
+          description: i18n.t("pleaseSignInFirst") || "Please sign in first",
+        },);
         return;
       }
 
@@ -162,10 +158,14 @@ const AddToCartButton = ({
         fetchCart().catch(() => {});
       }, 100);
 
-      Toast.show({ type: "success", text1: i18n.t("addedToCart") || "Added to cart", visibilityTime: 1000, autoHide: true });
+      toast.success(i18n.t("addedToCart") || "Added to cart", {
+        description: i18n.t("addedToCart") || "Added to cart",
+      });
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || i18n.t("addToCartError") || "Error";
-      Toast.show({ type: "error", text1: i18n.t("addToCartError") || "Add to cart error", text2: String(msg), visibilityTime: 1000, autoHide: true });
+      toast.error(i18n.t("addToCartError") || "Add to cart error", {
+        description: String(msg),
+      });
     } finally {
       setIsLoading(false);
     }

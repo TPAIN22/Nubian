@@ -5,21 +5,17 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth, useUser } from "@clerk/clerk-expo";
-
 import useOrderStore from "@/store/orderStore";
 import useCartStore from "@/store/useCartStore";
 import useAddressStore from "@/store/addressStore";
-
-import AddressForm, { Address } from "./AddressForm";
+import AddressForm from "@/components/AddressForm";
 import CouponInput, { CouponValidationResult } from "./CouponInput";
 import CouponRecommendations from "./CouponRecommendations";
-
 import i18n from "@/utils/i18n";
 import { useTracking } from "@/hooks/useTracking";
 import { useColors } from "@/hooks/useColors";
@@ -32,6 +28,8 @@ import { matchVariant } from "@/domain/variant/variant.match";
 import { getFinalPrice } from "@/utils/priceUtils";
 import { useRouter } from "expo-router";
 import { uploadImageToImageKit } from "@/utils/imageKitUpload";
+import { toast } from "sonner-native";
+import Colors from "@/locales/brandColors";
 
 type PaymentMethod = "CASH" | "BANKAK";
 
@@ -74,17 +72,14 @@ const AddressCard = React.memo(({ item, isSelected, onSelect, colors }: any) => 
     <Text style={[styles.addressName, { color: colors.text.darkGray }]}>
       {item.name}{" "}
       {item.isDefault ? (
-        <Text style={{ color: colors.primary, fontWeight: "400" }}>(افتراضي)</Text>
+        <Text style={{ color: colors.primary, fontWeight: "400" }}>({i18n.t("default")})</Text>
       ) : null}
     </Text>
 
     <Text style={[styles.addressText, { color: colors.text.mediumGray }]}>
-      {item.city}، {item.area}، {item.street}، {item.building}
+      {item.subCityName || item.area}، {item.street}، {item.building}
     </Text>
-
     <Text style={[styles.addressText, { color: colors.text.mediumGray }]}>📞 {item.phone}</Text>
-    <Text style={[styles.addressText, { color: colors.text.mediumGray }]}>💬 {item.whatsapp}</Text>
-
     {item.notes ? (
       <Text style={[styles.addressText, { color: colors.text.mediumGray }]}>
         {i18n.t("notes")}: {item.notes}
@@ -106,7 +101,7 @@ const PaymentSection = React.memo(
     colors,
   }: any) => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text.darkGray }]}>طريقة الدفع</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text.darkGray }]}>{i18n.t("paymentMethod")}</Text>
 
       {currentTotal < PROOF_THRESHOLD ? (
         <TouchableOpacity
@@ -128,15 +123,14 @@ const PaymentSection = React.memo(
           </View>
 
           <View style={styles.paymentContent}>
-            <Text style={[styles.paymentTitle, { color: colors.text.darkGray }]}>الدفع عند الاستلام</Text>
-            <Text style={[styles.paymentDesc, { color: colors.text.mediumGray }]}>ادفع نقداً عند استلام الطلب</Text>
+            <Text style={[styles.paymentTitle, { color: colors.text.darkGray }]}>{i18n.t("cashPayment")}</Text>
+            <Text style={[styles.paymentDesc, { color: colors.text.mediumGray }]}>{i18n.t("cashPaymentDescription")}</Text>
           </View>
         </TouchableOpacity>
       ) : (
         <View style={[styles.warningBox, { backgroundColor: colors.warning + "15", borderColor: colors.warning }]}>
           <Text style={[styles.warningText, { color: colors.warning }]}>
-            ⚠️ للطلبات التي تزيد عن {formatPrice(PROOF_THRESHOLD)}، يرجى استخدام التحويل البنكي (بنكك) وإرفاق صورة
-            الإيصال.
+            {i18n.t("bankakPaymentWarning")} {formatPrice(PROOF_THRESHOLD)}، {i18n.t("attachTransferImage")}
           </Text>
         </View>
       )}
@@ -155,16 +149,16 @@ const PaymentSection = React.memo(
         </View>
 
         <View style={styles.paymentContent}>
-          <Text style={[styles.paymentTitle, { color: colors.text.darkGray }]}>التحويل البنكي</Text>
+          <Text style={[styles.paymentTitle, { color: colors.text.darkGray }]}>{i18n.t("bankakPayment")}</Text>
           <Text style={[styles.paymentDesc, { color: colors.text.mediumGray }]}>
-            حول مبلغ {payableAmountText} وأرفق صورة الإيصال
+            {i18n.t("bankakPaymentDescription")} {payableAmountText} {i18n.t("attachTransferImage")}
           </Text>
 
           {paymentMethod === "BANKAK" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={[styles.paymentDetail, { color: colors.text.mediumGray }]}>رقم الحساب: 5831233</Text>
-              <Text style={[styles.paymentDetail, { color: colors.text.mediumGray }]}>الاسم: سعيد عبدالجبار</Text>
-              <Text style={[styles.paymentDetail, { color: colors.text.mediumGray }]}>البنك: بنك الخرطوم</Text>
+              <Text style={[styles.paymentDetail, { color: colors.text.mediumGray }]}>{i18n.t("accountNumber")}: {i18n.t("accountNumberValue")}</Text>
+              <Text style={[styles.paymentDetail, { color: colors.text.mediumGray }]}>{i18n.t("accountName")}: {i18n.t("accountNameValue")}</Text>
+              <Text style={[styles.paymentDetail, { color: colors.text.mediumGray }]}>{i18n.t("bankName")}: {i18n.t("bankNameValue")}</Text>
             </View>
           )}
         </View>
@@ -172,7 +166,7 @@ const PaymentSection = React.memo(
 
       {paymentMethod === "BANKAK" && (
         <View style={[styles.uploadSection, { backgroundColor: colors.gray?.[100] ?? "#F3F4F6" }]}>
-          <Text style={[styles.uploadLabel, { color: colors.text.darkGray }]}>إرفاق صورة التحويل البنكي *</Text>
+          <Text style={[styles.uploadLabel, { color: colors.text.darkGray }]}>{i18n.t("attachTransferImage")} *</Text>
 
           <TouchableOpacity
             style={[
@@ -185,7 +179,7 @@ const PaymentSection = React.memo(
             disabled={uploadingImage}
           >
             <Text style={[styles.uploadButtonText, { color: colors.text.mediumGray }]}>
-              {transferImage ? "تغيير الصورة" : "اختيار صورة"}
+              {transferImage ? i18n.t("changeImage") : i18n.t("selectImage")}
             </Text>
           </TouchableOpacity>
 
@@ -215,11 +209,11 @@ const PriceSummary = React.memo(({ quote, couponResult, orderAmount, colors }: a
     {couponResult?.valid && typeof couponResult.discountAmount === "number" ? (
       <View style={[styles.priceSection, { backgroundColor: colors.gray?.[100] ?? "#F3F4F6" }]}>
         <Text style={[styles.discountText, { color: colors.success }]}>
-          الخصم: {formatPrice(couponResult.discountAmount, "SDG")}
+          {i18n.t("discount")}: {formatPrice(couponResult.discountAmount, "SDG")}
           {couponResult.type === "percentage" ? ` (${couponResult.value}%)` : ""}
         </Text>
         <Text style={[styles.totalText, { color: colors.text.darkGray }]}>
-          المجموع بعد الخصم: {formatPrice(couponResult.finalAmount ?? orderAmount, "SDG")}
+          {i18n.t("totalAfterDiscount")}: {formatPrice(couponResult.finalAmount ?? orderAmount, "SDG")}
         </Text>
       </View>
     ) : null}
@@ -227,13 +221,13 @@ const PriceSummary = React.memo(({ quote, couponResult, orderAmount, colors }: a
     {quote ? (
       <View style={[styles.priceSection, { backgroundColor: colors.cardBackground }]}>
         <Text style={[styles.totalText, { color: colors.text.darkGray }]}>
-          المجموع: {formatPrice(quote.subtotal, quote.currency || "SDG")}
+          {i18n.t("total")}: {formatPrice(quote.subtotal, quote.currency || "SDG")}
         </Text>
         <Text style={[styles.discountText, { color: colors.text.mediumGray }]}>
-          الشحن: {formatPrice(quote.shippingFee, quote.currency || "SDG")}
+          {i18n.t("shipping")}: {formatPrice(quote.shippingFee, quote.currency || "SDG")}
         </Text>
         <Text style={[styles.totalText, { color: colors.primary, marginTop: 4 }]}>
-          الإجمالي: {formatPrice(quote.total, quote.currency || "SDG")}
+          {i18n.t("grandTotal")}: {formatPrice(quote.total, quote.currency || "SDG")}
         </Text>
       </View>
     ) : null}
@@ -254,7 +248,7 @@ const CheckoutButton = React.memo(({ isEnabled, isLoading, onCheckout, colors }:
     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
   >
     <Text style={[styles.buttonText, { color: colors.text.white }]}>
-      {isLoading ? "جاري التأكيد..." : "تأكيد الطلب"}
+      {isLoading ? i18n.t("loading") : i18n.t("checkout")}
     </Text>
   </TouchableOpacity>
 ));
@@ -371,15 +365,13 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
     if (!selectedAddressId) return false;
     if (!paymentMethod) return false;
 
-    const selectedAddress = (addresses || []).find((a: Address) => String(a._id) === String(selectedAddressId));
-    if (selectedAddress && (!selectedAddress.phone || !selectedAddress.whatsapp)) return false;
+    const selectedAddress = (addresses || []).find((a: any) => String(a._id) === String(selectedAddressId));
+    if (selectedAddress && (!selectedAddress.phone)) return false;
 
     if (!itemsPayload.length) return false;
-
     if (paymentMethod === "BANKAK") {
       if (!transferImage || !String(transferImage).startsWith("http")) return false;
     }
-
     if (currentTotal >= PROOF_THRESHOLD && paymentMethod === "CASH") return false;
 
     if (uploadingImage) return false;
@@ -399,26 +391,23 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
   ]);
 
   const checkoutDisabledReason = useMemo(() => {
-    if (!selectedAddressId) return "اختر عنوان التوصيل";
-    if (!paymentMethod) return "اختر طريقة الدفع";
+    if (!selectedAddressId) return i18n.t("selectShippingAddress");
+    if (!paymentMethod) return i18n.t("selectPaymentMethod");
 
-    const selectedAddress = (addresses || []).find((a: Address) => String(a._id) === String(selectedAddressId));
-    if (!selectedAddress) return "العنوان غير موجود";
-    if (!selectedAddress.phone) return "أضف رقم الهاتف في العنوان";
-    if (!selectedAddress.whatsapp) return "أضف رقم الواتساب في العنوان";
-
-    if (!itemsPayload.length) return "السلة فيها منتج غير مكتمل (اختر المواصفات/السعر)";
-
+    const selectedAddress = (addresses || []).find((a: any) => String(a._id) === String(selectedAddressId));
+    if (!selectedAddress) return i18n.t("addressNotFound");
+    if (!selectedAddress.phone) return i18n.t("addPhoneNumberToAddress");
+    if (!itemsPayload.length) return i18n.t("cartHasIncompleteProducts");
     if (paymentMethod === "BANKAK") {
-      if (uploadingImage) return "جاري رفع صورة التحويل...";
-      if (!transferImage) return "ارفق صورة التحويل";
-      if (!String(transferImage).startsWith("http")) return "انتظر اكتمال رفع الصورة";
+      if (uploadingImage) return i18n.t("uploadingTransferImage");
+      if (!transferImage) return i18n.t("attachTransferImage");
+      if (!String(transferImage).startsWith("http")) return i18n.t("waitForImageUpload");
     }
 
-    if (currentTotal >= PROOF_THRESHOLD && paymentMethod === "CASH") return "لا يمكن الدفع نقداً فوق الحد";
+    if (currentTotal >= PROOF_THRESHOLD && paymentMethod === "CASH") return i18n.t("cashPaymentAboveThreshold");
 
-    if (isLoading) return "جاري التأكيد...";
-    if (quoteLoading) return "جاري حساب الفاتورة...";
+    if (isLoading) return i18n.t("loading");
+    if (quoteLoading) return i18n.t("loading");
 
     return null;
   }, [
@@ -438,7 +427,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
     if (!addresses || addresses.length === 0) return;
     if (selectedAddressId) return;
 
-    const def = addresses.find((a: Address) => a.isDefault) || addresses[0];
+    const def = addresses.find((a: any) => a.isDefault) || addresses[0];
     if (def?._id) {
       setSelectedAddressId(String(def._id));
       refreshQuote(String(def._id));
@@ -451,7 +440,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
   }, [selectedAddressId, cart?.updatedAt, refreshQuote]);
 
   const handleAddAddress = useCallback(
-    async (form: Omit<Address, "_id">) => {
+    async (form: Omit<any, "_id">) => {
       try {
         setIsLoading(true);
         const newAddress = await addAddress(form);
@@ -463,9 +452,9 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
           refreshQuote(String(newAddress._id));
         }
 
-        Alert.alert("تمت الإضافة", "تم إضافة العنوان بنجاح");
+        toast.success(i18n.t("addressAddedSuccessfully"));
       } catch (e: any) {
-        Alert.alert("خطأ", e?.message || "حدث خطأ أثناء إضافة العنوان");
+        toast.error(e?.message || i18n.t("addressAddError"));
       } finally {
         setIsLoading(false);
       }
@@ -476,7 +465,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
   const pickImage = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("خطأ", "نحتاج إلى إذن الوصول للصور");
+      toast.error(i18n.t("imagePermissionError"));
       return;
     }
 
@@ -497,7 +486,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
         const uploadedUrl = await uploadImageToImageKit(uri);
         setTransferImage(uploadedUrl);
       } catch (error) {
-        Alert.alert("خطأ", "فشل رفع الصورة. يرجى المحاولة مرة أخرى.");
+        toast.error(i18n.t("imageUploadFailed"));
         setTransferImage(null);
       } finally {
         setUploadingImage(false);
@@ -505,41 +494,34 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
     }
   }, []);
 
-  const handleCheckout = useCallback(async () => {
-    if (!selectedAddressId) return Alert.alert("خطأ", "يرجى اختيار عنوان للتوصيل");
-    if (!paymentMethod) return Alert.alert("خطأ", "يرجى اختيار طريقة الدفع");
-
+  const handleCheckout = useCallback(async  () => {
+    if (!selectedAddressId) return toast.error(i18n.t("selectShippingAddress"));
+    if (!paymentMethod) return toast.error(i18n.t("selectPaymentMethod"));
     if (!itemsPayload.length) {
-      return Alert.alert("خطأ", "السلة فيها منتج غير مكتمل (اختر المواصفات/السعر).");
+      return toast.error(i18n.t("cartHasIncompleteProducts"));
     }
-
     if (paymentMethod === "BANKAK") {
       if (!transferImage || !String(transferImage).startsWith("http")) {
-        return Alert.alert("خطأ", "يرجى إرفاق صورة التحويل البنكي (بعد رفعها)");
+        return toast.error(i18n.t("attachTransferImage"));
       }
     }
-
     setIsLoading(true);
-
     try {
       const token = await getToken();
       if (!token) throw new Error("AUTH_ERROR");
 
-      const selectedAddress = (addresses || []).find((a: Address) => String(a._id) === String(selectedAddressId));
+      const selectedAddress = (addresses || []).find((a: any) => String(a._id) === String(selectedAddressId));
       if (!selectedAddress) throw new Error("ADDRESS_NOT_FOUND");
-      if (!selectedAddress.phone || !selectedAddress.whatsapp) throw new Error("ADDRESS_PHONE_MISSING");
-
+      if (!selectedAddress.phone) throw new Error("ADDRESS_PHONE_MISSING");
       // ✅ backend requires these fields
       const shippingAddress = buildShippingAddressText(selectedAddress);
-      const phoneNumber = String(selectedAddress.phone || selectedAddress.whatsapp || "").trim();
-
+      const phoneNumber = String(selectedAddress.phone).trim();
       if (!shippingAddress) {
-        return Alert.alert("خطأ", "عنوان الشحن ناقص. أكمل بيانات العنوان (المدينة/المنطقة/الشارع/المبنى).");
+        return toast.error(i18n.t("shippingAddressMissing"));
       }
       if (!phoneNumber || phoneNumber.length < 5) {
-        return Alert.alert("خطأ", "رقم الهاتف/الواتساب غير صحيح.");
+        return toast.error(i18n.t("invalidPhoneNumber"));
       }
-
       // quote endpoint might be 404 - do not block order
       try {
         await refreshQuote(selectedAddressId);
@@ -582,7 +564,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
 
       await clearCart();
       handleClose();
-
+      toast.success(i18n.t("orderSuccess"));
       router.push({
         pathname: "/order-success",
         params: {
@@ -602,9 +584,9 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
         errData?.error?.message ||
         errData?.message ||
         e?.message ||
-        "حدث خطأ أثناء إرسال الطلب";
+        i18n.t("orderError");
 
-      Alert.alert("خطأ", status ? `${serverMsg} (HTTP ${status})` : serverMsg);
+      toast.error(status ? `${serverMsg} (HTTP ${status})` : serverMsg || i18n.t("orderError"));
 
       // ❌ do NOT close on failure
     } finally {
@@ -627,7 +609,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
 
   // render address item
   const renderAddress = useCallback(
-    ({ item }: { item: Address }) => {
+      ({ item }: { item: any }) => {
       const isSelected = String(selectedAddressId) === String(item._id);
       return (
         <AddressCard
@@ -652,7 +634,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
           }}
           activeOpacity={0.85}
         >
-          <Text style={[styles.addButtonText, { color: colors.primary }]}>+ إضافة عنوان جديد</Text>
+          <Text style={[styles.addButtonText, { color: colors.primary }]}>{i18n.t("addNewAddress")}</Text>
         </TouchableOpacity>
 
         <PaymentSection
@@ -666,7 +648,6 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
           pickImage={pickImage}
           colors={colors}
         />
-
         {!!cart?.products?.length && orderAmount > 0 ? (
           <CouponRecommendations
             cartItems={cart.products}
@@ -736,10 +717,10 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
   if (showAddressForm) {
     return (
       <AddressForm
+        visible={showAddressForm}
         onClose={() => setShowAddressForm(false)}
         onSubmit={handleAddAddress}
-        initialValues={addressFormInitial}
-        isLoading={isLoading}
+        initialValues={addressFormInitial as Omit<any, "_id"> | undefined}
       />
     );
   }
@@ -758,7 +739,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
             setShowAddressForm(true);
           }}
         >
-          <Text style={[styles.addButtonText, { color: colors.primary }]}>+ {i18n.t("addNewAddress")}</Text>
+          <Text style={[styles.addButtonText, { color: colors.primary }]}>{i18n.t("addNewAddress")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -767,7 +748,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
   return (
     <FlatList
       data={addresses}
-      keyExtractor={(item: Address) => String(item._id)}
+      keyExtractor={(item: any) => String(item._id)}
       renderItem={renderAddress}
       extraData={{
         selectedAddressId,
@@ -815,6 +796,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "800",
+    color: Colors.primary,
+    lineHeight: 34,
   },
 
   addressCard: {
@@ -828,10 +811,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 8,
+    lineHeight: 24,
   },
   addressText: {
     fontSize: 14,
     marginBottom: 4,
+    lineHeight: 20,
   },
 
   addButton: {
@@ -845,6 +830,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 16,
     fontWeight: "700",
+    lineHeight: 24,
   },
 
   section: {
@@ -854,6 +840,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     marginBottom: 12,
+    lineHeight: 24,
   },
 
   paymentOption: {
@@ -863,6 +850,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     marginBottom: 12,
+    lineHeight: 24,
   },
   radioOuter: {
     width: 22,
@@ -885,13 +873,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 4,
+    lineHeight: 24,
   },
   paymentDesc: {
     fontSize: 13,
+    lineHeight: 20,
   },
   paymentDetail: {
     fontSize: 13,
     marginTop: 3,
+    lineHeight: 20,
   },
 
   uploadSection: {
@@ -903,25 +894,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
     fontWeight: "700",
+    lineHeight: 20,
   },
   uploadButton: {
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
+    lineHeight: 24,
   },
   uploadButtonText: {
     fontSize: 15,
     fontWeight: "700",
+    lineHeight: 24,
   },
   imagePreview: {
     marginTop: 12,
     position: "relative",
+    lineHeight: 20,
   },
   previewImage: {
     width: "100%",
     height: 200,
     borderRadius: 10,
+    lineHeight: 20,
   },
   removeImageButton: {
     position: "absolute",
@@ -933,10 +929,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-  },
+    lineHeight: 20,
+      },
   removeImageText: {
     fontSize: 16,
     fontWeight: "800",
+    lineHeight: 24,
   },
 
   priceSection: {
@@ -948,10 +946,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     marginBottom: 6,
+    lineHeight: 24,
   },
   totalText: {
     fontSize: 16,
     fontWeight: "900",
+    lineHeight: 24,
   },
 
   button: {
@@ -962,12 +962,14 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: "900",
+    lineHeight: 24,
   },
   warningBox: {
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
     marginBottom: 15,
+    lineHeight: 20,
   },
   warningText: {
     fontSize: 13,

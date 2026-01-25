@@ -26,8 +26,7 @@ export const setInitialLanguage = async () => {
     )) as SupportedLanguage | null;
 
     if (!savedLang || !SUPPORTED_LANGUAGES.includes(savedLang)) {
-      // استخدام لغة الجهاز أو الافتراضية 'en'
-
+      // Use device language or default to 'en'
       const locales = Localization.getLocales();
       const deviceLang =
         locales.length > 0 && locales[0] !== undefined
@@ -40,12 +39,12 @@ export const setInitialLanguage = async () => {
     i18n.locale = savedLang;
     const isRTL = savedLang === "ar";
 
-    // تفعيل أو تعطيل RTL
+    // Enable or disable RTL
     I18nManager.allowRTL(isRTL);
 
     if (I18nManager.isRTL !== isRTL) {
       I18nManager.forceRTL(isRTL);
-      await Updates.reloadAsync(); // إعادة تشغيل لتطبيق الاتجاه
+      await Updates.reloadAsync(); // Reload app to apply direction
     }
   } catch (error) {
     console.error("Error setting initial language:", error);
@@ -53,7 +52,7 @@ export const setInitialLanguage = async () => {
 };
 
 /**
- * تغيير اللغة يدويًا
+ * Change language manually
  */
 export const changeLanguage = async (
   lang: SupportedLanguage,
@@ -64,7 +63,7 @@ export const changeLanguage = async (
     i18n.locale = lang;
     const isRTL = lang === "ar";
 
-    // تفعيل أو تعطيل RTL
+    // Enable or disable RTL
     I18nManager.allowRTL(isRTL);
 
     if (I18nManager.isRTL !== isRTL) {

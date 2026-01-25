@@ -58,8 +58,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/screen.png",
-          "imageWidth": 200,
+          "image": "./assets/images/nubianscreen.png",
+          "imageWidth": 798,
           "resizeMode": "cover",
           "backgroundColor": "#ffffff",
           "duration": 0

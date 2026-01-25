@@ -14,7 +14,7 @@ import { useUser } from '@clerk/clerk-expo'
 import { Image } from 'expo-image'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import Toast from 'react-native-toast-message'
+import { toast } from "sonner-native";
 import { useTheme } from '@/providers/ThemeProvider'
 
 
@@ -46,9 +46,9 @@ export default function EditProfile() {
           firstName: firstName ?? null, 
           lastName: lastName ?? null 
         });
-        Toast.show({ type:'success', text1:'تم تغيير الأسم في', visibilityTime: 1000, autoHide: true });
+        toast.success('تم تغيير الأسم في');
       } catch {
-        Toast.show({ type:'error', text1:'فشل تغيير الأسم', visibilityTime: 1000, autoHide: true });
+        toast.error('فشل تغيير الأسم');
       }
       finally {
         setIsEditing(false);

@@ -7,7 +7,6 @@ import { useAuth } from "@clerk/clerk-expo";
 import { StatusBar } from "expo-status-bar";
 import { NotificationProvider } from "@/providers/notificationProvider";
 import * as Notifications from "expo-notifications";
-import Toast from "react-native-toast-message";
 import * as SplashScreen from "expo-splash-screen";
 import GifLoadingScreen from "./GifLoadingScreen";
 import NoNetworkScreen from "./NoNetworkScreen";
@@ -25,6 +24,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ThemeProvider, useTheme } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
+import { Toaster } from "sonner-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -124,13 +124,6 @@ function AppLoaderWithClerk() {
             setIsUpdateChecking(false);
           }
         } catch {
-          Toast.show({
-            type: "info",
-            text1: i18n.t("updateErrorTitle"),
-            text2: i18n.t("updateErrorMessage"),
-            visibilityTime: 1000,
-            autoHide: true,
-          });
           setIsUpdateChecking(false);
         }
       } else if (isConnected === false) {
@@ -235,7 +228,7 @@ function AppLoaderWithClerk() {
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="(screens)" />
           </Stack>
-          <Toast autoHide={true} visibilityTime={1000}/>
+          <Toaster position="top-center" duration={3000} richColors/>
         </>
         </BottomSheetModalProvider>
         </GestureHandlerRootView>

@@ -10,9 +10,9 @@ import React, {
   ReactNode, // إضافة ReactNode لاستخدامه في props
 } from "react";
 import * as Network from "expo-network";
-import Toast from "react-native-toast-message";
 import { EventSubscription } from "expo-modules-core";
 import i18n from "@/utils/i18n";
+import { toast } from "sonner-native";
 
 // 1. تعريف أنواع الـ Context
 interface NetworkContextType {
@@ -73,28 +73,11 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
         // إذا كان الاتصال مفقوداً و لم نظهر التنبيه بعد
         if (newConnected === false && !isShowingNoNetworkAlert.current) {
           isShowingNoNetworkAlert.current = true;
-          Toast.show({
-            type: "error",
-            text1: i18n.t('networkLostTitle'),
-            text2: i18n.t('networkLostMessage'),
-            visibilityTime: 1000,
-            autoHide: true,
-            onHide: () => {
-              isShowingNoNetworkAlert.current = false;
-              setIsConnected(false); // تحديث حالة isConnected في الـ store
-            },
-          });
+          toast.error(i18n.t('networkLostTitle'), i18n.t('networkLostMessage'));
         }
         // إذا تم استعادة الاتصال و كان هناك تنبيه ظاهر
         else if (newConnected === true && isShowingNoNetworkAlert.current) {
-          Toast.hide(); // إخفاء أي توستات حالية
-          Toast.show({
-            type: "success",
-            text1: i18n.t('networkRestoredTitle'),
-            text2: i18n.t('networkRestoredMessage'),
-            visibilityTime: 1000,
-            autoHide: true,
-          });
+          toast.success(i18n.t('networkRestoredTitle'), i18n.t('networkRestoredMessage'));
           isShowingNoNetworkAlert.current = false;
           setIsConnected(true); 
         }

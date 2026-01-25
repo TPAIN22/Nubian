@@ -364,6 +364,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
+    lineHeight: 20,
   },
   container: {
     flex: 1,
@@ -378,6 +379,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 8,
+    lineHeight: 38,
   },
   sectionDescription: {
     fontSize: 14,
@@ -412,6 +414,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
+    lineHeight: 28,
   },
   toggleDescription: {
     fontSize: 13,
@@ -427,6 +430,7 @@ const styles = StyleSheet.create({
   savingText: {
     marginLeft: 8,
     fontSize: 14,
+    lineHeight: 28,
   },
   footer: {
     marginTop: 24,

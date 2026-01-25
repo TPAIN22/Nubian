@@ -502,18 +502,22 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
     alignItems: I18nManager.isRTL ? "flex-end" : "flex-start",
+    lineHeight: 24,
   },
   welcomeText: {
     fontSize: 14,
     marginBottom: 4,
+    lineHeight: 24,
   },
   userName: {
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 4,
+    lineHeight: 48,
   },
   userEmail: {
     fontSize: 15,
+    lineHeight: 24,
   },
 
   // Section Styles
@@ -557,6 +561,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 17,
     fontWeight: "400",
+    lineHeight: 24,
   },
 
   // Language Settings Styles

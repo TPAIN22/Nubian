@@ -1,4 +1,4 @@
-import React from "react";
+
 import { View, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
@@ -9,7 +9,7 @@ import i18n from "@/utils/i18n";
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
-  const { orderId, orderNumber } = useLocalSearchParams();
+  const { orderNumber } = useLocalSearchParams();
   const { theme } = useTheme();
   const colors = theme.colors;
 

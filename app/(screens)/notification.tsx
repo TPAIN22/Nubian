@@ -325,6 +325,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
+    lineHeight: 38,
   },
   headerActions: {
     flexDirection: "row",
@@ -346,6 +347,7 @@ const styles = StyleSheet.create({
   markAllButton: {
     fontSize: 14,
     fontWeight: "600",
+    lineHeight: 28,
   },
   notificationItem: {
     padding: 16,

@@ -164,6 +164,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 18,
     minHeight: 60,
+    lineHeight: 24,
   },
 
   buttonContentRTL: {
@@ -181,11 +182,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 1,
+    lineHeight: 34,
   },
 
   divider: {
     width: 2,
-    height: 30,
+    height: 40,
     marginHorizontal: 16,
   },
 
@@ -193,6 +195,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row-reverse",
+    gap: 6,
   },
 
   currencyLabel: {
@@ -202,7 +206,8 @@ const styles = StyleSheet.create({
   },
 
   textAmount: {
-    fontSize: 16,
-    fontWeight: "900",
+    fontSize: 18,
+    fontWeight: "800",
+    lineHeight: 24,
   },
 });

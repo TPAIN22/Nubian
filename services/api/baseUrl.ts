@@ -10,12 +10,14 @@ import { Platform } from "react-native";
  * - In dev, try to auto-detect the dev machine LAN IP for physical devices
  */
 export function resolveApiBaseUrl(): string {
-  // Try the main LAN IP that should work for most home networks
-  const mainUrl = "http://192.168.0.115:5000/api";
-  console.log("🔍 API URL Debug - Using main LAN IP:", mainUrl);
-  return mainUrl;
+  // Check for explicit API URL first (works in both dev and prod)
+  const explicitUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (explicitUrl) {
+    // Ensure it ends with /api
+    return explicitUrl.endsWith('/api') ? explicitUrl : `${explicitUrl}/api`;
+  }
 
-  if (!__DEV__) return "https://nubian-lne4.onrender.com/api";
+  if (!__DEV__) return "https://nubian-auth.onrender.com/api";
 
   // Try to infer the packager host for LAN devices.
   // Examples:
@@ -33,7 +35,7 @@ export function resolveApiBaseUrl(): string {
   // On physical devices, use the inferred LAN IP if available.
   if (Platform.OS === "android") {
     if (host && host !== "localhost" && host !== "127.0.0.1") return `http://${host}:5000/api`;
-    return "http://10.0.2.2:5000/api";
+    return "http://10.0.2.2/api";
   }
 
   // iOS: prefer detected LAN IP, fallback to localhost for simulator only
@@ -58,7 +60,7 @@ export function resolveApiBaseUrl(): string {
   // Try to infer LAN IP from various sources, or provide helpful error
   console.warn(
     "iOS Physical Device: localhost won't work. " +
-    "Set EXPO_PUBLIC_API_URL to your dev machine's IP (e.g., EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api)"
+    "Set EXPO_PUBLIC_API_URL to your dev machine's IP (e.g., EXPO_PUBLIC_API_URL=http://192.168.1.100/api)"
   );
 
   // As a last resort, try localhost anyway (might work if connected via USB/networking)

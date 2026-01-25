@@ -238,7 +238,6 @@ export default function CartScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 10,
     flex: 1,
   },
   center: {

@@ -4,14 +4,25 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const useWishlistStore = create((set, get) => {
-  // استرجع المفضلة من AsyncStorage عند بدء التطبيق
+  // استرجع المفضلة من AsyncStorage عند بدء التطبيق (فقط على العميل)
   const loadWishlistFromStorage = async () => {
-    const localWishlist = await AsyncStorage.getItem('wishlist');
-    if (localWishlist) {
-      set({ wishlist: JSON.parse(localWishlist) });
+    // تحقق من وجود window للتأكد من أننا في بيئة العميل
+    if (typeof window !== 'undefined') {
+      try {
+        const localWishlist = await AsyncStorage.getItem('wishlist');
+        if (localWishlist) {
+          set({ wishlist: JSON.parse(localWishlist) });
+        }
+      } catch (error) {
+        console.warn('Failed to load wishlist from storage:', error);
+      }
     }
   };
-  loadWishlistFromStorage();
+
+  // قم بتحميل البيانات الأولية بعد إنشاء المتجر
+  setTimeout(() => {
+    loadWishlistFromStorage();
+  }, 0);
 
   return {
     wishlist: [],

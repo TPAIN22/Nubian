@@ -157,9 +157,6 @@ if (product?.category?.includes("ملابس") && (!selectedSize || selectedSize.
   Toast.show({
     type: 'info',
     text1: 'Please select size first',
-     visibilityTime: 1000,
-    autoHide: true,
-
   });
   return;
 }
@@ -177,9 +174,6 @@ if (!validation.valid) {
     type: 'info',
     text1: 'Please select required attributes',
     text2: `Missing: ${missingText}`,
-     visibilityTime: 1000,
-    autoHide: true,
-
   });
   return;
 }

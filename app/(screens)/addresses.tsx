@@ -3,13 +3,21 @@ import type { FC } from "react";
 import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView } from "react-native";
 import { Text } from '@/components/ui/text';
 import useAddressStore from '@/store/addressStore';
+import useLocationStore from '@/store/locationStore';
 import { useAuth } from '@clerk/clerk-expo';
 import i18n from "@/utils/i18n";
 import { useTheme } from '@/providers/ThemeProvider';
+import LocationPicker, { LocationData } from '@/components/LocationPicker';
 
 interface Address {
   _id: string;
   name: string;
+  countryId?: string;
+  cityId?: string;
+  subCityId?: string;
+  countryName?: string;
+  cityName?: string;
+  subCityName?: string;
   city: string;
   area: string;
   street: string;
@@ -26,104 +34,255 @@ interface AddressFormProps {
   initialValues?: Omit<Address, '_id'> | undefined;
 }
 
-const AddressForm: FC<AddressFormProps> = ({ visible, onClose, onSubmit, initialValues }) => {
+const AddressForm: FC<AddressFormProps> = ({
+  visible,
+  onClose,
+  onSubmit,
+  initialValues,
+}) => {
   const { theme } = useTheme();
   const Colors = theme.colors;
   const [form, setForm] = useState<Omit<Address, '_id'>>(initialValues || {
-    name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false
+    name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false,
+    countryId: undefined, cityId: undefined, subCityId: undefined,
+    countryName: undefined, cityName: undefined, subCityName: undefined
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const inputRefs = useRef<Record<string, any>>({});
 
+  // Update form when initialValues change
   useEffect(() => {
-    setForm(initialValues || {
-      name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false
-    });
-    setErrors({});
+    if (visible) {
+      setForm(initialValues || {
+        name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false,
+        countryId: undefined, cityId: undefined, subCityId: undefined,
+        countryName: undefined, cityName: undefined, subCityName: undefined
+      });
+      setErrors({});
+    }
   }, [initialValues, visible]);
 
   const validate = () => {
     const newErrors: {[key: string]: string} = {};
-    ['name','city','area','street','building','phone'].forEach(field => {
-      if (!(form as any)[field]) newErrors[field] = i18n.t(
-        field === 'name' ? 'addressForm_recipientName' :
-        field === 'city' ? 'addressForm_city' :
-        field === 'area' ? 'addressForm_area' :
-        field === 'street' ? 'addressForm_street' :
-        field === 'building' ? 'addressForm_building' :
-        field === 'phone' ? 'addressForm_phone' :
-        'addressForm_notesRequired');
-    });
+    if (!form.name.trim()) newErrors.name = i18n.t('addressForm_recipientName');
+    if (!form.subCityId && !form.area.trim()) newErrors.location = i18n.t('addressForm_locationRequired');
+    if (!form.street.trim()) newErrors.street = i18n.t('addressForm_street');
+    if (!form.building.trim()) newErrors.building = i18n.t('addressForm_building');
+    if (!form.phone.trim()) newErrors.phone = i18n.t('addressForm_phone');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleLocationSelect = (location: LocationData) => {
+    setForm(prev => ({
+      ...prev,
+      ...location,
+      area: location.subCityName || prev.area
+    }));
+    setErrors(prev => ({ ...prev, location: '' }));
+    setLocationPickerVisible(false);
+  };
+
   const handleSubmit = () => {
-    if (validate()) onSubmit(form);
+    if (validate()) {
+      onSubmit(form);
+    }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={true}>
+    <Modal 
+    visible={visible} animationType="slide" onRequestClose={onClose} transparent={true}>
       <View style={[styles.modalOverlay, { backgroundColor: Colors.overlay }]}>
         <View style={[styles.modalContent, { backgroundColor: Colors.cardBackground }]}>
           <View style={[styles.modalHeader, { borderBottomColor: Colors.borderLight }]}>
-            <Text style={[styles.modalTitle, { color: Colors.text.gray }]}>{initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}</Text>
+            <Text style={[styles.modalTitle, { color: Colors.text.gray }]}>
+              {initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}
+            </Text>
             <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: Colors.surface }]}>
               <Text style={[styles.closeButtonText, { color: Colors.text.veryLightGray }]}>{i18n.t('icon_close')}</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.formContainer}>
-            {(['name','city','area','street','building','phone','notes'] as const).map((field, idx, arr) => (
-              <View key={field} style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
-                  {field === 'name' ? i18n.t('addressForm_recipientName') :
-                    field === 'city' ? i18n.t('addressForm_city') :
-                    field === 'area' ? i18n.t('addressForm_area') :
-                    field === 'street' ? i18n.t('addressForm_street') :
-                    field === 'building' ? i18n.t('addressForm_building') :
-                    field === 'phone' ? i18n.t('addressForm_phone') : i18n.t('addressForm_notes')}
-                  {field !== 'notes' && <Text style={[styles.required, { color: Colors.error }]}>*</Text>}
+          
+          <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+            {/* Name Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_recipientName')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['name'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.name && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_recipientNamePlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.name}
+                onChangeText={text => setForm(prev => ({ ...prev, name: text }))}
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['phone']?.focus()}
+                blurOnSubmit={false}
+              />
+              {errors.name && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.name}</Text>}
+            </View>
+
+            {/* Phone Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_phone')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['phone'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.phone && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_phonePlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.phone}
+                onChangeText={text => setForm(prev => ({ ...prev, phone: text }))}
+                keyboardType="phone-pad"
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['street']?.focus()}
+                blurOnSubmit={false}
+              />
+              {errors.phone && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.phone}</Text>}
+            </View>
+
+            {/* Location Picker */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_location')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    justifyContent: 'center'
+                  },
+                  errors.location && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                onPress={() => setLocationPickerVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.locationText,
+                  {
+                    color: form.subCityName ? Colors.text.gray : Colors.text.veryLightGray
+                  }
+                ]}>
+                  {form.subCityName
+                    ? `${form.countryName || ''} › ${form.cityName || ''} › ${form.subCityName}`
+                    : i18n.t('addressForm_selectLocation')
+                  }
                 </Text>
-                <TextInput
-                  ref={ref => { inputRefs.current[field] = ref; }}
-                  style={[
-                    styles.input, 
-                    { 
-                      backgroundColor: Colors.surface, 
-                      borderColor: Colors.borderLight, 
-                      color: Colors.text.gray 
-                    },
-                    errors[field] && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
-                  ]}
-                  placeholder={field === 'name' ? i18n.t('addressForm_recipientNamePlaceholder') :
-                    field === 'city' ? i18n.t('addressForm_selectCity') :
-                    field === 'area' ? i18n.t('addressForm_areaPlaceholder') :
-                    field === 'street' ? i18n.t('addressForm_streetPlaceholder') :
-                    field === 'building' ? i18n.t('addressForm_buildingPlaceholder') :
-                    field === 'phone' ? i18n.t('addressForm_phonePlaceholder') :
-                    i18n.t('addressForm_notesPlaceholder')}
-                  placeholderTextColor={Colors.text.veryLightGray}
-                  value={form[field] as string}
-                  onChangeText={text => setForm((f) => ({ ...f, [field]: text }))}
-                  keyboardType={field === 'phone' ? 'phone-pad' : 'default'}
-                  returnKeyType={idx < arr.length - 1 ? 'next' : 'done'}
-                  onSubmitEditing={() => {
-                    if (idx < arr.length - 1) {
-                      const nextField = arr[idx + 1] as string;
-                      if (nextField) inputRefs.current[nextField]?.focus();
-                    } else {
-                      handleSubmit();
-                    }
-                  }}
-                  blurOnSubmit={idx === arr.length - 1}
-                  multiline={field === 'notes'}
-                  numberOfLines={field === 'notes' ? 3 : 1}
-                />
-                {errors[field] && <Text style={[styles.errorText, { color: Colors.error }]}>{errors[field]}</Text>}
-              </View>
-            ))}
+              </TouchableOpacity>
+              {errors.location && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.location}</Text>}
+            </View>
+
+            {/* Street Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_street')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['street'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.street && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_streetPlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.street}
+                onChangeText={text => setForm(prev => ({ ...prev, street: text }))}
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['building']?.focus()}
+              />
+              {errors.street && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.street}</Text>}
+            </View>
+
+            {/* Building Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_building')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['building'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.building && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_buildingPlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.building}
+                onChangeText={text => setForm(prev => ({ ...prev, building: text }))}
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['notes']?.focus()}
+                blurOnSubmit={false}
+              />
+              {errors.building && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.building}</Text>}
+            </View>
+
+            {/* Notes Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_notes')}
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['notes'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray,
+                    height: 80,
+                    textAlignVertical: 'top'
+                  }
+                ]}
+                placeholder={i18n.t('addressForm_notesPlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.notes || ''}
+                onChangeText={text => setForm(prev => ({ ...prev, notes: text }))}
+                multiline
+                numberOfLines={3}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+                blurOnSubmit={true}
+              />
+            </View>
+
+            {/* Default Checkbox */}
             <TouchableOpacity 
-              onPress={() => setForm((f) => ({ ...f, isDefault: !f.isDefault }))} 
+              onPress={() => setForm(prev => ({ ...prev, isDefault: !prev.isDefault }))} 
               style={[styles.checkboxContainer, { backgroundColor: Colors.surface }]}
             >
               <View style={[
@@ -135,6 +294,8 @@ const AddressForm: FC<AddressFormProps> = ({ visible, onClose, onSubmit, initial
               </View>
               <Text style={[styles.checkboxLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_makeDefault')}</Text>
             </TouchableOpacity>
+
+            {/* Buttons */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity onPress={onClose} style={[styles.cancelButton, { backgroundColor: Colors.surface }]}>
                 <Text style={[styles.cancelButtonText, { color: Colors.text.veryLightGray }]}>{i18n.t('addressForm_cancel')}</Text>
@@ -146,6 +307,22 @@ const AddressForm: FC<AddressFormProps> = ({ visible, onClose, onSubmit, initial
           </ScrollView>
         </View>
       </View>
+
+      {/* LocationPicker - ONLY ONE INSTANCE */}
+      <LocationPicker
+        visible={locationPickerVisible}
+        onClose={() => setLocationPickerVisible(false)}
+        onSelect={handleLocationSelect}
+        initialValues={{
+          countryId: form.countryId,
+          cityId: form.cityId,
+          subCityId: form.subCityId,
+          countryName: form.countryName,
+          cityName: form.cityName,
+          subCityName: form.subCityName
+        }}
+        language={i18n.language === 'ar' ? 'ar' : 'en'}
+      />
     </Modal>
   );
 };
@@ -154,12 +331,14 @@ export default function AddressesTab() {
   const { theme } = useTheme();
   const Colors = theme.colors;
   const { addresses, fetchAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress, isLoading, error, clearError } = useAddressStore();
+  const { initialize: initializeLocations } = useLocationStore();
   const { getToken } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [editAddress, setEditAddress] = useState<Address | null>(null);
 
   useEffect(() => {
     getToken().then(token => fetchAddresses(token));
+    initializeLocations();
   }, []);
 
   const handleAdd = async (form: Omit<Address, '_id'>) => {
@@ -173,7 +352,6 @@ export default function AddressesTab() {
     const token = await getToken();
     await updateAddress(editAddress._id, form, token);
     setEditAddress(null);
-    setModalVisible(false);
   };
   
   const handleDelete = async (id: string) => {
@@ -247,7 +425,7 @@ export default function AddressesTab() {
             
             <View style={styles.addressDetails}>
               <Text style={[styles.addressLocation, { color: Colors.text.veryLightGray }]}>
-                {i18n.t('icon_location')} {item.city}، {item.area}، {item.street}، {item.building}
+                {i18n.t('icon_location')} {item.subCityName || item.area}، {item.street}، {item.building}
               </Text>
               {item.notes && (
                 <Text style={[styles.addressNotes, { color: Colors.text.veryLightGray }]}>
@@ -291,6 +469,7 @@ export default function AddressesTab() {
         }
       />
       
+      {/* AddressForm - handles its own LocationPicker internally */}
       <AddressForm
         visible={modalVisible || !!editAddress}
         onClose={() => { setModalVisible(false); setEditAddress(null); }}
@@ -308,8 +487,6 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 60,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
   },
   headerTitle: {
     color: '#FFFFFF',
@@ -317,41 +494,48 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
+    lineHeight: 38,
   },
   headerSubtitle: {
     fontSize: 16,
     textAlign: 'center',
+    lineHeight: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    lineHeight: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
+    lineHeight: 20,
   },
   errorContainer: {
     borderRadius: 12,
     padding: 16,
     margin: 16,
     borderLeftWidth: 4,
+    lineHeight: 20,
   },
   errorMessage: {
     fontSize: 16,
     marginBottom: 8,
+    lineHeight: 20,
   },
   errorCloseButton: {
     alignSelf: 'flex-end',
   },
   errorCloseText: {
     fontWeight: 'bold',
+    lineHeight: 20,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 10,
     borderRadius: 12,
     margin: 16,
     marginTop: 24,
@@ -366,11 +550,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginRight: 8,
+    lineHeight: 38,
   },
   addButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+    lineHeight: 28,
   },
   addressCard: {
     borderRadius: 16,
@@ -384,9 +570,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     position: 'relative',
     borderWidth: 1,
-  },
-  defaultCard: {
-    paddingTop: 36,
   },
   defaultBadge: {
     position: 'absolute',
@@ -439,48 +622,59 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
+    lineHeight: 20,
   },
   actionEdit: {
     fontWeight: 'bold',
     fontSize: 14,
+    lineHeight: 20,
   },
   actionDelete: {
     fontWeight: 'bold',
     fontSize: 14,
+    lineHeight: 20,
   },
   actionDefault: {
     fontWeight: 'bold',
     fontSize: 14,
+    lineHeight: 20,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 48,
+    padding: 8,
     marginTop: 40,
   },
   emptyIcon: {
     fontSize: 64,
     marginBottom: 16,
+    lineHeight: 80,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
+    lineHeight: 28,
   },
   emptySubtitle: {
     fontSize: 16,
     lineHeight: 24,
+    marginBottom: 10,
   },
   
   modalOverlay: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   modalContent: {
     borderRadius: 18,
-    padding: 16, 
-    marginHorizontal: 20, 
-    width: '90%', 
-    minHeight: 'auto',
+    padding: 16,
+    width: '90%',
+    maxHeight: '90%',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -489,11 +683,15 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     paddingBottom: 12,
     borderBottomWidth: 1,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     flex: 1,
+    lineHeight: 34,
+    textAlign: 'center',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   closeButton: {
     width: 30,
@@ -501,21 +699,28 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
   closeButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   formContainer: {
-    maxHeight: '90%',
+    flexGrow: 1,
   },
   inputContainer: {
     marginBottom: 16,
+
   },
   inputLabel: {
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 6,
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   required: {
     marginLeft: 4,
@@ -525,13 +730,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     fontSize: 15,
-    textAlignVertical: 'top',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
-  inputError: {
+  locationText: {
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 10,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   errorText: {
     fontSize: 13,
     marginTop: 3,
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -539,6 +750,7 @@ const styles = StyleSheet.create({
     marginVertical: 18,
     padding: 14,
     borderRadius: 10,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   checkboxBox: {
     width: 22,
@@ -549,42 +761,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
-  },
-  checkboxChecked: {
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   checkboxTick: {
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   checkboxLabel: {
     fontSize: 15,
     fontWeight: '600',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
+    marginBottom: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   cancelButtonText: {
-    fontSize: 15,
+    fontSize: 15, 
     fontWeight: 'bold',
-  },
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
   submitButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-  },
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
   submitButtonText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: 'bold',
-  },
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
 });

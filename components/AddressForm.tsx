@@ -1,606 +1,478 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  I18nManager,
-  Modal,
-  Pressable,
-  Alert,
-  Animated
-} from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { View, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView } from "react-native";
 import { Text } from '@/components/ui/text';
-import { Heading } from '@/components/ui/heading';
-import Ionicons from "@expo/vector-icons/Ionicons";
-import i18n from '../utils/i18n';
+import i18n from "@/utils/i18n";
 import { useTheme } from '@/providers/ThemeProvider';
+import LocationPicker, { LocationData } from '@/components/LocationPicker';
 
-export interface Address {
-  _id?: string;
+interface Address {
+  _id: string;
   name: string;
+  countryId?: string;
+  cityId?: string;
+  subCityId?: string;
+  countryName?: string;
+  cityName?: string;
+  subCityName?: string;
   city: string;
   area: string;
   street: string;
   building: string;
   phone: string;
-  whatsapp: string;
   notes?: string;
   isDefault: boolean;
 }
 
-export interface AddressFormProps {
+interface AddressFormProps {
+  visible: boolean;
   onClose: () => void;
   onSubmit: (form: Omit<Address, '_id'>) => void;
   initialValues?: Omit<Address, '_id'> | undefined;
-  isLoading?: boolean;
 }
 
-const SUDANESE_CITIES = [
-  'الخرطوم',
-  'أم درمان',
-  'بحري',
-  'بورتسودان',
-  'كسلا',
-  'القضارف',
-  'عطبرة',
-  'مدني',
-  'الحصاحيصا',
-  'الأبيض',
-  'كوستي',
-  'دنقلا',
-];
-
-const AddressForm: React.FC<AddressFormProps> = ({ onClose, onSubmit, initialValues, isLoading = false }) => {
+export default function AddressForm ({
+  visible,
+  onClose,
+  onSubmit,
+  initialValues,
+}: AddressFormProps) {
   const { theme } = useTheme();
-  const colors = theme.colors;
-
+  const Colors = theme.colors;
   const [form, setForm] = useState<Omit<Address, '_id'>>(initialValues || {
-    name: '', city: '', area: '', street: '', building: '', phone: '', whatsapp: '', notes: '', isDefault: false
+    name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false,
+    countryId: undefined, cityId: undefined, subCityId: undefined,
+    countryName: undefined, cityName: undefined, subCityName: undefined
   });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const inputRefs = useRef<Record<string, any>>({});
 
-  const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const [showCityPicker, setShowCityPicker] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-
+  // Update form when initialValues change
   useEffect(() => {
-    setForm(initialValues || {
-      name: '', city: '', area: '', street: '', building: '', phone: '', whatsapp: '', notes: '', isDefault: false
-    });
-    setErrors({});
-  }, [initialValues]);
+    if (visible) {
+      setForm(initialValues || {
+        name: '', city: '', area: '', street: '', building: '', phone: '', notes: '', isDefault: false,
+        countryId: undefined, cityId: undefined, subCityId: undefined,
+        countryName: undefined, cityName: undefined, subCityName: undefined
+      });
+      setErrors({});
+    }
+  }, [initialValues, visible]);
 
   const validate = () => {
-    const newErrors: Record<string, boolean> = {};
-    if (!form.name.trim()) newErrors.name = true;
-    if (!form.city) {
-      newErrors.city = true;
-      Alert.alert("تنبيه", "يرجى اختيار المدينة");
-    }
-    if (!form.area.trim()) newErrors.area = true;
-    
-    const phoneTrimmed = form.phone.trim();
-    if (!phoneTrimmed || phoneTrimmed.length < 9) newErrors.phone = true;
-    
-    const whatsappTrimmed = form.whatsapp.trim();
-    if (!whatsappTrimmed || whatsappTrimmed.length < 9) newErrors.whatsapp = true;
-    
+    const newErrors: {[key: string]: string} = {};
+    if (!form.name.trim()) newErrors.name = i18n.t('addressForm_recipientName');
+    if (!form.subCityId && !form.area.trim()) newErrors.location = i18n.t('addressForm_locationRequired');
+    if (!form.street.trim()) newErrors.street = i18n.t('addressForm_street');
+    if (!form.building.trim()) newErrors.building = i18n.t('addressForm_building');
+    if (!form.phone.trim()) newErrors.phone = i18n.t('addressForm_phone');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (isLoading) return;
-    if (!validate()) {
-      return;
-    }
-    onSubmit(form);
+  const handleLocationSelect = (location: LocationData) => {
+    setForm(prev => ({
+      ...prev,
+      ...location,
+      area: location.subCityName || prev.area
+    }));
+    setErrors(prev => ({ ...prev, location: '' }));
+    setLocationPickerVisible(false);
   };
 
-  const renderInput = (
-    label: string,
-    value: string,
-    onChange: (text: string) => void,
-    placeholder: string,
-    icon: string,
-    fieldKey: string,
-    keyboardType: any = "default",
-    error: boolean = false,
-    multiline: boolean = false
-  ) => {
-    const isFocused = focusedField === fieldKey;
-    
-    return (
-      <View style={styles.fieldContainer}>
-        <Text style={[
-          styles.fieldLabel,
-          { color: error ? colors.error : (isFocused ? colors.primary : colors.text.gray) }
-        ]}>
-          {label}
-        </Text>
-        <View style={[
-          styles.inputWrapper,
-          {
-            backgroundColor: colors.surface,
-            borderColor: error ? colors.error : (isFocused ? colors.primary : colors.borderLight),
-            borderWidth: isFocused ? 1.5 : 1,
-            height: multiline ? 100 : 52
-          }
-        ]}>
-          <Ionicons 
-            name={icon as any} 
-            size={20} 
-            color={error ? colors.error : (isFocused ? colors.primary : colors.text.veryLightGray)} 
-            style={styles.inputIcon} 
-          />
-          <TextInput
-            style={[styles.input, { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-            placeholder={placeholder}
-            placeholderTextColor={colors.text.veryLightGray}
-            value={value}
-            onChangeText={onChange}
-            keyboardType={keyboardType}
-            multiline={multiline}
-            onFocus={() => setFocusedField(fieldKey)}
-            onBlur={() => setFocusedField(null)}
-            textAlignVertical={multiline ? "top" : "center"}
-          />
-        </View>
-      </View>
-    );
+  const handleSubmit = () => {
+    if (validate()) {
+      onSubmit(form);
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
-      {/* Simplified Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={26} color={colors.text.gray} />
-        </TouchableOpacity>
-        <Heading size="lg" style={{ color: colors.text.gray, fontWeight: '700' }}>
-          {initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}
-        </Heading>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Recipient Section */}
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text.gray }]}>معلومات المستلم</Text>
-          </View>
-          
-          {renderInput(
-            i18n.t('addressForm_recipientName'),
-            form.name,
-            (text) => setForm(f => ({ ...f, name: text })),
-            i18n.t('addressForm_recipientNamePlaceholder'),
-            "person-outline",
-            "name",
-            "default",
-            errors.name
-          )}
-
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              {renderInput(
-                i18n.t('addressForm_phone'),
-                form.phone,
-                (text) => setForm(f => ({ ...f, phone: text })),
-                "0912345678",
-                "call-outline",
-                "phone",
-                "phone-pad",
-                errors.phone
-              )}
-            </View>
-            <View style={{ width: 12 }} />
-            <View style={{ flex: 1 }}>
-              {renderInput(
-                "واتساب",
-                form.whatsapp,
-                (text) => setForm(f => ({ ...f, whatsapp: text })),
-                "0912345678",
-                "logo-whatsapp",
-                "whatsapp",
-                "phone-pad",
-                errors.whatsapp
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Address Details Section */}
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="location-outline" size={22} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text.gray }]}>تفاصيل العنوان</Text>
-          </View>
-
-          {/* City Picker */}
-          <View style={styles.fieldContainer}>
-            <Text style={[
-              styles.fieldLabel,
-              { color: errors.city ? colors.error : (focusedField === 'city' ? colors.primary : colors.text.gray) }
-            ]}>
-              {i18n.t('addressForm_city')}
+    <Modal 
+    visible={visible} animationType="slide" onRequestClose={onClose} transparent={true}>
+      <View style={[styles.modalOverlay, { backgroundColor: Colors.overlay }]}>
+        <View style={[styles.modalContent, { backgroundColor: Colors.cardBackground }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: Colors.borderLight }]}>
+            <Text style={[styles.modalTitle, { color: Colors.text.gray }]}>
+              {initialValues ? i18n.t('addressForm_editTitle') : i18n.t('addressForm_addTitle')}
             </Text>
-            <TouchableOpacity
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: errors.city ? colors.error : (focusedField === 'city' ? colors.primary : colors.borderLight),
-                  borderWidth: focusedField === 'city' ? 1.5 : 1,
-                  height: 52
-                }
-              ]}
-              onPress={() => {
-                setShowCityPicker(true);
-                setFocusedField('city');
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="location-outline" 
-                size={20} 
-                color={errors.city ? colors.error : (form.city ? colors.primary : colors.text.veryLightGray)} 
-                style={styles.inputIcon} 
-              />
-              <Text style={[
-                styles.selectText,
-                { color: form.city ? colors.text.gray : colors.text.veryLightGray }
-              ]}>
-                {form.city || i18n.t('addressForm_selectCity')}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color={colors.text.veryLightGray} />
+            <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: Colors.surface }]}>
+              <Text style={[styles.closeButtonText, { color: Colors.text.veryLightGray }]}>{i18n.t('icon_close')}</Text>
             </TouchableOpacity>
           </View>
-
-          {renderInput(
-            i18n.t('addressForm_area'),
-            form.area,
-            (text) => setForm(f => ({ ...f, area: text })),
-            i18n.t('addressForm_areaPlaceholder'),
-            "map-outline",
-            "area",
-            "default",
-            errors.area
-          )}
-
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              {renderInput(
-                i18n.t('addressForm_street'),
-                form.street,
-                (text) => setForm(f => ({ ...f, street: text })),
-                i18n.t('addressForm_streetPlaceholder'),
-                "navigate-outline",
-                "street"
-              )}
-            </View>
-            <View style={{ width: 12 }} />
-            <View style={{ flex: 1 }}>
-              {renderInput(
-                i18n.t('addressForm_building'),
-                form.building,
-                (text) => setForm(f => ({ ...f, building: text })),
-                "رقم المبنى",
-                "business-outline",
-                "building"
-              )}
-            </View>
-          </View>
-
-          {renderInput(
-            i18n.t('addressForm_notes'),
-            form.notes || '',
-            (text) => setForm(f => ({ ...f, notes: text })),
-            i18n.t('addressForm_notesPlaceholder'),
-            "chatbubble-outline",
-            "notes",
-            "default",
-            false,
-            true
-          )}
-        </View>
-
-        {/* Default Address Toggle */}
-        <TouchableOpacity
-          style={[styles.defaultToggle, { backgroundColor: colors.surface }]}
-          onPress={() => setForm(f => ({ ...f, isDefault: !f.isDefault }))}
-          activeOpacity={0.7}
-        >
-          <View style={styles.defaultToggleContent}>
-            <View style={styles.defaultToggleLeft}>
-              <Ionicons name="star" size={20} color={form.isDefault ? colors.primary : colors.text.veryLightGray} />
-              <Text style={[styles.defaultToggleLabel, { color: colors.text.gray }]}>
-                {i18n.t('addressForm_makeDefault')}
+          
+          <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+            {/* Name Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_recipientName')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
               </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['name'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.name && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_recipientNamePlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.name}
+                onChangeText={text => setForm(prev => ({ ...prev, name: text }))}
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['phone']?.focus()}
+                blurOnSubmit={false}
+              />
+              {errors.name && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.name}</Text>}
             </View>
-            <View style={[
-              styles.switch,
-              {
-                backgroundColor: form.isDefault ? colors.primary : colors.borderLight,
-              }
-            ]}>
-              <View style={[
-                styles.switchThumb,
-                {
-                  transform: [{ translateX: form.isDefault ? 22 : 2 }]
-                }
-              ]} />
+
+            {/* Phone Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_phone')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['phone'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.phone && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_phonePlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.phone}
+                onChangeText={text => setForm(prev => ({ ...prev, phone: text }))}
+                keyboardType="phone-pad"
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['street']?.focus()}
+                blurOnSubmit={false}
+              />
+              {errors.phone && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.phone}</Text>}
             </View>
-          </View>
-        </TouchableOpacity>
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            { backgroundColor: colors.primary },
-            isLoading && { opacity: 0.6 }
-          ]}
-          onPress={handleSubmit}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <Text style={styles.submitButtonText}>جاري الحفظ...</Text>
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={22} color="white" style={{ marginLeft: 8 }} />
-              <Text style={styles.submitButtonText}>
-                {initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add')}
+            {/* Location Picker */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_location')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
               </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Enhanced City Picker Modal */}
-      <Modal visible={showCityPicker} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <Pressable 
-            style={StyleSheet.absoluteFill} 
-            onPress={() => {
-              setShowCityPicker(false);
-              setFocusedField(null);
-            }} 
-          />
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <View style={[styles.modalHandle, { backgroundColor: colors.borderLight }]} />
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text.gray }]}>
-                {i18n.t('addressForm_selectCity')}
-              </Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  setShowCityPicker(false);
-                  setFocusedField(null);
-                }}
+              <TouchableOpacity
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    justifyContent: 'center'
+                  },
+                  errors.location && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                onPress={() => setLocationPickerVisible(true)}
+                activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={28} color={colors.text.veryLightGray} />
+                <Text style={[
+                  styles.locationText,
+                  {
+                    color: form.subCityName ? Colors.text.gray : Colors.text.veryLightGray
+                  }
+                ]}>
+                  {form.subCityName
+                    ? `${form.countryName || ''} › ${form.cityName || ''} › ${form.subCityName}`
+                    : i18n.t('addressForm_selectLocation')
+                  }
+                </Text>
+              </TouchableOpacity>
+              {errors.location && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.location}</Text>}
+            </View>
+
+            {/* Street Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_street')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['street'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.street && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_streetPlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.street}
+                onChangeText={text => setForm(prev => ({ ...prev, street: text }))}
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['building']?.focus()}
+              />
+              {errors.street && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.street}</Text>}
+            </View>
+
+            {/* Building Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_building')}
+                <Text style={[styles.required, { color: Colors.error }]}>*</Text>
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['building'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  },
+                  errors.building && { borderColor: Colors.error, backgroundColor: Colors.error + '15' }
+                ]}
+                placeholder={i18n.t('addressForm_buildingPlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.building}
+                onChangeText={text => setForm(prev => ({ ...prev, building: text }))}
+                returnKeyType="next"
+                onSubmitEditing={() => inputRefs.current['notes']?.focus()}
+                blurOnSubmit={false}
+              />
+              {errors.building && <Text style={[styles.errorText, { color: Colors.error }]}>{errors.building}</Text>}
+            </View>
+
+            {/* Notes Field */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: Colors.text.gray }]}>
+                {i18n.t('addressForm_notes')}
+              </Text>
+              <TextInput
+                ref={ref => { inputRefs.current['notes'] = ref; }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.surface,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray,
+                    height: 80,
+                    textAlignVertical: 'top'
+                  }
+                ]}
+                placeholder={i18n.t('addressForm_notesPlaceholder')}
+                placeholderTextColor={Colors.text.veryLightGray}
+                value={form.notes || ''}
+                onChangeText={text => setForm(prev => ({ ...prev, notes: text }))}
+                multiline
+                numberOfLines={3}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+                blurOnSubmit={true}
+              />
+            </View>
+
+            {/* Default Checkbox */}
+            <TouchableOpacity 
+              onPress={() => setForm(prev => ({ ...prev, isDefault: !prev.isDefault }))} 
+              style={[styles.checkboxContainer, { backgroundColor: Colors.surface }]}
+            >
+              <View style={[
+                styles.checkboxBox, 
+                { borderColor: Colors.primary },
+                form.isDefault && { backgroundColor: Colors.primary }
+              ]}>
+                {form.isDefault && <Text style={styles.checkboxTick}>{i18n.t('icon_tick')}</Text>}
+              </View>
+              <Text style={[styles.checkboxLabel, { color: Colors.text.gray }]}>{i18n.t('addressForm_makeDefault')}</Text>
+            </TouchableOpacity>
+
+            {/* Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity onPress={onClose} style={[styles.cancelButton, { backgroundColor: Colors.surface }]}>
+                <Text style={[styles.cancelButtonText, { color: Colors.text.veryLightGray }]}>{i18n.t('addressForm_cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSubmit} style={[styles.submitButton, { backgroundColor: Colors.primary }]}>
+                <Text style={styles.submitButtonText}>{initialValues ? i18n.t('addressForm_edit') : i18n.t('addressForm_add')}</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {SUDANESE_CITIES.map((city, index) => (
-                <TouchableOpacity
-                  key={city}
-                  style={[
-                    styles.cityItem,
-                    form.city === city && { backgroundColor: colors.primary + '08' },
-                    index !== SUDANESE_CITIES.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderLight }
-                  ]}
-                  onPress={() => {
-                    setForm(f => ({ ...f, city }));
-                    setShowCityPicker(false);
-                    setFocusedField(null);
-                  }}
-                  activeOpacity={0.6}
-                >
-                  <Text style={[
-                    styles.cityText,
-                    { color: colors.text.gray },
-                    form.city === city && { color: colors.primary, fontWeight: '600' }
-                  ]}>
-                    {city}
-                  </Text>
-                  {form.city === city && (
-                    <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          </ScrollView>
         </View>
-      </Modal>
-    </KeyboardAvoidingView>
+      </View>
+
+      {/* LocationPicker - ONLY ONE INSTANCE */}
+      <LocationPicker
+        visible={locationPickerVisible}
+        onClose={() => setLocationPickerVisible(false)}
+        onSelect={handleLocationSelect}
+        initialValues={{
+          countryId: form.countryId,
+          cityId: form.cityId,
+          subCityId: form.subCityId,
+          countryName: form.countryName,
+          cityName: form.cityName,
+          subCityName: form.subCityName
+        }}
+        language={i18n.language === 'ar' ? 'ar' : 'en'}
+      />
+    </Modal>
   );
-};
+  }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  card: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  row: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-  },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
-  },
-  inputWrapper: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-  },
-  inputIcon: {
-    marginHorizontal: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    height: '100%',
-    paddingVertical: 8,
-  },
-  selectText: {
-    flex: 1,
-    fontSize: 15,
-    textAlign: I18nManager.isRTL ? 'right' : 'left',
-  },
-  defaultToggle: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  defaultToggleContent: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  defaultToggleLeft: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  defaultToggleLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  switch: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    padding: 2,
-    justifyContent: 'center',
-  },
-  switchThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'white',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  submitButton: {
-    height: 56,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 17,
-    fontWeight: '700',
-  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    maxHeight: '70%',
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    borderRadius: 18,
+    padding: 16,
+    width: '90%',
+    maxHeight: '90%',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   modalHeader: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    marginBottom: 18,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
   modalTitle: {
-    fontSize: 19,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: 'bold',
+    flex: 1,
+    lineHeight: 34,
+    textAlign: 'center',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
-  cityItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-    justifyContent: 'space-between',
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
     alignItems: 'center',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
+  closeButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
   },
-  cityText: {
-    fontSize: 16,
-  }
-});
+  formContainer: {
+    flexGrow: 1,
+  },
+  inputContainer: {
+    marginBottom: 16,
 
-export default AddressForm;
+  },
+  inputLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 6,
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  required: {
+    marginLeft: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  locationText: {
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 10,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  errorText: {
+    fontSize: 13,
+    marginTop: 3,
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+    padding: 14,
+    borderRadius: 10,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  checkboxBox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  checkboxTick: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+  },
+  cancelButtonText: {
+    fontSize: 15, 
+    fontWeight: 'bold',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
+  submitButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    lineHeight: 20,
+    direction: i18n.language === 'ar' ? 'rtl' : 'ltr',
+    },
+});
