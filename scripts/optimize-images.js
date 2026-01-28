@@ -1,64 +1,74 @@
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+const fs = require("fs");
+const path = require("path");
+const sharp = require("sharp");
 
-const assetsDir = path.join(__dirname, '../assets/images');
+const assetsDir = path.join(__dirname, "../assets/images");
+const outputDir = path.join(assetsDir, "optimized");
+const backupDir = path.join(assetsDir, "backup");
 
-// قائمة الملفات الكبيرة التي تحتاج تحسين
-const largeFiles = [
-  'logo.gif',
-  'person.gif', 
-  'Online-shopping.gif',
-  'nubianLogo.png',
-  'nubian.png',
-  'splash.png'
-];
+// إعدادات الضغط
+const MAX_SIZE_MB = 0.3; // أي صورة أكبر من 300KB يتم ضغطها
+const WEBP_QUALITY = 70;
 
-console.log('🔧 بدء تحسين الصور...');
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
 
-largeFiles.forEach(file => {
-  const filePath = path.join(assetsDir, file);
-  
-  if (fs.existsSync(filePath)) {
-    const stats = fs.statSync(filePath);
-    const sizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
-    
-    console.log(`📁 معالجة: ${file} (${sizeInMB}MB)`);
-    
-    // تحويل GIF إلى WebP أو PNG محسن
-    if (file.endsWith('.gif')) {
-      const outputFile = file.replace('.gif', '.webp');
-      const outputPath = path.join(assetsDir, outputFile);
-      
-      try {
-        // استخدام ImageMagick لتحويل GIF إلى WebP
-        execSync(`magick "${filePath}" -quality 80 "${outputPath}"`);
-        console.log(`✅ تم تحويل ${file} إلى ${outputFile}`);
-        
-        // حذف الملف الأصلي إذا كان التحويل ناجح
-        const newStats = fs.statSync(outputPath);
-        const newSizeInMB = (newStats.size / (1024 * 1024)).toFixed(2);
-        
-        if (newStats.size < stats.size) {
-          fs.unlinkSync(filePath);
-          console.log(`🗑️ تم حذف ${file} (توفير ${(sizeInMB - newSizeInMB).toFixed(2)}MB)`);
-        }
-      } catch (error) {
-        console.log(`❌ فشل في تحويل ${file}: ${error.message}`);
-      }
-    }
-    
-    // تحسين ملفات PNG
-    if (file.endsWith('.png')) {
-      try {
-        // استخدام pngquant لضغط PNG
-        execSync(`pngquant --force --ext .png --quality=65-80 "${filePath}"`);
-        console.log(`✅ تم تحسين ${file}`);
-      } catch (error) {
-        console.log(`❌ فشل في تحسين ${file}: ${error.message}`);
-      }
-    }
+function getSizeMB(filePath) {
+  return fs.statSync(filePath).size / (1024 * 1024);
+}
+
+async function optimizeImage(file) {
+  const inputPath = path.join(assetsDir, file);
+  const ext = path.extname(file).toLowerCase();
+  const name = path.basename(file, ext);
+
+  const sizeMB = getSizeMB(inputPath);
+
+  if (sizeMB < MAX_SIZE_MB) {
+    console.log(`⚪ تخطي: ${file} (${sizeMB.toFixed(2)}MB صغير بالفعل)`);
+    return;
   }
-});
 
-console.log('🎉 انتهى تحسين الصور!'); 
+  console.log(`🖼️ معالجة: ${file} (${sizeMB.toFixed(2)}MB)`);
+
+  ensureDir(outputDir);
+  ensureDir(backupDir);
+
+  const outputPath = path.join(outputDir, `${name}.webp`);
+  const backupPath = path.join(backupDir, file);
+
+  // نسخة احتياطية
+  fs.copyFileSync(inputPath, backupPath);
+
+  try {
+    await sharp(inputPath)
+      .webp({ quality: WEBP_QUALITY })
+      .toFile(outputPath);
+
+    const newSizeMB = getSizeMB(outputPath);
+
+    console.log(
+      `✅ تم التحسين: ${file} → ${name}.webp (${newSizeMB.toFixed(2)}MB)`
+    );
+    console.log(`💾 توفير: ${(sizeMB - newSizeMB).toFixed(2)}MB`);
+  } catch (err) {
+    console.log(`❌ خطأ في ${file}:`, err.message);
+  }
+}
+
+async function main() {
+  console.log("🔧 بدء تحسين الصور...");
+
+  const files = fs.readdirSync(assetsDir).filter(f =>
+    [".png", ".jpg", ".jpeg", ".gif"].includes(path.extname(f).toLowerCase())
+  );
+
+  for (const file of files) {
+    await optimizeImage(file);
+  }
+
+  console.log("🎉 انتهى تحسين الصور!");
+}
+
+main();

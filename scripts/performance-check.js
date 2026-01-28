@@ -101,6 +101,29 @@ function checkMetroConfig() {
   console.log('');
 }
 
+function checkBabelConfig() {
+  console.log('🧩 فحص إعدادات Babel:');
+
+  const babelPath = path.join(__dirname, '../babel.config.js');
+  if (!fs.existsSync(babelPath)) {
+    console.log('  ❌ ملف babel.config.js غير موجود');
+    console.log('');
+    return;
+  }
+
+  const content = fs.readFileSync(babelPath, 'utf8');
+  const hasRemoveConsole =
+    content.includes('transform-remove-console') ||
+    content.includes('remove-console') ||
+    content.includes('drop_console');
+
+  if (hasRemoveConsole) console.log('  ✅ إزالة console.log موجودة (Babel)');
+  else console.log('  ⚠️  إزالة console.log غير واضحة في Babel');
+
+  console.log('');
+}
+
+
 // فحص TypeScript
 function checkTypeScript() {
   console.log('🔧 فحص إعدادات TypeScript:');
@@ -128,6 +151,54 @@ function checkTypeScript() {
   console.log('');
 }
 
+function checkLargestNodeModules() {
+  console.log('📦 أكبر الحزم في node_modules (تقريبي):');
+
+  const nodeModulesDir = path.join(__dirname, '../node_modules');
+  if (!fs.existsSync(nodeModulesDir)) {
+    console.log('  ❌ node_modules غير موجود (شغّل npm i)');
+    console.log('');
+    return;
+  }
+
+  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+  const deps = Object.keys(packageJson.dependencies || {});
+
+  function dirSize(dir) {
+    let total = 0;
+    const stack = [dir];
+    while (stack.length) {
+      const cur = stack.pop();
+      const items = fs.readdirSync(cur);
+      for (const it of items) {
+        const p = path.join(cur, it);
+        const st = fs.statSync(p);
+        if (st.isDirectory()) stack.push(p);
+        else total += st.size;
+      }
+    }
+    return total;
+  }
+
+  const sizes = [];
+  for (const d of deps) {
+    const depPath = d.startsWith('@')
+      ? path.join(nodeModulesDir, ...d.split('/'))
+      : path.join(nodeModulesDir, d);
+
+    if (!fs.existsSync(depPath)) continue;
+    const bytes = dirSize(depPath);
+    sizes.push({ name: d, bytes });
+  }
+
+  sizes.sort((a, b) => b.bytes - a.bytes);
+  sizes.slice(0, 10).forEach(x => {
+    console.log(`  ⚠️  ${x.name}: ${(x.bytes / 1024 / 1024).toFixed(2)}MB`);
+  });
+
+  console.log('');
+}
+
 // فحص الصور
 function checkImages() {
   console.log('🖼️  فحص الصور:');
@@ -137,7 +208,7 @@ function checkImages() {
   if (fs.existsSync(assetsDir)) {
     const files = fs.readdirSync(assetsDir);
     const imageFiles = files.filter(file => 
-      file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg') || file.endsWith('.gif')
+      file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg') || file.endsWith('.gif') || file.endsWith('.mp4')
     );
     
     let totalImageSize = 0;
@@ -147,7 +218,7 @@ function checkImages() {
       const stat = fs.statSync(filePath);
       totalImageSize += stat.size;
       
-      if (stat.size > 1024 * 1024) { // أكبر من 1MB
+      if (stat.size > 300 * 1024) { // أكبر من 1MB
         console.log(`  ⚠️  صورة كبيرة: ${file} (${(stat.size / 1024 / 1024).toFixed(2)}MB)`);
       }
     });
@@ -188,11 +259,14 @@ function checkTests() {
 // تشغيل جميع الفحوصات
 function runAllChecks() {
   checkFileSizes();
-  checkDependencies();
-  checkMetroConfig();
-  checkTypeScript();
-  checkImages();
-  checkTests();
+checkDependencies();
+checkLargestNodeModules();
+checkBabelConfig();
+checkMetroConfig();
+checkTypeScript();
+checkImages();
+checkTests();
+
   
   console.log('✅ انتهى فحص الأداء');
 }

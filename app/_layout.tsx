@@ -219,7 +219,8 @@ function AppLoaderWithClerk() {
               animation:
                 Platform.OS === "android"
                   ? (I18nManager.isRTL ? "slide_from_left" : "slide_from_right")
-                  : "fade",
+                  : "default",
+                  animationDuration: 1000,
             }}
             initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
           >

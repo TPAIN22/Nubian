@@ -43,7 +43,7 @@ const ONBOARDING_STEPS = [
     id: 'final',
     title: i18n.t('paragraph'),
     description: '',
-    image: require('../../assets/images/onboard4.png'),
+    image: require('../../assets/images/onboard4.webp'),
     imageStyle: { width: width, height: height },
     isFinal: true,
   },

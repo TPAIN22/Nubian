@@ -8,7 +8,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+
       "supportsTablet": true,
+      "jsEngine": "hermes", 
       "bundleIdentifier": "dev.expo.nubian",
       "config": {
         "usesNonExemptEncryption": false
@@ -25,6 +27,7 @@
     },
     "android": {
       "versionCode": 14,
+      "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/screen.png",
         "backgroundColor": "#ffffff"
@@ -51,7 +54,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/screen.png"
+      "favicon": "./assets/images/nubianscreen.png"
     },
     "plugins": [
       "expo-router",
