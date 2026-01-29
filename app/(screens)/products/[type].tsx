@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { 
-  View, 
-  TextInput, 
-  FlatList, 
-  StyleSheet, 
-  TouchableOpacity, 
-  RefreshControl, 
-  ActivityIndicator, 
+import {
+  View,
+  TextInput,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
   ScrollView,
   Modal,
   Pressable
@@ -35,7 +35,7 @@ const ProductsScreen = () => {
   const colors = theme.colors;
   const { trackEvent } = useTracking();
   const { setProduct } = useItemStore();
-  
+
   // Explore store
   const {
     products,
@@ -64,39 +64,39 @@ const ProductsScreen = () => {
     const type = params.type || 'trending';
     switch (type) {
       case 'trending':
-        return { 
-          pageTitle: i18n.t('trending') || 'Trending Now', 
-          sortType: 'trending' as ExploreSort 
+        return {
+          pageTitle: i18n.t('trending') || 'Trending Now',
+          sortType: 'trending' as ExploreSort
         };
       case 'flash-deals':
-        return { 
-          pageTitle: i18n.t('flashDeals') || 'Flash Deals', 
-          sortType: 'recommended' as ExploreSort 
+        return {
+          pageTitle: i18n.t('flashDeals') || 'Flash Deals',
+          sortType: 'recommended' as ExploreSort
         };
       case 'new-arrivals':
-        return { 
-          pageTitle: i18n.t('newArrivals') || 'New Arrivals', 
-          sortType: 'new' as ExploreSort 
+        return {
+          pageTitle: i18n.t('newArrivals') || 'New Arrivals',
+          sortType: 'new' as ExploreSort
         };
       case 'for-you':
-        return { 
-          pageTitle: i18n.t('forYou') || 'For You', 
-          sortType: 'recommended' as ExploreSort 
+        return {
+          pageTitle: i18n.t('forYou') || 'For You',
+          sortType: 'recommended' as ExploreSort
         };
       case 'best-sellers':
-        return { 
-          pageTitle: i18n.t('bestSellers') || 'Best Sellers', 
-          sortType: 'best_sellers' as ExploreSort 
+        return {
+          pageTitle: i18n.t('bestSellers') || 'Best Sellers',
+          sortType: 'best_sellers' as ExploreSort
         };
       case 'top-rated':
-        return { 
-          pageTitle: i18n.t('topRated') || 'Top Rated', 
-          sortType: 'rating' as ExploreSort 
+        return {
+          pageTitle: i18n.t('topRated') || 'Top Rated',
+          sortType: 'rating' as ExploreSort
         };
       default:
-        return { 
-          pageTitle: i18n.t('products') || 'Products', 
-          sortType: 'recommended' as ExploreSort 
+        return {
+          pageTitle: i18n.t('products') || 'Products',
+          sortType: 'recommended' as ExploreSort
         };
     }
   }, [params.type]);
@@ -133,7 +133,7 @@ const ProductsScreen = () => {
     if (filterCategory) newFilters.category = filterCategory;
     if (showAvailableOnly) newFilters.inStock = true;
     if (params.type === 'flash-deals') newFilters.discount = true;
-    
+
     trackEvent('filter_apply', { filters: JSON.stringify(newFilters), screen: params.type || 'products' });
     closeFilterModal();
     setFilters(newFilters);
@@ -161,8 +161,11 @@ const ProductsScreen = () => {
   // Initial load
   useEffect(() => {
     const initializeProducts = async () => {
+      // Reset store to clear any stale state from previous navigation
+      useExploreStore.getState().reset();
+
       fetchCategories();
-      
+
       const initialFilters: any = {};
       if (params.type === 'flash-deals') {
         initialFilters.discount = true;
@@ -174,9 +177,9 @@ const ProductsScreen = () => {
         page: 1,
       });
 
-      trackEvent('products_view', { 
+      trackEvent('products_view', {
         screen: params.type || 'products',
-        sort: sortType 
+        sort: sortType
       });
     };
 
@@ -233,7 +236,7 @@ const ProductsScreen = () => {
         </View>
       );
     }
-    
+
     if (exploreError && !isLoading) {
       return (
         <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
@@ -255,7 +258,7 @@ const ProductsScreen = () => {
         </View>
       );
     }
-    
+
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
         <Ionicons name="search-outline" size={60} color={colors.primary} />
@@ -263,8 +266,8 @@ const ProductsScreen = () => {
           {String(searchTerm ? (i18n.t('noResults') || 'No Results') : (i18n.t('noProducts') || 'No Products'))}
         </Text>
         <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
-          {String(searchTerm 
-            ? (i18n.t('tryNewSearch') || 'Try a new search') 
+          {String(searchTerm
+            ? (i18n.t('tryNewSearch') || 'Try a new search')
             : (i18n.t('noProductsFound') || 'No products found')
           )}
         </Text>
@@ -276,7 +279,7 @@ const ProductsScreen = () => {
   const ListHeaderComponent = useCallback(() => (
     <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
       <View style={styles.headerTop}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
         >
@@ -287,7 +290,7 @@ const ProductsScreen = () => {
         </Text>
         <View style={{ width: 24 }} />
       </View>
-      
+
       {/* Search */}
       <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground }]}>
         <Ionicons name="search" size={20} color={colors.text.mediumGray} style={styles.searchIcon} />
@@ -319,8 +322,8 @@ const ProductsScreen = () => {
             <View style={[styles.filterBadge, { backgroundColor: colors.danger || colors.primary }]} />
           )}
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.sortButton, { borderColor: colors.primary }]}
           onPress={() => {
             if (sort === 'recommended') handleSortChange('price_low');
@@ -328,16 +331,16 @@ const ProductsScreen = () => {
             else handleSortChange('recommended');
           }}
         >
-          <Ionicons 
-            name={sort === 'price_high' ? "arrow-down" : sort === 'price_low' ? "arrow-up" : "funnel-outline"} 
-            size={18} 
-            color={colors.primary} 
+          <Ionicons
+            name={sort === 'price_high' ? "arrow-down" : sort === 'price_low' ? "arrow-up" : "funnel-outline"}
+            size={18}
+            color={colors.primary}
           />
           <Text style={[styles.sortText, { color: colors.primary }]}>
             {String(
-              sort === 'price_high' ? (i18n.t('highestPrice') || 'Highest Price') : 
-              sort === 'price_low' ? (i18n.t('lowestPrice') || 'Lowest Price') : 
-              (i18n.t('sort') || 'Sort')
+              sort === 'price_high' ? (i18n.t('highestPrice') || 'Highest Price') :
+                sort === 'price_low' ? (i18n.t('lowestPrice') || 'Lowest Price') :
+                  (i18n.t('sort') || 'Sort')
             )}
           </Text>
         </TouchableOpacity>
@@ -400,11 +403,11 @@ const ProductsScreen = () => {
         animationType="slide"
         onRequestClose={closeFilterModal}
       >
-        <Pressable 
+        <Pressable
           style={styles.modalOverlay}
           onPress={closeFilterModal}
         >
-          <Pressable 
+          <Pressable
             style={[styles.modalContent, { backgroundColor: colors.background || '#FFFFFF' }]}
             onPress={(e) => e.stopPropagation()}
           >
@@ -445,7 +448,7 @@ const ProductsScreen = () => {
                 <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
                   {String(i18n.t('sortByPrice') || 'Sort By Price')}
                 </Text>
-                
+
                 {['price_high', 'price_low', 'recommended', 'trending'].map((sortOption) => (
                   <TouchableOpacity
                     key={sortOption}
@@ -453,22 +456,22 @@ const ProductsScreen = () => {
                     onPress={() => handleSortChange(sortOption as ExploreSort)}
                   >
                     <View style={styles.filterOptionLeft}>
-                      <Ionicons 
+                      <Ionicons
                         name={
                           sortOption === 'price_high' ? "arrow-down-outline" :
-                          sortOption === 'price_low' ? "arrow-up-outline" :
-                          sortOption === 'recommended' ? "sparkles-outline" :
-                          "trending-up-outline"
-                        } 
-                        size={20} 
-                        color={colors.primary} 
+                            sortOption === 'price_low' ? "arrow-up-outline" :
+                              sortOption === 'recommended' ? "sparkles-outline" :
+                                "trending-up-outline"
+                        }
+                        size={20}
+                        color={colors.primary}
                       />
                       <Text style={[styles.filterOptionText, { color: colors.text.gray }]}>
                         {String(
                           sortOption === 'price_high' ? (i18n.t('highestPrice') || 'Highest Price') :
-                          sortOption === 'price_low' ? (i18n.t('lowestPrice') || 'Lowest Price') :
-                          sortOption === 'recommended' ? (i18n.t('recommended') || 'Recommended') :
-                          (i18n.t('trending') || 'Trending')
+                            sortOption === 'price_low' ? (i18n.t('lowestPrice') || 'Lowest Price') :
+                              sortOption === 'recommended' ? (i18n.t('recommended') || 'Recommended') :
+                                (i18n.t('trending') || 'Trending')
                         )}
                       </Text>
                     </View>
@@ -490,8 +493,8 @@ const ProductsScreen = () => {
                 <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
                   {String(i18n.t('filterByCategory') || 'Filter By Category')}
                 </Text>
-                <ScrollView 
-                  style={styles.categoryScroll} 
+                <ScrollView
+                  style={styles.categoryScroll}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                 >
@@ -534,17 +537,17 @@ const ProductsScreen = () => {
 
             {/* Action Buttons */}
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                onPress={clearAllFilters} 
+              <TouchableOpacity
+                onPress={clearAllFilters}
                 style={[styles.clearButton, { borderColor: colors.borderMedium, backgroundColor: colors.surface }]}
               >
                 <Text style={[styles.clearButtonText, { color: colors.text.gray }]}>
                   {String(i18n.t('clear') || 'Clear')}
                 </Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                onPress={applyFilters} 
+
+              <TouchableOpacity
+                onPress={applyFilters}
                 style={styles.applyButton}
               >
                 <LinearGradient

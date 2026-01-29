@@ -17,6 +17,23 @@ const i18n = new I18n(translations);
 export const LANGUAGE_KEY = "APP_LANGUAGE";
 
 /**
+ * Helper to reload app safely (handles development mode)
+ */
+const reloadApp = async () => {
+  try {
+    // Only reload in production builds with expo-updates
+    if (!__DEV__ && Updates.isEnabled) {
+      await Updates.reloadAsync();
+    } else {
+      // In development, just log a message - user needs to manually reload
+      console.log("Language changed. Please reload the app to apply RTL changes.");
+    }
+  } catch (error) {
+    console.log("Could not reload app:", error);
+  }
+};
+
+/**
  * يحدد اللغة عند أول تشغيل أو يعيد اللغة المحفوظة
  */
 export const setInitialLanguage = async () => {
@@ -44,7 +61,7 @@ export const setInitialLanguage = async () => {
 
     if (I18nManager.isRTL !== isRTL) {
       I18nManager.forceRTL(isRTL);
-      await Updates.reloadAsync(); // Reload app to apply direction
+      await reloadApp();
     }
   } catch (error) {
     console.error("Error setting initial language:", error);
@@ -68,7 +85,7 @@ export const changeLanguage = async (
 
     if (I18nManager.isRTL !== isRTL) {
       I18nManager.forceRTL(isRTL);
-      await Updates.reloadAsync(); 
+      await reloadApp();
     } else {
       onLanguageChanged?.();
     }
@@ -78,3 +95,4 @@ export const changeLanguage = async (
 };
 
 export default i18n;
+
