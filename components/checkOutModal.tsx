@@ -494,7 +494,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
     }
   }, []);
 
-  const handleCheckout = useCallback(async  () => {
+  const handleCheckout = useCallback(async () => {
     if (!selectedAddressId) return toast.error(i18n.t("selectShippingAddress"));
     if (!paymentMethod) return toast.error(i18n.t("selectPaymentMethod"));
     if (!itemsPayload.length) {
@@ -525,7 +525,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
       // quote endpoint might be 404 - do not block order
       try {
         await refreshQuote(selectedAddressId);
-      } catch {}
+      } catch { }
 
       const orderPayload: any = {
         // ✅ required by backend (per validation error)
@@ -609,7 +609,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
 
   // render address item
   const renderAddress = useCallback(
-      ({ item }: { item: any }) => {
+    ({ item }: { item: any }) => {
       const isSelected = String(selectedAddressId) === String(item._id);
       return (
         <AddressCard
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     lineHeight: 20,
-      },
+  },
   removeImageText: {
     fontSize: 16,
     fontWeight: "800",

@@ -32,7 +32,7 @@ export default function CartScreen() {
   const handlePresentModalPress = useCallback(() => {
     router.push("/checkout");
   }, [router]);
-  
+
 
   const {
     fetchCart,
@@ -67,7 +67,7 @@ export default function CartScreen() {
       };
     }, [fetchCart])
   );
-  
+
 
   // ✅ helper ثابت لاستخراج attributes + size
   const getLineAttrs = useCallback((item: CartLine) => {
@@ -230,7 +230,7 @@ export default function CartScreen() {
       </View>
 
       <View style={[styles.checkoutSection, { backgroundColor: colors.surface }]}>
-        <Checkout total={finalTotal} handleCheckout={handlePresentModalPress} /> 
+        <Checkout total={finalTotal} handleCheckout={handlePresentModalPress} />
       </View>
     </View>
   );

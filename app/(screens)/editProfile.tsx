@@ -1,13 +1,13 @@
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
   ScrollView,
-  Platform, 
+  Platform,
   ActivityIndicator,
-  
+
 } from 'react-native'
 import { useState } from 'react'
 import { useUser } from '@clerk/clerk-expo'
@@ -36,15 +36,15 @@ export default function EditProfile() {
     }))
   }
 
-   const handleSave = async () => {
+  const handleSave = async () => {
     if (user && profileData.name) {
       const [firstName, ...rest] = profileData.name.split(' ');
       const lastName = rest.length > 0 ? rest.join(' ') : '';
       try {
         setIsEditing(true);
-        await user?.update({ 
-          firstName: firstName ?? null, 
-          lastName: lastName ?? null 
+        await user?.update({
+          firstName: firstName ?? null,
+          lastName: lastName ?? null
         });
         toast.success('تم تغيير الأسم في');
       } catch {
@@ -64,131 +64,131 @@ export default function EditProfile() {
     <SafeAreaProvider>
       <SafeAreaView style={[styles.container, { backgroundColor: Colors.surface }]}>
 
-    <ScrollView style={[styles.container, { backgroundColor: Colors.surface }]} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: Colors.cardBackground, borderBottomColor: Colors.borderLight }]}>
-        <TouchableOpacity style={[styles.backButton, { backgroundColor: Colors.surface }]} onPress={() => router.push('/profile')}>
-          <Text style={[styles.backButtonText, { color: Colors.text.gray }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: Colors.text.gray }]}>تعديل الملف الشخصي</Text>
-        <View style={styles.placeholder} />
-      </View>
+        <ScrollView style={[styles.container, { backgroundColor: Colors.surface }]} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={[styles.header, { backgroundColor: Colors.cardBackground, borderBottomColor: Colors.borderLight }]}>
+            <TouchableOpacity style={[styles.backButton, { backgroundColor: Colors.surface }]} onPress={() => router.push('/profile')}>
+              <Text style={[styles.backButtonText, { color: Colors.text.gray }]}>←</Text>
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: Colors.text.gray }]}>تعديل الملف الشخصي</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-      {/* Profile Image Section */}
-      <View style={[styles.imageSection, { backgroundColor: Colors.surface }]}>
-        <TouchableOpacity onPress={()=>{}} style={styles.imageContainer}>
-          <Image
-            source={
-              user?.imageUrl
-                ? { uri: user.imageUrl }
-                : require('../../assets/images/google.svg')
-            }
-            style={[styles.profileImage, { borderColor: Colors.primary }]}
-          />
-        </TouchableOpacity>
-      </View>
+          {/* Profile Image Section */}
+          <View style={[styles.imageSection, { backgroundColor: Colors.surface }]}>
+            <TouchableOpacity onPress={() => { }} style={styles.imageContainer}>
+              <Image
+                source={
+                  user?.imageUrl
+                    ? { uri: user.imageUrl }
+                    : require('../../assets/images/google.svg')
+                }
+                style={[styles.profileImage, { borderColor: Colors.primary }]}
+              />
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.formContainer}>
-        
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: Colors.text.gray }]}>الاسم الكامل</Text>
-          <TextInput
-            style={[
-              styles.input,
-              { 
-                backgroundColor: Colors.cardBackground, 
-                borderColor: Colors.borderLight, 
-                color: Colors.text.gray 
+          <View style={styles.formContainer}>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: Colors.text.gray }]}>الاسم الكامل</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.cardBackground,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  }
+                ]}
+                value={profileData.name}
+                onChangeText={(text) => handleInputChange('name', text)}
+                placeholderTextColor={Colors.text.veryLightGray}
+              />
+            </View>
+
+            {/* Email Field */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: Colors.text.gray }]}>البريد الإلكتروني</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.cardBackground,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  }
+                ]}
+                value={user?.primaryEmailAddress?.emailAddress}
+                placeholder="أدخل بريدك الإلكتروني"
+                placeholderTextColor={Colors.text.veryLightGray}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={false}
+              />
+            </View>
+
+            {/* Phone Field */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: Colors.text.gray }]}>رقم الهاتف</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.cardBackground,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  }
+                ]}
+                value={profileData.phone}
+                onChangeText={(text) => handleInputChange('phone', text)}
+                placeholder="أدخل رقم هاتفك"
+                placeholderTextColor={Colors.text.veryLightGray}
+                keyboardType="phone-pad"
+                editable={false}
+              />
+            </View>
+            {/* Location Field */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: Colors.text.gray }]}>الموقع</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: Colors.cardBackground,
+                    borderColor: Colors.borderLight,
+                    color: Colors.text.gray
+                  }
+                ]}
+                value={profileData.location}
+                onChangeText={(text) => handleInputChange('location', text)}
+                placeholder="أدخل موقعك"
+                placeholderTextColor={Colors.text.veryLightGray}
+              />
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity style={[styles.saveButton, { backgroundColor: Colors.primary }]} onPress={handleSave}
+              disabled={isEditing}
+            >
+              {isEditing ?
+                (<ActivityIndicator size="small" color="#fff" />)
+                :
+                <Text style={styles.saveButtonText}>
+                  حفظ التغييرات
+                </Text>
               }
-            ]}
-            value={profileData.name}
-            onChangeText={(text) => handleInputChange('name', text)}
-            placeholderTextColor={Colors.text.veryLightGray}
-          />
-        </View>
+            </TouchableOpacity>
 
-        {/* Email Field */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: Colors.text.gray }]}>البريد الإلكتروني</Text>
-          <TextInput
-            style={[
-              styles.input,
-              { 
-                backgroundColor: Colors.cardBackground, 
-                borderColor: Colors.borderLight, 
-                color: Colors.text.gray 
-              }
-            ]}
-            value={user?.primaryEmailAddress?.emailAddress}
-            placeholder="أدخل بريدك الإلكتروني"
-            placeholderTextColor={Colors.text.veryLightGray}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            editable={false}
-          />
-        </View>
+            {/* Delete Account */}
+            <TouchableOpacity style={[styles.deleteButton, { borderColor: Colors.error }]}>
+              <Text style={[styles.deleteButtonText, { color: Colors.error }]}>حذف الحساب</Text>
+            </TouchableOpacity>
 
-        {/* Phone Field */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: Colors.text.gray }]}>رقم الهاتف</Text>
-          <TextInput
-            style={[
-              styles.input,
-              { 
-                backgroundColor: Colors.cardBackground, 
-                borderColor: Colors.borderLight, 
-                color: Colors.text.gray 
-              }
-            ]}
-            value={profileData.phone}
-            onChangeText={(text) => handleInputChange('phone', text)}
-            placeholder="أدخل رقم هاتفك"
-            placeholderTextColor={Colors.text.veryLightGray}
-            keyboardType="phone-pad"
-            editable={false}
-          />
-        </View>
-        {/* Location Field */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: Colors.text.gray }]}>الموقع</Text>
-          <TextInput
-            style={[
-              styles.input,
-              { 
-                backgroundColor: Colors.cardBackground, 
-                borderColor: Colors.borderLight, 
-                color: Colors.text.gray 
-              }
-            ]}
-            value={profileData.location}
-            onChangeText={(text) => handleInputChange('location', text)}
-            placeholder="أدخل موقعك"
-            placeholderTextColor={Colors.text.veryLightGray}
-          />
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity style={[styles.saveButton, { backgroundColor: Colors.primary }]} onPress={handleSave}
-          disabled={isEditing}
-        >
-            {isEditing ?
-             (<ActivityIndicator size="small" color="#fff" />) 
-             :
-             <Text style={styles.saveButtonText}>
-               حفظ التغييرات
-             </Text>
-               }
-        </TouchableOpacity>
-
-        {/* Delete Account */}
-        <TouchableOpacity style={[styles.deleteButton, { borderColor: Colors.error }]}>
-          <Text style={[styles.deleteButtonText, { color: Colors.error }]}>حذف الحساب</Text>
-        </TouchableOpacity>
-
-      </View>
-    </ScrollView>
-    </SafeAreaView>
-  </SafeAreaProvider>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   )
 }
 

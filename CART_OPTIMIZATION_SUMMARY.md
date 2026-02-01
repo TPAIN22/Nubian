@@ -154,7 +154,7 @@ const productIndex = cart.products.findIndex((item) => {
 ```typescript
 // Hardcoded check for clothing category
 if (product?.category?.includes("ملابس") && (!selectedSize || selectedSize.trim() === '')) {
-  Toast.show({
+  toast({
     type: 'info',
     text1: 'Please select size first',
   });
@@ -170,7 +170,7 @@ import { validateRequiredAttributes } from '@/utils/cartUtils';
 const validation = validateRequiredAttributes(product.attributes, selectedAttributes);
 if (!validation.valid) {
   const missingText = validation.missing.join(', ');
-  Toast.show({
+  toast({
     type: 'info',
     text1: 'Please select required attributes',
     text2: `Missing: ${missingText}`,
