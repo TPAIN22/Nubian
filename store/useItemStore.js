@@ -1,7 +1,10 @@
 import { create } from "zustand";
+import { subscribeWithSelector } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
+import { useCallback } from 'react';
 import axiosInstance from "@/services/api/client";
 
-const useItemStore = create((set, get) => ({
+const useItemStore = create(subscribeWithSelector((set, get) => ({
   // State
   products: [],
   product: null,
@@ -593,6 +596,93 @@ const useItemStore = create((set, get) => ({
       }
     }
   },
-}));
+})));
+
+// ============================================================================
+// OPTIMIZED SELECTORS - Use these in components to prevent unnecessary re-renders
+// ============================================================================
+
+/**
+ * Hook to get setProduct action - stable reference, never causes re-renders
+ */
+export const useSetProduct = () => {
+  return useItemStore((state) => state.setProduct);
+};
+
+/**
+ * Hook to get current product
+ */
+export const useCurrentProduct = () => {
+  return useItemStore((state) => state.product);
+};
+
+/**
+ * Hook to get products list
+ */
+export const useProductsList = () => {
+  return useItemStore((state) => state.products);
+};
+
+/**
+ * Hook to get loading states
+ */
+export const useItemLoadingStates = () => {
+  return useItemStore(
+    useShallow((state) => ({
+      isProductsLoading: state.isProductsLoading,
+      isCategoriesLoading: state.isCategoriesLoading,
+      isLoadMoreLoading: state.isLoadMoreLoading,
+    }))
+  );
+};
+
+/**
+ * Hook to get categories
+ */
+export const useCategories = () => {
+  return useItemStore((state) => state.categories);
+};
+
+/**
+ * Hook to get tab bar visibility
+ */
+export const useTabBarVisibility = () => {
+  return useItemStore((state) => state.isTabBarVisible);
+};
+
+/**
+ * Hook to get sign-in modal visibility and setter
+ */
+export const useSignInModal = () => {
+  return useItemStore(
+    useShallow((state) => ({
+      signInModelVisible: state.signInModelVisible,
+      setSignInModelVisible: state.setSignInModelVisible,
+    }))
+  );
+};
+
+/**
+ * Hook to get all item store actions - stable references
+ */
+export const useItemStoreActions = () => {
+  return useItemStore(
+    useShallow((state) => ({
+      setProduct: state.setProduct,
+      setIsTabBarVisible: state.setIsTabBarVisible,
+      setSelectedCategory: state.setSelectedCategory,
+      getProducts: state.getProducts,
+      getAllProducts: state.getAllProducts,
+      getProductById: state.getProductById,
+      getCategories: state.getCategories,
+      searchProducts: state.searchProducts,
+      resetProducts: state.resetProducts,
+      resetProduct: state.resetProduct,
+      loadMoreProducts: state.loadMoreProducts,
+      loadMoreAllProducts: state.loadMoreAllProducts,
+      selectCategoryAndLoadProducts: state.selectCategoryAndLoadProducts,
+    }))
+  );
+};
 
 export default useItemStore;

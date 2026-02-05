@@ -1,21 +1,22 @@
 // ProductCard.tsx
 import React, { useMemo, useRef, useState, useCallback } from "react";
-import { View, StyleSheet, Pressable, FlatList, Image as RNImage, type ViewToken } from "react-native";
+import { View, StyleSheet, Pressable, FlatList, Image as RNImage, type ViewToken, InteractionManager } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
 import { Card } from "@/components/ui/card";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/providers/ThemeProvider";
-import useWishlistStore from "@/store/wishlistStore";
+import { useIsInWishlist, useWishlistActions } from "@/store/wishlistStore";
 import { useAuth } from "@clerk/clerk-expo";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
-import useItemStore from "@/store/useItemStore";
+import { useSetProduct } from "@/store/useItemStore";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
 import { formatPrice, getDiscountPercent } from "@/utils/priceUtils";
 import { cleanImages } from "@/utils/productUtils";
+import { markTapStart, markNavigationCall } from "@/utils/performance";
 
 export type Product = NormalizedProduct;
 
@@ -32,16 +33,16 @@ const ProductCard = React.memo(
     const { theme } = useTheme();
     const colors = theme.colors;
 
-    const { setProduct } = useItemStore();
-    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlistStore();
+    // Use optimized selectors - only re-render when this specific product's wishlist status changes
+    const setProduct = useSetProduct();
+    const { addToWishlist, removeFromWishlist } = useWishlistActions();
+    const inWishlist = useIsInWishlist(item?.id);
     const { getToken } = useAuth();
     const { trackEvent } = useTracking();
 
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [containerWidth, setContainerWidth] = useState<number>(0);
     const flatListRef = useRef<FlatList<string>>(null);
-
-    const inWishlist = useMemo(() => (item?.id ? isInWishlist(item.id) : false), [item?.id, isInWishlist]);
 
     const validImages = useMemo(() => (item ? cleanImages(item.images) : []), [item]);
     const singleImage = validImages.length === 1 ? validImages[0] : null;
@@ -79,18 +80,32 @@ const ProductCard = React.memo(
       if (!item) return;
       if (onPress) return onPress();
 
-      trackEvent("product_click", { productId: item.id, screen: "product_card" });
-      navigateToProduct(item.id, item as any);
+      // PERFORMANCE: Mark tap start for latency measurement
+      if (__DEV__) markTapStart(item.id);
 
-      requestAnimationFrame(() => {
-        setTimeout(() => setProduct(item as any), 0);
+      // CRITICAL: Navigate FIRST - this is the user's primary intent
+      // Don't block navigation with any synchronous work
+      navigateToProduct(item.id, item as any);
+      
+      if (__DEV__) markNavigationCall(item.id);
+
+      // DEFERRED: Run non-critical work after navigation animation completes
+      // This prevents blocking the JS thread during screen transition
+      InteractionManager.runAfterInteractions(() => {
+        // Track event after navigation is complete
+        trackEvent("product_click", { productId: item.id, screen: "product_card" });
+        
+        // Set product in store (for potential optimistic rendering)
+        setProduct(item as any);
+        
+        // Prefetch images for smoother experience on details screen
         try {
           validImages.slice(0, 2).forEach((uri) => {
             RNImage.prefetch(uri).catch(() => {});
           });
         } catch {}
       });
-    }, [onPress, trackEvent, item, setProduct, validImages]);
+    }, [onPress, item, setProduct, validImages, trackEvent]);
 
     const handleWishlistPress = useCallback(async () => {
       if (!item) return;
@@ -101,7 +116,10 @@ const ProductCard = React.memo(
         removeFromWishlist(item.id, token);
       } else {
         addToWishlist(item as any, token);
-        trackEvent("wishlist_add", { productId: item.id, screen: "product_card" });
+        // Defer tracking to not block UI
+        InteractionManager.runAfterInteractions(() => {
+          trackEvent("wishlist_add", { productId: item.id, screen: "product_card" });
+        });
       }
     }, [getToken, inWishlist, item, addToWishlist, removeFromWishlist, trackEvent]);
 

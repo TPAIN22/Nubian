@@ -4,6 +4,7 @@ import {
   useMemo,
   useCallback,
   useRef,
+  useLayoutEffect,
 } from "react";
 import {
   View,
@@ -21,9 +22,10 @@ import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useProductFetch } from "@/hooks/useProductFetch";
-import useWishlistStore from "@/store/wishlistStore";
+import { useIsInWishlist, useWishlistActions } from "@/store/wishlistStore";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
+import { markScreenMount, markContentReady } from "@/utils/performance";
 
 import type { SelectedAttributes } from "@/domain/product/product.selectors";
 import { getAttributeOptions, normalizeSelectedAttributes } from "@/domain/product/product.selectors";
@@ -56,10 +58,17 @@ export default function Details() {
   const params = useLocalSearchParams();
   const productId = params.details ? String(params.details) : "";
 
+  // PERFORMANCE: Mark screen mount immediately
+  useLayoutEffect(() => {
+    if (productId && __DEV__) {
+      markScreenMount(productId);
+    }
+  }, [productId]);
+
   const { product, isLoading, error } = useProductFetch(productId);
 
-  const { addToWishlist, removeFromWishlist, isInWishlist } =
-    useWishlistStore();
+  // Use optimized wishlist selectors
+  const { addToWishlist, removeFromWishlist } = useWishlistActions();
   const { trackEvent } = useTracking();
 
   const [selectedAttributes, setSelectedAttributes] =
@@ -271,10 +280,8 @@ export default function Details() {
     return stock > 0;
   }, [viewProduct, missingRequiredAttributes.length, matchingVariant]);
 
-  /** wishlist */
-  const inWishlist = useMemo(() => {
-    return viewProduct?.id ? isInWishlist(viewProduct.id) ?? false : false;
-  }, [viewProduct?.id, isInWishlist]);
+  /** wishlist - use optimized selector */
+  const inWishlist = useIsInWishlist(viewProduct?.id);
 
   const handleWishlistPress = useCallback(async () => {
     if (!viewProduct?.id || wishlistLoading) return;

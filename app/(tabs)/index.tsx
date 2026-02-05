@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/text";
 import { useCallback, useEffect, useRef, useState, memo } from "react";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import Carousel from "react-native-reanimated-carousel";
 import ItemCard from "@/components/Card";
 import {
   BottomSheetModal,
@@ -243,105 +244,70 @@ const BannerCarousel = memo(
     const isRTL = I18nManager.isRTL;
     const { window } = useResponsive();
     const screenWidth = window.width;
-    const flatListRef = useRef<FlatList>(null);
+    const bannerHeight = screenWidth * 0.5;
     const [activeIndex, setActiveIndex] = useState(0);
-    const intervalRef = useRef<any>(null);
     const { trackEvent } = useTracking();
 
-    const performScroll = useCallback((index: number) => {
-      if (!flatListRef.current) return;
-      flatListRef.current.scrollToIndex({
-        index,
-        animated: true,
-        viewPosition: 0,
-      });
-    }, []);
+    const onProgressChange = useCallback((_: number, absoluteProgress: number) => {
+      const index = Math.round(absoluteProgress) % banners.length;
+      setActiveIndex(index);
+    }, [banners.length]);
 
-    const startAutoScroll = useCallback(() => {
-      if (banners.length <= 1) return;
-      clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(() => {
-        setActiveIndex((current) => {
-          const next = current + 1 >= banners.length ? 0 : current + 1;
-          performScroll(next);
-          return next;
-        });
-      }, 3500);
-    }, [banners.length, performScroll]);
-
-    const stopAutoScroll = () => clearInterval(intervalRef.current);
-
-    useEffect(() => {
-      startAutoScroll();
-      return stopAutoScroll;
-    }, [startAutoScroll]);
-
-    const onMomentumScrollEnd = (e: any) => {
-      const offset = e.nativeEvent.contentOffset.x;
-      const newIndex = Math.round(offset / screenWidth);
-      setActiveIndex(newIndex);
-    };
+    const renderBannerItem = useCallback(({ item }: { item: any }) => (
+      <Pressable
+        onPress={() => {
+          trackEvent('banner_click', {
+            bannerId: item._id,
+            screen: 'home',
+          });
+          navigateBanner(item);
+        }}
+        style={{ width: screenWidth, height: bannerHeight }}
+      >
+        <Image
+          source={{ uri: item.image }}
+          style={styles.bannerImage}
+          contentFit="cover"
+          transition={200}
+        />
+        <LinearGradient
+          colors={[
+            "transparent",
+            colors.overlayDark || "rgba(0,0,0,0.8)",
+          ]}
+          style={styles.bannerOverlay}
+        />
+        {(item.title || item.description) && (
+          <View style={styles.bannerContent}>
+            {item.title && (
+              <Text style={[styles.bannerTitle, { color: colors.text.white }]}>
+                {item.title}
+              </Text>
+            )}
+            {item.description && (
+              <Text style={[styles.bannerDescription, { color: colors.text.white }]}>
+                {item.description}
+              </Text>
+            )}
+          </View>
+        )}
+      </Pressable>
+    ), [screenWidth, bannerHeight, colors, trackEvent]);
 
     if (banners.length === 0) return null;
 
     return (
       <View style={styles.bannersSection}>
-        <FlatList
-          ref={flatListRef}
+        <Carousel
           data={banners}
-          horizontal
-          pagingEnabled
-          key={`banners-${banners.length}-${isRTL}`}
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={onMomentumScrollEnd}
-          onScrollBeginDrag={stopAutoScroll}
-          onScrollEndDrag={startAutoScroll}
-          getItemLayout={(_, index) => ({
-            length: screenWidth,
-            offset: screenWidth * index,
-            index,
-          })}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => {
-                trackEvent('banner_click', {
-                  bannerId: item._id,
-                  screen: 'home',
-                });
-                navigateBanner(item);
-              }}
-              style={{ width: screenWidth, height: screenWidth * 0.5 }}
-            >
-              <Image
-                source={{ uri: item.image }}
-                style={styles.bannerImage}
-                contentFit="cover"
-                transition={200}
-              />
-              <LinearGradient
-                colors={[
-                  "transparent",
-                  colors.overlayDark || "rgba(0,0,0,0.8)",
-                ]}
-                style={styles.bannerOverlay}
-              />
-              {(item.title || item.description) && (
-                <View style={styles.bannerContent}>
-                  {item.title && (
-                    <Text style={[styles.bannerTitle, { color: colors.text.white }]}>
-                      {item.title}
-                    </Text>
-                  )}
-                  {item.description && (
-                    <Text style={[styles.bannerDescription, { color: colors.text.white }]}>
-                      {item.description}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </Pressable>
-          )}
-          keyExtractor={(item, index) => item._id || index.toString()}
+          width={screenWidth}
+          height={bannerHeight}
+          loop={banners.length > 1}
+          autoPlay={banners.length > 1}
+          autoPlayInterval={3500}
+          scrollAnimationDuration={800}
+          onProgressChange={onProgressChange}
+          renderItem={renderBannerItem}
         />
 
         {banners.length > 1 && (

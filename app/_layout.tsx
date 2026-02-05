@@ -26,6 +26,28 @@ import { ThemeProvider, useTheme } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
 import { Toaster } from "sonner-native";
 
+// Conditionally import expo-navigation-bar (not available in Expo Go)
+let NavigationBar: any = null;
+try {
+  NavigationBar = require("expo-navigation-bar");
+} catch (e) {
+  // expo-navigation-bar not available (running in Expo Go)
+  console.log("[Layout] expo-navigation-bar not available");
+}
+
+// Auto-hide Android navigation bar on app start (only if native module is available)
+if (Platform.OS === "android" && NavigationBar) {
+  try {
+    // Set navigation bar to be transparent and hide it
+    NavigationBar.setPositionAsync("absolute");
+    NavigationBar.setBackgroundColorAsync("#00000000"); // Transparent
+    NavigationBar.setVisibilityAsync("hidden");
+    NavigationBar.setBehaviorAsync("overlay-swipe"); // Show on swipe, auto-hide after
+  } catch (e) {
+    // Ignore errors if navigation bar API is not available
+  }
+}
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -53,6 +75,23 @@ function AppLoaderWithClerk() {
   
   // Initialize token manager for API requests
   useTokenManager();
+
+  // Keep Android navigation bar hidden and match theme
+  useEffect(() => {
+    if (Platform.OS === "android" && NavigationBar) {
+      const setupNavigationBar = async () => {
+        try {
+          await NavigationBar.setPositionAsync("absolute");
+          await NavigationBar.setBackgroundColorAsync("#00000000");
+          await NavigationBar.setVisibilityAsync("hidden");
+          await NavigationBar.setBehaviorAsync("overlay-swipe");
+        } catch (e) {
+          // Ignore errors if navigation bar API is not available
+        }
+      };
+      setupNavigationBar();
+    }
+  }, []);
 
   // Load Cairo fonts
   const { fontsLoaded, fontError } = useFonts();

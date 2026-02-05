@@ -3,14 +3,13 @@
     "name": "Nubian",
     "slug": "Nubian",
     "version": "1.0.3",
-    "icon": "./assets/images/screen.png",
+    "icon": "./assets/images/nubianscreen.png",
     "scheme": "sdnubian",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-
       "supportsTablet": true,
-      "jsEngine": "hermes", 
+      "jsEngine": "hermes",
       "bundleIdentifier": "dev.expo.nubian",
       "config": {
         "usesNonExemptEncryption": false
@@ -29,7 +28,7 @@
       "versionCode": 14,
       "jsEngine": "hermes",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/screen.png",
+        "foregroundImage": "./assets/images/nubianscreen.png",
         "backgroundColor": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
@@ -62,7 +61,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/nubianscreen.png",
-          "imageWidth": 798,
+          "imageWidth": 384,
           "resizeMode": "cover",
           "backgroundColor": "#ffffff",
           "duration": 0
@@ -91,7 +90,8 @@
       "expo-font",
       "expo-notifications",
       "expo-web-browser",
-      "expo-localization"
+      "expo-localization",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

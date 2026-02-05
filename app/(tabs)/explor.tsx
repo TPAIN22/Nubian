@@ -22,7 +22,7 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
 import { ExploreSort } from "@/api/explore.api";
-import useItemStore from "@/store/useItemStore";
+import { useSetProduct } from "@/store/useItemStore";
 import ProductCard from "@/components/ProductCard";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 
@@ -33,7 +33,7 @@ const SearchPage = () => {
   const { theme } = useTheme();
   const colors = theme.colors;
   const { trackEvent } = useTracking();
-  const { setProduct } = useItemStore();
+  const setProduct = useSetProduct();
   
   // Explore store
   const {
@@ -176,7 +176,10 @@ const SearchPage = () => {
     />
   ), [handleProductView, setProduct]);
 
-  const keyExtractor = useCallback((item: Product) => item.id || Math.random().toString(), []);
+  // PERFORMANCE: Stable keyExtractor - avoid Math.random() which causes unstable keys
+  const keyExtractor = useCallback((item: Product, index: number) => {
+    return item.id || `product-${index}`;
+  }, []);
 
   // Flatten categories
   const flatCategories = useMemo(() => {
