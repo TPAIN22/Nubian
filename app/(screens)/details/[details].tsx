@@ -25,14 +25,15 @@ import { useProductFetch } from "@/hooks/useProductFetch";
 import { useIsInWishlist, useWishlistActions } from "@/store/wishlistStore";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
-import { markScreenMount, markContentReady } from "@/utils/performance";
+import { markScreenMount } from "@/utils/performance";
+import { logPerf } from "@/hooks/useProductFetch";
 
 import type { SelectedAttributes } from "@/domain/product/product.selectors";
 import { getAttributeOptions, normalizeSelectedAttributes } from "@/domain/product/product.selectors";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { matchVariant, pickDisplayVariant } from "@/domain/variant/variant.match";
 import { isVariantSelectable } from "@/domain/product/product.guards";
-import { resolvePrice, getDisplayPrice } from "@/domain/pricing/pricing.engine";
+import { resolvePrice } from "@/domain/pricing/pricing.engine";
 import { formatPrice } from "@/utils/priceUtils";
 
 import { useRecommendationStore } from "@/store/useRecommendationStore";
@@ -58,6 +59,23 @@ export default function Details() {
   const params = useLocalSearchParams();
   const productId = params.details ? String(params.details) : "";
 
+  // Extract initial data from route params for instant render
+  const initialData = useMemo(() => {
+    if (!productId) return undefined;
+    const name = params.name ? String(params.name) : undefined;
+    const priceStr = params.price ? String(params.price) : undefined;
+    const image = params.image ? String(params.image) : undefined;
+
+    if (!name && !priceStr && !image) return undefined;
+
+    return {
+      id: productId,
+      name,
+      images: image ? [image] : [],
+      price: priceStr ? Number(priceStr) : undefined,
+    };
+  }, [productId, params.name, params.price, params.image]);
+
   // PERFORMANCE: Mark screen mount immediately
   useLayoutEffect(() => {
     if (productId && __DEV__) {
@@ -65,7 +83,8 @@ export default function Details() {
     }
   }, [productId]);
 
-  const { product, isLoading, error } = useProductFetch(productId);
+  // Use cached hook with initial data for instant render
+  const { product, isLoading, error } = useProductFetch(productId, initialData);
 
   // Use optimized wishlist selectors
   const { addToWishlist, removeFromWishlist } = useWishlistActions();
@@ -89,27 +108,41 @@ export default function Details() {
   const recommendations = productRecommendations[productId];
   const isLoadingRecommendations = isProductRecommendationsLoading[productId];
 
+  // PERFORMANCE: Defer recommendations fetch until navigation animation completes
   useEffect(() => {
-    if (productId) fetchProductRecommendations(productId);
-  }, [productId, fetchProductRecommendations]);
+    if (!productId || !showDeferred) return;
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchProductRecommendations(productId);
+    });
+    return () => task.cancel();
+  }, [productId, fetchProductRecommendations, showDeferred]);
 
-  // track once per product
+  // PERFORMANCE: Defer analytics tracking until AFTER first paint (non-blocking)
   useEffect(() => {
     const id = (product as any)?.id;
-    if (!id) return;
+    if (!id || !showDeferred) return;
     if (lastTrackedRef.current === id) return;
     lastTrackedRef.current = id;
-    trackEvent("product_view", { productId: id, screen: "product_details" });
-  }, [(product as any)?.id, trackEvent]);
+    // Fire-and-forget - don't await, wrapping ensures no blocking
+    Promise.resolve().then(() => {
+      trackEvent("product_view", { productId: id, screen: "product_details" });
+    });
+  }, [(product as any)?.id, trackEvent, showDeferred]);
 
   const viewProduct = product as NormalizedProduct | null;
 
+  // PERFORMANCE: Use requestAnimationFrame for fastest possible deferred render
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() =>
-      setShowDeferred(true)
-    );
-    return () => task.cancel();
-  }, []);
+    let cancelled = false;
+    // Wait for first paint, then enable heavy sections
+    requestAnimationFrame(() => {
+      if (!cancelled) {
+        setShowDeferred(true);
+        logPerf(productId, 'HEAVY_SECTIONS_START');
+      }
+    });
+    return () => { cancelled = true; };
+  }, [productId]);
 
   const productAttributes = useMemo(() => viewProduct?.attributeDefs ?? [], [viewProduct]);
 
@@ -184,25 +217,28 @@ export default function Details() {
     return uniqueImages.length > 0 ? uniqueImages : [];
   }, [viewProduct, displayVariant?.images]);
 
-  // Prefetch images
+  // PERFORMANCE: Defer image prefetching until navigation animation completes
   useEffect(() => {
-    const first = productImages?.[0];
-    if (first) RNImage.prefetch(first).catch(() => {});
-    const timeout = setTimeout(() => {
-      try {
-        const rest =
-          productImages?.slice(
+    if (!productImages?.length) return;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      const first = productImages[0];
+      if (first) RNImage.prefetch(first).catch(() => { });
+
+      // Prefetch remaining images with a small delay
+      setTimeout(() => {
+        try {
+          const rest = productImages.slice(
             PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX,
             PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX +
-              PRODUCT_DETAILS_CONFIG.PREFETCH_IMAGE_COUNT
-          ) || [];
-        rest.forEach(
-          (uri: string) => uri && RNImage.prefetch(uri).catch(() => {})
-        );
-      } catch {}
-    }, 0);
+            PRODUCT_DETAILS_CONFIG.PREFETCH_IMAGE_COUNT
+          );
+          rest.forEach((uri: string) => uri && RNImage.prefetch(uri).catch(() => { }));
+        } catch { }
+      }, 100);
+    });
 
-    return () => clearTimeout(timeout);
+    return () => task.cancel();
   }, [productImages]);
 
   // ✅ If user hasn't selected attributes yet, preload with displayVariant attrs to show price/stock and enable add-to-cart
@@ -223,7 +259,7 @@ export default function Details() {
     }
   }, [displayVariant, selectedAttributes]);
 
-  
+
 
   const pricing = useMemo(
     () => (viewProduct ? resolvePrice({ product: viewProduct, selectedVariant: matchingVariant || displayVariant }) : null),
@@ -460,9 +496,8 @@ export default function Details() {
 
             {missingRequiredAttributes.length > 0 && (
               <Text style={[styles.missingText, { color: COLORS.ERROR_RED }]}>
-                {`${
-                  i18n.t("pleaseSelect") || "Please select"
-                }: ${missingRequiredAttributes.join(", ")}`}
+                {`${i18n.t("pleaseSelect") || "Please select"
+                  }: ${missingRequiredAttributes.join(", ")}`}
               </Text>
             )}
           </View>
@@ -528,11 +563,13 @@ export default function Details() {
             </Text>
           </View>
 
-          <ProductRecommendations
-            recommendations={(recommendations as any) ?? null}
-            isLoading={isLoadingRecommendations ?? false}
-            colors={colors}
-          />
+          {showDeferred && (
+            <ProductRecommendations
+              recommendations={(recommendations as any) ?? null}
+              isLoading={isLoadingRecommendations ?? false}
+              colors={colors}
+            />
+          )}
 
           {showDeferred && <Review productId={viewProduct?.id} />}
         </View>

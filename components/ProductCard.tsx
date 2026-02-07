@@ -1,6 +1,6 @@
 // ProductCard.tsx
 import React, { useMemo, useRef, useState, useCallback } from "react";
-import { View, StyleSheet, Pressable, FlatList, Image as RNImage, type ViewToken, InteractionManager } from "react-native";
+import { View, StyleSheet, Pressable, FlatList, type ViewToken, InteractionManager } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
 import { Card } from "@/components/ui/card";
@@ -11,12 +11,14 @@ import { useIsInWishlist, useWishlistActions } from "@/store/wishlistStore";
 import { useAuth } from "@clerk/clerk-expo";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
-import { useSetProduct } from "@/store/useItemStore";
+import useItemStore from "@/store/useItemStore";
+import { usePrefetchProduct } from "@/store/useProductCacheStore";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
 import { formatPrice, getDiscountPercent } from "@/utils/priceUtils";
 import { cleanImages } from "@/utils/productUtils";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
+import { markTapStartTime } from "@/hooks/useProductFetch";
 
 export type Product = NormalizedProduct;
 
@@ -34,7 +36,8 @@ const ProductCard = React.memo(
     const colors = theme.colors;
 
     // Use optimized selectors - only re-render when this specific product's wishlist status changes
-    const setProduct = useSetProduct();
+    const setProduct = useItemStore((state: any) => state.setProduct);
+    const prefetchProduct = usePrefetchProduct();
     const { addToWishlist, removeFromWishlist } = useWishlistActions();
     const inWishlist = useIsInWishlist(item?.id);
     const { getToken } = useAuth();
@@ -50,7 +53,7 @@ const ProductCard = React.memo(
     const displayPrice = useMemo(() => (item ? getDisplayPrice(item) : { price: 0, isFrom: false }), [item]);
 
     const finalPrice = displayPrice.price;
-    
+
     // Original price logic:
     // 1. If we have an explicit discountPrice from backend, that was the intended manual discount
     // 2. If finalPrice < normal price (merchant + nubian markup), show the normal price as original
@@ -58,54 +61,52 @@ const ProductCard = React.memo(
     const originalPrice = useMemo(() => {
       if (!item?.productLevelPricing) return finalPrice;
       const { merchantPrice, nubianMarkup, discountPrice, finalPrice: backendFinal } = item.productLevelPricing;
-      
+
       const normalPrice = (merchantPrice || 0) * (1 + (nubianMarkup || 10) / 100);
 
       // Manual discount override
       if (discountPrice && discountPrice > 0 && Math.abs(finalPrice - discountPrice) < 0.01) {
         return backendFinal || normalPrice || finalPrice;
       }
-      
+
       // Automatic discount (finalPrice is less than normal price)
       if (normalPrice > finalPrice + 0.01) {
         return normalPrice;
       }
-      
+
       return finalPrice;
     }, [item, finalPrice]);
 
     const productHasDiscount = originalPrice > finalPrice;
-    
+
+    // PERFORMANCE: Start prefetch on press-in (while user's finger is still down)
+    const handlePressIn = useCallback(() => {
+      if (!item?.id) return;
+      prefetchProduct(item.id);
+    }, [item?.id, prefetchProduct]);
+
     const handleClick = useCallback(() => {
       if (!item) return;
       if (onPress) return onPress();
 
       // PERFORMANCE: Mark tap start for latency measurement
-      if (__DEV__) markTapStart(item.id);
+      if (__DEV__) {
+        markTapStart(item.id);
+        markTapStartTime(item.id); // For tap-to-content timing
+      }
 
       // CRITICAL: Navigate FIRST - this is the user's primary intent
-      // Don't block navigation with any synchronous work
+      // Pass the full item for instant rendering on details screen
       navigateToProduct(item.id, item as any);
-      
+
       if (__DEV__) markNavigationCall(item.id);
 
       // DEFERRED: Run non-critical work after navigation animation completes
-      // This prevents blocking the JS thread during screen transition
       InteractionManager.runAfterInteractions(() => {
-        // Track event after navigation is complete
         trackEvent("product_click", { productId: item.id, screen: "product_card" });
-        
-        // Set product in store (for potential optimistic rendering)
         setProduct(item as any);
-        
-        // Prefetch images for smoother experience on details screen
-        try {
-          validImages.slice(0, 2).forEach((uri) => {
-            RNImage.prefetch(uri).catch(() => {});
-          });
-        } catch {}
       });
-    }, [onPress, item, setProduct, validImages, trackEvent]);
+    }, [onPress, item, setProduct, trackEvent]);
 
     const handleWishlistPress = useCallback(async () => {
       if (!item) return;
@@ -129,7 +130,7 @@ const ProductCard = React.memo(
     const renderImage = useCallback(
       ({ item: imageUri }: { item: string }) => (
         <View style={{ width: measuredWidth, height: measuredWidth }}>
-          <Pressable onPress={handleClick} style={{ width: "100%", height: "100%" }}>
+          <Pressable onPressIn={handlePressIn} onPress={handleClick} style={{ width: "100%", height: "100%" }}>
             <Image
               source={{ uri: imageUri }}
               alt="product image"
@@ -140,7 +141,7 @@ const ProductCard = React.memo(
           </Pressable>
         </View>
       ),
-      [measuredWidth, handleClick, colors.surface]
+      [measuredWidth, handleClick, handlePressIn, colors.surface]
     );
 
     const onContainerLayout = useCallback((e: any) => {
@@ -191,7 +192,7 @@ const ProductCard = React.memo(
       return (
         <Card className="p-0" style={[styles.productCard, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.horizontalContainer}>
-            <Pressable onPress={handleClick} style={styles.horizontalImageContainer}>
+            <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.horizontalImageContainer}>
               <Image
                 source={firstImage ? { uri: firstImage } : null}
                 alt="product image"
@@ -202,7 +203,7 @@ const ProductCard = React.memo(
             </Pressable>
 
             <View style={styles.horizontalInfo}>
-              <Pressable onPress={handleClick} style={styles.horizontalNameContainer}>
+              <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.horizontalNameContainer}>
                 <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={2}>
                   {item.name}
                 </Heading>
@@ -241,7 +242,7 @@ const ProductCard = React.memo(
           )}
 
           {singleImage ? (
-            <Pressable onPress={handleClick} style={styles.imagePressable}>
+            <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
               <Image
                 source={{ uri: singleImage }}
                 alt="product image"
@@ -271,7 +272,7 @@ const ProductCard = React.memo(
                     style={{ width: measuredWidth, height: measuredWidth }}
                   />
                 ) : (
-                  <Pressable onPress={handleClick} style={styles.imagePressable}>
+                  <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
                     <Image
                       source={{ uri: validImages[0] as string }}
                       alt="product image"
@@ -285,7 +286,7 @@ const ProductCard = React.memo(
               {renderPagination()}
             </>
           ) : (
-            <Pressable onPress={handleClick} style={styles.imagePressable}>
+            <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
               <View style={[styles.productImage, { backgroundColor: colors.surface, justifyContent: "center", alignItems: "center" }]}>
                 <Ionicons name="image-outline" size={48} color={colors.text.veryLightGray} />
               </View>
@@ -300,7 +301,7 @@ const ProductCard = React.memo(
         </View>
 
         <View style={styles.productInfo}>
-          <Pressable onPress={handleClick}>
+          <Pressable onPressIn={handlePressIn} onPress={handleClick}>
             <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={2}>
               {item.name}
             </Heading>
@@ -322,6 +323,18 @@ const ProductCard = React.memo(
         </View>
       </Card>
     );
+  },
+  // PERFORMANCE: Custom comparison to ignore unstable callback references
+  // If item.id and visual props are the same, skip re-render
+  (prevProps, nextProps) => {
+    // Re-render if item identity changes
+    if (prevProps.item?.id !== nextProps.item?.id) return false;
+    // Re-render if visual props change
+    if (prevProps.variant !== nextProps.variant) return false;
+    if (prevProps.showWishlist !== nextProps.showWishlist) return false;
+    if (prevProps.cardWidth !== nextProps.cardWidth) return false;
+    // Don't compare onPress - if item is same, navigation target is same
+    return true;
   }
 );
 

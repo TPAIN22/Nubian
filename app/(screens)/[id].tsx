@@ -16,7 +16,6 @@ import {
   Text,
   View,
   Pressable,
-  StatusBar,
   Platform,
   Animated,
 } from "react-native";
@@ -46,10 +45,10 @@ export default function CategoriesScreen() {
   const Colors = theme.colors;
   const params = useLocalSearchParams();
   const router = useRouter();
-  
+
   // Handle array params (expo-router can return arrays)
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  
+
   // Validate ID format - must be MongoDB ObjectId (24 hex characters)
   const isValidCategoryId = id && typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id);
   const insets = useSafeAreaInsets();
@@ -125,7 +124,7 @@ export default function CategoriesScreen() {
       try {
         // First try to get from store categories
         const categoryFromStore = categories.find((cat: Category) => cat._id === id);
-        
+
         if (categoryFromStore) {
           setCategoryData(categoryFromStore);
         } else {
@@ -147,7 +146,7 @@ export default function CategoriesScreen() {
     };
 
     fetchCategoryDetails();
-    
+
     // Also ensure categories are loaded
     if (categories.length === 0) {
       getCategories();
@@ -242,11 +241,6 @@ export default function CategoriesScreen() {
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: Colors.surface }]}>
-      <StatusBar
-        barStyle={theme.mode === "dark" ? "light-content" : "dark-content"}
-        translucent
-        backgroundColor="transparent"
-      />
       <BottomSheetModalProvider>
         {/* Collapsible Header */}
         <Animated.View
@@ -302,7 +296,7 @@ export default function CategoriesScreen() {
             )}
 
             {/* Category Info */}
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.categoryInfo,
                 {

@@ -67,7 +67,8 @@ const useWishlistStore = create(
         set({ wishlist: [product, ...prevWishlist], _wishlistIds: newIds });
         try {
           await axiosInstance.post(`/wishlist/${product._id}`, {});
-          await get().fetchWishlist();
+          // Save to AsyncStorage after successful add (optimistic update already applied)
+          await AsyncStorage.setItem('wishlist', JSON.stringify(get().wishlist));
           Alert.alert('تمت الإضافة', 'تمت إضافة المنتج إلى المفضلة بنجاح');
         } catch (error) {
           set({ wishlist: prevWishlist, _wishlistIds: prevIds, error: error?.response?.data?.message || error.message });
@@ -86,7 +87,8 @@ const useWishlistStore = create(
         set({ wishlist: prevWishlist.filter((p) => p._id !== productId), _wishlistIds: newIds });
         try {
           await axiosInstance.delete(`/wishlist/${productId}`);
-          await get().fetchWishlist();
+          // Save to AsyncStorage after successful remove (optimistic update already applied)
+          await AsyncStorage.setItem('wishlist', JSON.stringify(get().wishlist));
           Alert.alert('تم الحذف', 'تمت إزالة المنتج من المفضلة');
         } catch (error) {
           set({ wishlist: prevWishlist, _wishlistIds: prevIds, error: error?.response?.data?.message || error.message });

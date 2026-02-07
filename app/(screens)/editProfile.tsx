@@ -12,12 +12,9 @@ import {
 import { useState } from 'react'
 import { useUser } from '@clerk/clerk-expo'
 import { Image } from 'expo-image'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { toast } from "sonner-native";
 import { useTheme } from '@/providers/ThemeProvider'
-
-
 export default function EditProfile() {
   const { theme } = useTheme();
   const Colors = theme.colors;
@@ -61,134 +58,129 @@ export default function EditProfile() {
   const router = useRouter();
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={[styles.container, { backgroundColor: Colors.surface }]}>
+    <ScrollView style={[styles.container, { backgroundColor: Colors.surface }]} showsVerticalScrollIndicator={false}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: Colors.cardBackground, borderBottomColor: Colors.borderLight }]}>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: Colors.surface }]} onPress={() => router.push('/profile')}>
+          <Text style={[styles.backButtonText, { color: Colors.text.gray }]}>←</Text>
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: Colors.text.gray }]}>تعديل الملف الشخصي</Text>
+        <View style={styles.placeholder} />
+      </View>
 
-        <ScrollView style={[styles.container, { backgroundColor: Colors.surface }]} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <View style={[styles.header, { backgroundColor: Colors.cardBackground, borderBottomColor: Colors.borderLight }]}>
-            <TouchableOpacity style={[styles.backButton, { backgroundColor: Colors.surface }]} onPress={() => router.push('/profile')}>
-              <Text style={[styles.backButtonText, { color: Colors.text.gray }]}>←</Text>
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: Colors.text.gray }]}>تعديل الملف الشخصي</Text>
-            <View style={styles.placeholder} />
-          </View>
+      {/* Profile Image Section */}
+      <View style={[styles.imageSection, { backgroundColor: Colors.surface }]}>
+        <TouchableOpacity onPress={() => { }} style={styles.imageContainer}>
+          <Image
+            source={
+              user?.imageUrl
+                ? { uri: user.imageUrl }
+                : require('../../assets/images/google.svg')
+            }
+            style={[styles.profileImage, { borderColor: Colors.primary }]}
+          />
+        </TouchableOpacity>
+      </View>
 
-          {/* Profile Image Section */}
-          <View style={[styles.imageSection, { backgroundColor: Colors.surface }]}>
-            <TouchableOpacity onPress={() => { }} style={styles.imageContainer}>
-              <Image
-                source={
-                  user?.imageUrl
-                    ? { uri: user.imageUrl }
-                    : require('../../assets/images/google.svg')
-                }
-                style={[styles.profileImage, { borderColor: Colors.primary }]}
-              />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.formContainer}>
 
-          <View style={styles.formContainer}>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: Colors.text.gray }]}>الاسم الكامل</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: Colors.cardBackground,
-                    borderColor: Colors.borderLight,
-                    color: Colors.text.gray
-                  }
-                ]}
-                value={profileData.name}
-                onChangeText={(text) => handleInputChange('name', text)}
-                placeholderTextColor={Colors.text.veryLightGray}
-              />
-            </View>
-
-            {/* Email Field */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: Colors.text.gray }]}>البريد الإلكتروني</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: Colors.cardBackground,
-                    borderColor: Colors.borderLight,
-                    color: Colors.text.gray
-                  }
-                ]}
-                value={user?.primaryEmailAddress?.emailAddress}
-                placeholder="أدخل بريدك الإلكتروني"
-                placeholderTextColor={Colors.text.veryLightGray}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={false}
-              />
-            </View>
-
-            {/* Phone Field */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: Colors.text.gray }]}>رقم الهاتف</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: Colors.cardBackground,
-                    borderColor: Colors.borderLight,
-                    color: Colors.text.gray
-                  }
-                ]}
-                value={profileData.phone}
-                onChangeText={(text) => handleInputChange('phone', text)}
-                placeholder="أدخل رقم هاتفك"
-                placeholderTextColor={Colors.text.veryLightGray}
-                keyboardType="phone-pad"
-                editable={false}
-              />
-            </View>
-            {/* Location Field */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: Colors.text.gray }]}>الموقع</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: Colors.cardBackground,
-                    borderColor: Colors.borderLight,
-                    color: Colors.text.gray
-                  }
-                ]}
-                value={profileData.location}
-                onChangeText={(text) => handleInputChange('location', text)}
-                placeholder="أدخل موقعك"
-                placeholderTextColor={Colors.text.veryLightGray}
-              />
-            </View>
-
-            {/* Save Button */}
-            <TouchableOpacity style={[styles.saveButton, { backgroundColor: Colors.primary }]} onPress={handleSave}
-              disabled={isEditing}
-            >
-              {isEditing ?
-                (<ActivityIndicator size="small" color="#fff" />)
-                :
-                <Text style={styles.saveButtonText}>
-                  حفظ التغييرات
-                </Text>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>الاسم الكامل</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: Colors.cardBackground,
+                borderColor: Colors.borderLight,
+                color: Colors.text.gray
               }
-            </TouchableOpacity>
+            ]}
+            value={profileData.name}
+            onChangeText={(text) => handleInputChange('name', text)}
+            placeholderTextColor={Colors.text.veryLightGray}
+          />
+        </View>
 
-            {/* Delete Account */}
-            <TouchableOpacity style={[styles.deleteButton, { borderColor: Colors.error }]}>
-              <Text style={[styles.deleteButtonText, { color: Colors.error }]}>حذف الحساب</Text>
-            </TouchableOpacity>
+        {/* Email Field */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>البريد الإلكتروني</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: Colors.cardBackground,
+                borderColor: Colors.borderLight,
+                color: Colors.text.gray
+              }
+            ]}
+            value={user?.primaryEmailAddress?.emailAddress}
+            placeholder="أدخل بريدك الإلكتروني"
+            placeholderTextColor={Colors.text.veryLightGray}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={false}
+          />
+        </View>
 
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </SafeAreaProvider>
+        {/* Phone Field */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>رقم الهاتف</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: Colors.cardBackground,
+                borderColor: Colors.borderLight,
+                color: Colors.text.gray
+              }
+            ]}
+            value={profileData.phone}
+            onChangeText={(text) => handleInputChange('phone', text)}
+            placeholder="أدخل رقم هاتفك"
+            placeholderTextColor={Colors.text.veryLightGray}
+            keyboardType="phone-pad"
+            editable={false}
+          />
+        </View>
+        {/* Location Field */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors.text.gray }]}>الموقع</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: Colors.cardBackground,
+                borderColor: Colors.borderLight,
+                color: Colors.text.gray
+              }
+            ]}
+            value={profileData.location}
+            onChangeText={(text) => handleInputChange('location', text)}
+            placeholder="أدخل موقعك"
+            placeholderTextColor={Colors.text.veryLightGray}
+          />
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: Colors.primary }]} onPress={handleSave}
+          disabled={isEditing}
+        >
+          {isEditing ?
+            (<ActivityIndicator size="small" color="#fff" />)
+            :
+            <Text style={styles.saveButtonText}>
+              حفظ التغييرات
+            </Text>
+          }
+        </TouchableOpacity>
+
+        {/* Delete Account */}
+        <TouchableOpacity style={[styles.deleteButton, { borderColor: Colors.error }]}>
+          <Text style={[styles.deleteButtonText, { color: Colors.error }]}>حذف الحساب</Text>
+        </TouchableOpacity>
+
+      </View>
+    </ScrollView>
   )
 }
 

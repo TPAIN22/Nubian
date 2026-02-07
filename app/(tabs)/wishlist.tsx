@@ -18,7 +18,8 @@ export default function WishlistTab() {
 
   useEffect(() => {
     getToken().then(token => fetchWishlist(token));
-  }, [getToken, fetchWishlist]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only fetch once on mount, not on every function reference change
 
   // PERFORMANCE: Memoize normalized products to avoid re-normalizing on every render
   const normalizedWishlist = useMemo(() => {
@@ -46,20 +47,20 @@ export default function WishlistTab() {
   );
 
   return (
-    <View style={[{flex:1, marginBottom:40, backgroundColor: theme.colors.surface}]}>
-    <FlatList
-      data={normalizedWishlist}
-      keyExtractor={keyExtractor}
-      numColumns={2}
-      renderItem={renderItem}
-      contentContainerStyle={[styles.list, { backgroundColor: theme.colors.surface }]}
-      columnWrapperStyle={styles.colomn}
-      style={{ backgroundColor: theme.colors.surface }}
-      // PERFORMANCE: FlatList optimizations
-      removeClippedSubviews={true}
-      maxToRenderPerBatch={10}
-      windowSize={6}
-      initialNumToRender={6}
+    <View style={[{ flex: 1, marginBottom: 40, backgroundColor: theme.colors.surface }]}>
+      <FlatList
+        data={normalizedWishlist}
+        keyExtractor={keyExtractor}
+        numColumns={2}
+        renderItem={renderItem}
+        contentContainerStyle={[styles.list, { backgroundColor: theme.colors.surface }]}
+        columnWrapperStyle={styles.colomn}
+        style={{ backgroundColor: theme.colors.surface }}
+        // PERFORMANCE: FlatList optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={6}
+        initialNumToRender={6}
       />
     </View>
   );
@@ -89,10 +90,10 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
-    marginBottom:30
+    marginBottom: 30
   },
-  colomn:{
-    margin:5,
-    gap:10
+  colomn: {
+    margin: 5,
+    gap: 10
   }
 }); 

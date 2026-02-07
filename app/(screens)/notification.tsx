@@ -3,14 +3,13 @@ import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, Touchabl
 import { Text } from "@/components/ui/text";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/providers/ThemeProvider";
-import { 
-  getNotifications, 
-  markAsRead, 
-  markMultipleAsRead, 
+import {
+  getNotifications,
+  markAsRead,
+  markMultipleAsRead,
   getUnreadCount,
-  type Notification 
+  type Notification
 } from "@/utils/notificationService";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -182,127 +181,119 @@ const NotificationsScreen = () => {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.surface }}>
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.surface }}>
-        <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-          {/* Header with filters */}
-          <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: Colors.text.primary }]}>
-              Notifications
-              {unreadCount > 0 && (
-                <Text style={[styles.badge, { backgroundColor: Colors.primary }]}>
-                  {unreadCount}
-                </Text>
-              )}
+    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
+      {/* Header with filters */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: Colors.text.primary }]}>
+          Notifications
+          {unreadCount > 0 && (
+            <Text style={[styles.badge, { backgroundColor: Colors.primary }]}>
+              {unreadCount}
             </Text>
-            <View style={styles.headerActions}>
-              {unreadCount > 0 && (
-                <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerButton}>
-                  <Text style={[styles.markAllButton, { color: Colors.primary }]}>
-                    Mark all read
-                  </Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                onPress={() => router.push('/(screens)/notificationPreferences')}
-                style={styles.headerButton}
-              >
-                <Ionicons name="settings-outline" size={24} color={Colors.primary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Notifications list - Simplified: no filters, backend handles categorization */}
-          <FlatList
-            data={notifications}
-            keyExtractor={(item) => item._id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => handleNotificationPress(item)}
-                style={[
-                  styles.notificationItem,
-                  {
-                    backgroundColor: Colors.cardBackground,
-                    borderLeftColor: getCategoryColor(item.category),
-                    borderLeftWidth: item.isRead ? 0 : 3,
-                    opacity: item.isRead ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <View style={styles.notificationContent}>
-                  <View style={styles.notificationHeader}>
-                    <Ionicons
-                      name={getCategoryIcon(item.category) as any}
-                      size={20}
-                      color={getCategoryColor(item.category)}
-                      style={styles.categoryIcon}
-                    />
-                    <Text
-                      style={[styles.title, { color: Colors.text.primary }]}
-                      numberOfLines={1}
-                    >
-                      {item.title}
-                    </Text>
-                    {!item.isRead && (
-                      <View style={[styles.unreadDot, { backgroundColor: Colors.primary }]} />
-                    )}
-                  </View>
-                  <Text
-                    style={[styles.body, { color: Colors.text.secondary }]}
-                    numberOfLines={2}
-                  >
-                    {item.body}
-                  </Text>
-                  <View style={styles.notificationFooter}>
-                    <Text
-                      style={[styles.date, { color: Colors.text.tertiary }]}
-                    >
-                      {formatDate(item.sentAt || item.createdAt)}
-                    </Text>
-                    {item.deepLink && (
-                      <Ionicons
-                        name="chevron-forward-outline"
-                        size={16}
-                        color={Colors.text.tertiary}
-                      />
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons
-                  name="notifications-off-outline"
-                  size={64}
-                  color={Colors.text.tertiary}
-                />
-                <Text style={[styles.emptyText, { color: Colors.text.tertiary }]}>
-                  No notifications
-                </Text>
-              </View>
-            }
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            contentContainerStyle={
-              notifications.length === 0 ? styles.emptyList : undefined
-            }
-          />
+          )}
+        </Text>
+        <View style={styles.headerActions}>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerButton}>
+              <Text style={[styles.markAllButton, { color: Colors.primary }]}>
+                Mark all read
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            onPress={() => router.push('/(screens)/notificationPreferences')}
+            style={styles.headerButton}
+          >
+            <Ionicons name="settings-outline" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+      </View>
+
+      {/* Notifications list - Simplified: no filters, backend handles categorization */}
+      <FlatList
+        data={notifications}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => handleNotificationPress(item)}
+            style={[
+              styles.notificationItem,
+              {
+                backgroundColor: Colors.cardBackground,
+                borderLeftColor: getCategoryColor(item.category),
+                borderLeftWidth: item.isRead ? 0 : 3,
+                opacity: item.isRead ? 0.7 : 1,
+              },
+            ]}
+          >
+            <View style={styles.notificationContent}>
+              <View style={styles.notificationHeader}>
+                <Ionicons
+                  name={getCategoryIcon(item.category) as any}
+                  size={20}
+                  color={getCategoryColor(item.category)}
+                  style={styles.categoryIcon}
+                />
+                <Text
+                  style={[styles.title, { color: Colors.text.primary }]}
+                  numberOfLines={1}
+                >
+                  {item.title}
+                </Text>
+                {!item.isRead && (
+                  <View style={[styles.unreadDot, { backgroundColor: Colors.primary }]} />
+                )}
+              </View>
+              <Text
+                style={[styles.body, { color: Colors.text.secondary }]}
+                numberOfLines={2}
+              >
+                {item.body}
+              </Text>
+              <View style={styles.notificationFooter}>
+                <Text
+                  style={[styles.date, { color: Colors.text.tertiary }]}
+                >
+                  {formatDate(item.sentAt || item.createdAt)}
+                </Text>
+                {item.deepLink && (
+                  <Ionicons
+                    name="chevron-forward-outline"
+                    size={16}
+                    color={Colors.text.tertiary}
+                  />
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              name="notifications-off-outline"
+              size={64}
+              color={Colors.text.tertiary}
+            />
+            <Text style={[styles.emptyText, { color: Colors.text.tertiary }]}>
+              No notifications
+            </Text>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={
+          notifications.length === 0 ? styles.emptyList : undefined
+        }
+      />
+    </View>
   );
 };
 

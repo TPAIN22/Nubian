@@ -19,7 +19,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import GoogleSignInSheet from "@/app/(auth)/signin";
 import i18n, { changeLanguage } from "../../utils/i18n";
@@ -45,7 +44,7 @@ export default function Profile() {
     //bottomSheetModalRef.current?.present();
     router.push("/signin");
   }, []);
-  const handleSheetChanges = useCallback(() => {}, []);
+  const handleSheetChanges = useCallback(() => { }, []);
 
   // العناصر التي تحتاج تسجيل دخول
   const userOnlyOptions = [
@@ -131,7 +130,7 @@ export default function Profile() {
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = event.nativeEvent.contentOffset.y;
 
-      if (offsetY > 100 && scrollY.current <= 100) {
+    if (offsetY > 100 && scrollY.current <= 100) {
       navigation.setOptions({
         headerTitle: i18n.t("profile"),
         headerStyle: {
@@ -171,7 +170,7 @@ export default function Profile() {
   }, [loaded, isSignedIn, user]);
 
   const { theme, themeMode, setThemeMode, isDark } = useTheme();
-  
+
   const renderOptionItem = (option: any, index: number) => (
     <TouchableOpacity
       key={index}
@@ -212,7 +211,7 @@ export default function Profile() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <ScrollView
         onScroll={handleScroll}
         scrollEventThrottle={16}
@@ -404,7 +403,7 @@ export default function Profile() {
           <GoogleSignInSheet />
         </BottomSheetView>
       </BottomSheetModal>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 

@@ -62,7 +62,7 @@
         {
           "image": "./assets/images/nubianscreen.png",
           "imageWidth": 384,
-          "resizeMode": "cover",
+          "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "duration": 0
         }

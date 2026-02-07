@@ -3,7 +3,6 @@ import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, Switch } from "
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@clerk/clerk-expo";
 import { Stack } from "expo-router";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/providers/ThemeProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { getPreferences, updatePreferences, type NotificationPreferences } from "@/utils/notificationService";
@@ -40,14 +39,14 @@ const NotificationPreferencesScreen = () => {
       const prefs = await getPreferences(token);
       if (prefs) {
         setPreferences(prefs);
-        
+
         // Map backend preferences to simple toggles
         // Backend automatically categorizes: behavioral = recommendations, marketing = offers
         const behaviorEnabled = prefs.types?.behavioral?.enabled !== false;
         const marketingEnabled = prefs.types?.marketing?.enabled !== false;
         const transactionalEnabled = prefs.types?.transactional?.enabled !== false;
         const merchantAlertsEnabled = prefs.types?.merchant_alerts?.enabled !== false;
-        
+
         setRecommendations(behaviorEnabled);
         setOffers(marketingEnabled);
         setOrderUpdates(transactionalEnabled);
@@ -139,13 +138,13 @@ const NotificationPreferencesScreen = () => {
       const updated = await updatePreferences(updatedPrefs, token);
       if (updated) {
         setPreferences(updated);
-        
+
         // Update local state from backend response
         const behaviorEnabled = updated.types?.behavioral?.enabled !== false;
         const marketingEnabled = updated.types?.marketing?.enabled !== false;
         const transactionalEnabled = updated.types?.transactional?.enabled !== false;
         const merchantAlertsEnabled = updated.types?.merchant_alerts?.enabled !== false;
-        
+
         setRecommendations(behaviorEnabled);
         setOffers(marketingEnabled);
         setOrderUpdates(transactionalEnabled);
@@ -171,7 +170,7 @@ const NotificationPreferencesScreen = () => {
           setPushEnabled(!value);
           break;
       }
-      
+
       Alert.alert(i18n.t("alertErrorTitle"), error.message || i18n.t("failedToUpdatePreferences"));
     } finally {
       setSaving(false);
@@ -180,179 +179,173 @@ const NotificationPreferencesScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.surface }}>
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={[styles.loadingText, { color: Colors.text.secondary, marginTop: 16 }]}>
-              {i18n.t("loadingPreferences")}
-            </Text>
-          </View>
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={[styles.loadingText, { color: Colors.text.secondary, marginTop: 16 }]}>
+          {i18n.t("loadingPreferences")}
+        </Text>
+      </View>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.surface }}>
-        <Stack.Screen
-          options={{
-            headerShown: false,
-          }}
-        />
-        <ScrollView
-          style={[styles.container, { backgroundColor: Colors.surface }]}
-          contentContainerStyle={styles.content}
-        >
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: Colors.text.primary }]}>
-              {i18n.t("notificationTypes")}
-            </Text>
-            <Text style={[styles.sectionDescription, { color: Colors.text.secondary }]}>
-              {i18n.t("chooseNotificationTypes")}
-            </Text>
-          </View>
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
+      <ScrollView
+        style={[styles.container, { backgroundColor: Colors.surface }]}
+        contentContainerStyle={styles.content}
+      >
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: Colors.text.primary }]}>
+            {i18n.t("notificationTypes")}
+          </Text>
+          <Text style={[styles.sectionDescription, { color: Colors.text.secondary }]}>
+            {i18n.t("chooseNotificationTypes")}
+          </Text>
+        </View>
 
-          {/* Push Notifications Toggle */}
-          <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
-            <View style={styles.toggleHeader}>
-              <View style={styles.toggleHeaderLeft}>
-                <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
-                <View style={styles.toggleTextContainer}>
-                  <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    {i18n.t("pushNotifications")}
-                  </Text>
-                  <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    {i18n.t("enableDisablePushNotifications")}
-                  </Text>
-                </View>
+        {/* Push Notifications Toggle */}
+        <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
+          <View style={styles.toggleHeader}>
+            <View style={styles.toggleHeaderLeft}>
+              <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+              <View style={styles.toggleTextContainer}>
+                <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
+                  {i18n.t("pushNotifications")}
+                </Text>
+                <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
+                  {i18n.t("enableDisablePushNotifications")}
+                </Text>
               </View>
-              <Switch
-                value={pushEnabled}
-                onValueChange={(value) => handleToggle('push', value)}
-                disabled={saving}
-                trackColor={{ false: '#E5E5E5', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
             </View>
+            <Switch
+              value={pushEnabled}
+              onValueChange={(value) => handleToggle('push', value)}
+              disabled={saving}
+              trackColor={{ false: '#E5E5E5', true: Colors.primary }}
+              thumbColor="#FFFFFF"
+            />
           </View>
+        </View>
 
-          {/* Recommendations Toggle */}
+        {/* Recommendations Toggle */}
+        <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
+          <View style={styles.toggleHeader}>
+            <View style={styles.toggleHeaderLeft}>
+              <Ionicons name="heart-outline" size={24} color="#FF3B30" />
+              <View style={styles.toggleTextContainer}>
+                <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
+                  {i18n.t("recommendations")}
+                </Text>
+                <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
+                  {i18n.t("personalizedRecommendations")}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={recommendations}
+              onValueChange={(value) => handleToggle('recommendations', value)}
+              disabled={saving || !pushEnabled}
+              trackColor={{ false: '#E5E5E5', true: Colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        {/* Offers Toggle */}
+        <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
+          <View style={styles.toggleHeader}>
+            <View style={styles.toggleHeaderLeft}>
+              <Ionicons name="pricetag-outline" size={24} color="#34C759" />
+              <View style={styles.toggleTextContainer}>
+                <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
+                  {i18n.t("offersPromotions")}
+                </Text>
+                <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
+                  {i18n.t("specialDealsDiscounts")}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={offers}
+              onValueChange={(value) => handleToggle('offers', value)}
+              disabled={saving || !pushEnabled}
+              trackColor={{ false: '#E5E5E5', true: Colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        {/* Order Updates Toggle */}
+        <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
+          <View style={styles.toggleHeader}>
+            <View style={styles.toggleHeaderLeft}>
+              <Ionicons name="receipt-outline" size={24} color="#007AFF" />
+              <View style={styles.toggleTextContainer}>
+                <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
+                  {i18n.t("orderUpdates")}
+                </Text>
+                <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
+                  {i18n.t("orderConfirmationsShipping")}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={orderUpdates}
+              onValueChange={(value) => handleToggle('orderUpdates', value)}
+              disabled={saving || !pushEnabled}
+              trackColor={{ false: '#E5E5E5', true: Colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        {/* Merchant Alerts Toggle (only shown if user is a merchant) */}
+        {preferences && (
           <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
             <View style={styles.toggleHeader}>
               <View style={styles.toggleHeaderLeft}>
-                <Ionicons name="heart-outline" size={24} color="#FF3B30" />
+                <Ionicons name="storefront-outline" size={24} color="#FF9500" />
                 <View style={styles.toggleTextContainer}>
                   <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    {i18n.t("recommendations")}
+                    {i18n.t("merchantAlerts")}
                   </Text>
                   <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    {i18n.t("personalizedRecommendations")}
+                    {i18n.t("storeUpdatesInventoryAlerts")}
                   </Text>
                 </View>
               </View>
               <Switch
-                value={recommendations}
-                onValueChange={(value) => handleToggle('recommendations', value)}
+                value={merchantAlerts}
+                onValueChange={(value) => handleToggle('merchantAlerts', value)}
                 disabled={saving || !pushEnabled}
                 trackColor={{ false: '#E5E5E5', true: Colors.primary }}
                 thumbColor="#FFFFFF"
               />
             </View>
           </View>
+        )}
 
-          {/* Offers Toggle */}
-          <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
-            <View style={styles.toggleHeader}>
-              <View style={styles.toggleHeaderLeft}>
-                <Ionicons name="pricetag-outline" size={24} color="#34C759" />
-                <View style={styles.toggleTextContainer}>
-                  <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    {i18n.t("offersPromotions")}
-                  </Text>
-                  <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    {i18n.t("specialDealsDiscounts")}
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={offers}
-                onValueChange={(value) => handleToggle('offers', value)}
-                disabled={saving || !pushEnabled}
-                trackColor={{ false: '#E5E5E5', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-
-          {/* Order Updates Toggle */}
-          <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
-            <View style={styles.toggleHeader}>
-              <View style={styles.toggleHeaderLeft}>
-                <Ionicons name="receipt-outline" size={24} color="#007AFF" />
-                <View style={styles.toggleTextContainer}>
-                  <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                    {i18n.t("orderUpdates")}
-                  </Text>
-                  <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                    {i18n.t("orderConfirmationsShipping")}
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={orderUpdates}
-                onValueChange={(value) => handleToggle('orderUpdates', value)}
-                disabled={saving || !pushEnabled}
-                trackColor={{ false: '#E5E5E5', true: Colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-
-          {/* Merchant Alerts Toggle (only shown if user is a merchant) */}
-          {preferences && (
-            <View style={[styles.toggleCard, { backgroundColor: Colors.cardBackground }]}>
-              <View style={styles.toggleHeader}>
-                <View style={styles.toggleHeaderLeft}>
-                  <Ionicons name="storefront-outline" size={24} color="#FF9500" />
-                  <View style={styles.toggleTextContainer}>
-                    <Text style={[styles.toggleTitle, { color: Colors.text.primary }]}>
-                      {i18n.t("merchantAlerts")}
-                    </Text>
-                    <Text style={[styles.toggleDescription, { color: Colors.text.secondary }]}>
-                      {i18n.t("storeUpdatesInventoryAlerts")}
-                    </Text>
-                  </View>
-                </View>
-                <Switch
-                  value={merchantAlerts}
-                  onValueChange={(value) => handleToggle('merchantAlerts', value)}
-                  disabled={saving || !pushEnabled}
-                  trackColor={{ false: '#E5E5E5', true: Colors.primary }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-            </View>
-          )}
-
-          {saving && (
-            <View style={styles.savingIndicator}>
-              <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={[styles.savingText, { color: Colors.text.secondary }]}>
-                {i18n.t("saving")}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: Colors.text.secondary }]}>
-              {i18n.t("systemAutoDetermine")}
+        {saving && (
+          <View style={styles.savingIndicator}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={[styles.savingText, { color: Colors.text.secondary }]}>
+              {i18n.t("saving")}
             </Text>
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </SafeAreaProvider>
+        )}
+
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: Colors.text.secondary }]}>
+            {i18n.t("systemAutoDetermine")}
+          </Text>
+        </View>
+      </ScrollView>
+    </>
   );
 };
 

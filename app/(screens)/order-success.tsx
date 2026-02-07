@@ -1,5 +1,5 @@
 
-import { View, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -14,46 +14,44 @@ export default function OrderSuccessScreen() {
   const colors = theme.colors;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.surface }]}>
-      <View style={styles.content}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.success + "20" }]}>
-          <Ionicons name="checkmark-circle" size={100} color={colors.success} />
-        </View>
-
-        <Heading size="xl" style={[styles.title, { color: colors.text.gray }]}>
-          {i18n.t("orderPlaced") || "تم تقديم الطلب بنجاح!"}
-        </Heading>
-
-        <Text style={[styles.subtitle, { color: colors.text.veryLightGray }]}>
-          {i18n.t("orderPlacedMessage") || "شكراً لك! تم استلام طلبك وهو قيد المعالجة الآن."}
-        </Text>
-
-        {orderNumber && (
-          <View style={[styles.orderInfo, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.orderLabel, { color: colors.text.veryLightGray }]}>رقم الطلب:</Text>
-            <Text style={[styles.orderValue, { color: colors.primary }]}>#{orderNumber}</Text>
-          </View>
-        )}
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace("/(tabs)")}
-          >
-            <Text style={styles.primaryButtonText}>{i18n.t("continueShopping") || "العودة للتسوق"}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.secondaryButton, { borderColor: colors.primary }]}
-            onPress={() => router.replace("/order")}
-          >
-            <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
-              {i18n.t("myOrders") || "طلباتي"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+    <View style={styles.content}>
+      <View style={[styles.iconContainer, { backgroundColor: colors.success + "20" }]}>
+        <Ionicons name="checkmark-circle" size={100} color={colors.success} />
       </View>
-    </SafeAreaView>
+
+      <Heading size="xl" style={[styles.title, { color: colors.text.gray }]}>
+        {i18n.t("orderPlaced") || "تم تقديم الطلب بنجاح!"}
+      </Heading>
+
+      <Text style={[styles.subtitle, { color: colors.text.veryLightGray }]}>
+        {i18n.t("orderPlacedMessage") || "شكراً لك! تم استلام طلبك وهو قيد المعالجة الآن."}
+      </Text>
+
+      {orderNumber && (
+        <View style={[styles.orderInfo, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.orderLabel, { color: colors.text.veryLightGray }]}>رقم الطلب:</Text>
+          <Text style={[styles.orderValue, { color: colors.primary }]}>#{orderNumber}</Text>
+        </View>
+      )}
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+          onPress={() => router.replace("/(tabs)")}
+        >
+          <Text style={styles.primaryButtonText}>{i18n.t("continueShopping") || "العودة للتسوق"}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.secondaryButton, { borderColor: colors.primary }]}
+          onPress={() => router.replace("/order")}
+        >
+          <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+            {i18n.t("myOrders") || "طلباتي"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 

@@ -27,12 +27,16 @@ export type NormalizedProduct = {
     finalPrice: number | null;
     nubianMarkup: number | null;
     dynamicMarkup: number | null;
+    discountPrice: number | null;
   };
 
   // backend-provided convenience fields (do not compute)
   productLevelPricing: {
     merchantPrice: number | null;
     finalPrice: number | null;
+    nubianMarkup: number | null;
+    dynamicMarkup: number | null;
+    discountPrice: number | null;
   };
 };
 

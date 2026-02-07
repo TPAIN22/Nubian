@@ -22,9 +22,10 @@ import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
 import { LanguageProvider } from "@/utils/LanguageContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { ThemeProvider, useTheme } from "@/providers/ThemeProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
 import { Toaster } from "sonner-native";
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 // Conditionally import expo-navigation-bar (not available in Expo Go)
 let NavigationBar: any = null;
@@ -38,11 +39,8 @@ try {
 // Auto-hide Android navigation bar on app start (only if native module is available)
 if (Platform.OS === "android" && NavigationBar) {
   try {
-    // Set navigation bar to be transparent and hide it
-    NavigationBar.setPositionAsync("absolute");
-    NavigationBar.setBackgroundColorAsync("#00000000"); // Transparent
+    // Hide navigation bar (other methods not supported in edge-to-edge mode)
     NavigationBar.setVisibilityAsync("hidden");
-    NavigationBar.setBehaviorAsync("overlay-swipe"); // Show on swipe, auto-hide after
   } catch (e) {
     // Ignore errors if navigation bar API is not available
   }
@@ -71,28 +69,58 @@ function AppLoaderWithClerk() {
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState<boolean>(true);
 
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
-  const { isDark } = useTheme();
-  
+
   // Initialize token manager for API requests
   useTokenManager();
 
   // Keep Android navigation bar hidden and match theme
+  // Auto-hide after 2 seconds when shown via swipe
   useEffect(() => {
     if (Platform.OS === "android" && NavigationBar) {
+      let hideTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
       const setupNavigationBar = async () => {
         try {
-          await NavigationBar.setPositionAsync("absolute");
-          await NavigationBar.setBackgroundColorAsync("#00000000");
+          // Only use setVisibilityAsync - other methods not supported in edge-to-edge mode
           await NavigationBar.setVisibilityAsync("hidden");
-          await NavigationBar.setBehaviorAsync("overlay-swipe");
         } catch (e) {
           // Ignore errors if navigation bar API is not available
         }
       };
       setupNavigationBar();
+
+      // Listen for visibility changes and auto-hide after 2 seconds
+      const subscription = NavigationBar.addVisibilityListener?.(
+        ({ visibility }: { visibility: string }) => {
+          if (visibility === "visible") {
+            // Clear any existing timeout
+            if (hideTimeoutId) {
+              clearTimeout(hideTimeoutId);
+            }
+            // Hide after 2 seconds
+            hideTimeoutId = setTimeout(async () => {
+              try {
+                await NavigationBar.setVisibilityAsync("hidden");
+              } catch (e) {
+                // Ignore errors
+              }
+            }, 2000);
+          }
+        }
+      );
+
+      return () => {
+        // Cleanup timeout and subscription
+        if (hideTimeoutId) {
+          clearTimeout(hideTimeoutId);
+        }
+        subscription?.remove?.();
+      };
     }
+    return undefined;
   }, []);
 
+  // Hide status bar on Android (like the navigation bar)
   // Load Cairo fonts
   const { fontsLoaded, fontError } = useFonts();
 
@@ -218,61 +246,63 @@ function AppLoaderWithClerk() {
     setIsUpdateChecking(true);
   }, [retryNetworkCheck]);
 
-  useEffect(() => {}, []);
+  useEffect(() => { }, []);
 
   if (isNetworkChecking || !fontsLoaded) {
     return (
-        <GifLoadingScreen
-          onAnimationFinish={() => {}}
-          onMount={onGifComponentMounted}
-        />
+      <GifLoadingScreen
+        onAnimationFinish={() => { }}
+        onMount={onGifComponentMounted}
+      />
     );
   }
 
   if (isConnected === false) {
     return (
-        <NoNetworkScreen onRetry={handleRetryNetwork} />
+      <NoNetworkScreen onRetry={handleRetryNetwork} />
     );
   }
 
   if (!gifAnimationFinished || !isLoaded || isUpdateChecking || isCheckingOnboarding) {
     return (
-        <GifLoadingScreen
-          onAnimationFinish={onGifFinish}
-          onMount={onGifComponentMounted}
-        />
+      <GifLoadingScreen
+        onAnimationFinish={onGifFinish}
+        onMount={onGifComponentMounted}
+      />
     );
   }
 
   return (
-      <NotificationProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <BottomSheetModalProvider>
-        <>
-          <StatusBar style={isDark ? "light" : "dark"} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              gestureEnabled: true,
-              gestureDirection: "horizontal",
-              animation:
-                Platform.OS === "android"
-                  ? (I18nManager.isRTL ? "slide_from_left" : "slide_from_right")
-                  : "default",
-                  animationDuration: 1000,
-            }}
-            initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(onboarding)" />
-            <Stack.Screen name="(screens)" />
-          </Stack>
-          <Toaster position="top-center" duration={3000} richColors/>
-        </>
+    <NotificationProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <BottomSheetModalProvider>
+          <>
+            <StatusBar
+              style="auto"
+              translucent={true}
+
+            />
+            <SafeAreaInsetsContext value={{ top: 25, bottom: 0, left: 10, right: 10 }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  gestureEnabled: true,
+                  gestureDirection: "horizontal",
+                  animation: Platform.OS === "android" ? "none" : "default",
+                }}
+                initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
+              >
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(onboarding)" />
+                <Stack.Screen name="(screens)" />
+              </Stack>
+            </SafeAreaInsetsContext>
+            <Toaster position="top-center" duration={3000} richColors />
+          </>
         </BottomSheetModalProvider>
-        </GestureHandlerRootView>
-      </NotificationProvider>
+      </GestureHandlerRootView>
+    </NotificationProvider>
   );
 }
 

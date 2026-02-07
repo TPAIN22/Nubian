@@ -7,9 +7,7 @@ import {
   Platform,
   Pressable,
   I18nManager,
-  } from 'react-native';
-import { StatusBar } from "expo-status-bar";
-import type { StatusBarStyle } from "expo-status-bar";
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,14 +67,13 @@ function useHeaderState() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const currentScrollY = useScrollStore((state) => state.scrollY);
-  
+
   const isScrolled = currentScrollY > SCROLL_THRESHOLD;
   const isRTL = I18nManager.isRTL;
   const isDark = theme.mode === 'dark';
-  
+
   const topPadding = insets.top;
 
-  const statusBarStyle: StatusBarStyle = isScrolled ? (isDark ? "light" : "dark") : "light";
 
   const iconColor = isScrolled ? theme.colors.text.primary : '#FFFFFF';
 
@@ -95,7 +92,6 @@ function useHeaderState() {
     isRTL,
     isDark,
     topPadding,
-    statusBarStyle,
     iconColor,
     headerGradient,
     glassBackground,
@@ -106,10 +102,10 @@ function useHeaderState() {
 function useHeaderActions(onNotificationPress?: () => void) {
   const router = useRouter();
 
-  const handleLogoPress = () => {}; // No routing on logo press
+  const handleLogoPress = () => { }; // No routing on logo press
   const handleSearchPress = () => router.push('/(tabs)/explor');
   const handleCartPress = () => router.push('/(tabs)/cart');
-  
+
   const handleNotificationPress = () => {
     if (onNotificationPress) {
       onNotificationPress();
@@ -298,8 +294,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <View style={[styles.container, { paddingTop: state.topPadding }]}>
-      <StatusBar style={state.statusBarStyle} />
-
       {/* Gradient background */}
       <LinearGradient
         colors={state.headerGradient as [string, string]}
@@ -311,7 +305,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       {state.isScrolled && Platform.OS === 'ios' && (
         <BlurView
           intensity={80}
-          tint={state.isDark ? 'dark' : 'light'}
+          tint={state.isDark ? 'light' : 'dark'}
           style={styles.blurView}
         />
       )}

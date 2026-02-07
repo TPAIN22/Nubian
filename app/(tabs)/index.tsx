@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Text } from "@/components/ui/text";
-import { useCallback, useEffect, useRef, useState, memo } from "react";
+import { useCallback, useEffect, useRef, useState, memo, useMemo } from "react";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Carousel from "react-native-reanimated-carousel";
@@ -413,7 +413,35 @@ const ProductSection = memo(({
   // Calculate responsive card width for horizontal scroll
   // Use 45% of screen width for horizontal lists
   const cardWidth = screenWidth * 0.45;
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const itemWidth = cardWidth + 12; // card width + marginRight
+
+  // PERFORMANCE: Pre-normalize products to avoid creating new objects on each render
+  // This prevents defeating React.memo on ItemCard
+  const normalizedProducts = useMemo(
+    () => products.map(normalizeProduct),
+    [products]
+  );
+
+  // PERFORMANCE: Stable renderItem callback
+  const renderItem = useCallback(({ item }: { item: ReturnType<typeof normalizeProduct> }) => (
+    <View style={{ width: cardWidth, marginRight: 12 }}>
+      <ItemCard
+        item={item}
+        cardWidth={cardWidth}
+      />
+    </View>
+  ), [cardWidth]);
+
+  // PERFORMANCE: Stable keyExtractor
+  const keyExtractor = useCallback((item: ReturnType<typeof normalizeProduct>, index: number) =>
+    `${title}-${item.id}-${index}`, [title]);
+
+  // PERFORMANCE: getItemLayout for fast scrolling
+  const getItemLayout = useCallback((_: any, index: number) => ({
+    length: itemWidth,
+    offset: itemWidth * index,
+    index,
+  }), [itemWidth]);
 
   if (isLoading) {
     return (
@@ -459,37 +487,18 @@ const ProductSection = memo(({
       {showCountdown && <FlashDealsCountdown colors={colors} />}
       <FlatList
         horizontal
-        data={products}
+        data={normalizedProducts}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
-        renderItem={({ item }) => (
-          <View style={{ width: cardWidth, marginRight: 12 }}>
-            <ItemCard
-              item={normalizeProduct(item)}
-              handlePresentModalPress={() =>
-                navigateToProduct(item._id, item)
-              }
-              cardWidth={cardWidth}
-            />
-          </View>
-        )}
-        keyExtractor={(item, index) => `${title}-${item._id}-${index}`}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        getItemLayout={getItemLayout}
+        // PERFORMANCE: FlatList optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={4}
+        windowSize={3}
+        initialNumToRender={3}
       />
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        snapPoints={["70%"]}
-        backdropComponent={(p) => (
-          <BottomSheetBackdrop
-            {...p}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-          />
-        )}
-      >
-        <BottomSheetView style={{ flex: 1 }}>
-          <BottomSheet />
-        </BottomSheetView>
-      </BottomSheetModal>
     </View>
   );
 });
@@ -584,6 +593,7 @@ function IndexContent() {
     >
       <BottomSheetModalProvider>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
           refreshControl={
@@ -823,13 +833,13 @@ const styles = StyleSheet.create({
 
   // Banner Carousel
   bannersSection: { height: 200, position: "relative" },
-  bannerImage: { width: SCREEN_WIDTH, height: 300 },
+  bannerImage: { width: SCREEN_WIDTH, height: 220 },
   bannerOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    minHeight: 300,
+    minHeight: 200,
   },
   bannerContent: {
     position: "absolute",
@@ -848,13 +858,13 @@ const styles = StyleSheet.create({
   },
   pagination: {
     position: "absolute",
-    bottom: 20,
+    bottom: 10,
     width: "100%",
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
   },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
 
   // Sections
   section: { marginTop: 25 },
