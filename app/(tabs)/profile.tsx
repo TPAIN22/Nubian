@@ -591,6 +591,10 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     lineHeight: 24,
   },
+  optionSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
 
   // Language Settings Styles
   languageContainer: {
