@@ -22,6 +22,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
 import { Toaster } from "sonner-native";
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import CurrencySelector from "@/components/CurrencySelector";
 
 // Conditionally import expo-navigation-bar (not available in Expo Go)
 let NavigationBar: any = null;
@@ -248,6 +249,7 @@ function AppLoaderWithClerk() {
                 <Stack.Screen name="(screens)" />
               </Stack>
             </SafeAreaInsetsContext>
+            <CurrencySelector mandatory />
             <Toaster position="top-center" duration={3000} richColors />
           </>
         </BottomSheetModalProvider>

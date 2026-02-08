@@ -24,6 +24,8 @@ import GoogleSignInSheet from "@/app/(auth)/signin";
 import i18n, { changeLanguage } from "../../utils/i18n";
 import Colors from "@/locales/brandColors";
 import { useTheme } from "@/providers/ThemeProvider";
+import CurrencySelector from "@/components/CurrencySelector";
+import { useCurrencyStore } from "@/store/useCurrencyStore";
 
 const { width } = Dimensions.get("window");
 
@@ -38,6 +40,12 @@ export default function Profile() {
   const navigation = useNavigation();
   const scrollY = useRef(0);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const [isCurrencyModalVisible, setIsCurrencyModalVisible] = useState(false);
+  const { countryCode, currencyCode, countries, currencies } = useCurrencyStore();
+
+  const currentCountry = countries.find(c => c.code === countryCode);
+  const currentCurrency = currencies.find(c => c.code === currencyCode);
+
 
   // callbacks
   const handlePresentModalPress = useCallback(() => {
@@ -117,6 +125,15 @@ export default function Profile() {
       icon: "return-up-back" as const,
       color: Colors.lime,
     },
+    {
+      title: i18n.t("currency") || "Currency",
+      subtitle: currentCurrency ? `${currentCurrency.name} (${currentCurrency.symbol})` : currencyCode,
+      action: () => {
+        setIsCurrencyModalVisible(true);
+      },
+      icon: "cash-outline" as const,
+      color: Colors.primary,
+    },
   ];
 
   useEffect(() => {
@@ -187,7 +204,14 @@ export default function Profile() {
         >
           <Ionicons name={option.icon} size={20} color={option.color} />
         </View>
-        <Text style={[styles.optionText, { color: theme.colors.text.gray }]}>{option.title}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.optionText, { color: theme.colors.text.gray }]}>{option.title}</Text>
+          {option.subtitle && (
+            <Text style={[styles.optionSubtitle, { color: theme.colors.text.veryLightGray, fontSize: 12 }]}>
+              {option.subtitle}
+            </Text>
+          )}
+        </View>
       </View>
       <Ionicons
         name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
@@ -403,6 +427,11 @@ export default function Profile() {
           <GoogleSignInSheet />
         </BottomSheetView>
       </BottomSheetModal>
+
+      <CurrencySelector
+        visible={isCurrencyModalVisible}
+        onComplete={() => setIsCurrencyModalVisible(false)}
+      />
     </View>
   );
 }
