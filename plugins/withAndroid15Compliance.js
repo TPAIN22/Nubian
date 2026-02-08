@@ -77,12 +77,6 @@ const withAndroid15Compliance = (config) => {
         const hasWindowLayoutInDisplayCutout = items.some(
           (item) => item.$ && item.$.name === 'android:windowLayoutInDisplayCutoutMode'
         );
-        const hasWindowTranslucentStatus = items.some(
-          (item) => item.$ && item.$.name === 'android:windowTranslucentStatus'
-        );
-        const hasWindowDrawsSystemBarBackgrounds = items.some(
-          (item) => item.$ && item.$.name === 'android:windowDrawsSystemBarBackgrounds'
-        );
         const hasWindowTranslucentNavigation = items.some(
           (item) => item.$ && item.$.name === 'android:windowTranslucentNavigation'
         );
@@ -97,27 +91,7 @@ const withAndroid15Compliance = (config) => {
           });
         }
 
-        // Add windowTranslucentStatus
-        if (!hasWindowTranslucentStatus) {
-          items.push({
-            $: {
-              name: 'android:windowTranslucentStatus',
-            },
-            _: 'true',
-          });
-        }
-
-        // Add windowDrawsSystemBarBackgrounds
-        if (!hasWindowDrawsSystemBarBackgrounds) {
-          items.push({
-            $: {
-              name: 'android:windowDrawsSystemBarBackgrounds',
-            },
-            _: 'true',
-          });
-        }
-
-        // Add windowTranslucentNavigation for edge-to-edge
+        // Add windowTranslucentNavigation for edge-to-edge navigation bar
         if (!hasWindowTranslucentNavigation) {
           items.push({
             $: {

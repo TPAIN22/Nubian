@@ -10,19 +10,11 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Text } from "@/components/ui/text";
-import { useCallback, useEffect, useRef, useState, memo, useMemo } from "react";
+import { useCallback, useEffect, useState, memo, useMemo } from "react";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Carousel from "react-native-reanimated-carousel";
 import ItemCard from "@/components/Card";
-import {
-  BottomSheetModal,
-  BottomSheetModalProvider,
-  BottomSheetView,
-  BottomSheetBackdrop,
-} from "@gorhom/bottom-sheet";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import BottomSheet from "@/components/BottomSheet";
 import { useScrollStore } from "@/store/useScrollStore";
 import { useTheme } from "@/providers/ThemeProvider";
 import BannerSkeleton from "@/components/BannerSkeleton";
@@ -39,7 +31,6 @@ import {
   navigateToFlashDeals,
   navigateToNewArrivals,
   navigateToForYou,
-  navigateToProduct,
 } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -567,7 +558,6 @@ StoreHighlights.displayName = "StoreHighlights";
 function IndexContent() {
   const {
     banners,
-    categories,
     trending,
     flashDeals,
     newArrivals,
@@ -579,7 +569,6 @@ function IndexContent() {
     refresh,
   } = useHomeQuery();
 
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const { setScrollY } = useScrollStore();
   const { theme } = useTheme();
   const Colors = theme.colors;
@@ -588,109 +577,91 @@ function IndexContent() {
   }, [refresh]);
 
   return (
-    <GestureHandlerRootView
+    <View
       style={[styles.container, { backgroundColor: Colors.surface }]}
     >
-      <BottomSheetModalProvider>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={Colors.primary}
-            />
-          }
-        >
-          <LinearGradient
-            colors={[Colors.primary, "transparent"]}
-            style={styles.topGradient}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.primary}
           />
+        }
+      >
+        <LinearGradient
+          colors={[Colors.primary, "transparent"]}
+          style={styles.topGradient}
+        />
 
 
 
-          {/* Hero Banner */}
-          {isLoading ? (
-            <BannerSkeleton />
-          ) : (
-            <BannerCarousel banners={banners} colors={Colors} />
-          )}
+        {/* Hero Banner */}
+        {isLoading ? (
+          <BannerSkeleton />
+        ) : (
+          <BannerCarousel banners={banners} colors={Colors} />
+        )}
 
-          {/* Quick Actions */}
-          <QuickActionsBar colors={Colors} />
+        {/* Quick Actions */}
+        <QuickActionsBar colors={Colors} />
+
+        {/* New Arrivals */}
+        <ProductSection
+          title={i18n.t("home_newArrivals")}
+          products={newArrivals}
+          colors={Colors}
+          isLoading={isLoading}
+          onViewAll={navigateToNewArrivals}
+        />
+
+        {/* Trending Now */}
+        <ProductSection
+          title={i18n.t("home_trendingNow")}
+          products={trending}
+          colors={Colors}
+          isLoading={isLoading}
+          onViewAll={navigateToTrending}
+        />
+
+        {/* Flash Deals with Countdown */}
+        <ProductSection
+          title={i18n.t("home_flashDeals")}
+          products={flashDeals}
+          colors={Colors}
+          isLoading={isLoading}
+          onViewAll={navigateToFlashDeals}
+          showCountdown={flashDeals.length > 0}
+        />
+
+        {/* For You */}
+        <ProductSection
+          title={i18n.t("home_forYou")}
+          products={forYou}
+          colors={Colors}
+          isLoading={isLoading}
+          onViewAll={navigateToForYou}
+        />
 
 
+        {/* Store Highlights */}
+        <StoreHighlights stores={stores} colors={Colors} />
 
-          {/* Trending Now */}
-          <ProductSection
-            title={i18n.t("home_trendingNow")}
-            products={trending}
-            colors={Colors}
-            isLoading={isLoading}
-            onViewAll={navigateToTrending}
-          />
+        {/* Benefits Banner */}
+        <BenefitsBanner colors={Colors} />
 
-          {/* Flash Deals with Countdown */}
-          <ProductSection
-            title={i18n.t("home_flashDeals")}
-            products={flashDeals}
-            colors={Colors}
-            isLoading={isLoading}
-            onViewAll={navigateToFlashDeals}
-            showCountdown={flashDeals.length > 0}
-          />
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: Colors.danger }]}>{error}</Text>
+          </View>
+        )}
 
-          {/* For You */}
-          <ProductSection
-            title={i18n.t("home_forYou")}
-            products={forYou}
-            colors={Colors}
-            isLoading={isLoading}
-            onViewAll={navigateToForYou}
-          />
-
-          {/* New Arrivals */}
-          <ProductSection
-            title={i18n.t("home_newArrivals")}
-            products={newArrivals}
-            colors={Colors}
-            isLoading={isLoading}
-            onViewAll={navigateToNewArrivals}
-          />
-
-          {/* Store Highlights */}
-          <StoreHighlights stores={stores} colors={Colors} />
-
-          {/* Benefits Banner */}
-          <BenefitsBanner colors={Colors} />
-
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: Colors.danger }]}>{error}</Text>
-            </View>
-          )}
-
-          <View style={{ height: 100 }} />
-        </ScrollView>
-        <BottomSheetModal
-          ref={bottomSheetModalRef}
-          snapPoints={["70%"]}
-          backdropComponent={(p) => (
-            <BottomSheetBackdrop
-              {...p}
-              disappearsOnIndex={-1}
-              appearsOnIndex={0}
-            />
-          )}
-        >
-          <BottomSheetView style={{ flex: 1 }}>
-            <BottomSheet />
-          </BottomSheetView>
-        </BottomSheetModal>
-      </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -731,27 +702,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   quickActionItem: {
-    width: 80,
+    width: 60,
     alignItems: "center",
-    padding: 12,
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: 6,
+    borderRadius: 6,
   },
   quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
   },
   quickActionLabel: {
-    fontSize: 11,
+    fontSize: 10,
     textAlign: "center",
-    fontWeight: "500",
+    fontWeight: "400",
   },
 
   // Flash Deals Countdown
@@ -799,28 +766,28 @@ const styles = StyleSheet.create({
   // Benefits Banner
   benefitsBanner: {
     flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 24,
+    marginHorizontal: 6,
+    marginTop: 26,
     marginBottom: 16,
-    padding: 16,
+    padding: 6,
     borderRadius: 16,
     justifyContent: "space-between",
   },
   benefitItem: {
     flex: 1,
     alignItems: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   benefitIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
   },
   benefitTitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 4,
@@ -848,12 +815,12 @@ const styles = StyleSheet.create({
     right: 20,
   },
   bannerTitle: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: "bold",
     marginBottom: 8,
   },
   bannerDescription: {
-    fontSize: 14,
+    fontSize: 12,
     opacity: 0.9,
   },
   pagination: {
@@ -877,7 +844,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   accentBar: { width: 4, height: 22, borderRadius: 2 },
-  sectionTitle: { padding: 10, fontSize: 18, fontWeight: "bold", flex: 1, },
+  sectionTitle: { padding: 10, fontSize: 14, fontWeight: "bold", flex: 1, },
   viewAllButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -885,7 +852,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     padding: 5,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
   },
 
@@ -903,9 +870,9 @@ const styles = StyleSheet.create({
     maxWidth: "25%",
   },
   categoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -920,7 +887,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   categoryName: {
-    fontSize: 11,
+    fontSize: 12,
     textAlign: "center",
     fontWeight: "500",
   },
@@ -938,9 +905,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   storeIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,

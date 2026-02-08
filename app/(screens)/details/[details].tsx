@@ -6,6 +6,8 @@ import {
   useRef,
   useLayoutEffect,
 } from "react";
+import { GestureHandlerRootView, GestureDetector, Gesture } from "react-native-gesture-handler";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import {
   View,
   ScrollView,
@@ -50,6 +52,78 @@ import { ProductAttributes } from "@/components/ProductDetails/ProductAttributes
 import Review from "@/components/Review";
 import { ProductRecommendations } from "@/components/ProductDetails/ProductRecommendations";
 import { ProductActions } from "@/components/ProductDetails/ProductActions";
+
+// Zoomable Image component for fullscreen modal
+const ZoomableImage = ({ uri }: { uri: string }) => {
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.value = savedScale.value * e.scale;
+    })
+    .onEnd(() => {
+      if (scale.value < 1) {
+        scale.value = withTiming(1);
+        savedScale.value = 1;
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        savedScale.value = scale.value;
+      }
+    });
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      if (scale.value > 1) {
+        translateX.value = savedTranslateX.value + e.translationX;
+        translateY.value = savedTranslateY.value + e.translationY;
+      }
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
+
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      scale.value = withTiming(1);
+      savedScale.value = 1;
+      translateX.value = withTiming(0);
+      translateY.value = withTiming(0);
+      savedTranslateX.value = 0;
+      savedTranslateY.value = 0;
+    });
+
+  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture, doubleTapGesture);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  return (
+    <GestureDetector gesture={composedGesture}>
+      <Animated.View style={[styles.modalImageContainer, animatedStyle]}>
+        <Image
+          source={{ uri }}
+          style={styles.modalImage}
+          contentFit="contain"
+        />
+      </Animated.View>
+    </GestureDetector>
+  );
+};
 
 export default function Details() {
   const { theme } = useTheme();
@@ -501,6 +575,14 @@ export default function Details() {
               </Text>
             )}
           </View>
+          {/* ✅ Attributes */}
+          <ProductAttributes
+            product={viewProduct}
+            selectedAttributes={selectedAttributes}
+            onAttributeSelect={handleAttributeSelect}
+            themeColors={colors}
+            pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
+          />
 
           {!!viewProduct.description && (
             <View
@@ -533,16 +615,6 @@ export default function Details() {
               </Text>
             </View>
           )}
-
-          {/* ✅ Attributes */}
-          <ProductAttributes
-            product={viewProduct}
-            selectedAttributes={selectedAttributes}
-            onAttributeSelect={handleAttributeSelect}
-            themeColors={colors}
-            pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
-          />
-
           <View
             style={[
               styles.stockContainer,
@@ -586,29 +658,24 @@ export default function Details() {
         themeColors={colors}
       />
 
+      {/* ✅ Fullscreen Zoomable Image Modal */}
       <Modal
         visible={modalVisible}
         transparent
-        onRequestClose={closeImageModal}
         animationType="fade"
+        onRequestClose={closeImageModal}
       >
-        <View style={styles.modalContainer}>
+        <GestureHandlerRootView style={styles.modalContainer}>
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={closeImageModal}
           >
             <Text style={styles.modalCloseText}>✕</Text>
           </TouchableOpacity>
-
           {selectedImage && (
-            <Image
-              source={{ uri: selectedImage }}
-              style={styles.modalImage}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-            />
+            <ZoomableImage uri={selectedImage} />
           )}
-        </View>
+        </GestureHandlerRootView>
       </Modal>
     </View>
   );
@@ -710,5 +777,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalCloseText: { color: "#fff", fontSize: 24, fontWeight: "300" },
-  modalImage: { width: "90%", height: "70%", borderRadius: 6 },
+  modalImageContainer: { width: "90%", height: "70%" },
+  modalImage: { width: "100%", height: "100%", borderRadius: 6 },
 });

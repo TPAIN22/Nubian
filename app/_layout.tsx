@@ -279,16 +279,14 @@ function AppLoaderWithClerk() {
           <>
             <StatusBar
               style="auto"
-              translucent={true}
 
             />
-            <SafeAreaInsetsContext value={{ top: 25, bottom: 0, left: 10, right: 10 }}>
+            <SafeAreaInsetsContext value={{ top: 35, bottom: 0, left: 10, right: 10 }}>
               <Stack
                 screenOptions={{
                   headerShown: false,
                   gestureEnabled: true,
                   gestureDirection: "horizontal",
-                  animation: Platform.OS === "android" ? "none" : "default",
                 }}
                 initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
               >

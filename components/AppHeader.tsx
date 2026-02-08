@@ -154,7 +154,9 @@ const SearchBar = memo<{
   isRTL: boolean;
   primaryColor: string;
   textColor: string;
-}>(({ onPress, isRTL, primaryColor, textColor }) => {
+  isDark: boolean;
+  isScrolled: boolean;
+}>(({ onPress, isRTL, primaryColor, textColor, isDark, isScrolled }) => {
   const placeholder = i18n.t('searchPlaceholder') || 'ابحث عن منتج، متجر، أو فئة';
 
   return (
@@ -171,7 +173,15 @@ const SearchBar = memo<{
     >
       <View style={[
         styles.searchInnerContainer,
-        { flexDirection: isRTL ? 'row-reverse' : 'row' }
+        {
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          backgroundColor: isScrolled
+            ? (isDark ? '#2A2A2A' : '#FFFFFF')
+            : 'rgba(255, 255, 255, 0.15)',
+          borderColor: isScrolled
+            ? (isDark ? '#444444' : '#2b2929ff')
+            : 'rgba(255, 255, 255, 0.3)',
+        }
       ]}>
         <View style={[styles.searchIconContainer, { backgroundColor: primaryColor + '15' }]}>
           <Ionicons name="search" size={SEARCH_ICON_SIZE} color={'#000000'} />
@@ -319,6 +329,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           isRTL={state.isRTL}
           primaryColor={state.colors.primary}
           textColor={state.colors.text.secondary}
+          isDark={state.isDark}
+          isScrolled={state.isScrolled}
         />
 
         <HeaderActions
@@ -383,8 +395,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingVertical: 8,
-    minHeight: 56,
+    paddingVertical: 4,
+    minHeight: 36,
     position: 'relative',
     zIndex: 1,
     maxWidth: '100%',
@@ -440,11 +452,9 @@ const styles = StyleSheet.create({
   },
   searchBarCenter: {
     flex: 1,
-    height: 46,
+    height: 26,
     marginHorizontal: 8,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderRadius: 34,
     justifyContent: 'center',
     ...SHADOWS.searchBar,
   },
@@ -452,17 +462,17 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFFBB',
-    borderRadius: 14,
+    borderRadius: 34,
     paddingHorizontal: 12,
     paddingVertical: 2,
     gap: 10,
     minWidth: '65%',
+    borderWidth: 1,
   },
   searchIconContainer: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },

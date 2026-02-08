@@ -1,6 +1,6 @@
 import { View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import type { ViewabilityConfig, ViewToken } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { PRODUCT_DETAILS_CONFIG, COLORS } from '@/constants/productDetails';
@@ -18,11 +18,20 @@ export const ProductImageCarousel = ({ images, colors, onImagePress }: ProductIm
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [firstImageLoaded, setFirstImageLoaded] = useState(false);
   const flatListRef = useRef<FlatList<string>>(null);
+  const prevFirstImageRef = useRef<string | null>(null);
 
   // Reset index and scroll to top when images change (e.g. variant selection)
-  useMemo(() => {
+  // Only reset firstImageLoaded if the actual first image URL changed
+  useEffect(() => {
+    const firstImage = images?.[0] ?? null;
+
+    // Only reset loading state if the first image URL actually changed
+    if (firstImage !== prevFirstImageRef.current) {
+      setFirstImageLoaded(false);
+      prevFirstImageRef.current = firstImage;
+    }
+
     setCurrentImageIndex(0);
-    setFirstImageLoaded(false);
     if (flatListRef.current) {
       flatListRef.current.scrollToOffset({ offset: 0, animated: false });
     }
@@ -48,7 +57,7 @@ export const ProductImageCarousel = ({ images, colors, onImagePress }: ProductIm
 
   const renderImageItem = useCallback(({ item: uri, index }: { item: string; index: number }) => {
     const showOverlay = index === 0 && !firstImageLoaded;
-    
+
     if (!uri || typeof uri !== 'string') {
       return (
         <View style={styles.imageWrapper}>
@@ -56,7 +65,7 @@ export const ProductImageCarousel = ({ images, colors, onImagePress }: ProductIm
         </View>
       );
     }
-    
+
     return (
       <TouchableOpacity
         style={styles.imageWrapper}
@@ -92,7 +101,7 @@ export const ProductImageCarousel = ({ images, colors, onImagePress }: ProductIm
 
   const renderPagination = useCallback(() => {
     if (!validImages || validImages.length <= 1) return null;
-    
+
     return (
       <View style={styles.pagination}>
         {validImages.map((_, index: number) => (
