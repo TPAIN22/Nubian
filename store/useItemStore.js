@@ -3,6 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { useCallback } from 'react';
 import axiosInstance from "@/services/api/client";
+import { useCurrencyStore } from './useCurrencyStore';
 
 const useItemStore = create(subscribeWithSelector((set, get) => ({
   // State
@@ -71,11 +72,15 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
         return;
       }
 
+      // Get currency code from currency store
+      const currencyCode = useCurrencyStore.getState().currencyCode;
+      
       const response = await axiosInstance.get("/products", {
         params: { 
           page, 
           limit: 50, // Increased limit to get more products
-          category: selectedCategory 
+          category: selectedCategory,
+          currencyCode: currencyCode || undefined,
         },
       });
 
@@ -246,10 +251,13 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
     try {
       // First try with pagination params (like the mobile app expects)
       // Also try to get only active products if API supports it
+      // Get currency code from currency store
+      const currencyCode = useCurrencyStore.getState().currencyCode;
+      
       let response;
       try {
         response = await axiosInstance.get("/products", {
-          params: { page: 1, limit, isActive: true },
+          params: { page: 1, limit, isActive: true, currencyCode: currencyCode || undefined },
         });
       } catch (paginationError) {
         // If pagination with isActive fails, try without isActive
@@ -333,12 +341,16 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
     }
   },
 
-  // Get single product by ID
   getProductById: async (productId) => {
     set({ isProductsLoading: true, error: null });
     
     try {
-      const response = await axiosInstance.get(`/products/${productId}`);
+      // Get currency code from currency store
+      const currencyCode = useCurrencyStore.getState().currencyCode;
+      
+      const response = await axiosInstance.get(`/products/${productId}`, {
+        params: { currencyCode: currencyCode || undefined },
+      });
       
       // Backend returns: { success: true, data: { ...product... }, message: "..." }
       // Extract the actual product data from response.data.data

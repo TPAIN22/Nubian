@@ -1,5 +1,6 @@
 import axiosInstance from "@/services/api/client";
 import * as FileSystem from "expo-file-system/legacy";
+import { compressImage } from "./compressImage";
 
 interface ImageKitAuthParams {
   token: string;
@@ -60,7 +61,20 @@ function guessExtFromMime(mime: string) {
 }
 
 export const uploadImageToImageKit = async (imageUri: string): Promise<string> => {
-  // 1) auth
+  // 1) Compress image before upload (converts to WebP, resizes if >1920px)
+  // This reduces file size significantly while maintaining quality
+  const compressionResult = await compressImage(imageUri);
+  const compressedUri = compressionResult.uri;
+  
+  if (compressionResult.wasCompressed) {
+    console.log(
+      `ImageKit: Image compressed - ` +
+      `${((compressionResult.originalSize || 0) / 1024).toFixed(1)}KB → ` +
+      `${((compressionResult.newSize || 0) / 1024).toFixed(1)}KB`
+    );
+  }
+
+  // 2) auth
   const authResponse = await axiosInstance.get("/upload/imagekit-auth");
   const authParams = pickAuthParams(authResponse?.data);
 
@@ -70,11 +84,12 @@ export const uploadImageToImageKit = async (imageUri: string): Promise<string> =
     throw new Error("IMAGEKIT_AUTH_INVALID_RESPONSE");
   }
 
-  // 2) base64
-  const mime = guessMimeFromUri(imageUri);
-  const ext = guessExtFromMime(mime);
+  // 3) base64 - Use compressed URI and WebP mime type
+  // After compression, the image is always WebP format
+  const mime = compressionResult.wasCompressed ? "image/webp" : guessMimeFromUri(compressedUri);
+  const ext = compressionResult.wasCompressed ? "webp" : guessExtFromMime(mime);
 
-  const base64 = await FileSystem.readAsStringAsync(imageUri, {
+  const base64 = await FileSystem.readAsStringAsync(compressedUri, {
     encoding: FileSystem.EncodingType.Base64,
   });
 

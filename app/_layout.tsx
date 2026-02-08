@@ -10,14 +10,10 @@ import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import GifLoadingScreen from "./GifLoadingScreen";
 import NoNetworkScreen from "./NoNetworkScreen";
-import { Alert, Platform, View, I18nManager } from "react-native";
+import { Platform, View, I18nManager } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import i18n from "@/utils/i18n";
 import { useFonts } from "@/hooks/useFonts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-import * as Updates from "expo-updates";
-
 import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
 import { LanguageProvider } from "@/utils/LanguageContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -157,54 +153,10 @@ function AppLoaderWithClerk() {
     }
   }, [fontsLoaded, fontError]);
 
+  // Update checking disabled - set to false immediately
   useEffect(() => {
-    async function onFetchUpdateAsync() {
-      if (!__DEV__ && isConnected === true) {
-        try {
-          setIsUpdateChecking(true);
-          const update = await Updates.checkForUpdateAsync();
-
-          if (update.isAvailable) {
-            await Updates.fetchUpdateAsync();
-
-            Alert.alert(
-              i18n.t("updateAvailableTitle"),
-              i18n.t("updateAvailableMessage"),
-              [
-                {
-                  text: i18n.t("no"),
-                  style: "cancel",
-                  onPress: () => {
-                    setIsUpdateChecking(false);
-                  },
-                },
-                {
-                  text: i18n.t("yes"),
-                  onPress: () => {
-                    Updates.reloadAsync();
-                  },
-                },
-              ],
-              { cancelable: false }
-            );
-          } else {
-            setIsUpdateChecking(false);
-          }
-        } catch {
-          setIsUpdateChecking(false);
-        }
-      } else if (isConnected === false) {
-        setIsUpdateChecking(false);
-      } else {
-        setIsUpdateChecking(false);
-      }
-    }
-
-    if (!isNetworkChecking) {
-      // انتظر حتى ينتهي NetworkProvider من التحقق الأولي
-      onFetchUpdateAsync();
-    }
-  }, [isConnected, isNetworkChecking]); // يعتمد على isConnected و isNetworkChecking
+    setIsUpdateChecking(false);
+  }, []);
 
   const onGifFinish = useCallback(() => {
     setGifAnimationFinished(true);
