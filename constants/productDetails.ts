@@ -28,7 +28,6 @@ export const PRODUCT_DETAILS_CONFIG = {
   IMAGE_HEIGHT: SCREEN_WIDTH * 1.1,
 } as const;
 
-export const CURRENCY = 'SDG' as const;
 
 export const COLORS = {
   LOADING_INDICATOR: '#f0b745',

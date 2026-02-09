@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, subscribeWithSelector } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '@/services/api/client';
 
@@ -55,8 +55,9 @@ interface CurrencyState {
 const STORAGE_KEY = 'nubian_currency_prefs';
 
 export const useCurrencyStore = create<CurrencyState>()(
-  persist(
-    (set, get) => ({
+  subscribeWithSelector(
+    persist(
+      (set, get) => ({
       // Initial state
       countryCode: null,
       currencyCode: null,
@@ -122,7 +123,7 @@ export const useCurrencyStore = create<CurrencyState>()(
       },
 
       // Sync preferences to backend
-      syncWithBackend: async () => {
+      syncWithBackend: async (userId: string) => {
         try {
           const { countryCode, currencyCode } = get();
           
@@ -133,7 +134,7 @@ export const useCurrencyStore = create<CurrencyState>()(
             currencyCode,
           });
           
-          console.log('Currency preferences synced to backend');
+          console.log(`Currency preferences synced to backend for user: ${userId}`);
         } catch (error: any) {
           console.error('Failed to sync preferences:', error.message);
           // Don't set error - local storage still works
@@ -191,6 +192,7 @@ export const useCurrencyStore = create<CurrencyState>()(
         }
       },
     }
+    )
   )
 );
 

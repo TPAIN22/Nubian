@@ -41,7 +41,6 @@ import { formatPrice } from "@/utils/priceUtils";
 import { useRecommendationStore } from "@/store/useRecommendationStore";
 import { useTracking } from "@/hooks/useTracking";
 import {
-  CURRENCY,
   COLORS,
   PRODUCT_DETAILS_CONFIG,
 } from "@/constants/productDetails";
@@ -345,11 +344,11 @@ export default function Details() {
   const productHasDiscount = (pricing?.discount?.amount ?? 0) > 0;
 
   const formattedFinalPrice = useMemo(
-    () => formatPrice(currentPrice, CURRENCY),
+    () => formatPrice(currentPrice),
     [currentPrice]
   );
   const formattedOriginalPrice = useMemo(
-    () => (productHasDiscount ? formatPrice(originalPrice, CURRENCY) : ""),
+    () => (productHasDiscount ? formatPrice(originalPrice) : ""),
     [originalPrice, productHasDiscount]
   );
 
@@ -583,6 +582,25 @@ export default function Details() {
             themeColors={colors}
             pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
           />
+          <View
+            style={[
+              styles.stockContainer,
+              { backgroundColor: colors.cardBackground },
+            ]}
+          >
+            <Text style={[styles.stockText, { color: colors.text.gray }]}>
+              {i18n.t("stock") || "Stock"}:{" "}
+              {currentStock > 0 ? (
+                <Text style={{ color: colors.primary, fontWeight: "600" }}>
+                  {currentStock}
+                </Text>
+              ) : (
+                <Text style={{ color: COLORS.ERROR_RED, fontWeight: "600" }}>
+                  {i18n.t("outOfStock") || "Out of Stock"}
+                </Text>
+              )}
+            </Text>
+          </View>
 
           {!!viewProduct.description && (
             <View
@@ -615,25 +633,7 @@ export default function Details() {
               </Text>
             </View>
           )}
-          <View
-            style={[
-              styles.stockContainer,
-              { backgroundColor: colors.cardBackground },
-            ]}
-          >
-            <Text style={[styles.stockText, { color: colors.text.gray }]}>
-              {i18n.t("stock") || "Stock"}:{" "}
-              {currentStock > 0 ? (
-                <Text style={{ color: colors.primary, fontWeight: "600" }}>
-                  {currentStock}
-                </Text>
-              ) : (
-                <Text style={{ color: COLORS.ERROR_RED, fontWeight: "600" }}>
-                  {i18n.t("outOfStock") || "Out of Stock"}
-                </Text>
-              )}
-            </Text>
-          </View>
+          <View style={{ flex: 1, height: 10, backgroundColor: colors.background }} />
 
           {showDeferred && (
             <ProductRecommendations
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
 
-  descriptionSection: { paddingHorizontal: 20, paddingVertical: 20 },
+  descriptionSection: { paddingHorizontal: 20, paddingVertical: 10, marginBottom: 26 },
   descriptionTitle: { padding: 10, fontSize: 16, fontWeight: "600", marginBottom: 12 },
   description: { padding: 10, fontSize: 14, lineHeight: 22, marginBottom: 4 },
 

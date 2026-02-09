@@ -57,9 +57,11 @@ export interface HomeData {
 /**
  * Fetch all home screen data in one optimized call
  */
-export const getHomeData = async (): Promise<HomeData> => {
+export const getHomeData = async (currencyCode?: string): Promise<HomeData> => {
   try {
-    const response = await axiosInstance.get('/home');
+    const response = await axiosInstance.get('/home', {
+      params: { currencyCode }
+    });
     
     // Handle different response structures
     const data = response.data?.data || response.data;

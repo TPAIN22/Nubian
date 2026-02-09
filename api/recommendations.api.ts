@@ -61,9 +61,11 @@ function excludeProduct(list: HomeProduct[], productId?: string) {
  * Fetch home page recommendations
  * GET /api/recommendations/home
  */
-export const getHomeRecommendations = async (): Promise<HomeRecommendations> => {
+export const getHomeRecommendations = async (currencyCode?: string): Promise<HomeRecommendations> => {
   try {
-    const response = await withRetry(() => axiosInstance.get("/recommendations/home"), 1);
+    const response = await withRetry(() => axiosInstance.get("/recommendations/home", {
+      params: { currencyCode }
+    }), 1);
 
     const data = unwrapData<any>(response);
 
@@ -88,10 +90,12 @@ export const getHomeRecommendations = async (): Promise<HomeRecommendations> => 
  * Fetch product recommendations
  * GET /api/recommendations/product/:id
  */
-export const getProductRecommendations = async (productId: string): Promise<ProductRecommendations> => {
+export const getProductRecommendations = async (productId: string, currencyCode?: string): Promise<ProductRecommendations> => {
   try {
     const response = await withRetry(
-      () => axiosInstance.get(`/recommendations/product/${productId}`),
+      () => axiosInstance.get(`/recommendations/product/${productId}`, {
+        params: { currencyCode }
+      }),
       1
     );
 
@@ -118,9 +122,11 @@ export const getProductRecommendations = async (productId: string): Promise<Prod
  * Fetch cart recommendations
  * GET /api/recommendations/cart
  */
-export const getCartRecommendations = async (): Promise<HomeProduct[]> => {
+export const getCartRecommendations = async (currencyCode?: string): Promise<HomeProduct[]> => {
   try {
-    const response = await withRetry(() => axiosInstance.get("/recommendations/cart"), 1);
+    const response = await withRetry(() => axiosInstance.get("/recommendations/cart", {
+      params: { currencyCode }
+    }), 1);
     const data = unwrapData<any>(response);
 
     // cart endpoint يرجّع Array
@@ -140,10 +146,12 @@ export const getCartRecommendations = async (): Promise<HomeProduct[]> => {
  * Fetch user-specific recommendations
  * GET /api/recommendations/user/:id
  */
-export const getUserRecommendations = async (userId: string): Promise<HomeProduct[]> => {
+export const getUserRecommendations = async (userId: string, currencyCode?: string): Promise<HomeProduct[]> => {
   try {
     const response = await withRetry(
-      () => axiosInstance.get(`/recommendations/user/${userId}`),
+      () => axiosInstance.get(`/recommendations/user/${userId}`, {
+        params: { currencyCode }
+      }),
       1
     );
     const data = unwrapData<any>(response);

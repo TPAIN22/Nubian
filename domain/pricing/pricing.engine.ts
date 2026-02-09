@@ -1,4 +1,4 @@
-import { NormalizedProduct, ProductVariantDTO } from "../product/product.normalize";
+import { NormalizedProduct } from "../product/product.normalize";
 import { ResolvedPrice, PricingOptions } from "./pricing.types";
 
 /**
@@ -15,7 +15,7 @@ import { ResolvedPrice, PricingOptions } from "./pricing.types";
 export function resolvePrice({
   product,
   selectedVariant,
-  currency = "SDG",
+  currency = "USD",
 }: PricingOptions): ResolvedPrice {
   // Safe access with fallbacks for non-normalized products
   const variants = Array.isArray(product?.variants) ? product.variants : [];

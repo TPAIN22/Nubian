@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { HomeService } from "../services/home.service";
 import { getHomeRecommendations } from "../api/recommendations.api";
+import { useCurrencyStore } from "./useCurrencyStore";
 
 interface HomeState {
   banners: any[];
@@ -51,9 +52,10 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
     const task = (async () => {
       try {
+        const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
         const [homeData, recommendations] = await Promise.all([
-          HomeService.fetchHomeData(),
-          getHomeRecommendations().catch(() => null),
+          HomeService.fetchHomeData(currencyCode),
+          getHomeRecommendations(currencyCode).catch(() => null),
         ]);
 
         const activeCategories = HomeService.filterActiveCategories(homeData.categories);
@@ -118,9 +120,10 @@ export const useHomeStore = create<HomeState>((set, get) => ({
     set({ isRefreshing: true, error: null });
 
     try {
+      const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
       const [homeData, recommendations] = await Promise.all([
-        HomeService.fetchHomeData(),
-        getHomeRecommendations().catch(() => null),
+        HomeService.fetchHomeData(currencyCode),
+        getHomeRecommendations(currencyCode).catch(() => null),
       ]);
 
       const activeCategories = HomeService.filterActiveCategories(homeData.categories);

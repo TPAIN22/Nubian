@@ -53,7 +53,7 @@
   "orderStatusShipped": "Shipped",
   "orderDetails": "Order Details",
   "failedToLoadOrders": "Failed to load orders",
-  "currency": "SDG",
+  "currency": "Currency",
   "myOrders": "My Orders",
   "hideDetails": "Hide Details",
   "showDetails": "Show Details",

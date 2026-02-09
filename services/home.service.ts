@@ -3,8 +3,8 @@ import { hasAnyActiveStock } from "@/utils/cartUtils";
 import { getDiscountPercent, getFinalPrice, getOriginalPrice } from "@/utils/priceUtils";
 
 export class HomeService {
-  static async fetchHomeData(): Promise<HomeData> {
-    return getHomeData();
+  static async fetchHomeData(currencyCode?: string): Promise<HomeData> {
+    return getHomeData(currencyCode);
   }
 
   /** ✅ هل المنتج عنده variants؟ */

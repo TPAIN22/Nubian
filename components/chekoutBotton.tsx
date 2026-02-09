@@ -10,7 +10,7 @@ import {
 import { Text } from "@/components/ui/text";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
-import { formatPrice } from "@/utils/priceUtils";
+import { useCurrencyStore } from "@/store/useCurrencyStore";
 
 const { width } = Dimensions.get("window");
 
@@ -19,7 +19,7 @@ interface CheckoutProps {
   handleCheckout: () => void;
   isLoading?: boolean;
   disabled?: boolean;
-  currency?: string; // default SDG
+  currency?: string;
 }
 
 export default function Checkout({
@@ -27,8 +27,10 @@ export default function Checkout({
   handleCheckout,
   isLoading = false,
   disabled = false,
-  currency = "SDG",
+  currency: propCurrency,
 }: CheckoutProps) {
+  const currencyCode = useCurrencyStore(state => state.currencyCode);
+  const currency = propCurrency || currencyCode || "USD";
   const { theme } = useTheme();
   const colors = theme.colors;
 
@@ -80,12 +82,17 @@ export default function Checkout({
     handleCheckout();
   }, [isDisabled, handleCheckout]);
 
+  const getSelectedCurrency = useCurrencyStore(state => state.getSelectedCurrency);
+  const selectedCurrency = getSelectedCurrency();
+  const displaySymbol = selectedCurrency?.symbol || currency;
+
   const formattedTotal = useMemo(() => {
-    // formatPrice currently returns: "12345 SDG"
-    // We want number on right and currency label fixed: so split.
-    const text = formatPrice(total, currency);
-    return text.replace(` ${currency}`, "");
-  }, [total, currency]);
+    const decimals = selectedCurrency?.decimals ?? 2;
+    return total.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  }, [total, selectedCurrency]);
 
   return (
     <View style={styles.container}>
@@ -124,7 +131,7 @@ export default function Checkout({
 
             <View style={styles.amountSection}>
               <Text style={[styles.currencyLabel, { color: `${colors.text.white}CC` }]}>
-                {currency}
+                {displaySymbol}
               </Text>
               <Text style={[styles.textAmount, { color: colors.text.white }]} numberOfLines={1}>
                 {formattedTotal}

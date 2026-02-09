@@ -17,6 +17,18 @@ apiClient.interceptors.request.use(
         config.headers = config.headers ?? {};
         config.headers.Authorization = `Bearer ${token}`;
       }
+      
+      // Inject currency and country from store
+      // We use require to avoid circular dependency if useCurrencyStore imports apiClient
+      const { useCurrencyStore } = require("@/store/useCurrencyStore");
+      const { currencyCode, countryCode } = useCurrencyStore.getState();
+      
+      if (currencyCode) {
+        config.headers['x-currency'] = currencyCode;
+      }
+      if (countryCode) {
+        config.headers['x-country'] = countryCode;
+      }
     } catch (error) {
       if (__DEV__) console.warn("Token retrieval failed:", error);
     }

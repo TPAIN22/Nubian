@@ -14,7 +14,7 @@ import { useTracking } from "@/hooks/useTracking";
 import useItemStore from "@/store/useItemStore";
 import { usePrefetchProduct } from "@/store/useProductCacheStore";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
-import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
+import { getDisplayPrice, resolvePrice } from "@/domain/pricing/pricing.engine";
 import { formatPrice, getDiscountPercent } from "@/utils/priceUtils";
 import { cleanImages } from "@/utils/productUtils";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
@@ -50,34 +50,21 @@ const ProductCard = React.memo(
     const validImages = useMemo(() => (item ? cleanImages(item.images) : []), [item]);
     const singleImage = validImages.length === 1 ? validImages[0] : null;
 
-    const displayPrice = useMemo(() => (item ? getDisplayPrice(item) : { price: 0, isFrom: false }), [item]);
+    const pricing = useMemo(
+      () => (item ? getDisplayPrice(item) : { price: 0, isFrom: false }),
+      [item]
+    );
 
-    const finalPrice = displayPrice.price;
+    const finalPrice = pricing.price;
 
-    // Original price logic:
-    // 1. If we have an explicit discountPrice from backend, that was the intended manual discount
-    // 2. If finalPrice < normal price (merchant + nubian markup), show the normal price as original
-    // 3. Fallback to finalPrice
-    const originalPrice = useMemo(() => {
-      if (!item?.productLevelPricing) return finalPrice;
-      const { merchantPrice, nubianMarkup, discountPrice, finalPrice: backendFinal } = item.productLevelPricing;
+    // We need the full resolution for original price
+    const fullResolution = useMemo(() => {
+      if (!item) return null;
+      return resolvePrice({ product: item });
+    }, [item]);
 
-      const normalPrice = (merchantPrice || 0) * (1 + (nubianMarkup || 10) / 100);
-
-      // Manual discount override
-      if (discountPrice && discountPrice > 0 && Math.abs(finalPrice - discountPrice) < 0.01) {
-        return backendFinal || normalPrice || finalPrice;
-      }
-
-      // Automatic discount (finalPrice is less than normal price)
-      if (normalPrice > finalPrice + 0.01) {
-        return normalPrice;
-      }
-
-      return finalPrice;
-    }, [item, finalPrice]);
-
-    const productHasDiscount = originalPrice > finalPrice;
+    const originalPrice = fullResolution?.original ?? finalPrice;
+    const productHasDiscount = (fullResolution?.discount?.amount ?? 0) > 0;
 
     // PERFORMANCE: Start prefetch on press-in (while user's finger is still down)
     const handlePressIn = useCallback(() => {
@@ -216,7 +203,7 @@ const ProductCard = React.memo(
                   </Text>
                 )}
                 <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
-                  {displayPrice.isFrom && (
+                  {pricing.isFrom && (
                     <Text style={{ fontSize: 10, color: colors.text.veryLightGray }}>From </Text>
                   )}
                   {formatPrice(finalPrice)}
@@ -314,7 +301,7 @@ const ProductCard = React.memo(
               </Text>
             )}
             <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
-              {displayPrice.isFrom && (
+              {pricing.isFrom && (
                 <Text style={{ fontSize: 10, color: colors.text.veryLightGray }}>From </Text>
               )}
               {formatPrice(finalPrice)}

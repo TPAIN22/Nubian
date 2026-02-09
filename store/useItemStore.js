@@ -500,10 +500,12 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
     set({ isProductsLoading: true, error: null });
     
     try {
+      const currencyCode = useCurrencyStore.getState().currencyCode;
       const response = await axiosInstance.get("/products/search", {
         params: { 
           q: searchTerm.trim(), 
-          limit 
+          limit,
+          currencyCode: currencyCode || undefined
         },
       });
 
@@ -572,8 +574,9 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
       set({ isProductsLoading: true, error: null });
       
       try {
+        const currencyCode = useCurrencyStore.getState().currencyCode;
         const response = await axiosInstance.get("/products", {
-          params: { page, limit: 8 },
+          params: { page, limit: 8, currencyCode: currencyCode || undefined },
         });
 
         const newProducts = Array.isArray(response.data.products) 

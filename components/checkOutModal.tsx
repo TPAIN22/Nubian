@@ -209,11 +209,11 @@ const PriceSummary = React.memo(({ quote, couponResult, orderAmount, colors }: a
     {couponResult?.valid && typeof couponResult.discountAmount === "number" ? (
       <View style={[styles.priceSection, { backgroundColor: colors.gray?.[100] ?? "#F3F4F6" }]}>
         <Text style={[styles.discountText, { color: colors.success }]}>
-          {i18n.t("discount")}: {formatPrice(couponResult.discountAmount, "SDG")}
+          {i18n.t("discount")}: {formatPrice(couponResult.discountAmount)}
           {couponResult.type === "percentage" ? ` (${couponResult.value}%)` : ""}
         </Text>
         <Text style={[styles.totalText, { color: colors.text.darkGray }]}>
-          {i18n.t("totalAfterDiscount")}: {formatPrice(couponResult.finalAmount ?? orderAmount, "SDG")}
+          {i18n.t("totalAfterDiscount")}: {formatPrice(couponResult.finalAmount ?? orderAmount)}
         </Text>
       </View>
     ) : null}
@@ -221,13 +221,13 @@ const PriceSummary = React.memo(({ quote, couponResult, orderAmount, colors }: a
     {quote ? (
       <View style={[styles.priceSection, { backgroundColor: colors.cardBackground }]}>
         <Text style={[styles.totalText, { color: colors.text.darkGray }]}>
-          {i18n.t("total")}: {formatPrice(quote.subtotal, quote.currency || "SDG")}
+          {i18n.t("total")}: {formatPrice(quote.subtotal)}
         </Text>
         <Text style={[styles.discountText, { color: colors.text.mediumGray }]}>
-          {i18n.t("shipping")}: {formatPrice(quote.shippingFee, quote.currency || "SDG")}
+          {i18n.t("shipping")}: {formatPrice(quote.shippingFee)}
         </Text>
         <Text style={[styles.totalText, { color: colors.primary, marginTop: 4 }]}>
-          {i18n.t("grandTotal")}: {formatPrice(quote.total, quote.currency || "SDG")}
+          {i18n.t("grandTotal")}: {formatPrice(quote.total)}
         </Text>
       </View>
     ) : null}
@@ -308,7 +308,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
       couponResult && couponResult.valid && typeof couponResult.finalAmount === "number"
         ? couponResult.finalAmount
         : baseAmount;
-    return formatPrice(amount, "SDG");
+    return formatPrice(amount);
   }, [couponResult, orderAmount, quote?.total]);
 
   const currentTotal = useMemo(() => couponResult?.finalAmount ?? quote?.total ?? orderAmount, [couponResult, quote, orderAmount]);

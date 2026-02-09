@@ -23,6 +23,9 @@ import { useTokenManager } from "@/hooks/useTokenManager";
 import { Toaster } from "sonner-native";
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import CurrencySelector from "@/components/CurrencySelector";
+import { useCurrencyStore } from "@/store/useCurrencyStore";
+import { useHomeStore } from "@/store/useHomeStore";
+import useItemStore from "@/store/useItemStore";
 
 // Conditionally import expo-navigation-bar (not available in Expo Go)
 let NavigationBar: any = null;
@@ -199,7 +202,29 @@ function AppLoaderWithClerk() {
     setIsUpdateChecking(true);
   }, [retryNetworkCheck]);
 
-  useEffect(() => { }, []);
+  useEffect(() => {
+    // 🌍 Global Currency Refresh Listener
+    // When the user changes their currency, we need to refresh all product data
+    // to reflect the new prices and currency symbols.
+    const unsubscribe = useCurrencyStore.subscribe(
+      (state) => state.currencyCode,
+      (currencyCode, previousCurrencyCode) => {
+        // Only refresh if currency actually changed and wasn't null before (initial hydration)
+        if (currencyCode && previousCurrencyCode && currencyCode !== previousCurrencyCode) {
+          console.log(`[Currency] Changed from ${previousCurrencyCode} to ${currencyCode}. Refreshing data...`);
+
+          // 1. Refresh Home Store (Trending, New Arrivals, etc.)
+          useHomeStore.getState().fetchHomeData();
+
+          // 2. Clear Item Store (Products, Search Results) 
+          // This ensures they re-fetch with new currency on next visit
+          useItemStore.getState().resetProducts();
+        }
+      }
+    );
+
+    return unsubscribe;
+  }, []);
 
   if (isNetworkChecking || !fontsLoaded) {
     return (

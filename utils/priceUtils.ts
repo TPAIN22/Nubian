@@ -3,6 +3,7 @@ import { NormalizedProduct, ProductVariantDTO } from "@/domain/product/product.n
 import { resolvePrice, getDisplayPrice } from "@/domain/pricing/pricing.engine";
 import { SelectedAttributes } from "@/domain/product/product.selectors";
 import { findMatchingVariant, normalizeAttributes } from "@/utils/cartUtils";
+import { useCurrencyStore } from "@/store/useCurrencyStore";
 
 export interface PriceOptions {
   selectedAttributes?: SelectedAttributes;
@@ -57,9 +58,8 @@ export function getDiscountPercent(original: number, current: number): number {
   return Math.round(((original - current) / original) * 100);
 }
 
-export function formatPrice(amount: number, currency: string = "SDG") {
-  const n = Number.isFinite(amount) ? amount : 0;
-  return `${n.toFixed(0)} ${currency}`;
+export function formatPrice(amount: number) {
+  return useCurrencyStore.getState().formatPrice(amount);
 }
 
 export { getDisplayPrice };

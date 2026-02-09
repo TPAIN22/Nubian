@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useCurrencyStore, useHasSelectedCurrency } from '@/store/useCurrencyStore';
+import { useUser } from '@clerk/clerk-expo';
 import { LinearGradient } from 'expo-linear-gradient';
+import { toast } from 'sonner-native';
+
 import { Ionicons } from '@expo/vector-icons';
+import Colors from '@/locales/brandColors';
 
 interface CurrencySelectorProps {
     visible?: boolean;
@@ -11,6 +15,7 @@ interface CurrencySelectorProps {
 }
 
 export default function CurrencySelector({ visible, mandatory = false, onComplete }: CurrencySelectorProps) {
+    const { user } = useUser();
     const {
         countries,
         currencies,
@@ -18,8 +23,6 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
         currencyCode,
         isLoading,
         fetchMetadata,
-        setCountry,
-        setCurrency,
         savePreferences,
     } = useCurrencyStore();
 
@@ -59,10 +62,11 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
 
     const handleComplete = useCallback(async () => {
         if (selectedCountry && selectedCurrency) {
-            await savePreferences(selectedCountry, selectedCurrency);
+            await savePreferences(selectedCountry, selectedCurrency, user?.id);
+            toast.success('Currency preference updated');
             onComplete?.();
         }
-    }, [selectedCountry, selectedCurrency, savePreferences, onComplete]);
+    }, [selectedCountry, selectedCurrency, savePreferences, onComplete, user?.id]);
 
     const handleBack = useCallback(() => {
         setStep('country');
@@ -79,21 +83,21 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
         >
             <SafeAreaView style={styles.container}>
                 <LinearGradient
-                    colors={['#1a1a2e', '#16213e', '#0f3460']}
+                    colors={[Colors.secondaryBackground, Colors.darkBackground, Colors.secondaryBackground]}
                     style={styles.gradient}
                 >
                     {/* Header */}
                     <View style={styles.header}>
                         {step === 'currency' && (
                             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                                <Ionicons name="arrow-back" size={24} color="#fff" />
+                                <Ionicons name="arrow-back" size={24} color={Colors.text.white} />
                             </TouchableOpacity>
                         )}
                         <View style={styles.headerCenter}>
                             <Ionicons
                                 name={step === 'country' ? 'globe-outline' : 'cash-outline'}
                                 size={40}
-                                color="#00d9ff"
+                                color={Colors.primary}
                             />
                             <Text style={styles.title}>
                                 {step === 'country' ? 'اختر دولتك' : 'اختر العملة'}
@@ -109,12 +113,12 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
                     {/* Content */}
                     {isLoading ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#00d9ff" />
+                            <ActivityIndicator size="large" color={Colors.primary} />
                             <Text style={styles.loadingText}>جاري التحميل...</Text>
                         </View>
                     ) : (
                         <FlatList
-                            data={step === 'country' ? countries : currencies}
+                            data={(step === 'country' ? countries : currencies) as any[]}
                             keyExtractor={(item) => item.code}
                             contentContainerStyle={styles.listContent}
                             renderItem={({ item }) => {
@@ -132,7 +136,7 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
                                     >
                                         <View style={styles.itemContent}>
                                             {step === 'currency' && 'symbol' in item && (
-                                                <Text style={styles.currencySymbol}>{item.symbol}</Text>
+                                                <Text style={styles.currencySymbol}>{item.symbol as string}</Text>
                                             )}
                                             <View style={styles.itemText}>
                                                 <Text style={styles.itemTitle}>
@@ -148,7 +152,7 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
                                             </View>
                                         </View>
                                         {isSelected && (
-                                            <Ionicons name="checkmark-circle" size={24} color="#00d9ff" />
+                                            <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
                                         )}
                                     </TouchableOpacity>
                                 );
@@ -158,9 +162,9 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
 
                     {/* Continue button (step 2 only) */}
                     {step === 'currency' && selectedCurrency && (
-                        <TouchableOpacity style={styles.continueButton} onPress={handleComplete}>
+                        <TouchableOpacity style={[styles.continueButton, { backgroundColor: Colors.primary }]} onPress={handleComplete}>
                             <Text style={styles.continueButtonText}>متابعة</Text>
-                            <Ionicons name="arrow-forward" size={20} color="#fff" />
+                            <Ionicons name="arrow-forward" size={20} color={Colors.text.white} />
                         </TouchableOpacity>
                     )}
                 </LinearGradient>
@@ -229,8 +233,8 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     itemSelected: {
-        borderColor: '#00d9ff',
-        backgroundColor: 'rgba(0,217,255,0.15)',
+        borderColor: Colors.primary,
+        backgroundColor: 'rgba(163, 126, 44, 0.15)', // Colors.primary with opacity
     },
     itemContent: {
         flexDirection: 'row',
@@ -240,7 +244,7 @@ const styles = StyleSheet.create({
     currencySymbol: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#00d9ff',
+        color: Colors.primary,
         marginRight: 12,
         minWidth: 40,
         textAlign: 'center',
@@ -263,7 +267,6 @@ const styles = StyleSheet.create({
         bottom: 30,
         left: 20,
         right: 20,
-        backgroundColor: '#00d9ff',
         borderRadius: 12,
         paddingVertical: 16,
         flexDirection: 'row',
