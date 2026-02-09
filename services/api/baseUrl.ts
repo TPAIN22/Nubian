@@ -9,20 +9,40 @@ import { Platform } from "react-native";
  * - Prefer `EXPO_PUBLIC_API_URL` for explicit configuration
  * - In dev, try to auto-detect the dev machine LAN IP for physical devices
  */
-export function resolveApiBaseUrl(): string {
-  // Check for explicit API URL first (works in both dev and prod)
-  const explicitUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (explicitUrl) {
-    // Ensure it ends with /api/
-    const baseUrl = explicitUrl.endsWith('/api') ? explicitUrl : `${explicitUrl}/api`;
-    return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+/**
+ * Helper to ensure the API URL is properly formatted for Axios.
+ * Axios with relative paths (e.g. .get("home")) REQUIRES a trailing slash on baseURL.
+ */
+function ensureApiSuffix(url: string): string {
+  let cleanUrl = url.trim();
+  
+  // Remove any trailing slashes for normalization
+  while (cleanUrl.endsWith('/')) {
+    cleanUrl = cleanUrl.slice(0, -1);
   }
 
-  if (!__DEV__) return "https://nubian-auth.onrender.com/api/";
+  // Ensure it ends with /api
+  if (!cleanUrl.toLowerCase().endsWith('/api')) {
+    cleanUrl = `${cleanUrl}/api`;
+  }
 
-  // Try to infer the packager host for LAN devices.
-  // Examples:
-  // - "192.168.1.10:8081" / "192.168.1.10:19000" / "10.0.2.2:19000"
+  // Ensure return value ALWAYS ends with exactly one trailing slash
+  return `${cleanUrl}/`;
+}
+
+export function resolveApiBaseUrl(): string {
+  // 1. Explicit environment variable (highest priority)
+  const explicitUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (explicitUrl) {
+    return ensureApiSuffix(explicitUrl);
+  }
+
+  // 2. Production fallback
+  if (!__DEV__) {
+    return ensureApiSuffix("https://nubian-lne4.onrender.com");
+  }
+
+  // 3. Development auto-detection
   const hostUri =
     (Constants.expoConfig as any)?.hostUri ??
     (Constants as any)?.expoConfig?.hostUri ??
@@ -32,40 +52,32 @@ export function resolveApiBaseUrl(): string {
 
   const host = String(hostUri).split(":")[0]?.trim();
 
-  // On Android emulator, 10.0.2.2 is usually correct.
-  // On physical devices, use the inferred LAN IP if available.
+  // Android emulator or physical device
   if (Platform.OS === "android") {
-    if (host && host !== "localhost" && host !== "127.0.0.1") return `http://${host}:5000/api`;
-    return "http://10.0.2.2/api";
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      return ensureApiSuffix(`http://${host}:5000`);
+    }
+    return ensureApiSuffix("http://10.0.2.2:5000");
   }
 
-  // iOS: prefer detected LAN IP, fallback to localhost for simulator only
-  if (host && host !== "localhost" && host !== "127.0.0.1") {
-    return `http://${host}:5000/api`;
-  }
-
-  // For iOS, we need to distinguish between physical devices and simulators
-  // Physical devices cannot reach localhost - they need the dev machine's LAN IP
-  // Simulators can use localhost
-
-  // Check if we're in an iOS simulator (more reliable detection)
+  // iOS Simulator or Physical device
   const isSimulator = Platform.OS === "ios" && Constants.executionEnvironment !== "bare" &&
     (Constants as any)?.platform?.ios?.model?.includes("Simulator");
 
   if (isSimulator) {
-    // iOS simulator can use localhost
-    return "http://localhost:5000/api";
+    return ensureApiSuffix("http://localhost:5000");
   }
 
-  // Physical iOS device: localhost won't work
-  // Try to infer LAN IP from various sources, or provide helpful error
+  if (host && host !== "localhost" && host !== "127.0.0.1") {
+    return ensureApiSuffix(`http://${host}:5000`);
+  }
+
+  // Fallback with warning for physical iOS
   console.warn(
     "iOS Physical Device: localhost won't work. " +
-    "Set EXPO_PUBLIC_API_URL to your dev machine's IP (e.g., EXPO_PUBLIC_API_URL=http://192.168.1.100/api)"
+    "Set EXPO_PUBLIC_API_URL to your dev machine's IP (e.g., EXPO_PUBLIC_API_URL=http://192.168.1.100:5000)"
   );
 
-  // As a last resort, try localhost anyway (might work if connected via USB/networking)
-  // But this will likely fail - the warning above should guide the developer
-  return "http://localhost:5000/api";
+  return ensureApiSuffix("http://localhost:5000");
 }
 

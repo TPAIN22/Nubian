@@ -36,6 +36,7 @@ import { useTracking } from "@/hooks/useTracking";
 import { useResponsive } from "@/hooks/useResponsive";
 import i18n from "@/utils/i18n";
 import { router } from "expo-router";
+import { resolveApiBaseUrl } from "@/services/api/baseUrl";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -656,6 +657,9 @@ function IndexContent() {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={[styles.errorText, { color: Colors.danger }]}>{error}</Text>
+            <Text style={[styles.debugText, { color: Colors.text.veryLightGray }]}>
+              API: {resolveApiBaseUrl()}
+            </Text>
           </View>
         )}
 
@@ -949,6 +953,14 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 10,
+    fontFamily: 'monospace',
+    textAlign: 'center',
+    opacity: 0.6,
   },
 });
 
