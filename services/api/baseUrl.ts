@@ -13,11 +13,12 @@ export function resolveApiBaseUrl(): string {
   // Check for explicit API URL first (works in both dev and prod)
   const explicitUrl = process.env.EXPO_PUBLIC_API_URL;
   if (explicitUrl) {
-    // Ensure it ends with /api
-    return explicitUrl.endsWith('/api') ? explicitUrl : `${explicitUrl}/api`;
+    // Ensure it ends with /api/
+    const baseUrl = explicitUrl.endsWith('/api') ? explicitUrl : `${explicitUrl}/api`;
+    return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   }
 
-  if (!__DEV__) return "https://nubian-auth.onrender.com/api";
+  if (!__DEV__) return "https://nubian-auth.onrender.com/api/";
 
   // Try to infer the packager host for LAN devices.
   // Examples:

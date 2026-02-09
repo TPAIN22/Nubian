@@ -75,7 +75,7 @@ export const getExploreProducts = async (params: ExploreParams = {}): Promise<Ex
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     
-    const response = await axiosInstance.get(`/products/explore?${queryParams.toString()}`);
+    const response = await axiosInstance.get(`products/explore?${queryParams.toString()}`);
     
     // Backend uses sendPaginated which returns: { success: true, data: [...], meta: { pagination: {...} } }
     const responseData = response.data;

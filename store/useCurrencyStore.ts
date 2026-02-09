@@ -78,7 +78,7 @@ export const useCurrencyStore = create<CurrencyState>()(
         try {
           set({ isLoading: true, error: null });
           
-          const response = await axiosInstance.get('/meta/all');
+          const response = await axiosInstance.get('meta/all');
           const { countries, currencies } = response.data.data;
           
           set({
@@ -129,7 +129,7 @@ export const useCurrencyStore = create<CurrencyState>()(
           
           if (!countryCode || !currencyCode) return;
           
-          await axiosInstance.put('/me/preferences', {
+          await axiosInstance.put('me/preferences', {
             countryCode,
             currencyCode,
           });

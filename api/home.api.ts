@@ -59,7 +59,7 @@ export interface HomeData {
  */
 export const getHomeData = async (currencyCode?: string): Promise<HomeData> => {
   try {
-    const response = await axiosInstance.get('/home', {
+    const response = await axiosInstance.get('home', {
       params: { currencyCode }
     });
     

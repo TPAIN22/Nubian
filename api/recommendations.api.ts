@@ -63,7 +63,7 @@ function excludeProduct(list: HomeProduct[], productId?: string) {
  */
 export const getHomeRecommendations = async (currencyCode?: string): Promise<HomeRecommendations> => {
   try {
-    const response = await withRetry(() => axiosInstance.get("/recommendations/home", {
+    const response = await withRetry(() => axiosInstance.get("recommendations/home", {
       params: { currencyCode }
     }), 1);
 
@@ -93,7 +93,7 @@ export const getHomeRecommendations = async (currencyCode?: string): Promise<Hom
 export const getProductRecommendations = async (productId: string, currencyCode?: string): Promise<ProductRecommendations> => {
   try {
     const response = await withRetry(
-      () => axiosInstance.get(`/recommendations/product/${productId}`, {
+      () => axiosInstance.get(`recommendations/product/${productId}`, {
         params: { currencyCode }
       }),
       1
@@ -124,7 +124,7 @@ export const getProductRecommendations = async (productId: string, currencyCode?
  */
 export const getCartRecommendations = async (currencyCode?: string): Promise<HomeProduct[]> => {
   try {
-    const response = await withRetry(() => axiosInstance.get("/recommendations/cart", {
+    const response = await withRetry(() => axiosInstance.get("recommendations/cart", {
       params: { currencyCode }
     }), 1);
     const data = unwrapData<any>(response);
@@ -149,7 +149,7 @@ export const getCartRecommendations = async (currencyCode?: string): Promise<Hom
 export const getUserRecommendations = async (userId: string, currencyCode?: string): Promise<HomeProduct[]> => {
   try {
     const response = await withRetry(
-      () => axiosInstance.get(`/recommendations/user/${userId}`, {
+      () => axiosInstance.get(`recommendations/user/${userId}`, {
         params: { currencyCode }
       }),
       1

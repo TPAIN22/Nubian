@@ -76,7 +76,7 @@ const useProductCacheStore = create<ProductCacheState>((set, get) => ({
         const { useCurrencyStore } = require("@/store/useCurrencyStore");
         const { currencyCode } = useCurrencyStore.getState();
         
-        const response = await axiosInstance.get(`/products/${productId}`, {
+        const response = await axiosInstance.get(`products/${productId}`, {
           params: { currencyCode: currencyCode || undefined },
         });
         const productData = (response.data?.data || response.data) as ProductDTO;
