@@ -28,6 +28,11 @@ export type NormalizedProduct = {
     nubianMarkup: number | null;
     dynamicMarkup: number | null;
     discountPrice: number | null;
+    
+    // Currency fields in simple
+    priceDisplay?: string;
+    currencyCode?: string;
+    priceConverted?: number;
   };
 
   // backend-provided convenience fields (do not compute)
@@ -37,7 +42,21 @@ export type NormalizedProduct = {
     nubianMarkup: number | null;
     dynamicMarkup: number | null;
     discountPrice: number | null;
+    
+    // Currency fields in plp
+    priceDisplay?: string;
+    currencyCode?: string;
+    priceConverted?: number;
   };
+  
+  // Root-level currency fields (preferred)
+  priceDisplay?: string;
+  currencyCode?: string;
+  priceConverted?: number;
+  rate?: number;
+  rateUnavailable?: boolean;
+  discountPercentage?: number;
+  originalPrice?: number;
 };
 
 function asString(v: any): string {
@@ -156,6 +175,11 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
       nubianMarkup: variants.length ? null : asNum(raw?.nubianMarkup),
       dynamicMarkup: variants.length ? null : asNum(raw?.dynamicMarkup),
       discountPrice: variants.length ? null : asNum(raw?.discountPrice),
+      
+      // Map currency fields (safely check simple object if it exists in raw)
+      priceDisplay: asString((raw as any)?.simple?.priceDisplay),
+      currencyCode: asString((raw as any)?.simple?.currencyCode),
+      priceConverted: asNum((raw as any)?.simple?.priceConverted) ?? undefined,
     },
 
     productLevelPricing: {
@@ -164,7 +188,21 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
       nubianMarkup: asNum(raw?.nubianMarkup),
       dynamicMarkup: asNum(raw?.dynamicMarkup),
       discountPrice: asNum(raw?.discountPrice),
+      
+      // Map currency fields
+      priceDisplay: asString((raw as any)?.productLevelPricing?.priceDisplay),
+      currencyCode: asString((raw as any)?.productLevelPricing?.currencyCode),
+      priceConverted: asNum((raw as any)?.productLevelPricing?.priceConverted) ?? undefined,
     },
+
+    // Root level currency fields
+    priceDisplay: asString((raw as any)?.priceDisplay),
+    currencyCode: asString((raw as any)?.currencyCode),
+    priceConverted: asNum((raw as any)?.priceConverted) ?? undefined,
+    rate: asNum((raw as any)?.rate) ?? undefined,
+    rateUnavailable: asBool((raw as any)?.rateUnavailable),
+    discountPercentage: asNum((raw as any)?.discountPercentage) ?? undefined,
+    originalPrice: asNum((raw as any)?.originalPrice) ?? undefined,
   };
 }
 

@@ -146,12 +146,17 @@ const ProductCard = React.memo(
     const viewabilityConfigCallbackPairs = useRef([{ viewabilityConfig, onViewableItemsChanged }]).current;
 
     const discountPercentage = useMemo(() => {
+      // Use backend provided percentage if available (authoritative)
+      if (item?.discountPercentage && item.discountPercentage > 0) {
+        return Math.min(99, item.discountPercentage);
+      }
+
       if (!productHasDiscount) return 0;
       if (!originalPrice || !finalPrice) return 0;
       if (originalPrice <= 0) return 0;
       const pct = getDiscountPercent(originalPrice, finalPrice);
       return Math.max(0, Math.min(99, pct));
-    }, [productHasDiscount, originalPrice, finalPrice]);
+    }, [productHasDiscount, originalPrice, finalPrice, item?.discountPercentage]);
 
     const renderPagination = () => {
       if (validImages.length <= 1) return null;
@@ -199,14 +204,14 @@ const ProductCard = React.memo(
               <View style={styles.horizontalPriceContainer}>
                 {productHasDiscount && (
                   <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
-                    {formatPrice(originalPrice)}
+                    {item.originalPrice ? formatPrice(item.originalPrice) : formatPrice(originalPrice)}
                   </Text>
                 )}
                 <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
                   {pricing.isFrom && (
                     <Text style={{ fontSize: 10, color: colors.text.veryLightGray }}>From </Text>
                   )}
-                  {formatPrice(finalPrice)}
+                  {item.priceDisplay || formatPrice(finalPrice)}
                 </Text>
               </View>
             </View>
@@ -297,14 +302,11 @@ const ProductCard = React.memo(
           <View style={styles.priceContainer}>
             {productHasDiscount && (
               <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]} numberOfLines={1}>
-                {formatPrice(originalPrice)}
+                {item.originalPrice ? formatPrice(item.originalPrice) : formatPrice(originalPrice)}
               </Text>
             )}
             <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
-              {pricing.isFrom && (
-                <Text style={{ fontSize: 10, color: colors.text.veryLightGray }}>From </Text>
-              )}
-              {formatPrice(finalPrice)}
+              {item.priceDisplay || formatPrice(finalPrice)}
             </Text>
           </View>
         </View>

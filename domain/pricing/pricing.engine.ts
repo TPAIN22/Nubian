@@ -52,7 +52,7 @@ export function resolvePrice({
     
     if (selectedVariant.discountPrice && selectedVariant.discountPrice > 0) {
       // If there's a manual discount override, the "original" was the intended final price with markups
-      original = selectedVariant.finalPrice || normalPrice;
+      original = normalPrice;
     } else if (normalPrice > final) {
       // If normal price is higher than current final (e.g. negative dynamic markup), normal is original
       original = normalPrice;
@@ -92,7 +92,8 @@ export function resolvePrice({
   let original = normalPrice;
   
   if (simple.discountPrice && simple.discountPrice > 0) {
-    original = simple.finalPrice || normalPrice;
+    // If there's a discount, the "original" is the normal calculated price (MSRP)
+    original = normalPrice;
   } else if (normalPrice > final) {
     original = normalPrice;
   } else {
