@@ -27,16 +27,34 @@ export function resolvePrice({
   if (hasVariants) {
     if (!selectedVariant) {
       // Get "From" price from productLevelPricing as a fallback for display
-      const minPrice = productLevelPricing.finalPrice ?? 0;
-      const minMerchant = productLevelPricing.merchantPrice ?? 0;
+      const final = productLevelPricing.finalPrice ?? 0;
+      const merchant = productLevelPricing.merchantPrice ?? 0;
+      const nubianMarkup = productLevelPricing.nubianMarkup ?? 10;
+
+      // The "normal" price is the merchant price plus the fixed Nubian markup
+      const normalPrice = merchant * (1 + nubianMarkup / 100);
+
+      let original = normalPrice;
+
+      if (productLevelPricing.discountPrice && productLevelPricing.discountPrice > 0) {
+        original = normalPrice;
+      } else if (normalPrice > final) {
+        original = normalPrice;
+      } else {
+        original = final;
+      }
+
+      const discountAmount = Math.max(0, original - final);
+      const discountPercentage = original > 0 ? Math.round((discountAmount / original) * 100) : 0;
 
       return {
-        final: minPrice,
-        merchant: minMerchant,
-        original: minMerchant,
+        final,
+        merchant,
+        original,
         currency,
         requiresSelection: true,
         source: "variant",
+        discount: discountAmount > 0 ? { amount: discountAmount, percentage: discountPercentage } : undefined,
       };
     }
 

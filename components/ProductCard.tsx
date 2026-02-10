@@ -14,8 +14,8 @@ import { useTracking } from "@/hooks/useTracking";
 import useItemStore from "@/store/useItemStore";
 import { usePrefetchProduct } from "@/store/useProductCacheStore";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
-import { getDisplayPrice, resolvePrice } from "@/domain/pricing/pricing.engine";
-import { formatPrice, getDiscountPercent } from "@/utils/priceUtils";
+import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
+import { formatPrice } from "@/utils/priceUtils";
 import { cleanImages } from "@/utils/productUtils";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { markTapStartTime } from "@/hooks/useProductFetch";
@@ -50,21 +50,32 @@ const ProductCard = React.memo(
     const validImages = useMemo(() => (item ? cleanImages(item.images) : []), [item]);
     const singleImage = validImages.length === 1 ? validImages[0] : null;
 
+    // --- DEFINITIVE PRICING LOGIC ---
+    // 1. Final Price: Prefer backend "displayFinalPrice", fallback to legacy getDisplayPrice
     const pricing = useMemo(
       () => (item ? getDisplayPrice(item) : { price: 0, isFrom: false }),
       [item]
     );
+    const finalPrice = (item as any)?.displayFinalPrice ?? pricing.price;
 
-    const finalPrice = pricing.price;
+    // 2. Original Price: Backend "displayOriginalPrice" is the Source of Truth.
+    const originalPrice = (item as any)?.displayOriginalPrice ?? finalPrice;
 
-    // We need the full resolution for original price
-    const fullResolution = useMemo(() => {
-      if (!item) return null;
-      return resolvePrice({ product: item });
-    }, [item]);
+    // 3. Discount: Backend "displayDiscountPercentage" is the Source of Truth and includes Sanity Checks.
+    const discountPercentage = (item as any)?.displayDiscountPercentage ?? 0;
 
-    const originalPrice = fullResolution?.original ?? finalPrice;
-    const productHasDiscount = (fullResolution?.discount?.amount ?? 0) > 0;
+    const productHasDiscount = discountPercentage > 0;
+
+    // Debug Logging
+    if (__DEV__) {
+      // console.log(`[ProductCard] ID: ${item?.id}`);
+      console.log(`[ProductCard] Backend Display Fields:`, {
+        displayFinal: (item as any)?.displayFinalPrice,
+        displayOriginal: (item as any)?.displayOriginalPrice,
+        displayDiscount: (item as any)?.displayDiscountPercentage
+      });
+      console.log(`[ProductCard] Resolved: Final=${finalPrice}, Original=${originalPrice}, Discount=${discountPercentage}`);
+    }
 
     // PERFORMANCE: Start prefetch on press-in (while user's finger is still down)
     const handlePressIn = useCallback(() => {
@@ -145,18 +156,16 @@ const ProductCard = React.memo(
     const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
     const viewabilityConfigCallbackPairs = useRef([{ viewabilityConfig, onViewableItemsChanged }]).current;
 
-    const discountPercentage = useMemo(() => {
-      // Use backend provided percentage if available (authoritative)
-      if (item?.discountPercentage && item.discountPercentage > 0) {
-        return Math.min(99, item.discountPercentage);
-      }
+    /*
+   * Discount Computation
+   * --------------------
+   * We calculate the discount percentage to display on the badge.
+   * Priority:
+   * 1. Local price difference check (Sanity Check) - if prices are same, NO discount.
+   * 2. Backend provided percentage (if trusted/available).
+   * 3. Local calculation based on resolved prices.
+   */
 
-      if (!productHasDiscount) return 0;
-      if (!originalPrice || !finalPrice) return 0;
-      if (originalPrice <= 0) return 0;
-      const pct = getDiscountPercent(originalPrice, finalPrice);
-      return Math.max(0, Math.min(99, pct));
-    }, [productHasDiscount, originalPrice, finalPrice, item?.discountPercentage]);
 
     const renderPagination = () => {
       if (validImages.length <= 1) return null;
@@ -204,7 +213,7 @@ const ProductCard = React.memo(
               <View style={styles.horizontalPriceContainer}>
                 {productHasDiscount && (
                   <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
-                    {item.originalPrice ? formatPrice(item.originalPrice) : formatPrice(originalPrice)}
+                    {formatPrice(originalPrice)}
                   </Text>
                 )}
                 <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
@@ -302,7 +311,7 @@ const ProductCard = React.memo(
           <View style={styles.priceContainer}>
             {productHasDiscount && (
               <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]} numberOfLines={1}>
-                {item.originalPrice ? formatPrice(item.originalPrice) : formatPrice(originalPrice)}
+                {formatPrice(originalPrice)}
               </Text>
             )}
             <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>

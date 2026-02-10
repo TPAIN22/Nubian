@@ -57,6 +57,11 @@ export type NormalizedProduct = {
   rateUnavailable?: boolean;
   discountPercentage?: number;
   originalPrice?: number;
+  
+  // Definitive Display Pricing (Source of Truth)
+  displayOriginalPrice?: number;
+  displayFinalPrice?: number;
+  displayDiscountPercentage?: number;
 };
 
 function asString(v: any): string {
@@ -203,6 +208,11 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     rateUnavailable: asBool((raw as any)?.rateUnavailable),
     discountPercentage: asNum((raw as any)?.discountPercentage) ?? undefined,
     originalPrice: asNum((raw as any)?.originalPrice) ?? undefined,
+
+    // Definitive Display Pricing
+    displayOriginalPrice: asNum((raw as any)?.displayOriginalPrice) ?? undefined,
+    displayFinalPrice: asNum((raw as any)?.displayFinalPrice) ?? undefined,
+    displayDiscountPercentage: asNum((raw as any)?.displayDiscountPercentage) ?? undefined,
   };
 }
 
