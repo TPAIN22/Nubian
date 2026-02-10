@@ -205,7 +205,7 @@ const ProductCard = React.memo(
 
             <View style={styles.horizontalInfo}>
               <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.horizontalNameContainer}>
-                <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={2}>
+                <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={1}>
                   {item.name}
                 </Heading>
               </Pressable>
