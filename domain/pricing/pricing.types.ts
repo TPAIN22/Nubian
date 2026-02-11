@@ -6,7 +6,7 @@ export interface ResolvedPrice {
   original?: number;
   currency: string;
   requiresSelection: boolean;
-  source: "variant" | "simple" | "none";
+  source: "variant" | "simple" | "none" | "definitive";
   discount?: {
     amount: number;
     percentage: number;

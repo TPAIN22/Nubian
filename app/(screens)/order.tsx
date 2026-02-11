@@ -1,4 +1,4 @@
-import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable  } from "react-native";
+import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useEffect, useState } from "react";
 import useOrderStore from "@/store/orderStore";
@@ -160,18 +160,18 @@ export default function Order() {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={[styles.container, { backgroundColor: Colors.surface }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <Text style={[styles.title, { color: Colors.text.gray }]}>{i18n.t('myOrders')} ({orders.length})</Text>
-      
+
       {orders.map((order: any) => (
         <View key={order._id} style={[styles.orderCard, { backgroundColor: Colors.cardBackground }]}>
           {/* رأس البطاقة */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.orderHeader, { borderBottomColor: Colors.borderLight }]}
             onPress={() => toggleOrderExpansion(order._id)}
           >
@@ -259,8 +259,8 @@ export default function Order() {
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>حالة الدفع:</Text>
-                  <Text style={[styles.detailValue, { 
-                    color: order.paymentStatus === 'paid' ? Colors.success : Colors.warning 
+                  <Text style={[styles.detailValue, {
+                    color: order.paymentStatus === 'paid' ? Colors.success : Colors.warning
                   }]}>
                     {getPaymentStatusText(order.paymentStatus)}
                   </Text>
@@ -292,8 +292,8 @@ export default function Order() {
                         <View style={styles.productInfo}>
                           {/* صورة المنتج - إذا كانت متوفرة */}
                           {product.images && Array.isArray(product.images) && product.images[0] && (
-                            <Image 
-                              source={{ uri: product.images[0] }} 
+                            <Image
+                              source={{ uri: product.images[0] }}
                               style={[styles.productImage, { backgroundColor: Colors.borderLight }]}
                               contentFit="cover"
                             />
@@ -302,54 +302,62 @@ export default function Order() {
                             <Text style={[styles.productName, { color: Colors.text.gray }]} numberOfLines={2}>
                               {product.name || product.productName || 'منتج غير محدد'}
                             </Text>
-                          <View style={styles.productPricing}>
-                            {(() => {
-                              // Ensure normalization
-                              const productObj = normalizeProduct({
-                                _id: product.productId || product._id || '',
-                                name: product.name || '',
-                                merchantPrice: product.merchantPrice || product.price || 0,
-                                finalPrice: product.price || 0, // In order.productsDetails, 'price' is the final price charged
-                                images: product.images || [],
-                                variants: [], // We don't have variants details here, but the price is already captured
-                              } as any);
-                              
-                              const finalPrice = getFinalPrice(productObj);
-                              const originalPrice = getOriginalPrice(productObj);
-                              const productHasDiscount = hasDiscount(productObj);
-                              const quantity = product.quantity || 1;
-                              const totalFinalPrice = finalPrice * quantity;
-                              
-                              return (
-                                <>
-                                  {productHasDiscount ? (
-                                    <>
-                                      <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
-                                        <Text style={{ textDecorationLine: 'line-through' }}>
-                                          {formatPriceUtil(originalPrice)}
+                            <View style={styles.productPricing}>
+                              {(() => {
+                                // Use definitive fields if available (from backend enrichment)
+                                let finalPrice = product.displayFinalPrice ?? product.price ?? 0;
+                                let originalPrice = product.displayOriginalPrice ?? product.originalPrice ?? 0;
+                                let productHasDiscount = (product.displayDiscountPercentage ?? 0) > 0;
+
+                                // Fallback: If no definitive fields, try to simulate (Legacy)
+                                if (product.displayFinalPrice === undefined && product.displayOriginalPrice === undefined) {
+                                  const productObj = normalizeProduct({
+                                    _id: product.productId || product._id || '',
+                                    name: product.name || '',
+                                    merchantPrice: product.merchantPrice || product.price || 0,
+                                    finalPrice: product.price || 0,
+                                    images: product.images || [],
+                                    variants: [],
+                                  } as any);
+
+                                  finalPrice = getFinalPrice(productObj);
+                                  originalPrice = getOriginalPrice(productObj);
+                                  productHasDiscount = hasDiscount(productObj);
+                                }
+
+                                const quantity = product.quantity || 1;
+                                const totalFinalPrice = finalPrice * quantity;
+
+                                return (
+                                  <>
+                                    {productHasDiscount ? (
+                                      <>
+                                        <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
+                                          <Text style={{ textDecorationLine: 'line-through' }}>
+                                            {formatPriceUtil(originalPrice)}
+                                          </Text>
+                                          {' '}{formatPriceUtil(finalPrice)} × {quantity}
                                         </Text>
-                                        {' '}{formatPriceUtil(finalPrice)} × {quantity}
-                                      </Text>
-                                      <Text style={[styles.productTotal, { color: Colors.success }]}>
-                                        = {formatPriceUtil(totalFinalPrice)}
-                                      </Text>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
-                                        {formatPriceUtil(finalPrice)} × {quantity}
-                                      </Text>
-                                      <Text style={[styles.productTotal, { color: Colors.success }]}>
-                                        = {formatPriceUtil(totalFinalPrice)}
-                                      </Text>
-                                    </>
-                                  )}
-                                </>
-                              );
-                            })()}
+                                        <Text style={[styles.productTotal, { color: Colors.success }]}>
+                                          = {formatPriceUtil(totalFinalPrice)}
+                                        </Text>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
+                                          {formatPriceUtil(finalPrice)} × {quantity}
+                                        </Text>
+                                        <Text style={[styles.productTotal, { color: Colors.success }]}>
+                                          = {formatPriceUtil(totalFinalPrice)}
+                                        </Text>
+                                      </>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </View>
                           </View>
                         </View>
-                      </View>
                       </Pressable>
                     );
                   })
@@ -570,33 +578,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     lineHeight: 24,
-      },
+  },
   productInfo: {
     flexDirection: 'row',
     lineHeight: 24,
-    },
+  },
   productImage: {
     width: 60,
     height: 60,
     borderRadius: 8,
     marginRight: 12,
     lineHeight: 24,
-    },
+  },
   productDetails: {
     flex: 1,
     lineHeight: 24,
-    },
+  },
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
     lineHeight: 24,
-    },
+  },
   productCategory: {
     fontSize: 12,
     marginBottom: 4,
     lineHeight: 24,
-    },
+  },
   productPricing: {
     flexDirection: 'row',
     alignItems: 'center',

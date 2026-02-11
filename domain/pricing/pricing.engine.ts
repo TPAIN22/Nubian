@@ -23,6 +23,26 @@ export function resolvePrice({
   const productLevelPricing = product?.productLevelPricing || {};
   const simple = product?.simple || {};
 
+  // PRIORITY: If backend provided definitive display pricing and no variant is selected (or product is simple), use it.
+  // This ensures consistency with the backend calculations (sanity checks etc).
+  if (!selectedVariant && product?.displayFinalPrice !== undefined) {
+      const final = product.displayFinalPrice;
+      const original = product.displayOriginalPrice ?? final;
+      const discountAmount = Math.max(0, original - final);
+
+      return {
+          final,
+          merchant: product.merchantId ? (product.productLevelPricing?.merchantPrice || 0) : 0, // approximate
+          original,
+          currency,
+          requiresSelection: hasVariants, // If it has variants but none selected, it might still require selection
+          source: "definitive",
+          discount: (product.displayDiscountPercentage && product.displayDiscountPercentage > 0) 
+              ? { amount: discountAmount, percentage: product.displayDiscountPercentage } // amount is derivative, percentage is source of truth
+              : undefined,
+      };
+  }
+
   // Case 1: Variant Product
   if (hasVariants) {
     if (!selectedVariant) {

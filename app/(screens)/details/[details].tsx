@@ -262,30 +262,55 @@ export default function Details() {
   const displayVariant = useMemo(
     () => {
       if (!viewProduct) return null;
+      // 1. Precise, selectable match (e.g. for cart)
       if (matchingVariant) return matchingVariant;
+
+      // 2. Lenient match for display (ignore stock, just check attributes)
+      // This ensures if user selects "Red", we show Red images even if that specific variant is OOS or partial
+      const selKeys = Object.keys(normalizedSelection);
+      if (selKeys.length > 0) {
+        const variants = Array.isArray(viewProduct.variants) ? viewProduct.variants : [];
+        for (const v of variants) {
+          if (v.isActive === false) continue; // Skip inactive
+
+          const attrs = v.attributes || {};
+          let ok = true;
+          for (const k of selKeys) {
+            // loose matching for string values
+            if (!attrs[k] || String(attrs[k]) !== String(normalizedSelection[k])) {
+              ok = false;
+              break;
+            }
+          }
+          if (ok) return v as any;
+        }
+      }
+
+      // 3. Fallback
       const picked = pickDisplayVariant(viewProduct);
       return picked || null;
     },
-    [viewProduct, matchingVariant]
+    [viewProduct, matchingVariant, normalizedSelection]
   );
 
   const productImages = useMemo(() => {
     if (!viewProduct) return [];
 
-    // Start with current selection's images if available
-    const selectionImages =
+    // 1. Get images for the currently selected/displayed variant
+    const variantImages =
       displayVariant?.images && displayVariant.images.length > 0
         ? displayVariant.images
         : [];
 
-    // Collect all unique images from product and ALL variants
-    const allImages = [
-      ...(viewProduct.images || []),
-      ...(viewProduct.variants || []).flatMap((v) => v.images || []),
-    ].filter((img): img is string => !!img && typeof img === "string");
+    // 2. Get generic product images (always shown)
+    const mainImages = viewProduct.images || [];
 
-    // De-duplicate while preserving order (selection first, then others)
-    const uniqueImages = Array.from(new Set([...selectionImages, ...allImages]));
+    // 3. Fallback: If variant has images, use ONLY them to avoid Showing wrong-color general images.
+    // Otherwise, fallback to main product images.
+    const images = variantImages.length > 0 ? variantImages : mainImages;
+
+    // 4. De-duplicate and filter valid strings
+    const uniqueImages = Array.from(new Set(images)).filter((img): img is string => !!img && typeof img === "string");
 
     return uniqueImages.length > 0 ? uniqueImages : [];
   }, [viewProduct, displayVariant?.images]);
