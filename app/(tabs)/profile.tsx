@@ -112,7 +112,7 @@ export default function Profile() {
     {
       title: i18n.t("support"),
       action: () => {
-        Linking.openURL("https://nubian-sd.store");
+        router.push("/(screens)/support");
       },
       icon: "help-circle-outline" as const,
       color: Colors.cyan,
