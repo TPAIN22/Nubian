@@ -79,12 +79,19 @@ export function resolvePrice({
     }
 
     // Selected variant exists
-    const final = selectedVariant.finalPrice ?? selectedVariant.merchantPrice ?? 0;
+    let final = selectedVariant.finalPrice ?? selectedVariant.merchantPrice ?? 0;
+    
+    // FALLBACK: If final/merchant are 0, try the legacy "price" field
+    if (final <= 0) {
+        final = selectedVariant.price ?? 0;
+    }
+
     const merchant = selectedVariant.merchantPrice ?? 0;
     const nubianMarkup = selectedVariant.nubianMarkup ?? 10;
     
     // The "normal" price is the merchant price plus the fixed Nubian markup
-    const normalPrice = merchant * (1 + nubianMarkup / 100);
+    let normalPrice = merchant * (1 + nubianMarkup / 100);
+    if (normalPrice <= 0) normalPrice = final; // fallback
     
     let original = normalPrice;
     
@@ -175,7 +182,11 @@ export function getDisplayPrice(product: NormalizedProduct): { price: number; is
     // If still 0, try to find the minimum from variants directly
     if (price <= 0 && variants.length > 0) {
       const variantPrices = variants
-        .map(v => v.finalPrice ?? v.merchantPrice ?? 0)
+        .map(v => {
+            let p = v.finalPrice ?? v.merchantPrice ?? 0;
+            if (p <= 0) p = v.price ?? 0;
+            return p;
+        })
         .filter(p => p > 0);
       if (variantPrices.length > 0) price = Math.min(...variantPrices);
     }

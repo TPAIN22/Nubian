@@ -22,9 +22,9 @@ import { useColors } from "@/hooks/useColors";
 import { formatPrice } from "@/utils/priceUtils";
 import { quoteCheckout } from "@/services/api/checkout.api";
 import type { QuoteResponse } from "@/types/checkout.types";
-import { extractCartItemAttributes } from "@/utils/cartUtils";
+import { extractCartItemAttributes, findMatchingVariant } from "@/utils/cartUtils";
 import { normalizeProduct } from "@/domain/product/product.normalize";
-import { matchVariant } from "@/domain/variant/variant.match";
+// import { matchVariant } from "@/domain/variant/variant.match"; // Removed
 import { getFinalPrice } from "@/utils/priceUtils";
 import { useRouter } from "expo-router";
 import { uploadImageToImageKit } from "@/utils/imageKitUpload";
@@ -64,7 +64,7 @@ const AddressCard = React.memo(({ item, isSelected, onSelect, colors }: any) => 
     style={[
       styles.addressCard,
       { borderColor: colors.borderDark, backgroundColor: colors.cardBackground },
-      isSelected && { borderColor: colors.primary, borderWidth: 2 },
+      isSelected && { borderColor: colors.primary, borderWidth: 0.5 },
     ]}
     onPress={() => onSelect(String(item._id))}
     activeOpacity={0.85}
@@ -108,7 +108,7 @@ const PaymentSection = React.memo(
           style={[
             styles.paymentOption,
             { borderColor: colors.borderDark, backgroundColor: colors.cardBackground },
-            paymentMethod === "CASH" && { borderColor: colors.primary, borderWidth: 2 },
+            paymentMethod === "CASH" && { borderColor: colors.primary, borderWidth: 0.5 },
           ]}
           onPress={() => {
             setPaymentMethod("CASH");
@@ -139,7 +139,7 @@ const PaymentSection = React.memo(
         style={[
           styles.paymentOption,
           { borderColor: colors.borderDark, backgroundColor: colors.cardBackground },
-          paymentMethod === "BANKAK" && { borderColor: colors.primary, borderWidth: 2 },
+          paymentMethod === "BANKAK" && { borderColor: colors.primary, borderWidth: 0.5 },
         ]}
         onPress={() => setPaymentMethod("BANKAK")}
         activeOpacity={0.85}
@@ -221,13 +221,13 @@ const PriceSummary = React.memo(({ quote, couponResult, orderAmount, colors }: a
     {quote ? (
       <View style={[styles.priceSection, { backgroundColor: colors.cardBackground }]}>
         <Text style={[styles.totalText, { color: colors.text.darkGray }]}>
-          {i18n.t("total")}: {formatPrice(quote.subtotal)}
+          {i18n.t("total")}: {formatPrice((quote.subtotal && quote.subtotal > 0) ? quote.subtotal : orderAmount)}
         </Text>
         <Text style={[styles.discountText, { color: colors.text.mediumGray }]}>
           {i18n.t("shipping")}: {formatPrice(quote.shippingFee)}
         </Text>
         <Text style={[styles.totalText, { color: colors.primary, marginTop: 4 }]}>
-          {i18n.t("grandTotal")}: {formatPrice(quote.total)}
+          {i18n.t("grandTotal")}: {formatPrice((quote.total && quote.total > 0) ? quote.total : (orderAmount + (quote.shippingFee || 0)))}
         </Text>
       </View>
     ) : null}
@@ -300,19 +300,6 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
     };
   }, [fetchAddresses]);
 
-  const orderAmount = useMemo(() => quote?.subtotal ?? cart?.totalPrice ?? 0, [quote?.subtotal, cart?.totalPrice]);
-
-  const payableAmountText = useMemo(() => {
-    const baseAmount = quote?.total ?? orderAmount;
-    const amount =
-      couponResult && couponResult.valid && typeof couponResult.finalAmount === "number"
-        ? couponResult.finalAmount
-        : baseAmount;
-    return formatPrice(amount);
-  }, [couponResult, orderAmount, quote?.total]);
-
-  const currentTotal = useMemo(() => couponResult?.finalAmount ?? quote?.total ?? orderAmount, [couponResult, quote, orderAmount]);
-
   const itemsPayload = useMemo(() => {
     if (!cart?.products?.length) return [];
 
@@ -322,15 +309,29 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
         const productId = raw?._id ? String(raw._id) : null;
         if (!productId) return null;
 
+        console.log(`[Checkout] Processing item: ${raw.name} (${productId})`);
+
         const p = normalizeProduct(raw);
         const attrs = toPlainObject(extractCartItemAttributes(item));
-        const v = matchVariant(p, attrs);
+        console.log(`[Checkout] Attributes:`, JSON.stringify(attrs));
 
+        const v = findMatchingVariant(p, attrs);
+        console.log(`[Checkout] Matched Variant:`, v ? v._id : "None");
+
+        // This should now return > 0 due to our pricing engine fix
         const unitPriceRaw = getFinalPrice(p, { variant: v });
         const unitPrice = Number(unitPriceRaw);
         const quantity = Number(item?.quantity ?? 1);
 
-        if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
+        console.log(`[Checkout] Price Calculation: Unit=${unitPrice}, Qty=${quantity}`);
+
+        if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+          console.warn(`[Checkout] ITEM SKIPPED DUE TO ZERO PRICE! Raw Price: ${unitPriceRaw}`);
+          // FALLBACK: Try to force a price from the raw item if possible, just to see if it exists
+          // const rawPrice = item.price || item.product.price || 0;
+          // if (rawPrice > 0) return { ... };
+          return null;
+        }
         if (!Number.isFinite(quantity) || quantity <= 0) return null;
 
         return {
@@ -342,7 +343,47 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
         };
       })
       .filter(Boolean);
-  }, [cart?.updatedAt]);
+  }, [cart?.products, cart?.updatedAt]);
+
+  const orderAmount = useMemo(() => {
+    // 1. Prefer quote total if available
+    if (typeof quote?.subtotal === 'number' && quote.subtotal > 0) return quote.subtotal;
+
+    // 2. Prefer backend cart total if > 0 (it is currently 0 due to backend bug)
+    if (typeof cart?.totalPrice === 'number' && cart.totalPrice > 0) return cart.totalPrice;
+
+    // 3. Fallback: Calculate locally from items
+    if (itemsPayload.length > 0) {
+      return itemsPayload.reduce((sum: number, item: any) => sum + (item.unitPrice * item.quantity), 0);
+    }
+
+    return 0;
+  }, [quote?.subtotal, cart?.totalPrice, itemsPayload]);
+
+  const payableAmountText = useMemo(() => {
+    // Fix: If quote.total is 0 (backend bug), fallback to orderAmount
+    const effectiveTotal = (quote?.total && quote.total > 0) ? quote.total : orderAmount;
+
+    // If shipping is involved but quote.total was 0, we should technically add shipping, 
+    // but orderAmount is usually just subtotal. Let's assume orderAmount is the best we have if quote fails.
+    // Ideally: fallbackTotal = orderAmount + (quote?.shippingFee || 0).
+    const fallbackTotal = (quote?.total && quote.total > 0) ? quote.total : (orderAmount + (quote?.shippingFee || 0));
+
+    const amount =
+      couponResult && couponResult.valid && typeof couponResult.finalAmount === "number"
+        ? couponResult.finalAmount
+        : fallbackTotal;
+    return formatPrice(amount);
+  }, [couponResult, orderAmount, quote?.total, quote?.shippingFee]);
+
+  const currentTotal = useMemo(() => {
+    if (couponResult?.finalAmount) return couponResult.finalAmount;
+    if (quote?.total && quote.total > 0) return quote.total;
+    // Fallback if quote total is broken
+    return orderAmount + (quote?.shippingFee || 0);
+  }, [couponResult, quote, orderAmount]);
+
+
 
   const refreshQuote = useCallback(
     async (addressId: string | null) => {
@@ -776,10 +817,9 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 30,
   },
   innerContainer: {
-    padding: 20,
+    padding: 10,
     width: "100%",
   },
 
@@ -787,11 +827,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 10,
   },
 
   header: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   title: {
     fontSize: 22,
@@ -802,10 +842,10 @@ const styles = StyleSheet.create({
 
   addressCard: {
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 10,
-    marginHorizontal: 20,
-    marginBottom: 12,
+    marginHorizontal: 10,
+    marginBottom: 10,
   },
   addressName: {
     fontSize: 16,
@@ -821,10 +861,10 @@ const styles = StyleSheet.create({
 
   addButton: {
     borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 18,
   },
   addButtonText: {
@@ -839,7 +879,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
-    marginBottom: 12,
+    marginBottom: 10,
     lineHeight: 24,
   },
 
@@ -847,16 +887,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 10,
-    marginBottom: 12,
+    marginBottom: 10,
     lineHeight: 24,
   },
   radioOuter: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    borderWidth: 2,
+    borderWidth: 0.5,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -897,7 +937,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   uploadButton: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
@@ -928,7 +968,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: 0.5,
     lineHeight: 20,
   },
   removeImageText: {
@@ -967,7 +1007,7 @@ const styles = StyleSheet.create({
   warningBox: {
     padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 15,
     lineHeight: 20,
   },

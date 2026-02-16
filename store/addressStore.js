@@ -16,7 +16,7 @@ const useAddressStore = create((set, get) => ({
     const task = (async () => {
       try {
         const res = await axiosInstance.get('/addresses');
-        set({ addresses: res.data, isLoading: false, error: null });
+        set({ addresses: Array.isArray(res.data) ? res.data : [], isLoading: false, error: null });
         return res.data;
       } catch (error) {
         const msg = error?.response?.data?.message || error.message;
@@ -39,7 +39,8 @@ const useAddressStore = create((set, get) => ({
       const { user, ...addressData } = address;
       const res = await axiosInstance.post('/addresses', addressData);
       const newAddress = res.data;
-      set({ addresses: [newAddress, ...get().addresses], isLoading: false });
+      const currentAddresses = Array.isArray(get().addresses) ? get().addresses : [];
+      set({ addresses: [newAddress, ...currentAddresses], isLoading: false });
       return newAddress;
     } catch (error) {
       const msg = error?.response?.data?.message || error.message;
@@ -54,11 +55,12 @@ const useAddressStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { user, ...addressData } = address;
-      if (!addressData.phone || !addressData.whatsapp) {
-        throw new Error("رقم الهاتف وواتساب مطلوبان");
+      if (!addressData.phone) {
+        throw new Error("رقم الهاتف مطلوب");
       }
       const res = await axiosInstance.put(`/addresses/${id}`, addressData);
-      set({ addresses: get().addresses.map(a => a._id === id ? res.data : a), isLoading: false });
+      const currentAddresses = Array.isArray(get().addresses) ? get().addresses : [];
+      set({ addresses: currentAddresses.map(a => a._id === id ? res.data : a), isLoading: false });
     } catch (error) {
       set({ error: error?.response?.data?.message || error.message, isLoading: false });
     }

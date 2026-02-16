@@ -164,14 +164,15 @@ export const useCurrencyStore = create<CurrencyState>()(
       },
 
       // Format price with currency symbol
-      formatPrice: (amount: number) => {
+      formatPrice: (amount: number | undefined | null) => {
+        const safeAmount = Number(amount) || 0;
         const currency = get().getSelectedCurrency();
         
         if (!currency) {
-          return `$${amount.toFixed(2)}`;
+          return `$${safeAmount.toFixed(2)}`;
         }
         
-        const formatted = amount.toFixed(currency.decimals);
+        const formatted = safeAmount.toFixed(currency.decimals);
         
         if (currency.symbolPosition === 'after') {
           return `${formatted} ${currency.symbol}`;
