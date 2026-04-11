@@ -378,5 +378,8 @@
   "home_secondsShort": "ث",
   "home_exploreCategories": "تصفح التصنيفات",
   "home_todaysDeals": "عروض اليوم",
-  "home_viewOffers": "عرض العروض"
+  "home_viewOffers": "عرض العروض",
+  "home_empty_title": "لا توجد منتجات بعد",
+  "home_empty_subtitle": "نحن بصدد تحديث قائمة منتجاتنا بأفضل العروض. تفقدنا قريباً!",
+  "home_empty_cta": "تحديث"
 }

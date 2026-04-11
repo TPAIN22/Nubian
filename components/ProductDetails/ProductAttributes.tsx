@@ -21,9 +21,19 @@ export const ProductAttributes = ({
   themeColors,
   pleaseSelectText = "Please select",
 }: Props) => {
-  const attrsList = product.attributeDefs ?? [];
-  const normalizedSelected = useMemo(() => normalizeSelectedAttributes(selectedAttributes), [selectedAttributes]);
   const optionsMap = useMemo(() => getAttributeOptions(product), [product]);
+  const attrsList = useMemo(() => {
+    if (product.attributeDefs && product.attributeDefs.length > 0) {
+      return product.attributeDefs;
+    }
+    // Fallback: Generate attributes from variants' attributes if backend omits attributeDefs
+    return Object.keys(optionsMap).map(key => ({
+      name: key,
+      displayName: key.charAt(0).toUpperCase() + key.slice(1),
+      required: true
+    }));
+  }, [product.attributeDefs, optionsMap]);
+  const normalizedSelected = useMemo(() => normalizeSelectedAttributes(selectedAttributes), [selectedAttributes]);
 
   if (!attrsList.length) return null;
 

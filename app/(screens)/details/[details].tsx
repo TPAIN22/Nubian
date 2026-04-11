@@ -10,7 +10,7 @@ import { GestureHandlerRootView, GestureDetector, Gesture } from "react-native-g
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import {
   View,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Pressable,
   Modal,
@@ -217,14 +217,24 @@ export default function Details() {
     return () => { cancelled = true; };
   }, [productId]);
 
-  const productAttributes = useMemo(() => viewProduct?.attributeDefs ?? [], [viewProduct]);
+  const optionsMap = useMemo(() => (viewProduct ? getAttributeOptions(viewProduct) : {}), [viewProduct]);
+
+  const productAttributes = useMemo(() => {
+    if (!viewProduct) return [];
+    if (viewProduct.attributeDefs && viewProduct.attributeDefs.length > 0) {
+      return viewProduct.attributeDefs;
+    }
+    return Object.keys(optionsMap).map(key => ({
+      name: key,
+      displayName: key.charAt(0).toUpperCase() + key.slice(1),
+      required: true
+    }));
+  }, [viewProduct, optionsMap]);
 
   const normalizedSelection = useMemo(
     () => normalizeSelectedAttributes(selectedAttributes),
     [selectedAttributes]
   );
-
-  const optionsMap = useMemo(() => (viewProduct ? getAttributeOptions(viewProduct) : {}), [viewProduct]);
 
   /** ✅ auto-init required attributes when options exist (regardless of type) */
   useEffect(() => {
@@ -364,6 +374,15 @@ export default function Details() {
     [viewProduct, matchingVariant, displayVariant]
   );
 
+  useEffect(() => {
+    if (__DEV__ && viewProduct) {
+      console.log("\n================[DEV: PRODUCT DETAILS PAYLOAD]================");
+      console.log("PRICING ENGINE RESULT:\n", JSON.stringify(pricing, null, 2));
+      console.log("FULL PRODUCT PAYLOAD:\n", JSON.stringify(viewProduct, null, 2));
+      console.log("==============================================================\n");
+    }
+  }, [viewProduct?.id, pricing?.final]);
+
   const currentPrice = pricing?.final ?? 0;
   const originalPrice = pricing?.original ?? pricing?.merchant ?? 0;
   const productHasDiscount = (pricing?.discount?.amount ?? 0) > 0;
@@ -404,15 +423,21 @@ export default function Details() {
     if (!viewProduct) return false;
     if ((viewProduct as any)?.isActive === false) return false;
     if (missingRequiredAttributes.length > 0) return false;
-    // If product has variants, require valid matching selectable variant
+
+    // Special case: New backend treats simple products as having 1 variant but 0 attribute definitions
+    const isSingleVariantSimple = viewProduct.variants.length === 1 && productAttributes.length === 0;
+
+    // If product has variants, require valid matching selectable variant (or be a single-variant simple)
     if (viewProduct.variants.length > 0) {
-      if (!matchingVariant) return false;
-      return isVariantSelectable(matchingVariant);
+      if (!matchingVariant && !isSingleVariantSimple) return false;
+      const target = matchingVariant || (isSingleVariantSimple ? viewProduct.variants[0] : null);
+      return isVariantSelectable(target);
     }
-    // Simple product: rely on simple stock
+    
+    // Simple product fallback (legacy)
     const stock = Number(viewProduct.simple?.stock ?? 0);
     return stock > 0;
-  }, [viewProduct, missingRequiredAttributes.length, matchingVariant]);
+  }, [viewProduct, missingRequiredAttributes.length, matchingVariant, productAttributes.length]);
 
   /** wishlist - use optimized selector */
   const inWishlist = useIsInWishlist(viewProduct?.id);
@@ -540,100 +565,116 @@ export default function Details() {
     );
   }
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      <ProductHeader colors={colors} />
+  const SECTIONS = [
+    "CAROUSEL",
+    "INFO",
+    "ATTRIBUTES",
+    "STOCK",
+    "DESCRIPTION",
+    "RECOMMENDATIONS",
+    "REVIEWS",
+  ];
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        removeClippedSubviews
-      >
-        <ProductImageCarousel
-          images={productImages || []}
-          colors={colors}
-          onImagePress={openImageModal}
-        />
-
-        <View
-          style={[styles.productDetails, { backgroundColor: colors.surface }]}
-        >
-          <View
-            style={[
-              styles.productInfoCard,
-              { backgroundColor: colors.cardBackground },
-            ]}
-          >
-            <Text style={[styles.productName, { color: colors.text.gray }]}>
-              {viewProduct.name}
-            </Text>
-
-            <View style={styles.priceContainer}>
-              {productHasDiscount && (
-                <Text
-                  style={[
-                    styles.originalPrice,
-                    { color: colors.text.veryLightGray },
-                  ]}
-                >
-                  {formattedOriginalPrice}
+  const renderItem = useCallback(
+    ({ item }: { item: string }) => {
+      switch (item) {
+        case "CAROUSEL":
+          return (
+            <ProductImageCarousel
+              images={productImages || []}
+              colors={colors}
+              onImagePress={openImageModal}
+            />
+          );
+        case "INFO":
+          return (
+            <View style={[styles.productInfoCard, { backgroundColor: colors.cardBackground }]}>
+              {!!viewProduct.categoryName && (
+                <Text style={{ fontSize: 13, color: colors.primary, marginBottom: 4, fontWeight: "600", textAlign: I18nManager.isRTL ? "right" : "left", textTransform: "uppercase" }}>
+                  {viewProduct.categoryName}
                 </Text>
               )}
-              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                {pricing?.requiresSelection && (
-                  <Text style={{ fontSize: 14, color: colors.text.veryLightGray, marginRight: 4 }}>
-                    {i18n.t("from") || "From"}
+              <Text style={[styles.productName, { color: colors.text.gray }]}>
+                {viewProduct.name}
+              </Text>
+              <View style={styles.priceContainer}>
+                <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+                  {pricing?.requiresSelection && (
+                    <Text style={{ fontSize: 14, color: colors.text.veryLightGray, marginRight: 4 }}>
+                      {i18n.t("from") || "From"}
+                    </Text>
+                  )}
+                  <Text
+                    style={[
+                      styles.price,
+                      { color: productHasDiscount ? COLORS.ERROR_RED : colors.text.gray },
+                    ]}
+                  >
+                    {formattedFinalPrice}
+                  </Text>
+                  {productHasDiscount && (
+                    <Text
+                      style={[
+                        styles.originalPrice,
+                        { color: colors.text.veryLightGray, marginLeft: 8 },
+                      ]}
+                    >
+                      {formattedOriginalPrice}
+                    </Text>
+                  )}
+                </View>
+                {productHasDiscount && (
+                  <View style={[styles.discountBadge, { backgroundColor: COLORS.ERROR_RED }]}>
+                    <Text style={styles.discountBadgeText}>
+                      {viewProduct?.displayDiscountPercentage || pricing?.discount?.percentage
+                        ? `-${Math.round((viewProduct as any)?.displayDiscountPercentage || pricing?.discount?.percentage || 0)}% OFF`
+                        : "Sale"}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {missingRequiredAttributes.length > 0 && (
+                <Text style={[styles.missingText, { color: COLORS.ERROR_RED }]}>
+                  {`${i18n.t("pleaseSelect") || "Please select"}: ${missingRequiredAttributes.join(
+                    ", "
+                  )}`}
+                </Text>
+              )}
+            </View>
+          );
+        case "ATTRIBUTES":
+          return (
+            <ProductAttributes
+              product={viewProduct}
+              selectedAttributes={selectedAttributes}
+              onAttributeSelect={handleAttributeSelect}
+              themeColors={colors}
+              pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
+            />
+          );
+        case "STOCK":
+          return (
+            <View style={[styles.stockContainer, { backgroundColor: colors.cardBackground }]}>
+              <Text style={[styles.stockText, { color: colors.text.gray }]}>
+                {i18n.t("stock") || "Stock"}:{" "}
+                {currentStock > 0 ? (
+                  <Text style={{ color: colors.primary, fontWeight: "600" }}>{currentStock}</Text>
+                ) : (
+                  <Text style={{ color: COLORS.ERROR_RED, fontWeight: "600" }}>
+                    {i18n.t("outOfStock") || "Out of Stock"}
                   </Text>
                 )}
-                <Text style={[styles.price, { color: colors.text.gray }]}>
-                  {formattedFinalPrice}
-                </Text>
-              </View>
-            </View>
-
-            {missingRequiredAttributes.length > 0 && (
-              <Text style={[styles.missingText, { color: COLORS.ERROR_RED }]}>
-                {`${i18n.t("pleaseSelect") || "Please select"
-                  }: ${missingRequiredAttributes.join(", ")}`}
               </Text>
-            )}
-          </View>
-          {/* ✅ Attributes */}
-          <ProductAttributes
-            product={viewProduct}
-            selectedAttributes={selectedAttributes}
-            onAttributeSelect={handleAttributeSelect}
-            themeColors={colors}
-            pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
-          />
-          <View
-            style={[
-              styles.stockContainer,
-              { backgroundColor: colors.cardBackground },
-            ]}
-          >
-            <Text style={[styles.stockText, { color: colors.text.gray }]}>
-              {i18n.t("stock") || "Stock"}:{" "}
-              {currentStock > 0 ? (
-                <Text style={{ color: colors.primary, fontWeight: "600" }}>
-                  {currentStock}
-                </Text>
-              ) : (
-                <Text style={{ color: COLORS.ERROR_RED, fontWeight: "600" }}>
-                  {i18n.t("outOfStock") || "Out of Stock"}
+              {displayVariant?.sku && (
+                <Text style={{ fontSize: 13, color: colors.text.veryLightGray, marginTop: 4, paddingBottom: 4, textAlign: I18nManager.isRTL ? "right" : "left" }}>
+                  SKU: {displayVariant.sku}
                 </Text>
               )}
-            </Text>
-          </View>
-
-          {!!viewProduct.description && (
-            <View
-              style={[
-                styles.descriptionSection,
-                { backgroundColor: colors.cardBackground },
-              ]}
-            >
+            </View>
+          );
+        case "DESCRIPTION":
+          return !!viewProduct.description ? (
+            <View style={[styles.descriptionSection, { backgroundColor: colors.cardBackground }]}>
               <Text
                 style={[
                   styles.descriptionTitle,
@@ -657,20 +698,75 @@ export default function Details() {
                 {viewProduct.description}
               </Text>
             </View>
-          )}
-          <View style={{ flex: 1, height: 10, backgroundColor: colors.background }} />
+          ) : null;
+        case "RECOMMENDATIONS":
+          return showDeferred ? (
+            <View style={{ backgroundColor: colors.surface }}>
+              <View style={{ height: 10, backgroundColor: colors.background }} />
+              <ProductRecommendations
+                recommendations={(recommendations as any) ?? null}
+                isLoading={isLoadingRecommendations ?? false}
+                colors={colors}
+              />
+            </View>
+          ) : null;
+        case "REVIEWS":
+          return showDeferred ? (
+            <View style={{ backgroundColor: colors.surface }}>
+              <View style={{ height: 10, backgroundColor: colors.background }} />
+              <Review productId={viewProduct?.id} />
+              <View style={{ height: 140 }} />
+            </View>
+          ) : null;
+        default:
+          return null;
+      }
+    },
+    [
+      productImages,
+      colors,
+      openImageModal,
+      viewProduct,
+      productHasDiscount,
+      pricing,
+      formattedFinalPrice,
+      formattedOriginalPrice,
+      missingRequiredAttributes,
+      selectedAttributes,
+      handleAttributeSelect,
+      currentStock,
+      showDeferred,
+      recommendations,
+      isLoadingRecommendations,
+      displayVariant,
+    ]
+  );
 
-          {showDeferred && (
-            <ProductRecommendations
-              recommendations={(recommendations as any) ?? null}
-              isLoading={isLoadingRecommendations ?? false}
-              colors={colors}
-            />
-          )}
+  return (
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <ProductHeader colors={colors} />
 
-          {showDeferred && <Review productId={viewProduct?.id} />}
-        </View>
-      </ScrollView>
+      <FlatList
+        data={SECTIONS}
+        renderItem={renderItem}
+        keyExtractor={(item) => item}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        removeClippedSubviews
+        initialNumToRender={5}
+        maxToRenderPerBatch={3}
+        extraData={{
+          selectedAttributes,
+          viewProduct,
+          displayVariant,
+          pricing,
+          currentStock,
+          missingRequiredAttributes,
+          showDeferred,
+          recommendations,
+          isLoadingRecommendations
+        }}
+      />
 
       {/* ✅ Bottom actions */}
       <ProductActions
@@ -734,36 +830,53 @@ const styles = StyleSheet.create({
   backButton: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 6 },
   backButtonText: { fontSize: 16, fontWeight: "600" },
 
-  productDetails: { paddingBottom: 140 },
+  productDetails: { paddingBottom: 120 },
 
-  productInfoCard: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 16 },
+  productInfoCard: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
   productName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     marginBottom: 8,
-    lineHeight: 32,
+    lineHeight: 28,
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
 
   priceContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     flexWrap: "wrap",
     marginTop: 4,
   },
   price: {
-    padding: 10,
-    fontSize: 24,
-    fontWeight: "700",
+    paddingVertical: 4,
+    fontSize: 22,
+    fontWeight: "800",
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
   originalPrice: {
-    padding: 10,
-    fontSize: 18,
-    fontWeight: "400",
+    paddingVertical: 4,
+    fontSize: 14,
+    fontWeight: "500",
     textDecorationLine: "line-through",
     textAlign: I18nManager.isRTL ? "right" : "left",
+  },
+  discountBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+    alignSelf: "flex-start",
+  },
+  discountBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
 
   missingText: {
@@ -773,15 +886,28 @@ const styles = StyleSheet.create({
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
 
-  descriptionSection: { paddingHorizontal: 20, paddingVertical: 10, marginBottom: 26 },
-  descriptionTitle: { padding: 10, fontSize: 16, fontWeight: "600", marginBottom: 12 },
-  description: { padding: 10, fontSize: 14, lineHeight: 22, marginBottom: 4 },
-
-  stockContainer: { paddingHorizontal: 20, paddingVertical: 16, marginTop: 8 },
-  stockText: {
-    padding: 10,
+  descriptionSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  descriptionTitle: {
+    paddingVertical: 6,
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  description: {
+    paddingVertical: 4,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+
+  stockContainer: { paddingHorizontal: 16, paddingVertical: 12, marginTop: 8 },
+  stockText: {
+    paddingVertical: 4,
+    fontSize: 14,
+    fontWeight: "600",
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
 

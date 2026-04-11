@@ -4,6 +4,7 @@ import {
   Pressable,
   ActivityIndicator,
   I18nManager,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/ui/text";
@@ -41,7 +42,7 @@ export const ProductActions = ({
         {
           paddingBottom: Math.max(insets.bottom, 20),
           backgroundColor: themeColors.surface,
-          borderTopColor: themeColors.borderLight,
+          shadowColor: themeColors.text.dark,
         },
       ]}
     >
@@ -97,14 +98,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 20,
-    borderTopWidth: 1,
+    paddingBottom: 24,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: -6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   actionButtonsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 16,
   },
   actionButtonsRowRTL: {
     flexDirection: "row-reverse",
@@ -114,7 +124,7 @@ const styles = StyleSheet.create({
   },
   addToCartButton: {
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 14,
   },
   disabledButton: {
     opacity: 0.7,
@@ -122,7 +132,7 @@ const styles = StyleSheet.create({
   wishlistButton: {
     borderRadius: 8,
     paddingHorizontal: 24,
-    paddingVertical: 10,
+    paddingVertical: 14,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -133,6 +143,6 @@ const styles = StyleSheet.create({
   },
   wishlistButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

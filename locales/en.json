@@ -377,5 +377,8 @@
   "home_secondsShort": "s",
   "home_exploreCategories": "Explore Categories",
   "home_todaysDeals": "Today's Deals",
-  "home_viewOffers": "View Offers"
+  "home_viewOffers": "View Offers",
+  "home_empty_title": "No products yet",
+  "home_empty_subtitle": "We're currently updating our catalog with new amazing products. Check back soon!",
+  "home_empty_cta": "Refresh"
 }

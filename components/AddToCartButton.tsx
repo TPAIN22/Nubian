@@ -70,22 +70,25 @@ const AddToCartButton = ({
     // product inactive
     if ((product as any).isActive === false) return { ok: false, reason: "inactive_product" as const };
 
-    // If no variants, allow simple product purchase based on stock
-    if (!hasVariants) {
-      if (simpleStock > 0) return { ok: true, reason: "ok" as const };
-      return { ok: false, reason: "out_of_stock" as const };
+    const isActuallySimple = (product.variants?.length === 1) && (!product.attributeDefs || product.attributeDefs.length === 0);
+
+    // If product has variants, require valid matching selectable variant (or be a single-variant simple)
+    if (hasVariants) {
+      if (!requiredValidation.valid) return { ok: false, reason: "missing_required" as const };
+
+      // Fix: Auto-match if it's the single-variant simple product
+      if (!matchingVariant && !isActuallySimple) return { ok: false, reason: "no_variant" as const };
+
+      const target = matchingVariant || (isActuallySimple ? product.variants[0] : null);
+      if (!isVariantSelectable(target)) return { ok: false, reason: "out_of_stock" as const };
+
+      return { ok: true, reason: "ok" as const };
     }
 
-    // if required missing -> not available yet (needs selection)
-    if (!requiredValidation.valid) return { ok: false, reason: "missing_required" as const };
-
-    // no matching variant
-    if (!matchingVariant) return { ok: false, reason: "no_variant" as const };
-
-    if (!isVariantSelectable(matchingVariant)) return { ok: false, reason: "out_of_stock" as const };
-
-    return { ok: true, reason: "ok" as const };
-  }, [product, hasVariants, requiredValidation.valid, matchingVariant]);
+    // Legacy simple product fallback
+    if (simpleStock > 0) return { ok: true, reason: "ok" as const };
+    return { ok: false, reason: "out_of_stock" as const };
+  }, [product, hasVariants, requiredValidation.valid, matchingVariant, simpleStock]);
 
   // ✅ 5) Button disabled
   const isButtonDisabled = useMemo(() => {

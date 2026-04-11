@@ -303,7 +303,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const cartQuantity = useCartQuantity();
 
   return (
-    <View style={[styles.container, { paddingTop: state.topPadding }]}>
+    <View style={[styles.container, { paddingTop: state.topPadding + 12, paddingBottom: 12 }]}>
       {/* Gradient background */}
       <LinearGradient
         colors={state.headerGradient as [string, string]}

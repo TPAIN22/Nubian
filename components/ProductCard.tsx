@@ -12,7 +12,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
 import useItemStore from "@/store/useItemStore";
-import { usePrefetchProduct } from "@/store/useProductCacheStore";
+import { usePrefetchProduct, useSetInitialProduct } from "@/store/useProductCacheStore";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
 import { formatPrice } from "@/utils/priceUtils";
@@ -38,6 +38,7 @@ const ProductCard = React.memo(
     // Use optimized selectors - only re-render when this specific product's wishlist status changes
     const setProduct = useItemStore((state: any) => state.setProduct);
     const prefetchProduct = usePrefetchProduct();
+    const setInitialProduct = useSetInitialProduct();
     const { addToWishlist, removeFromWishlist } = useWishlistActions();
     const inWishlist = useIsInWishlist(item?.id);
     const { getToken } = useAuth();
@@ -93,8 +94,13 @@ const ProductCard = React.memo(
         markTapStartTime(item.id); // For tap-to-content timing
       }
 
+      // CRITICAL: Seed the product cache INSTANTLY with the full list item data
+      // This prevents the details screen from showing a loading skeleton or falling back
+      // to the minimal URL params initialData, enabling a 0ms perceived load time.
+      setInitialProduct(item.id, item as any);
+
       // CRITICAL: Navigate FIRST - this is the user's primary intent
-      // Pass the full item for instant rendering on details screen
+      // Pass the minimal item representation in URL for deep-link compatibility
       navigateToProduct(item.id, item as any);
 
       if (__DEV__) markNavigationCall(item.id);

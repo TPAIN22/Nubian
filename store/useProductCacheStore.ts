@@ -33,6 +33,7 @@ interface ProductCacheState {
   getCachedProduct: (productId: string) => CacheEntry | null;
   invalidateProduct: (productId: string) => void;
   clearCache: () => void;
+  clearAll: () => void; // alias for clearCache, used by currency store
 }
 
 const useProductCacheStore = create<ProductCacheState>((set, get) => ({
@@ -207,6 +208,13 @@ const useProductCacheStore = create<ProductCacheState>((set, get) => ({
    * Clear entire cache.
    */
   clearCache: () => {
+    set({ byId: {}, inFlight: {} });
+  },
+
+  /**
+   * Alias for clearCache — used externally (e.g. by currency store).
+   */
+  clearAll: () => {
     set({ byId: {}, inFlight: {} });
   },
 }));

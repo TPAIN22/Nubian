@@ -24,8 +24,12 @@ export type ProductVariantDTO = {
 
   nubianMarkup?: number;
   dynamicMarkup?: number;
+  merchantDiscount?: number;
   finalPrice?: number;
   discountPrice?: number;
+  
+  priceConverted?: number;
+  priceDisplay?: string;
 
   stock: number;
   images?: string[];
@@ -62,6 +66,7 @@ export type ProductDTO = {
   variants?: ProductVariantDTO[];
 
   isActive?: boolean;
+  dynamicPricingEnabled?: boolean;
 
   priorityScore?: number;
   featured?: boolean;
@@ -71,6 +76,7 @@ export type ProductDTO = {
     cartCount24h?: number;
     sales24h?: number;
     favoritesCount?: number;
+    scoreCalculatedAt?: string | null;
   };
 
   rankingFields?: {

@@ -7,6 +7,7 @@
 
 import { router } from 'expo-router';
 import { Linking } from 'react-native';
+import useProductCacheStore from '@/store/useProductCacheStore';
 
 // ============================================================================
 // GLOBAL ROUTING PATHS
@@ -39,11 +40,22 @@ export const ROUTES = {
  * @param product - Optional product object for prefetching
  */
 export function navigateToProduct(productId: string, product?: any): void {
+  // CRITICAL PERF FIX: Seed the Zustand cache store instantly with the full product object.
+  // This completely eliminates loading skeletons on the details screen because useProductFetch
+  // will instantly find the cached record (even if marked as partial) before the network request.
+  if (product && productId) {
+    try {
+      useProductCacheStore.getState().setInitialProduct(productId, product);
+    } catch (e) {
+      console.warn('Failed to seed product cache:', e);
+    }
+  }
+
   router.push({
     pathname: ROUTES.PRODUCT,
     params: {
       details: productId, // Route expects 'details' param
-      // Include product data for optimistic rendering
+      // Include minimal product data for optimistic rendering fallback
       ...(product && {
         name: product.name || '',
         price: String(product.price || product.finalPrice || product.discountPrice || 0),

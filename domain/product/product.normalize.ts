@@ -6,6 +6,7 @@ export type NormalizedProduct = {
   name: string;
   description: string;
   isActive: boolean;
+  dynamicPricingEnabled: boolean;
   deletedAt: string | null;
 
   categoryId: string;
@@ -129,8 +130,11 @@ function normalizeVariant(v: any, attrDefs?: ProductAttributeDefDTO[]): ProductV
     price: Number(v?.price ?? v?.merchantPrice ?? 0),
     nubianMarkup: asNum(v?.nubianMarkup) ?? undefined,
     dynamicMarkup: asNum(v?.dynamicMarkup) ?? undefined,
+    merchantDiscount: asNum(v?.merchantDiscount) ?? undefined,
     finalPrice: asNum(v?.finalPrice) ?? undefined,
     discountPrice: asNum(v?.discountPrice) ?? undefined,
+    priceConverted: asNum(v?.priceConverted) ?? undefined,
+    priceDisplay: asString(v?.priceDisplay) || undefined,
     stock: Number(v?.stock ?? 0),
     images: asStringArray(v?.images),
     isActive: v?.isActive === false ? false : true,
@@ -162,6 +166,7 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     name: asString(raw?.name),
     description: asString(raw?.description),
     isActive: raw?.isActive === false ? false : true,
+    dynamicPricingEnabled: raw?.dynamicPricingEnabled === false ? false : true,
     deletedAt: raw?.deletedAt ? asString(raw.deletedAt) : null,
 
     categoryId,

@@ -9,11 +9,14 @@ import type { SelectedAttributes } from "@/domain/product/product.selectors";
 import { pickDisplayVariant } from "@/domain/variant/variant.match";
 import { getOriginalPrice, getFinalPrice, hasDiscount } from "@/utils/priceUtils";
 import { formatPrice as formatPriceUtil } from "@/utils/priceUtils";
+import { useTheme } from "@/providers/ThemeProvider";
 
 const { width: windowWidth } = Dimensions.get("window");
 
 const BottomSheet = () => {
   const { product } = useItemStore();
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   const displayVariant = useMemo(() => (product ? pickDisplayVariant(product as any) : null), [product]);
   const originalPrice = useMemo(() => (product ? getOriginalPrice(product as any, { variant: displayVariant as any }) : 0), [product, displayVariant]);
@@ -24,14 +27,14 @@ const BottomSheet = () => {
 
   if (!product) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading product details...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.loadingText, { color: colors.text.veryLightGray }]}>Loading product details...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -53,14 +56,14 @@ const BottomSheet = () => {
               </View>
             ))
           ) : (
-            <View style={styles.noImageContainer}>
-              <Text style={styles.noImageText}>No images available</Text>
+            <View style={[styles.noImageContainer, { backgroundColor: colors.cardBackground }]}>
+              <Text style={[styles.noImageText, { color: colors.text.mediumGray }]}>No images available</Text>
             </View>
           )}
         </ScrollView>
 
-        <View style={styles.detailsContainer}>
-          <Text style={styles.productName}>{product.name}</Text>
+        <View style={[styles.detailsContainer, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.productName, { color: colors.text.gray }]}>{product.name}</Text>
 
           {/* Price Display */}
           {/* price = original price, discountPrice = final selling price */}
@@ -68,23 +71,23 @@ const BottomSheet = () => {
             {productHasDiscount ? (
               <>
                 {/* Final price (after discount) */}
-                <Text style={styles.discountPrice}>
+                <Text style={[styles.discountPrice, { color: colors.primary }]}>
                   {formatPriceUtil(finalPrice)}
                 </Text>
                 {/* Original price (strikethrough) */}
-                <Text style={styles.originalPrice}>
+                <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
                   {formatPriceUtil(originalPrice)}
                 </Text>
               </>
             ) : (
-              <Text style={styles.productPrice}>{formatPriceUtil(finalPrice)}</Text>
+              <Text style={[styles.productPrice, { color: colors.primary }]}>{formatPriceUtil(finalPrice)}</Text>
             )}
           </View>
         </View>
       </ScrollView>
 
       {/* Add to Cart Button */}
-      <View style={styles.buttonContainer}>
+      <View style={[styles.buttonContainer, { backgroundColor: colors.surface, borderTopColor: colors.borderLight }]}>
         <AddToCartButton 
           product={product} 
           selectedAttributes={selectedAttributes}
@@ -97,7 +100,6 @@ const BottomSheet = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   loadingContainer: {
     flex: 1,
@@ -125,7 +127,6 @@ const styles = StyleSheet.create({
   noImageContainer: {
     width: windowWidth,
     height: 300,
-    backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -144,7 +145,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
-    color: "#333",
     textAlign: "left",
   },
   sectionTitle: {
@@ -190,19 +190,16 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#f0b745",
     textAlign: "left",
   },
   discountPrice: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#f0b745",
     textAlign: "left",
     marginRight: 10,
   },
   originalPrice: {
     fontSize: 16,
-    color: "#888",
     textDecorationLine: "line-through",
     textAlign: "left",
   },
@@ -220,8 +217,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    backgroundColor: "#fff",
     position: "absolute",
     bottom: 0,
     alignSelf: "center",

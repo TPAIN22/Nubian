@@ -11,7 +11,6 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useItemStore from "@/store/useItemStore";
-import AppHeader from "@/components/AppHeader";
 import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
@@ -277,10 +276,7 @@ export default function TabsLayout() {
           name="index"
           options={{
             tabBarHideOnKeyboard: true,
-            headerShadowVisible: false,
-            headerTransparent: false,
-            header: () => <AppHeader />,
-            headerTitleContainerStyle: styles.headerTitleContainer,
+            headerShown: false,
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 iconType="home"

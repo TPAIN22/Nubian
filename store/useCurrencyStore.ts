@@ -96,20 +96,53 @@ export const useCurrencyStore = create<CurrencyState>()(
         }
       },
 
-      // Set country (also auto-selects default currency)
+      // Set country (also auto-selects default currency and invalidates caches)
       setCountry: (countryCode: string) => {
         const { countries } = get();
         const country = countries.find(c => c.code === countryCode);
-        
+        const newCurrencyCode = country?.defaultCurrencyCode || 'USD';
         set({
           countryCode,
-          currencyCode: country?.defaultCurrencyCode || 'USD',
+          currencyCode: newCurrencyCode,
         });
+        // Invalidate product caches since currency changed
+        setTimeout(() => {
+          try {
+            const { useHomeStore } = require('@/store/useHomeStore');
+            useHomeStore.getState().reset();
+          } catch {}
+          try {
+            const { useExploreStore } = require('@/store/useExploreStore');
+            useExploreStore.getState().reset();
+          } catch {}
+          try {
+            const { useProductCacheStore } = require('@/store/useProductCacheStore');
+            useProductCacheStore.getState().clearAll?.();
+          } catch {}
+        }, 50);
       },
 
-      // Set currency
+      // Set currency and invalidate all product caches
       setCurrency: (currencyCode: string) => {
         set({ currencyCode });
+        // Defer cache invalidation to next tick so the header interceptor picks up the new currency
+        setTimeout(() => {
+          try {
+            // Reset home product data (prices are now stale)
+            const { useHomeStore } = require('@/store/useHomeStore');
+            useHomeStore.getState().reset();
+          } catch {}
+          try {
+            // Reset explore product data
+            const { useExploreStore } = require('@/store/useExploreStore');
+            useExploreStore.getState().reset();
+          } catch {}
+          try {
+            // Clear product detail cache
+            const { useProductCacheStore } = require('@/store/useProductCacheStore');
+            useProductCacheStore.getState().clearAll?.();
+          } catch {}
+        }, 50);
       },
 
       // Save preferences to AsyncStorage and optionally sync with backend
