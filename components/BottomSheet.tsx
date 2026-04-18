@@ -1,7 +1,6 @@
-import { View, Dimensions, StyleSheet } from "react-native";
+import { View, Dimensions, StyleSheet, ScrollView } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useMemo } from "react";
-import { ScrollView } from "react-native-gesture-handler";
 import useItemStore from "@/store/useItemStore";
 import { Image } from "expo-image";
 import AddToCartButton from "./AddToCartButton";

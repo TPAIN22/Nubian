@@ -4,6 +4,7 @@ import {
   RefreshControl,
   StyleSheet,
 } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { useCallback, useEffect, useRef } from "react";
 import useItemStore from "@/store/useItemStore";
@@ -11,9 +12,6 @@ import NoNetworkScreen from "../NoNetworkScreen";
 import { useNetwork } from "@/providers/NetworkProvider";
 import ItemCard from "@/components/Card";
 import ItemCardSkeleton from "@/components/ItemCardSkeleton";
-import {
-  GestureHandlerRootView,
-} from "react-native-gesture-handler";
 import {
   BottomSheetModal,
   BottomSheetModalProvider,
@@ -50,10 +48,15 @@ export default function Index() {
     [setIsTabBarVisible]
   );
 
-  useEffect(() => {
-    if (products.length === 0)
-    getAllProducts();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      // Only fetch all products if we don't have any and we aren't currently loading
+      // This prevents background global fetches from overwriting category data
+      if (products.length === 0 && !isProductsLoading) {
+        getAllProducts();
+      }
+    }, [products.length, isProductsLoading, getAllProducts])
+  );
 
   const onRefresh = useCallback(async () => {
     await getAllProducts();
@@ -72,7 +75,7 @@ export default function Index() {
   }
 
   return (
-    <GestureHandlerRootView style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
+    <View style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
       <BottomSheetModalProvider>
         <View style={{ backgroundColor: Colors.surface }}>
           <FlatList
@@ -128,7 +131,7 @@ export default function Index() {
           </BottomSheetView>
         </BottomSheetModal>
       </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 

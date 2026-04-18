@@ -1,8 +1,8 @@
 import { useNetwork } from "@/providers/NetworkProvider";
 import useItemStore from "@/store/useItemStore";
 import { useCallback, useEffect, useRef, useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import NoNetworkScreen from "../NoNetworkScreen";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
   BottomSheetModal,
   BottomSheetModalProvider,
@@ -60,7 +60,6 @@ export default function CategoriesScreen() {
     products = [],
     hasMore,
     setIsTabBarVisible,
-    selectedCategory,
     categories,
     getCategories,
   } = useItemStore();
@@ -167,23 +166,22 @@ export default function CategoriesScreen() {
     [setIsTabBarVisible]
   );
 
-  // Load products when category changes - only if ID is valid
-  useEffect(() => {
-    // Validate ID format before loading products
-    if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
-      return;
-    }
+  // Always reload products when this category screen is focused with a new category ID.
+  // Using useFocusEffect + a ref prevents double-fetching on the initial mount while
+  // ensuring fresh data when navigating back to this screen or switching categories.
+  const loadedCategoryRef = useRef<string | null>(null);
 
-    if (selectedCategory !== id) {
-      if (__DEV__) {
-        console.log('[CategoryScreen] Loading products for category:', {
-          categoryId: id,
-          previousCategory: selectedCategory,
-        });
+  useFocusEffect(
+    useCallback(() => {
+      if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) return;
+
+      // Only re-fetch if we haven't already loaded this exact category
+      if (loadedCategoryRef.current !== id) {
+        loadedCategoryRef.current = id;
+        selectCategoryAndLoadProducts(id);
       }
-      selectCategoryAndLoadProducts(id);
-    }
-  }, [id, selectedCategory, selectCategoryAndLoadProducts]);
+    }, [id, selectCategoryAndLoadProducts])
+  );
 
   const onRefresh = useCallback(async () => {
     if (id) {
@@ -194,10 +192,10 @@ export default function CategoriesScreen() {
   }, [id, selectCategoryAndLoadProducts, setIsTabBarVisible, handleSheetChanges]);
 
   const onEndReachedHandler = useCallback(() => {
-    if (!isProductsLoading && hasMore && selectedCategory) {
+    if (!isProductsLoading && hasMore && id) {
       getProducts();
     }
-  }, [getProducts, hasMore, isProductsLoading, selectedCategory]);
+  }, [getProducts, hasMore, isProductsLoading, id]);
 
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
@@ -233,14 +231,14 @@ export default function CategoriesScreen() {
 
   // Guards (must come after all hooks, to satisfy rules-of-hooks)
   if (!isValidCategoryId) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="../" />;
   }
   if (!isConnected && !isNetworkChecking) {
     return <NoNetworkScreen onRetry={retryNetworkCheck} />;
   }
 
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: Colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
       <BottomSheetModalProvider>
         {/* Collapsible Header */}
         <Animated.View
@@ -458,7 +456,7 @@ export default function CategoriesScreen() {
           </BottomSheetView>
         </BottomSheetModal>
       </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 

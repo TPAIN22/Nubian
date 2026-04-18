@@ -51,18 +51,19 @@ export function navigateToProduct(productId: string, product?: any): void {
     }
   }
 
+  // Use href string with ID embedded to avoid dynamic segment ([id]) interception
+  // when navigating from within the (screens) stack (e.g. category → product detail).
   router.push({
-    pathname: ROUTES.PRODUCT,
+    pathname: '/(screens)/details/[details]' as any,
     params: {
-      details: productId, // Route expects 'details' param
-      // Include minimal product data for optimistic rendering fallback
+      details: productId,
       ...(product && {
         name: product.name || '',
         price: String(product.price || product.finalPrice || product.discountPrice || 0),
         image: product.images?.[0] || '',
       }),
     },
-  } as any);
+  });
 }
 
 /**

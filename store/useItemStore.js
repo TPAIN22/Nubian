@@ -58,7 +58,9 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
       return;
     }
 
-    if (!hasMore || isProductsLoading) return;
+    // Allow fresh reloads (page 1) to proceed even if isProductsLoading is true
+    // this prevents background getAllProducts fetches from blocking category selection.
+    if (!hasMore || (isProductsLoading && page !== 1)) return;
 
     set({ isProductsLoading: true, error: null });
 
@@ -381,15 +383,23 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
 
   // Select category and load its products
   selectCategoryAndLoadProducts: async (categoryId) => {
+    // Log for debugging
+    if (__DEV__) {
+      console.log('[useItemStore] selectCategoryAndLoadProducts:', categoryId);
+    }
+    
+    // Explicitly set state and ensure loading is false so getProducts can start fresh
     set({ 
       selectedCategory: categoryId, 
       page: 1, 
       products: [], 
       hasMore: true, 
-      error: null 
+      error: null,
+      isProductsLoading: false // Reset shared loading state to allow fresh fetch
     });
     
-    await get().getProducts();
+    // We don't await here to allow the UI to show the empty list/skeletons immediately
+    get().getProducts();
   },
 
   // Load more products for current category

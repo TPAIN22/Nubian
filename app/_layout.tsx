@@ -252,56 +252,55 @@ function AppLoaderWithClerk() {
 
   return (
     <NotificationProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <BottomSheetModalProvider>
-          <>
-            <StatusBar
-              style="auto"
-
-            />
-            <SafeAreaInsetsContext value={{ top: 35, bottom: 0, left: 10, right: 10 }}>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  gestureEnabled: true,
-                  gestureDirection: "horizontal",
-                }}
-                initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
-              >
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(onboarding)" />
-                <Stack.Screen name="(screens)" />
-              </Stack>
-            </SafeAreaInsetsContext>
-            <CurrencySelector mandatory />
-            <Toaster position="top-center" duration={3000} richColors />
-          </>
-        </BottomSheetModalProvider>
-      </GestureHandlerRootView>
+      <>
+        <StatusBar
+          style="auto"
+        />
+        <SafeAreaInsetsContext value={{ top: 35, bottom: 0, left: 10, right: 10 }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              gestureEnabled: true,
+              gestureDirection: "horizontal",
+            }}
+            initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="(screens)" />
+          </Stack>
+        </SafeAreaInsetsContext>
+        <CurrencySelector mandatory />
+        <Toaster position="top-center" duration={3000} richColors />
+      </>
     </NotificationProvider>
   );
 }
 
 export default function RootLayout() {
   return (
-    <LanguageProvider>
-      <ThemeProvider>
-        <KeyboardProvider>
-          <ClerkProvider>
-            <NetworkProvider>
-              <View
-                style={{
-                  direction: I18nManager.isRTL ? "rtl" : "ltr",
-                  flex: 1,
-                }}
-              >
-                <AppLoaderWithClerk />
-              </View>
-            </NetworkProvider>
-          </ClerkProvider>
-        </KeyboardProvider>
-      </ThemeProvider>
-    </LanguageProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <KeyboardProvider>
+              <ClerkProvider>
+                <NetworkProvider>
+                  <View
+                    style={{
+                      direction: I18nManager.isRTL ? "rtl" : "ltr",
+                      flex: 1,
+                    }}
+                  >
+                    <AppLoaderWithClerk />
+                  </View>
+                </NetworkProvider>
+              </ClerkProvider>
+            </KeyboardProvider>
+          </ThemeProvider>
+        </LanguageProvider>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
