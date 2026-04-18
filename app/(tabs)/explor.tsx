@@ -216,20 +216,7 @@ const SearchPage = () => {
     return item.id || `product-${index}`;
   }, []);
 
-  // Flatten categories
-  const flatCategories = useMemo(() => {
-    const flatten = (cats: any[]): { _id: string, name: string }[] => {
-      let result: { _id: string, name: string }[] = [];
-      cats.forEach(cat => {
-        result.push({ _id: cat._id || '', name: String(cat.name || 'Category') });
-        if (cat.children?.length) {
-          result = result.concat(flatten(cat.children));
-        }
-      });
-      return result;
-    };
-    return flatten(categories);
-  }, [categories]);
+  // Flatten categories removed
 
   // Get sort display text
   const getSortLabel = useCallback(() => {
@@ -639,63 +626,6 @@ const SearchPage = () => {
                 </View>
               </View>
 
-              {/* Category Filter */}
-              <View style={styles.filterSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
-                  {String(i18n.t('filterByCategory') || 'Categories')}
-                </Text>
-                <ScrollView
-                  style={styles.categoryScroll}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.categoryScrollContent}
-                >
-                  <TouchableOpacity
-                    style={[
-                      styles.categoryChip,
-                      {
-                        backgroundColor: !filterCategory ? colors.primary : colors.surface,
-                        borderColor: !filterCategory ? colors.primary : colors.borderLight,
-                      }
-                    ]}
-                    onPress={() => setFilterCategory(null)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name="apps"
-                      size={16}
-                      color={!filterCategory ? '#fff' : colors.text.mediumGray}
-                    />
-                    <Text style={[
-                      styles.categoryChipText,
-                      { color: !filterCategory ? '#fff' : colors.text.gray }
-                    ]}>
-                      {String(i18n.t('allCategories') || 'All')}
-                    </Text>
-                  </TouchableOpacity>
-                  {flatCategories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat._id}
-                      style={[
-                        styles.categoryChip,
-                        {
-                          backgroundColor: filterCategory === cat._id ? colors.primary : colors.surface,
-                          borderColor: filterCategory === cat._id ? colors.primary : colors.borderLight,
-                        }
-                      ]}
-                      onPress={() => setFilterCategory(cat._id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        styles.categoryChipText,
-                        { color: filterCategory === cat._id ? '#fff' : colors.text.gray }
-                      ]}>
-                        {String(cat.name || 'Category')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
             </ScrollView>
 
             {/* Action Buttons */}

@@ -18,7 +18,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
   isTabBarVisible: true,
   categories: [],
   signInModelVisible: false,
-  selectedCategory: null,
   // Request tracking to prevent duplicate calls
   _requestInProgress: {
     categories: false,
@@ -31,8 +30,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
   },
 
   // Actions
-  setSelectedCategory: (categoryId) => 
-    set({ selectedCategory: categoryId }),
 
   setSignInModelVisible: (visible) => 
     set({ signInModelVisible: visible }),
@@ -48,184 +45,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
 
   clearError: () => 
     set({ error: null }),
-
-  // Get products with pagination and category filter
-  getProducts: async () => {
-    const { page, hasMore, isProductsLoading, selectedCategory } = get();
-
-    if (!selectedCategory) {
-      set({ error: "يرجى اختيار قسم أولاً." });
-      return;
-    }
-
-    // Allow fresh reloads (page 1) to proceed even if isProductsLoading is true
-    // this prevents background getAllProducts fetches from blocking category selection.
-    if (!hasMore || (isProductsLoading && page !== 1)) return;
-
-    set({ isProductsLoading: true, error: null });
-
-    try {
-      // Validate category ID format (MongoDB ObjectId)
-      if (selectedCategory && !/^[0-9a-fA-F]{24}$/.test(selectedCategory)) {
-        set({ 
-          isProductsLoading: false, 
-          error: "معرف الفئة غير صالح" 
-        });
-        return;
-      }
-
-      // Get currency code from currency store
-      const currencyCode = useCurrencyStore.getState().currencyCode;
-      
-      const response = await axiosInstance.get("/products", {
-        params: { 
-          page, 
-          limit: 50, // Increased limit to get more products
-          category: selectedCategory,
-          currencyCode: currencyCode || undefined,
-        },
-      });
-
-      // Debug: Log the API response structure
-      if (__DEV__) {
-        console.log(`[Category ${selectedCategory}] Products API Request:`, {
-          category: selectedCategory,
-          page,
-          limit: 50,
-          isValidObjectId: /^[0-9a-fA-F]{24}$/.test(selectedCategory),
-        });
-        console.log(`[Category ${selectedCategory}] Products API Response:`, {
-          responseType: typeof response.data,
-          isArray: Array.isArray(response.data),
-          hasData: !!response.data?.data,
-          dataIsArray: Array.isArray(response.data?.data),
-          dataLength: Array.isArray(response.data?.data) ? response.data.data.length : 'N/A',
-          hasMeta: !!response.data?.meta,
-          hasPagination: !!response.data?.meta?.pagination,
-          totalPages: response.data?.meta?.pagination?.totalPages || 'N/A',
-          total: response.data?.meta?.pagination?.total || response.data?.meta?.total || 'N/A',
-          hasProducts: !!response.data?.products,
-          productsIsArray: Array.isArray(response.data?.products),
-          responseKeys: response.data ? Object.keys(response.data) : [],
-          responsePreview: JSON.stringify(response.data).substring(0, 500),
-        });
-      }
-
-      // Handle different response structures
-      let newProducts = [];
-      let totalPages = 1;
-      let currentPage = page;
-
-      // Pattern 1: response.data.data (array) with response.data.meta.pagination (sendPaginated)
-      if (Array.isArray(response.data?.data) && response.data?.meta?.pagination) {
-        newProducts = response.data.data;
-        totalPages = Number(response.data.meta.pagination.totalPages) || 1;
-        currentPage = Number(response.data.meta.pagination.page) || page;
-      }
-      // Pattern 1b: response.data.data (array) with response.data.meta.total (alternative pagination)
-      else if (Array.isArray(response.data?.data) && response.data?.meta?.total) {
-        newProducts = response.data.data;
-        const limit = Number(response.data.meta.limit) || 50;
-        const total = Number(response.data.meta.total) || 0;
-        totalPages = Math.ceil(total / limit) || 1;
-        currentPage = Number(response.data.meta.page) || page;
-      }
-      // Pattern 2: response.data.products (legacy structure)
-      else if (Array.isArray(response.data?.products)) {
-        newProducts = response.data.products;
-        totalPages = Number(response.data.totalPages) || 1;
-        currentPage = Number(response.data.currentPage) || page;
-      }
-      // Pattern 3: response.data.data (array, no meta)
-      else if (Array.isArray(response.data?.data)) {
-        newProducts = response.data.data;
-        totalPages = 1;
-        currentPage = page;
-      }
-      // Pattern 4: response.data is directly an array
-      else if (Array.isArray(response.data)) {
-        newProducts = response.data;
-        totalPages = 1;
-        currentPage = page;
-      }
-
-      // Debug: Log what we extracted
-      if (__DEV__) {
-        console.log(`[Category ${selectedCategory}] Extracted products:`, {
-          count: newProducts.length,
-          totalPages,
-          currentPage,
-          hasMore: currentPage < totalPages,
-        });
-        
-        if (newProducts.length === 0) {
-          console.warn(`[Category ${selectedCategory}] ⚠️ No products found!`);
-          console.warn(`[Category ${selectedCategory}] Response structure:`, {
-            hasData: !!response.data?.data,
-            hasProducts: !!response.data?.products,
-            isArray: Array.isArray(response.data),
-            keys: response.data ? Object.keys(response.data) : [],
-          });
-        } else {
-          console.log(`[Category ${selectedCategory}] ✓ Found ${newProducts.length} products`);
-        }
-      }
-
-      set((state) => {
-        const nextPage = currentPage + 1;
-        const nextHasMore = nextPage <= totalPages;
-        const updatedProducts = page === 1 
-          ? newProducts 
-          : [...state.products, ...newProducts];
-
-        if (__DEV__ && updatedProducts.length === 0 && page === 1) {
-          console.warn(`[Category ${selectedCategory}] ⚠️ No products found after parsing!`);
-        }
-
-        return {
-          products: updatedProducts,
-          page: nextPage,
-          hasMore: nextHasMore,
-          isProductsLoading: false,
-          error: null,
-        };
-      });
-    } catch (error) {
-      let errorMessage = error?.response?.data?.message 
-        || error?.message 
-        || "تعذر تحميل المنتجات";
-      
-      // Handle validation errors specifically
-      if (error?.response?.status === 400) {
-        const validationError = error?.response?.data?.error;
-        if (validationError?.code === 'VALIDATION_ERROR') {
-          errorMessage = validationError?.message || "معرف الفئة غير صالح";
-          
-          if (__DEV__) {
-            console.error(`[Category ${selectedCategory}] Validation Error:`, {
-              details: validationError?.details,
-              categoryId: selectedCategory,
-              isValidFormat: /^[0-9a-fA-F]{24}$/.test(selectedCategory),
-            });
-          }
-        }
-      }
-      
-      if (__DEV__) {
-        console.error(`[Category ${selectedCategory}] Error fetching products:`, {
-          status: error?.response?.status,
-          message: errorMessage,
-          error: error?.response?.data,
-          categoryId: selectedCategory,
-        });
-      }
-      
-      set({ 
-        isProductsLoading: false, 
-        error: errorMessage 
-      });
-    }
-  },
 
   // Get all products with pagination
   getAllProducts: async (limit = 90) => {
@@ -325,7 +144,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
         // Set up pagination for getAllProducts
         page: currentPage + 1,
         hasMore: currentPage < totalPages,
-        selectedCategory: null,
         _requestInProgress: { ..._requestInProgress, products: false }
       });
     } catch (error) {
@@ -379,27 +197,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
         product: null,
       });
     }
-  },
-
-  // Select category and load its products
-  selectCategoryAndLoadProducts: async (categoryId) => {
-    // Log for debugging
-    if (__DEV__) {
-      console.log('[useItemStore] selectCategoryAndLoadProducts:', categoryId);
-    }
-    
-    // Explicitly set state and ensure loading is false so getProducts can start fresh
-    set({ 
-      selectedCategory: categoryId, 
-      page: 1, 
-      products: [], 
-      hasMore: true, 
-      error: null,
-      isProductsLoading: false // Reset shared loading state to allow fresh fetch
-    });
-    
-    // We don't await here to allow the UI to show the empty list/skeletons immediately
-    get().getProducts();
   },
 
   // Load more products for current category
@@ -532,7 +329,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
         // Reset pagination for search results
         page: 1,
         hasMore: false,
-        selectedCategory: null,
       });
     } catch (error) {
       const errorMessage = error?.response?.data?.message 
@@ -552,7 +348,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
       products: [], 
       page: 1, 
       hasMore: true, 
-      selectedCategory: null,
       error: null,
     }),
 
@@ -573,7 +368,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
       isTabBarVisible: true,
       categories: [],
       signInModelVisible: false,
-      selectedCategory: null,
     }),
 
   // Load more products for getAllProducts
@@ -695,8 +489,6 @@ export const useItemStoreActions = () => {
     useShallow((state) => ({
       setProduct: state.setProduct,
       setIsTabBarVisible: state.setIsTabBarVisible,
-      setSelectedCategory: state.setSelectedCategory,
-      getProducts: state.getProducts,
       getAllProducts: state.getAllProducts,
       getProductById: state.getProductById,
       getCategories: state.getCategories,
@@ -705,7 +497,6 @@ export const useItemStoreActions = () => {
       resetProduct: state.resetProduct,
       loadMoreProducts: state.loadMoreProducts,
       loadMoreAllProducts: state.loadMoreAllProducts,
-      selectCategoryAndLoadProducts: state.selectCategoryAndLoadProducts,
     }))
   );
 };

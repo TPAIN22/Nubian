@@ -18,7 +18,7 @@ import useProductCacheStore from '@/store/useProductCacheStore';
 export const ROUTES = {
   // Actual route paths (Expo Router file-based routing)
   PRODUCT: '/(screens)/details/[details]',
-  CATEGORY: '/(screens)/[id]',
+  CATEGORY: '/categories/[id]',
   STORE: '/(screens)/store/[id]',
   COLLECTION: '/(screens)/[id]', // Can be extended later for collections
   SEARCH: '/(tabs)/explor',

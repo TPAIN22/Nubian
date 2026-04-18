@@ -22,7 +22,7 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
 import { ExploreSort } from "@/api/explore.api";
-import { useSetProduct } from "@/store/useItemStore";
+import useItemStore from "@/store/useItemStore";
 import ProductCard from "@/components/ProductCard";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 
@@ -34,7 +34,7 @@ const ProductsScreen = () => {
   const { theme } = useTheme();
   const colors = theme.colors;
   const { trackEvent } = useTracking();
-  const setProduct = useSetProduct();
+  const setProduct = useItemStore((state: any) => state.setProduct);
 
   // Explore store
   const {
@@ -213,20 +213,7 @@ const ProductsScreen = () => {
     return item.id || `product-${index}`;
   }, []);
 
-  // Flatten categories
-  const flatCategories = useMemo(() => {
-    const flatten = (cats: any[]): { _id: string, name: string }[] => {
-      let result: { _id: string, name: string }[] = [];
-      cats.forEach(cat => {
-        result.push({ _id: cat._id || '', name: String(cat.name || 'Category') });
-        if (cat.children?.length) {
-          result = result.concat(flatten(cat.children));
-        }
-      });
-      return result;
-    };
-    return flatten(categories);
-  }, [categories]);
+  // Flatten categories removed
 
   // Empty component
   const ListEmptyComponent = useCallback(() => {
@@ -492,51 +479,6 @@ const ProductsScreen = () => {
                 ))}
               </View>
 
-              {/* Category Filter */}
-              <View style={styles.filterSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
-                  {String(i18n.t('filterByCategory') || 'Filter By Category')}
-                </Text>
-                <ScrollView
-                  style={styles.categoryScroll}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                >
-                  <TouchableOpacity
-                    style={[
-                      styles.categoryOption,
-                      { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                      !filterCategory && [styles.categoryOptionActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
-                    ]}
-                    onPress={() => setFilterCategory(null)}
-                  >
-                    <Text style={[
-                      styles.categoryOptionText,
-                      { color: !filterCategory ? colors.text.white : colors.text.gray }
-                    ]}>
-                      {String(i18n.t('allCategories') || 'All Categories')}
-                    </Text>
-                  </TouchableOpacity>
-                  {flatCategories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat._id}
-                      style={[
-                        styles.categoryOption,
-                        { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                        filterCategory === cat._id && [styles.categoryOptionActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
-                      ]}
-                      onPress={() => setFilterCategory(cat._id)}
-                    >
-                      <Text style={[
-                        styles.categoryOptionText,
-                        { color: filterCategory === cat._id ? colors.text.white : colors.text.gray }
-                      ]}>
-                        {String(cat.name || 'Category')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
             </ScrollView>
 
             {/* Action Buttons */}
