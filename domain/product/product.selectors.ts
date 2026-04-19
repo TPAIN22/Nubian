@@ -27,7 +27,7 @@ export function getAttributeOptions(p: NormalizedProduct): Record<string, string
   const options: Record<string, Set<string>> = {};
 
   // 1) backend definitions first
-  for (const def of p.attributeDefs) {
+  for (const def of p.attributeDefs || []) {
     const key = normKey(def.name);
     if (!key) continue;
     options[key] = options[key] || new Set<string>();
@@ -38,7 +38,7 @@ export function getAttributeOptions(p: NormalizedProduct): Record<string, string
   }
 
   // 2) derive from selectable variants (never invent)
-  for (const v of p.variants) {
+  for (const v of p.variants || []) {
     if (!isVariantSelectable(v)) continue;
     for (const [k, raw] of Object.entries(v.attributes || {})) {
       const key = normKey(k);
@@ -67,7 +67,7 @@ export function isOptionAvailable(
   optionValue: string,
   currentSelection: SelectedAttributes
 ): boolean {
-  if (!product.variants.length) return true; // Simple product logic doesn't apply here
+  if (!(product.variants || []).length) return true; // Simple product logic doesn't apply here
 
   const keyLower = normKey(attrName);
   const valLower = normVal(optionValue);

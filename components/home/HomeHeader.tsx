@@ -20,7 +20,7 @@ interface HomeHeaderProps {
   categories?: HomeCategory[];
 }
 
-const FALLBACK_TABS = ["All", "Men", "Women", "Shoes", "Sports", "Home", "Electronics"];
+
 
 export const HomeHeader = memo(({ activeTab = "All", onTabPress, categories = [] }: HomeHeaderProps) => {
   const insets = useSafeAreaInsets();
@@ -81,9 +81,7 @@ export const HomeHeader = memo(({ activeTab = "All", onTabPress, categories = []
           contentContainerStyle={styles.tabsScrollContent}
         >
           {(() => {
-            const tabsToRender = categories.length > 0
-              ? [{ _id: 'all', name: 'All' }, ...categories]
-              : FALLBACK_TABS.map(name => ({ _id: name, name }));
+            const tabsToRender = [{ _id: 'all', name: 'All' }, ...categories];
 
             return tabsToRender.map((tab) => {
               const tabId = tab._id;

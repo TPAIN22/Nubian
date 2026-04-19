@@ -6,7 +6,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Text } from "@/components/ui/text";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useScrollStore } from "@/store/useScrollStore";
 import { useTheme } from "@/providers/ThemeProvider";
 import BannerSkeleton from "@/components/BannerSkeleton";
@@ -20,6 +20,7 @@ import {
 import i18n from "@/utils/i18n";
 import { resolveApiBaseUrl } from "@/services/api/baseUrl";
 import { navigateToCategory } from "@/utils/deepLinks";
+import useCategoryStore from "@/store/useCategoryStore";
 
 import { BannerCarousel } from "@/components/home/BannerCarousel";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
@@ -41,20 +42,27 @@ function IndexContent() {
     newArrivals,
     forYou,
     stores,
-    categories,
     isLoading,
     isRefreshing,
     error,
     refresh,
   } = useHomeQuery();
 
+  const { categories: storeCategories, fetchCategories } = useCategoryStore();
+  const categories = storeCategories || [];
+
   const { setScrollY } = useScrollStore();
   const { theme } = useTheme();
   const Colors = theme.colors;
 
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
   const handleRefresh = useCallback(() => {
     refresh();
-  }, [refresh]);
+    fetchCategories();
+  }, [refresh, fetchCategories]);
 
   const isEmpty = useMemo(() => {
     return (
@@ -71,7 +79,7 @@ function IndexContent() {
 
   const handleTabPress = useCallback((tabId: string) => {
     if (tabId === 'all') return;
-    const selectedCategory = categories.find(c => c._id === tabId);
+    const selectedCategory = categories.find((c: any) => c._id === tabId);
     if (selectedCategory) {
       navigateToCategory(tabId, selectedCategory);
     }
