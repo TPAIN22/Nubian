@@ -57,7 +57,17 @@ const useOrderStore = create((set, get) => ({
 
   // إنشاء طلب جديد
   // Token is automatically added by axios interceptor
-  createOrder: async ({ addressId, items, paymentMethod, transferProof, proofFileUri }) => {
+  createOrder: async ({ 
+    addressId, 
+    items, 
+    paymentMethod, 
+    transferProof, 
+    proofFileUri, 
+    shippingAddress, 
+    phoneNumber, 
+    couponCode,
+    paymentProofUrl 
+  }) => {
     set({ isLoading: true, error: null });
     try {
       // 1. Create order with transferProof URL if available
@@ -65,6 +75,10 @@ const useOrderStore = create((set, get) => ({
         addressId, 
         items, 
         paymentMethod,
+        shippingAddress,
+        phoneNumber,
+        couponCode,
+        paymentProofUrl,
         transferProof: transferProof || (proofFileUri?.startsWith('http') ? proofFileUri : null)
       });
       
@@ -140,12 +154,13 @@ const useOrderStore = create((set, get) => ({
   // البحث في الطلبات
   searchOrders: (searchTerm) => {
     const orders = get().orders;
+    const term = searchTerm?.toLowerCase() || "";
     return orders.filter(order => 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.productsDetails?.some(product => 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      order?.orderNumber?.toLowerCase().includes(term) ||
+      order?.city?.toLowerCase().includes(term) ||
+      order?.address?.toLowerCase().includes(term) ||
+      order?.productsDetails?.some(product => 
+        product?.name?.toLowerCase().includes(term)
       )
     );
   },

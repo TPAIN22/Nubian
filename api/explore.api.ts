@@ -36,6 +36,7 @@ export interface ExploreParams extends ExploreFilters {
   sort?: ExploreSort;
   page?: number;
   limit?: number;
+  currencyCode?: string;
 }
 
 export interface ExploreResponse {
@@ -74,6 +75,9 @@ export const getExploreProducts = async (params: ExploreParams = {}): Promise<Ex
     // Add pagination
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
+    
+    // Add currency
+    if (params.currencyCode) queryParams.append('currencyCode', params.currencyCode);
     
     const response = await axiosInstance.get(`products/explore?${queryParams.toString()}`);
     

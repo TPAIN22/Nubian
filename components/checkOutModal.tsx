@@ -579,12 +579,15 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
         paymentMethod,
         items: itemsPayload,
 
+        // coupon
+        couponCode: couponResult?.code,
+
         // proof
         transferProof: paymentMethod === "BANKAK" ? transferImage : undefined,
         paymentProofUrl: paymentMethod === "BANKAK" ? transferImage : undefined,
       };
 
-      console.log("ORDER_PAYLOAD", JSON.stringify(orderPayload, null, 2));
+      if (__DEV__) console.log("ORDER_PAYLOAD", JSON.stringify(orderPayload, null, 2));
 
       const order = await createOrder(orderPayload);
 
@@ -617,8 +620,10 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
       const errData = e?.response?.data;
       const details = errData?.error?.details;
 
-      console.log("CREATE_ORDER_ERROR_RAW", JSON.stringify(errData, null, 2));
-      console.log("CREATE_ORDER_ERROR_DETAILS", JSON.stringify(details, null, 2));
+      if (__DEV__) {
+        console.log("CREATE_ORDER_ERROR_RAW", JSON.stringify(errData, null, 2));
+        console.log("CREATE_ORDER_ERROR_DETAILS", JSON.stringify(details, null, 2));
+      }
 
       const status = e?.response?.status;
       const serverMsg =

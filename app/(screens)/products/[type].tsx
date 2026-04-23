@@ -412,6 +412,57 @@ const ProductsScreen = () => {
             </View>
 
             <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
+              {/* Category Section */}
+              <View style={styles.filterSection}>
+                <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
+                  {String(i18n.t('category') || 'Category')}
+                </Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoryScroll}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.categoryOption,
+                      {
+                        backgroundColor: filterCategory === null ? colors.primary + '15' : colors.surface,
+                        borderColor: filterCategory === null ? colors.primary : colors.borderLight,
+                      }
+                    ]}
+                    onPress={() => setFilterCategory(null)}
+                  >
+                    <Text style={[
+                      styles.categoryOptionText,
+                      { color: filterCategory === null ? colors.primary : colors.text.gray }
+                    ]}>
+                      {String(i18n.t('all') || 'All')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat._id}
+                      style={[
+                        styles.categoryOption,
+                        {
+                          backgroundColor: filterCategory === cat._id ? colors.primary + '15' : colors.surface,
+                          borderColor: filterCategory === cat._id ? colors.primary : colors.borderLight,
+                        }
+                      ]}
+                      onPress={() => setFilterCategory(cat._id)}
+                    >
+                      <Text style={[
+                        styles.categoryOptionText,
+                        { color: filterCategory === cat._id ? colors.primary : colors.text.gray }
+                      ]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
               {/* Available Only */}
               <TouchableOpacity
                 style={[styles.filterOption, { backgroundColor: colors.surface }]}

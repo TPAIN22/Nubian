@@ -9,7 +9,7 @@ import {
 import { Text } from "@/components/ui/text";
 import useCartStore from "@/store/useCartStore";
 import CartItem from "@/components/cartItem";
-import Checkout from "@/components/chekoutBotton";
+import Checkout from "@/components/CheckoutButton";
 import { normalizeAttributes } from "@/utils/cartUtils";
 import { useRouter } from "expo-router";
 import i18n from "@/utils/i18n";
@@ -44,8 +44,6 @@ export default function CartScreen() {
     error,
     clearError,
   } = useCartStore();
-
-  const [isProcessing] = useState(false);
 
   const { trackEvent } = useTracking();
 
@@ -196,8 +194,8 @@ export default function CartScreen() {
     );
   }
 
-  // processing
-  if (isProcessing) {
+  // Loading
+  if (isLoading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.surface }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -223,7 +221,12 @@ export default function CartScreen() {
               </View>
             ) : null
           }
-          keyExtractor={(item: any, idx) => (item?.product?._id ? item.product._id : String(idx))}
+          keyExtractor={(item: any, idx) => {
+            const productId = item?.product?._id || item?.product?.id || String(idx);
+            const { attrs } = getLineAttrs(item);
+            const attrString = Object.entries(attrs).sort().map(([k, v]) => `${k}:${v}`).join("|");
+            return attrString ? `${productId}|${attrString}` : productId;
+          }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
         />

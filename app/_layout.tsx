@@ -120,8 +120,6 @@ function AppLoaderWithClerk() {
     return undefined;
   }, []);
 
-  // Hide status bar on Android (like the navigation bar)
-  // Load Cairo fonts
   const { fontsLoaded, fontError } = useFonts();
 
   // Check if user has seen onboarding
@@ -256,21 +254,19 @@ function AppLoaderWithClerk() {
         <StatusBar
           style="auto"
         />
-        <SafeAreaInsetsContext value={{ top: 35, bottom: 0, left: 10, right: 10 }}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              gestureEnabled: true,
-              gestureDirection: "horizontal",
-            }}
-            initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(onboarding)" />
-            <Stack.Screen name="(screens)" />
-          </Stack>
-        </SafeAreaInsetsContext>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            gestureEnabled: true,
+            gestureDirection: "horizontal",
+          }}
+          initialRouteName={hasSeenOnboarding ? "(tabs)" : "(onboarding)"}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(onboarding)" />
+          <Stack.Screen name="(screens)" />
+        </Stack>
         <CurrencySelector mandatory />
         <Toaster position="top-center" duration={3000} richColors />
       </>

@@ -6,6 +6,7 @@ import {
   getExploreProducts 
 } from '../api/explore.api';
 import { normalizeProduct, type NormalizedProduct } from "@/domain/product/product.normalize";
+import { useCurrencyStore } from './useCurrencyStore';
 
 interface ExploreState {
   // Data
@@ -49,7 +50,7 @@ const initialState: Omit<ExploreState, 'fetchProducts' | 'loadMore' | 'refresh' 
   hasMore: false,
   filters: DEFAULT_FILTERS,
   sort: DEFAULT_SORT,
-  isLoading: false,
+  isLoading: true,
   isRefreshing: false,
   isLoadingMore: false,
   error: null,
@@ -78,6 +79,12 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
         // Override with explicit params (they take highest priority)
         ...params,
       };
+
+      // Add currency code from currency store
+      const currencyCode = useCurrencyStore.getState().currencyCode;
+      if (currencyCode) {
+        (queryParams as any).currencyCode = currencyCode;
+      }
 
       const response = await getExploreProducts(queryParams);
       const normalized = (response.data || []).map(normalizeProduct);

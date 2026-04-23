@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
   View,
   TextInput,
@@ -65,10 +65,10 @@ const SearchPage = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Animation for filter badge
-  const filterBadgeAnim = useMemo(() => new Animated.Value(0), []);
+  const filterBadgeAnim = useRef(new Animated.Value(0)).current;
 
   // Scroll animation for collapsible header
-  const scrollY = useMemo(() => new Animated.Value(0), []);
+  const scrollY = useRef(new Animated.Value(0)).current;
   const HEADER_HEIGHT = 110; // Fixed header height
 
   // Animated values for header collapse - using translateY for native driver support
@@ -93,7 +93,7 @@ const SearchPage = () => {
       tension: 100,
       friction: 8,
     }).start();
-  }, [showAvailableOnly, filterCategory, filters.category, filters.inStock]);
+  }, [showAvailableOnly, filterCategory, filters.category, filters.inStock, filterBadgeAnim]);
 
   // Page title
   const pageTitle = useMemo(() => {
@@ -187,7 +187,7 @@ const SearchPage = () => {
     };
 
     initializeExplore();
-  }, []);
+  }, [params.sort, params.categoryId, params.discounted, fetchCategories, fetchProducts, trackEvent]);
 
   // Filtered products
   const filteredProducts = useMemo(() => {
@@ -377,7 +377,7 @@ const SearchPage = () => {
         contentContainerStyle={[
           styles.listContainer,
           filteredProducts.length === 0 && styles.emptyListContainer,
-          { paddingBottom: 100 } // Space for floating bar
+          { paddingTop: HEADER_HEIGHT + 60, paddingBottom: 100 } // Anchored with padding top
         ]}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -547,6 +547,74 @@ const SearchPage = () => {
             </View>
 
             <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+              {/* Category Section */}
+              <View style={styles.filterSection}>
+                <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
+                  {String(i18n.t('category') || 'Category')}
+                </Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoryScroll}
+                  contentContainerStyle={styles.categoryScrollContent}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.categoryChip,
+                      {
+                        backgroundColor: filterCategory === null ? colors.primary + '15' : colors.surface,
+                        borderColor: filterCategory === null ? colors.primary : colors.borderLight,
+                      }
+                    ]}
+                    onPress={() => setFilterCategory(null)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons 
+                      name="apps-outline" 
+                      size={18} 
+                      color={filterCategory === null ? colors.primary : colors.text.mediumGray} 
+                    />
+                    <Text style={[
+                      styles.categoryChipText,
+                      { color: filterCategory === null ? colors.primary : colors.text.gray }
+                    ]}>
+                      {String(i18n.t('all') || 'All')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat._id}
+                      style={[
+                        styles.categoryChip,
+                        {
+                          backgroundColor: filterCategory === cat._id ? colors.primary + '15' : colors.surface,
+                          borderColor: filterCategory === cat._id ? colors.primary : colors.borderLight,
+                        }
+                      ]}
+                      onPress={() => setFilterCategory(cat._id)}
+                      activeOpacity={0.7}
+                    >
+                      {cat.image ? (
+                        <Image source={{ uri: cat.image }} style={{ width: 18, height: 18, borderRadius: 9 }} />
+                      ) : (
+                        <Ionicons 
+                          name="grid-outline" 
+                          size={18} 
+                          color={filterCategory === cat._id ? colors.primary : colors.text.mediumGray} 
+                        />
+                      )}
+                      <Text style={[
+                        styles.categoryChipText,
+                        { color: filterCategory === cat._id ? colors.primary : colors.text.gray }
+                      ]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
               {/* Available Only Toggle */}
               <TouchableOpacity
                 style={[styles.filterOption, { backgroundColor: colors.surface }]}
@@ -673,7 +741,11 @@ const styles = StyleSheet.create({
 
   // Header styles
   headerWrapper: {
-    position: 'relative',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
     paddingTop: 44,
   },
   headerGradient: {

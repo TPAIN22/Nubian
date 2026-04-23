@@ -30,6 +30,7 @@ import { useCurrencyStore } from "@/store/useCurrencyStore";
 const { width } = Dimensions.get("window");
 
 export default function Profile() {
+  const { theme, themeMode, setThemeMode, isDark } = useTheme();
   const { user } = useUser();
   const { signOut } = useClerk();
   const tabbarHeight = useBottomTabBarHeight();
@@ -185,8 +186,6 @@ export default function Profile() {
       setIsUserLoaded(false);
     }
   }, [loaded, isSignedIn, user]);
-
-  const { theme, themeMode, setThemeMode, isDark } = useTheme();
 
   const renderOptionItem = (option: any, index: number) => (
     <TouchableOpacity

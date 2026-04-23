@@ -76,9 +76,9 @@ export default function CategoriesScreen() {
   const SCROLL_THRESHOLD = 100; // Delay before header starts collapsing
 
   // Header animations - collapses when scrolling
-  const headerHeight = scrollY.interpolate({
+  const headerTranslateY = scrollY.interpolate({
     inputRange: [0, SCROLL_THRESHOLD, SCROLL_THRESHOLD + 100],
-    outputRange: [HEADER_HEIGHT, HEADER_COLLAPSED_HEIGHT, HEADER_COLLAPSED_HEIGHT],
+    outputRange: [0, -(HEADER_HEIGHT - HEADER_COLLAPSED_HEIGHT), -(HEADER_HEIGHT - HEADER_COLLAPSED_HEIGHT)],
     extrapolate: "clamp",
   });
 
@@ -150,7 +150,7 @@ export default function CategoriesScreen() {
     if (categories.length === 0) {
       getCategories();
     }
-  }, [id, categories]);
+  }, [id]);
 
 
   const handlePresentModalPress = useCallback(() => {
@@ -226,7 +226,7 @@ export default function CategoriesScreen() {
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    { useNativeDriver: false }
+    { useNativeDriver: true }
   );
 
   // Guards (must come after all hooks, to satisfy rules-of-hooks)
@@ -246,7 +246,8 @@ export default function CategoriesScreen() {
             styles.headerContainer,
             {
               paddingTop: insets.top,
-              height: headerHeight,
+              height: HEADER_HEIGHT,
+              transform: [{ translateY: headerTranslateY }],
             },
           ]}
           pointerEvents="box-none"

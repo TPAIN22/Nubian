@@ -171,7 +171,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 18,
     minHeight: 60,
-    lineHeight: 24,
   },
 
   buttonContentRTL: {

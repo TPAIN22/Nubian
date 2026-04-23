@@ -163,8 +163,8 @@ const AddToCartButton = ({
 
       toast.success(i18n.t("addedToCart") || "Added to cart");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || i18n.t("addToCartError") || "Error";
-      toast.error(i18n.t("addToCartError") || "Add to cart error" + msg);
+      const msg = err?.response?.data?.message || err?.message || "Error";
+      toast.error(i18n.t("addToCartError") || `Add to cart error: ${msg}`);
     } finally {
       setIsLoading(false);
     }

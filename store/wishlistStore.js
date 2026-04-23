@@ -2,24 +2,23 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { useCallback, useMemo } from 'react';
-import axiosInstance from "@/services/api/client";
-import { Alert } from 'react-native';
+import { toast } from 'sonner-native';
+import i18n from '@/utils/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const useWishlistStore = create(
   subscribeWithSelector((set, get) => {
     // استرجع المفضلة من AsyncStorage عند بدء التطبيق (فقط على العميل)
     const loadWishlistFromStorage = async () => {
-      // تحقق من وجود window للتأكد من أننا في بيئة العميل
-      if (typeof window !== 'undefined') {
-        try {
-          const localWishlist = await AsyncStorage.getItem('wishlist');
-          if (localWishlist) {
-            set({ wishlist: JSON.parse(localWishlist) });
-          }
-        } catch (error) {
-          console.warn('Failed to load wishlist from storage:', error);
+      try {
+        const localWishlist = await AsyncStorage.getItem('wishlist');
+        if (localWishlist) {
+          const wishlist = JSON.parse(localWishlist);
+          const _wishlistIds = new Set(wishlist.map((p) => p.id || p._id));
+          set({ wishlist, _wishlistIds });
         }
+      } catch (error) {
+        console.warn('Failed to load wishlist from storage:', error);
       }
     };
 
@@ -42,7 +41,7 @@ const useWishlistStore = create(
         try {
           const res = await axiosInstance.get('/wishlist');
           const wishlist = res.data || [];
-          const _wishlistIds = new Set(wishlist.map((p) => p._id));
+          const _wishlistIds = new Set(wishlist.map((p) => p.id || p._id));
           set({ wishlist, _wishlistIds, isLoading: false });
           await AsyncStorage.setItem('wishlist', JSON.stringify(wishlist));
         } catch (error) {
@@ -51,7 +50,7 @@ const useWishlistStore = create(
           const localWishlist = await AsyncStorage.getItem('wishlist');
           if (localWishlist) {
             const wishlist = JSON.parse(localWishlist);
-            const _wishlistIds = new Set(wishlist.map((p) => p._id));
+            const _wishlistIds = new Set(wishlist.map((p) => p.id || p._id));
             set({ wishlist, _wishlistIds });
           }
         }
@@ -60,19 +59,25 @@ const useWishlistStore = create(
       // إضافة منتج (Optimistic + Feedback)
       // Token is automatically added by axios interceptor
       addToWishlist: async (product) => {
+        const productId = product.id || product._id;
         const prevWishlist = get().wishlist;
         const prevIds = get()._wishlistIds;
+        
+        if (prevIds.has(productId)) return; // Prevent duplicates
+
         const newIds = new Set(prevIds);
-        newIds.add(product._id);
+        newIds.add(productId);
         set({ wishlist: [product, ...prevWishlist], _wishlistIds: newIds });
         try {
-          await axiosInstance.post(`/wishlist/${product._id}`, {});
-          // Save to AsyncStorage after successful add (optimistic update already applied)
+          // Backend expects the actual DB _id
+          const dbId = product._id || product.id;
+          await axiosInstance.post(`/wishlist/${dbId}`, {});
+          // Save to AsyncStorage after successful add
           await AsyncStorage.setItem('wishlist', JSON.stringify(get().wishlist));
-          Alert.alert('تمت الإضافة', 'تمت إضافة المنتج إلى المفضلة بنجاح');
+          toast.success(i18n.t('addedToWishlistTitle') || 'Added', i18n.t('addedToWishlistMsg') || 'Product added to wishlist');
         } catch (error) {
           set({ wishlist: prevWishlist, _wishlistIds: prevIds, error: error?.response?.data?.message || error.message });
-          Alert.alert('خطأ', error?.response?.data?.message || error.message);
+          toast.error(i18n.t('error') || 'Error', error?.response?.data?.message || error.message);
           console.log(error)
         }
       },
@@ -84,15 +89,15 @@ const useWishlistStore = create(
         const prevIds = get()._wishlistIds;
         const newIds = new Set(prevIds);
         newIds.delete(productId);
-        set({ wishlist: prevWishlist.filter((p) => p._id !== productId), _wishlistIds: newIds });
+        set({ wishlist: prevWishlist.filter((p) => (p.id || p._id) !== productId), _wishlistIds: newIds });
         try {
           await axiosInstance.delete(`/wishlist/${productId}`);
-          // Save to AsyncStorage after successful remove (optimistic update already applied)
+          // Save to AsyncStorage after successful remove
           await AsyncStorage.setItem('wishlist', JSON.stringify(get().wishlist));
-          Alert.alert('تم الحذف', 'تمت إزالة المنتج من المفضلة');
+          toast.info(i18n.t('removedFromWishlistTitle') || 'Removed', i18n.t('removedFromWishlistMsg') || 'Product removed from wishlist');
         } catch (error) {
           set({ wishlist: prevWishlist, _wishlistIds: prevIds, error: error?.response?.data?.message || error.message });
-          Alert.alert('خطأ', error?.response?.data?.message || error.message);
+          toast.error(i18n.t('error') || 'Error', error?.response?.data?.message || error.message);
         }
       },
 

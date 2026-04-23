@@ -52,7 +52,7 @@ export default function CategoryScreen() {
   const setProduct = useItemStore((state: any) => state.setProduct);
 
   useEffect(() => {
-    if (!isValidCategoryId) return;
+    if (!isValidCategoryId || !id) return;
     
     // Clear old state before fetching new
     clearCategoryState();
@@ -60,11 +60,7 @@ export default function CategoryScreen() {
     fetchCategoryById(id);
     fetchProductsByCategory(id, 1);
     
-    return () => {
-      // Optional: Clear on unmount if you don't want cache
-      // clearCategoryState();
-    };
-  }, [id]);
+  }, [id, isValidCategoryId, clearCategoryState, fetchCategoryById, fetchProductsByCategory]);
 
   const handleRefresh = useCallback(() => {
     if (isValidCategoryId) {

@@ -160,6 +160,32 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
       });
     }
   },
+  
+  // Missing methods used in search and category screens
+  getProducts: async () => {
+    return get().loadMoreAllProducts();
+  },
+
+  selectCategoryAndLoadProducts: async (categoryId) => {
+    set({ isProductsLoading: true, error: null, products: [], page: 1, hasMore: true });
+    try {
+      const currencyCode = useCurrencyStore.getState().currencyCode;
+      const response = await axiosInstance.get("/products", {
+        params: { category: categoryId, currencyCode: currencyCode || undefined, limit: 10, page: 1 },
+      });
+      
+      let products = Array.isArray(response.data?.products) ? response.data.products : (Array.isArray(response.data) ? response.data : []);
+      
+      set({
+        products,
+        isProductsLoading: false,
+        page: 2,
+        hasMore: products.length >= 10,
+      });
+    } catch (error) {
+      set({ isProductsLoading: false, error: error.message });
+    }
+  },
 
   getProductById: async (productId) => {
     set({ isProductsLoading: true, error: null });

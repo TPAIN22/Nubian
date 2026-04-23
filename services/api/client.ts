@@ -11,29 +11,48 @@ const fetchAdapter = async (config: any) => {
     fullUrl = `${config.baseURL}${fullUrl}`.replace(/([^:]\/)\/+/g, "$1"); // remove double slashes
   }
 
-  const response = await fetch(fullUrl, {
-    method: config.method.toUpperCase(),
-    headers: config.headers,
-    body: config.data,
-  });
+  const controller = new AbortController();
+  const timeoutId = config.timeout 
+    ? setTimeout(() => controller.abort(), config.timeout) 
+    : null;
 
-  const responseText = await response.text();
-  let responseData = responseText;
-  
   try {
-    responseData = JSON.parse(responseText);
-  } catch (e) {
-    // Keep as text if not JSON
-  }
+    const response = await fetch(fullUrl, {
+      method: config.method.toUpperCase(),
+      headers: config.headers,
+      body: config.data,
+      signal: controller.signal,
+    });
 
-  return {
-    data: responseData,
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-    config,
-    request: null,
-  };
+    if (timeoutId) clearTimeout(timeoutId);
+
+    const responseText = await response.text();
+    let responseData = responseText;
+    
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      // Keep as text if not JSON
+    }
+
+    return {
+      data: responseData,
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      config,
+      request: null,
+    };
+  } catch (error: any) {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('timeout of ' + config.timeout + 'ms exceeded');
+      (timeoutError as any).code = 'ECONNABORTED';
+      (timeoutError as any).config = config;
+      throw timeoutError;
+    }
+    throw error;
+  }
 };
 
 const apiClient = axios.create({

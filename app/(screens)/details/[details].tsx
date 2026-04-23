@@ -7,19 +7,20 @@ import {
   useLayoutEffect,
 } from "react";
 import { GestureHandlerRootView, GestureDetector, Gesture } from "react-native-gesture-handler";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat } from "react-native-reanimated";
 import {
   View,
   FlatList,
   StyleSheet,
-  Pressable,
   Modal,
   TouchableOpacity,
   ActivityIndicator,
   I18nManager,
   InteractionManager,
   Image as RNImage,
+  ScrollView,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -121,6 +122,131 @@ const ZoomableImage = ({ uri }: { uri: string }) => {
         />
       </Animated.View>
     </GestureDetector>
+  );
+};
+
+// Skeleton component for loading/error states
+const ProductDetailsSkeleton = ({ colors }: { colors: any }) => {
+  const skeletonColor = colors.borderLight + '40';
+  const shimmerValue = useSharedValue(0.3);
+
+  useEffect(() => {
+    shimmerValue.value = withRepeat(
+      withTiming(0.7, { duration: 1000 }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: shimmerValue.value,
+  }));
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      {/* Header Skeleton */}
+      <View style={{ height: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: skeletonColor }} />
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: skeletonColor }} />
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+        {/* Main Image Carousel Skeleton */}
+        <View style={{ width: '100%', aspectRatio: 1, backgroundColor: skeletonColor }}>
+          <Animated.View style={[animatedStyle, { flex: 1, backgroundColor: colors.borderLight + '60' }]} />
+          {/* Carousel Dots */}
+          <View style={{ position: 'absolute', bottom: 15, width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff', opacity: 0.5 }} />
+            ))}
+          </View>
+        </View>
+
+        <View style={{ padding: 20 }}>
+          {/* Category & Title */}
+          <Animated.View style={[animatedStyle, { width: 100, height: 14, borderRadius: 4, backgroundColor: colors.primary + '30', marginBottom: 8 }]} />
+          <Animated.View style={[animatedStyle, { width: '85%', height: 28, borderRadius: 6, backgroundColor: skeletonColor, marginBottom: 15 }]} />
+
+          {/* Pricing & Discount */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 25, gap: 10 }}>
+            <Animated.View style={[animatedStyle, { width: 120, height: 35, borderRadius: 8, backgroundColor: colors.primary + '20' }]} />
+            <Animated.View style={[animatedStyle, { width: 60, height: 20, borderRadius: 4, backgroundColor: skeletonColor }]} />
+          </View>
+
+          {/* Divider */}
+          <View style={{ height: 1, backgroundColor: colors.borderLight + '50', marginBottom: 25 }} />
+
+          {/* Attribute Section 1 (e.g. Size) */}
+          <Animated.View style={[animatedStyle, { width: 80, height: 18, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 15 }]} />
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 30 }}>
+            {[1, 2, 3, 4].map(i => (
+              <Animated.View key={i} style={[animatedStyle, { width: 60, height: 45, borderRadius: 12, backgroundColor: skeletonColor }]} />
+            ))}
+          </View>
+
+          {/* Attribute Section 2 (e.g. Color) */}
+          <Animated.View style={[animatedStyle, { width: 80, height: 18, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 15 }]} />
+          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 30 }}>
+            {[1, 2, 3].map(i => (
+              <Animated.View key={i} style={[animatedStyle, { width: 40, height: 40, borderRadius: 20, backgroundColor: skeletonColor, borderWidth: 1, borderColor: colors.borderLight }]} />
+            ))}
+          </View>
+
+          {/* Stock & SKU Info */}
+          <View style={{ marginBottom: 30 }}>
+            <Animated.View style={[animatedStyle, { width: 140, height: 16, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 8 }]} />
+            <Animated.View style={[animatedStyle, { width: 100, height: 14, borderRadius: 4, backgroundColor: skeletonColor }]} />
+          </View>
+
+          {/* Description Section */}
+          <Animated.View style={[animatedStyle, { width: 120, height: 20, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 15 }]} />
+          {[1, 2, 3, 4].map(i => (
+            <Animated.View key={i} style={[animatedStyle, { width: i === 4 ? '60%' : '100%', height: 14, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 8 }]} />
+          ))}
+
+          {/* Reviews Section Placeholder */}
+          <View style={{ marginTop: 40, paddingVertical: 20, borderTopWidth: 1, borderTopColor: colors.borderLight + '50' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Animated.View style={[animatedStyle, { width: 100, height: 22, borderRadius: 4, backgroundColor: skeletonColor }]} />
+              <Animated.View style={[animatedStyle, { width: 60, height: 18, borderRadius: 4, backgroundColor: skeletonColor }]} />
+            </View>
+            <View style={{ backgroundColor: skeletonColor, height: 100, borderRadius: 15, width: '100%' }} />
+          </View>
+
+          {/* Recommendations Grid Placeholder */}
+          <View style={{ marginTop: 20 }}>
+            <Animated.View style={[animatedStyle, { width: 180, height: 22, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 20 }]} />
+            <View style={{ flexDirection: 'row', gap: 15 }}>
+              {[1, 2].map(i => (
+                <View key={i} style={{ flex: 1 }}>
+                  <Animated.View style={[animatedStyle, { aspectRatio: 0.8, borderRadius: 15, backgroundColor: skeletonColor, marginBottom: 10 }]} />
+                  <Animated.View style={[animatedStyle, { width: '80%', height: 14, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 6 }]} />
+                  <Animated.View style={[animatedStyle, { width: '50%', height: 14, borderRadius: 4, backgroundColor: colors.primary + '20' }]} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Bottom Floating Bar Skeleton */}
+      <View style={{
+        position: 'absolute',
+        bottom: 0,
+        width: '100%',
+        padding: 16,
+        paddingBottom: 32,
+        backgroundColor: colors.surface,
+        borderTopWidth: 1,
+        borderTopColor: colors.borderLight,
+        flexDirection: 'row',
+        gap: 12
+      }}>
+        <View style={{ width: 55, height: 55, borderRadius: 15, backgroundColor: skeletonColor }} />
+        <View style={{ flex: 1, height: 55, borderRadius: 15, backgroundColor: colors.primary + '40' }} />
+      </View>
+    </View>
   );
 };
 
@@ -433,7 +559,7 @@ export default function Details() {
       const target = matchingVariant || (isSingleVariantSimple ? viewProduct.variants[0] : null);
       return isVariantSelectable(target);
     }
-    
+
     // Simple product fallback (legacy)
     const stock = Number(viewProduct.simple?.stock ?? 0);
     return stock > 0;
@@ -481,90 +607,6 @@ export default function Details() {
     []
   );
 
-  // Loading
-  if (isLoading && !viewProduct) {
-    return (
-      <View
-        style={[styles.loadingContainer, { backgroundColor: colors.surface }]}
-      >
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text
-          style={[styles.loadingText, { color: colors.text.veryLightGray }]}
-        >
-          {i18n.t("loading") || "Loading..."}
-        </Text>
-      </View>
-    );
-  }
-
-  // Error
-  if (error && !viewProduct) {
-    return (
-      <View
-        style={[styles.errorContainer, { backgroundColor: colors.surface }]}
-      >
-        <Text
-          style={[
-            styles.errorText,
-            {
-              color: colors.text.gray,
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-        >
-          {i18n.t("errorLoadingProduct") || "Error loading product"}
-        </Text>
-        <Text
-          style={[
-            styles.errorSubText,
-            {
-              color: colors.text.veryLightGray,
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-        >
-          {String(error)}
-        </Text>
-        <Pressable
-          style={[styles.backButton, { backgroundColor: colors.accent }]}
-          onPress={() => router.replace("/(tabs)")}
-        >
-          <Text style={[styles.backButtonText, { color: colors.text.white }]}>
-            {i18n.t("backToHome") || "Back to Home"}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  if (!viewProduct?.id) {
-    return (
-      <View
-        style={[styles.errorContainer, { backgroundColor: colors.surface }]}
-      >
-        <Text
-          style={[
-            styles.errorText,
-            {
-              color: colors.text.gray,
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-        >
-          {i18n.t("noProductAvailable") || "No product available"}
-        </Text>
-        <Pressable
-          style={[styles.backButton, { backgroundColor: colors.accent }]}
-          onPress={() => router.replace("/(tabs)")}
-        >
-          <Text style={[styles.backButtonText, { color: colors.text.white }]}>
-            {i18n.t("backToHome") || "Back to Home"}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   const SECTIONS = [
     "CAROUSEL",
     "INFO",
@@ -587,7 +629,7 @@ export default function Details() {
             />
           );
         case "INFO":
-          return (
+          return viewProduct ? (
             <View style={[styles.productInfoCard, { backgroundColor: colors.cardBackground }]}>
               {!!viewProduct.categoryName && (
                 <Text style={{ fontSize: 13, color: colors.primary, marginBottom: 4, fontWeight: "600", textAlign: I18nManager.isRTL ? "right" : "left", textTransform: "uppercase" }}>
@@ -599,19 +641,23 @@ export default function Details() {
               </Text>
               <View style={styles.priceContainer}>
                 <View style={{ flexDirection: "row", alignItems: "baseline" }}>
-                  {pricing?.requiresSelection && (
+                  {pricing?.requiresSelection && !isLoading && (
                     <Text style={{ fontSize: 14, color: colors.text.veryLightGray, marginRight: 4 }}>
                       {i18n.t("from") || "From"}
                     </Text>
                   )}
-                  <Text
-                    style={[
-                      styles.price,
-                      { color: productHasDiscount ? COLORS.ERROR_RED : colors.text.gray },
-                    ]}
-                  >
-                    {formattedFinalPrice}
-                  </Text>
+                  {isLoading && !formattedFinalPrice ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.price,
+                        { color: productHasDiscount ? COLORS.ERROR_RED : colors.text.gray },
+                      ]}
+                    >
+                      {formattedFinalPrice}
+                    </Text>
+                  )}
                   {productHasDiscount && (
                     <Text
                       style={[
@@ -641,9 +687,9 @@ export default function Details() {
                 </Text>
               )}
             </View>
-          );
+          ) : null;
         case "ATTRIBUTES":
-          return (
+          return viewProduct ? (
             <ProductAttributes
               product={viewProduct}
               selectedAttributes={selectedAttributes}
@@ -651,13 +697,15 @@ export default function Details() {
               themeColors={colors}
               pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
             />
-          );
+          ) : null;
         case "STOCK":
           return (
             <View style={[styles.stockContainer, { backgroundColor: colors.cardBackground }]}>
               <Text style={[styles.stockText, { color: colors.text.gray }]}>
                 {i18n.t("stock") || "Stock"}:{" "}
-                {currentStock > 0 ? (
+                {isLoading && currentStock === 0 ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : currentStock > 0 ? (
                   <Text style={{ color: colors.primary, fontWeight: "600" }}>{currentStock}</Text>
                 ) : (
                   <Text style={{ color: COLORS.ERROR_RED, fontWeight: "600" }}>
@@ -673,7 +721,7 @@ export default function Details() {
             </View>
           );
         case "DESCRIPTION":
-          return !!viewProduct.description ? (
+          return viewProduct && viewProduct.description ? (
             <View style={[styles.descriptionSection, { backgroundColor: colors.cardBackground }]}>
               <Text
                 style={[
@@ -711,10 +759,10 @@ export default function Details() {
             </View>
           ) : null;
         case "REVIEWS":
-          return showDeferred ? (
+          return showDeferred && viewProduct?.id ? (
             <View style={{ backgroundColor: colors.surface }}>
               <View style={{ height: 10, backgroundColor: colors.background }} />
-              <Review productId={viewProduct?.id} />
+              <Review productId={viewProduct.id} />
               <View style={{ height: 140 }} />
             </View>
           ) : null;
@@ -741,6 +789,83 @@ export default function Details() {
       displayVariant,
     ]
   );
+
+
+  // Skeleton for Loading Phase (Initial param resolution or active fetch)
+  const isInitializing = !viewProduct?.id || isLoading;
+  if (isInitializing && !error) {
+    return <ProductDetailsSkeleton colors={colors} />;
+  }
+
+  // Error State
+  if (error && !viewProduct) {
+    return (
+      <View
+        style={[styles.errorContainer, { backgroundColor: colors.surface }]}
+      >
+        <Ionicons name="alert-circle-outline" size={60} color={colors.danger || colors.primary} />
+        <Text
+          style={[
+            styles.errorText,
+            {
+              color: colors.text.gray,
+              textAlign: I18nManager.isRTL ? "right" : "left",
+            },
+          ]}
+        >
+          {i18n.t("errorLoadingProduct") || "Error loading product"}
+        </Text>
+        <Text
+          style={[
+            styles.errorSubText,
+            {
+              color: colors.text.veryLightGray,
+              textAlign: I18nManager.isRTL ? "right" : "left",
+            },
+          ]}
+        >
+          {String(error)}
+        </Text>
+        <TouchableOpacity
+          style={[styles.backButton, { backgroundColor: colors.primary, marginTop: 24, borderRadius: 12, paddingHorizontal: 30, paddingVertical: 15 }]}
+          onPress={() => router.replace("/(tabs)")}
+        >
+          <Text style={[styles.backButtonText, { color: colors.text.white, fontWeight: 'bold' }]}>
+            {i18n.t("backToHome") || "Back to Home"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!viewProduct?.id && !isLoading) {
+    return (
+      <View
+        style={[styles.errorContainer, { backgroundColor: colors.surface }]}
+      >
+        <Ionicons name="search-outline" size={60} color={colors.text.veryLightGray} />
+        <Text
+          style={[
+            styles.errorText,
+            {
+              color: colors.text.gray,
+              textAlign: I18nManager.isRTL ? "right" : "left",
+            },
+          ]}
+        >
+          {i18n.t("noProductAvailable") || "No product available"}
+        </Text>
+        <TouchableOpacity
+          style={[styles.backButton, { backgroundColor: colors.primary, marginTop: 24, borderRadius: 12, paddingHorizontal: 30, paddingVertical: 15 }]}
+          onPress={() => router.replace("/(tabs)")}
+        >
+          <Text style={[styles.backButtonText, { color: colors.text.white, fontWeight: 'bold' }]}>
+            {i18n.t("backToHome") || "Back to Home"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
