@@ -21,7 +21,7 @@ export const ROUTES = {
   CATEGORY: '/categories/[id]',
   STORE: '/(screens)/store/[id]',
   COLLECTION: '/(screens)/[id]', // Can be extended later for collections
-  SEARCH: '/(tabs)/explor',
+  SEARCH: '/(tabs)/explore',
   PRODUCTS: '/(screens)/products/[type]', // New products screen for headlines
   CART: '/(tabs)/cart',
   PROFILE: '/(tabs)/profile',

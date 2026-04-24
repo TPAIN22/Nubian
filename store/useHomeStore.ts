@@ -25,6 +25,42 @@ interface HomeState {
   reset: () => void;
 }
 
+async function buildHomePayload(currencyCode?: string) {
+  const [homeData, recommendations] = await Promise.all([
+    HomeService.fetchHomeData(currencyCode),
+    getHomeRecommendations(currencyCode).catch(() => null),
+  ]);
+
+  const activeCategories = HomeService.filterActiveCategories(homeData.categories);
+  const activeBanners = HomeService.filterActiveBanners(homeData.banners);
+  const verifiedStores = HomeService.filterVerifiedStores(homeData.stores);
+
+  const hasRecommendations =
+    recommendations &&
+    (recommendations.trending?.length ||
+      recommendations.forYou?.length ||
+      recommendations.flashDeals?.length ||
+      recommendations.newArrivals?.length);
+
+  return {
+    banners: activeBanners,
+    categories: activeCategories,
+    trending: hasRecommendations
+      ? HomeService.filterAvailableProducts(recommendations.trending || [])
+      : HomeService.filterAvailableProducts(homeData.trending || []),
+    flashDeals: hasRecommendations
+      ? HomeService.filterAvailableProducts(recommendations.flashDeals || [])
+      : HomeService.filterAvailableProducts(homeData.flashDeals || []),
+    newArrivals: hasRecommendations
+      ? HomeService.filterAvailableProducts(recommendations.newArrivals || [])
+      : HomeService.filterAvailableProducts(homeData.newArrivals || []),
+    forYou: hasRecommendations
+      ? HomeService.filterAvailableProducts(recommendations.forYou || [])
+      : HomeService.filterAvailableProducts(homeData.forYou || []),
+    stores: verifiedStores,
+  };
+}
+
 const initialState = {
   banners: [],
   categories: [],
@@ -53,55 +89,13 @@ export const useHomeStore = create<HomeState>((set, get) => ({
     const task = (async () => {
       try {
         const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
-        const [homeData, recommendations] = await Promise.all([
-          HomeService.fetchHomeData(currencyCode),
-          getHomeRecommendations(currencyCode).catch(() => null),
-        ]);
-
-        const activeCategories = HomeService.filterActiveCategories(homeData.categories);
-        const activeBanners = HomeService.filterActiveBanners(homeData.banners);
-        const verifiedStores = HomeService.filterVerifiedStores(homeData.stores);
-
-        const hasRecommendations =
-          recommendations &&
-          (recommendations.trending?.length ||
-            recommendations.forYou?.length ||
-            recommendations.flashDeals?.length ||
-            recommendations.newArrivals?.length);
-
-        const trending = hasRecommendations
-          ? HomeService.filterAvailableProducts(recommendations.trending || [])
-          : HomeService.filterAvailableProducts(homeData.trending || []);
-
-        const flashDeals = hasRecommendations
-          ? HomeService.filterAvailableProducts(recommendations.flashDeals || [])
-          : HomeService.filterAvailableProducts(homeData.flashDeals || []);
-
-        const newArrivals = hasRecommendations
-          ? HomeService.filterAvailableProducts(recommendations.newArrivals || [])
-          : HomeService.filterAvailableProducts(homeData.newArrivals || []);
-
-        const forYou = hasRecommendations
-          ? HomeService.filterAvailableProducts(recommendations.forYou || [])
-          : HomeService.filterAvailableProducts(homeData.forYou || []);
-
-        set({
-          banners: activeBanners,
-          categories: activeCategories,
-          trending,
-          flashDeals,
-          newArrivals,
-          forYou,
-          stores: verifiedStores,
-          isLoading: false,
-          error: null,
-          lastFetchedAt: Date.now(),
-        });
+        const payload = await buildHomePayload(currencyCode);
+        set({ ...payload, isLoading: false, error: null, lastFetchedAt: Date.now() });
       } catch (error: any) {
         set({
           isLoading: false,
           error: error?.message || "Failed to load home data",
-          lastFetchedAt: Date.now(), // ✅ Update even on error to prevent focus loop
+          lastFetchedAt: Date.now(),
         });
       } finally {
         set({ inFlight: null });
@@ -121,55 +115,10 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
     try {
       const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
-      const [homeData, recommendations] = await Promise.all([
-        HomeService.fetchHomeData(currencyCode),
-        getHomeRecommendations(currencyCode).catch(() => null),
-      ]);
-
-      const activeCategories = HomeService.filterActiveCategories(homeData.categories);
-      const activeBanners = HomeService.filterActiveBanners(homeData.banners);
-      const verifiedStores = HomeService.filterVerifiedStores(homeData.stores);
-
-      const hasRecommendations =
-        recommendations &&
-        (recommendations.trending?.length ||
-          recommendations.forYou?.length ||
-          recommendations.flashDeals?.length ||
-          recommendations.newArrivals?.length);
-
-      const trending = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.trending || [])
-        : HomeService.filterAvailableProducts(homeData.trending || []);
-
-      const flashDeals = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.flashDeals || [])
-        : HomeService.filterAvailableProducts(homeData.flashDeals || []);
-
-      const newArrivals = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.newArrivals || [])
-        : HomeService.filterAvailableProducts(homeData.newArrivals || []);
-
-      const forYou = hasRecommendations
-        ? HomeService.filterAvailableProducts(recommendations.forYou || [])
-        : HomeService.filterAvailableProducts(homeData.forYou || []);
-
-      set({
-        banners: activeBanners,
-        categories: activeCategories,
-        trending,
-        flashDeals,
-        newArrivals,
-        forYou,
-        stores: verifiedStores,
-        isRefreshing: false,
-        error: null,
-        lastFetchedAt: Date.now(), // ✅
-      });
+      const payload = await buildHomePayload(currencyCode);
+      set({ ...payload, isRefreshing: false, error: null, lastFetchedAt: Date.now() });
     } catch (error: any) {
-      set({
-        isRefreshing: false,
-        error: error?.message || "Failed to refresh home data",
-      });
+      set({ isRefreshing: false, error: error?.message || "Failed to refresh home data" });
     }
   },
 

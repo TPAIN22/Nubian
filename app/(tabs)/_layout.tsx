@@ -306,7 +306,7 @@ export default function TabsLayout() {
         />
 
         <Tabs.Screen
-          name="explor"
+          name="explore"
           options={{
             headerShown: false,
             tabBarIcon: ({ focused }) => (

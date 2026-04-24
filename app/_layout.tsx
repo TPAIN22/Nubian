@@ -26,6 +26,8 @@ import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
 import { useHomeStore } from "@/store/useHomeStore";
 import useItemStore from "@/store/useItemStore";
+import { useExploreStore } from "@/store/useExploreStore";
+import useProductCacheStore from "@/store/useProductCacheStore";
 
 // Conditionally import expo-navigation-bar (not available in Expo Go)
 let NavigationBar: any = null;
@@ -209,14 +211,10 @@ function AppLoaderWithClerk() {
       (currencyCode, previousCurrencyCode) => {
         // Only refresh if currency actually changed and wasn't null before (initial hydration)
         if (currencyCode && previousCurrencyCode && currencyCode !== previousCurrencyCode) {
-          console.log(`[Currency] Changed from ${previousCurrencyCode} to ${currencyCode}. Refreshing data...`);
-
-          // 1. Refresh Home Store (Trending, New Arrivals, etc.)
           useHomeStore.getState().fetchHomeData();
-
-          // 2. Clear Item Store (Products, Search Results) 
-          // This ensures they re-fetch with new currency on next visit
           useItemStore.getState().resetProducts();
+          useExploreStore.getState().reset();
+          useProductCacheStore.getState().clearAll();
         }
       }
     );

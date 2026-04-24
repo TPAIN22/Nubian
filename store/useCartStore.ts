@@ -4,7 +4,8 @@
  */
 
 import { create } from "zustand";
-import { subscribeWithSelector } from "zustand/middleware";
+import { subscribeWithSelector, persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axiosInstance from "@/services/api/client";
 import type {
   Cart,
@@ -102,9 +103,11 @@ function buildCartPayload(
   return base;
 }
 
-// Create store with selector middleware for performance
+// Create store with selector + persistence middleware
 const useCartStore = create<CartStore>()(
-  subscribeWithSelector((set, get) => ({
+  subscribeWithSelector(
+    persist(
+      (set, get) => ({
     // Initial state
     cart: null,
     isLoading: false,
@@ -256,7 +259,15 @@ const useCartStore = create<CartStore>()(
         throw error;
       }
     },
-  }))
+      }),
+      {
+        name: "nubian-cart-v1",
+        storage: createJSONStorage(() => AsyncStorage),
+        // Only persist cart data — never persist loading/error/in-flight state
+        partialize: (state) => ({ cart: state.cart }),
+      }
+    )
+  )
 );
 
 // Optimized selectors

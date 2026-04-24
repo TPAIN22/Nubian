@@ -2,7 +2,54 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '@/services/api/client';
 
-// Cache keys
+// ===== Types =====
+type Country = {
+  _id: string;
+  name: string;
+};
+
+type City = {
+  _id: string;
+  name: string;
+  country: string;
+};
+
+type SubCity = {
+  _id: string;
+  name: string;
+  city: string;
+};
+
+type LocationStore = {
+  countries: Country[];
+  citiesByCountryId: Record<string, City[]>;
+  subCitiesByCityId: Record<string, SubCity[]>;
+  isLoading: boolean;
+  error: string | null;
+  inFlight: Promise<any> | null;
+
+  // methods
+  isCacheValid: () => Promise<boolean>;
+  loadFromCache: () => Promise<boolean>;
+  saveToCache: (
+    countries: Country[],
+    citiesByCountryId: Record<string, City[]>,
+    subCitiesByCityId: Record<string, SubCity[]>
+  ) => Promise<void>;
+
+  loadCountries: (forceRefresh?: boolean) => Promise<Country[]>;
+  loadCities: (countryId: string, forceRefresh?: boolean) => Promise<City[]>;
+  loadSubCities: (cityId: string, forceRefresh?: boolean) => Promise<SubCity[]>;
+
+  getCitiesForCountry: (countryId: string) => City[];
+  getSubCitiesForCity: (cityId: string) => SubCity[];
+
+  clearCache: () => Promise<void>;
+  clearError: () => void;
+  initialize: () => Promise<void>;
+};
+
+// ===== Cache keys =====
 const CACHE_KEYS = {
   COUNTRIES: 'locations_countries',
   CITIES_BY_COUNTRY: 'locations_cities_by_country',
@@ -10,11 +57,10 @@ const CACHE_KEYS = {
   CACHE_TIMESTAMP: 'locations_cache_timestamp'
 };
 
-// Cache TTL (7 days in milliseconds)
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
-const useLocationStore = create((set, get) => ({
-  // State
+// ===== Store =====
+const useLocationStore = create<LocationStore>((set, get) => ({
   countries: [],
   citiesByCountryId: {},
   subCitiesByCityId: {},
@@ -22,38 +68,36 @@ const useLocationStore = create((set, get) => ({
   error: null,
   inFlight: null,
 
-  // Helper functions
   isCacheValid: async () => {
     try {
       const timestamp = await AsyncStorage.getItem(CACHE_KEYS.CACHE_TIMESTAMP);
       if (!timestamp) return false;
 
       const cacheTime = parseInt(timestamp);
-      const now = Date.now();
-      return (now - cacheTime) < CACHE_TTL;
-    } catch (error) {
+      return Date.now() - cacheTime < CACHE_TTL;
+    } catch {
       return false;
     }
   },
 
   loadFromCache: async () => {
     try {
-      const [countries, citiesByCountryId, subCitiesByCityId] = await Promise.all([
+      const [countries, cities, subCities] = await Promise.all([
         AsyncStorage.getItem(CACHE_KEYS.COUNTRIES),
         AsyncStorage.getItem(CACHE_KEYS.CITIES_BY_COUNTRY),
         AsyncStorage.getItem(CACHE_KEYS.SUBCITIES_BY_CITY)
       ]);
 
-      if (countries && citiesByCountryId && subCitiesByCityId) {
+      if (countries && cities && subCities) {
         set({
           countries: JSON.parse(countries),
-          citiesByCountryId: JSON.parse(citiesByCountryId),
-          subCitiesByCityId: JSON.parse(subCitiesByCityId)
+          citiesByCountryId: JSON.parse(cities),
+          subCitiesByCityId: JSON.parse(subCities)
         });
         return true;
       }
       return false;
-    } catch (error) {
+    } catch {
       return false;
     }
   },
@@ -66,50 +110,39 @@ const useLocationStore = create((set, get) => ({
         AsyncStorage.setItem(CACHE_KEYS.SUBCITIES_BY_CITY, JSON.stringify(subCitiesByCityId)),
         AsyncStorage.setItem(CACHE_KEYS.CACHE_TIMESTAMP, Date.now().toString())
       ]);
-    } catch (error) {
-      // Silently fail cache save
+    } catch {
+      // ignore
     }
   },
 
-  // Load countries
   loadCountries: async (forceRefresh = false) => {
     const { isLoading, inFlight, isCacheValid, loadFromCache, saveToCache } = get();
 
     if (isLoading && inFlight) return inFlight;
 
-    // Try to load from cache first if not forcing refresh
     if (!forceRefresh) {
       const cacheLoaded = await loadFromCache();
       if (cacheLoaded) {
-        // Check if cache is still valid, if not, refresh in background
-        const cacheValid = await isCacheValid();
-        if (cacheValid) {
-          return get().countries;
-        }
+        const valid = await isCacheValid();
+        if (valid) return get().countries;
       }
     }
 
     set({ isLoading: true, error: null });
+
     const task = (async () => {
       try {
         const res = await axiosInstance.get('/locations/countries?active=true');
-        const countries = res.data.data || [];
+        const countries: Country[] = res.data.data || [];
 
-        // Update cache
         await saveToCache(countries, get().citiesByCountryId, get().subCitiesByCityId);
 
-        set({
-          countries,
-          isLoading: false,
-          error: null
-        });
-
+        set({ countries, isLoading: false, error: null });
         return countries;
-      } catch (error) {
+      } catch (error: any) {
         const msg = error?.response?.data?.message || error.message;
         set({ error: msg, isLoading: false });
 
-        // If cache exists, use it as fallback
         if (!forceRefresh) {
           await loadFromCache();
         }
@@ -124,39 +157,33 @@ const useLocationStore = create((set, get) => ({
     return task;
   },
 
-  // Load cities for a country
   loadCities: async (countryId, forceRefresh = false) => {
     if (!countryId) return [];
 
-    const { isLoading, inFlight, citiesByCountryId, saveToCache } = get();
+    const { citiesByCountryId, saveToCache } = get();
 
-    // Return cached data if available and not forcing refresh
     if (!forceRefresh && citiesByCountryId[countryId]) {
       return citiesByCountryId[countryId];
     }
 
     set({ isLoading: true, error: null });
+
     const task = (async () => {
       try {
         const res = await axiosInstance.get(`/locations/countries/${countryId}/cities?active=true`);
-        const cities = res.data.data || [];
+        const cities: City[] = res.data.data || [];
 
-        // Update cities cache
-        const updatedCitiesByCountryId = {
+        const updated = {
           ...citiesByCountryId,
           [countryId]: cities
         };
 
-        await saveToCache(get().countries, updatedCitiesByCountryId, get().subCitiesByCityId);
+        await saveToCache(get().countries, updated, get().subCitiesByCityId);
 
-        set({
-          citiesByCountryId: updatedCitiesByCountryId,
-          isLoading: false,
-          error: null
-        });
+        set({ citiesByCountryId: updated, isLoading: false, error: null });
 
         return cities;
-      } catch (error) {
+      } catch (error: any) {
         const msg = error?.response?.data?.message || error.message;
         set({ error: msg, isLoading: false });
         throw error;
@@ -169,39 +196,33 @@ const useLocationStore = create((set, get) => ({
     return task;
   },
 
-  // Load subcities for a city
   loadSubCities: async (cityId, forceRefresh = false) => {
     if (!cityId) return [];
 
-    const { isLoading, inFlight, subCitiesByCityId, saveToCache } = get();
+    const { subCitiesByCityId, saveToCache } = get();
 
-    // Return cached data if available and not forcing refresh
     if (!forceRefresh && subCitiesByCityId[cityId]) {
       return subCitiesByCityId[cityId];
     }
 
     set({ isLoading: true, error: null });
+
     const task = (async () => {
       try {
         const res = await axiosInstance.get(`/locations/cities/${cityId}/subcities?active=true`);
-        const subCities = res.data.data || [];
+        const subCities: SubCity[] = res.data.data || [];
 
-        // Update subcities cache
-        const updatedSubCitiesByCityId = {
+        const updated = {
           ...subCitiesByCityId,
           [cityId]: subCities
         };
 
-        await saveToCache(get().countries, get().citiesByCountryId, updatedSubCitiesByCityId);
+        await saveToCache(get().countries, get().citiesByCountryId, updated);
 
-        set({
-          subCitiesByCityId: updatedSubCitiesByCityId,
-          isLoading: false,
-          error: null
-        });
+        set({ subCitiesByCityId: updated, isLoading: false, error: null });
 
         return subCities;
-      } catch (error) {
+      } catch (error: any) {
         const msg = error?.response?.data?.message || error.message;
         set({ error: msg, isLoading: false });
         throw error;
@@ -214,17 +235,14 @@ const useLocationStore = create((set, get) => ({
     return task;
   },
 
-  // Get cached cities for a country (doesn't trigger API call)
   getCitiesForCountry: (countryId) => {
     return get().citiesByCountryId[countryId] || [];
   },
 
-  // Get cached subcities for a city (doesn't trigger API call)
   getSubCitiesForCity: (cityId) => {
     return get().subCitiesByCityId[cityId] || [];
   },
 
-  // Clear cache
   clearCache: async () => {
     try {
       await Promise.all([
@@ -239,30 +257,23 @@ const useLocationStore = create((set, get) => ({
         citiesByCountryId: {},
         subCitiesByCityId: {}
       });
-    } catch (error) {
-      // Silently fail
+    } catch {
+      // ignore
     }
   },
 
-  // Clear error
   clearError: () => set({ error: null }),
 
-  // Initialize - load from cache on app start
   initialize: async () => {
-    const cacheLoaded = await get().loadFromCache();
-    if (cacheLoaded) {
-      // Load fresh data in background if cache is stale
-      const cacheValid = await get().isCacheValid();
-      if (!cacheValid) {
-        get().loadCountries(true).catch(() => {
-          // Silently fail background refresh
-        });
+    const loaded = await get().loadFromCache();
+
+    if (loaded) {
+      const valid = await get().isCacheValid();
+      if (!valid) {
+        get().loadCountries(true).catch(() => {});
       }
     } else {
-      // No cache, load fresh data
-      get().loadCountries().catch(() => {
-        // Silently fail initial load
-      });
+      get().loadCountries().catch(() => {});
     }
   }
 }));

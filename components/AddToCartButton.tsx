@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, View, ActivityIndicator } from "react-native";
+import { useTheme } from "@/providers/ThemeProvider";
 import useCartStore from "@/store/useCartStore";
 import { useUser } from "@clerk/clerk-expo";
 import useItemStore from "@/store/useItemStore";
@@ -22,8 +23,9 @@ type Props = {
   buttonStyle?: ViewStyle | any;
   textStyle?: TextStyle;
   disabled?: boolean;
-  selectedSize?: string; // legacy
-  selectedAttributes?: SelectedAttributes; // new
+  selectedSize?: string;
+  selectedAttributes?: SelectedAttributes;
+  onPressAttempt?: () => void;
 };
 
 const AddToCartButton = ({
@@ -34,7 +36,10 @@ const AddToCartButton = ({
   disabled,
   selectedSize,
   selectedAttributes,
+  onPressAttempt,
 }: Props) => {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const { addToCart, clearError, fetchCart } = useCartStore();
   const { isSignedIn } = useUser();
   const [isLoading, setIsLoading] = useState(false);
@@ -115,6 +120,7 @@ const AddToCartButton = ({
   }, [product, isLoading, disabled, availability.reason, requiredValidation.missing]);
 
   const handleAddToCart = useCallback(async () => {
+    onPressAttempt?.();
     if (isButtonDisabled) {
       // show helpful toast in case user taps fast
       if (!availability.ok) {
@@ -188,7 +194,7 @@ const AddToCartButton = ({
   return (
     <View style={styles.container}>
       <Pressable
-        style={[styles.button, buttonStyle, isButtonDisabled && styles.disabledButton]}
+        style={[styles.button, { backgroundColor: colors.primary }, buttonStyle, isButtonDisabled && styles.disabledButton]}
         disabled={isButtonDisabled}
         onPress={handleAddToCart}
       >
@@ -210,7 +216,6 @@ const AddToCartButton = ({
 const styles = StyleSheet.create({
   container: { width: "100%" },
   button: {
-    backgroundColor: "#f0b745",
     padding: 10,
     alignItems: "center",
     justifyContent: "center",

@@ -16,12 +16,13 @@ import type { LightColors, DarkColors } from "@/theme";
 
 interface ProductActionsProps {
   product: NormalizedProduct;
-  selectedAttributes: SelectedAttributes; // ✅ attributes-only
+  selectedAttributes: SelectedAttributes;
   isAvailable: boolean;
   wishlistLoading: boolean;
   inWishlist: boolean;
   onWishlistPress: () => void;
   themeColors: LightColors | DarkColors;
+  onAttempt?: () => void;
 }
 
 export const ProductActions = ({
@@ -32,6 +33,7 @@ export const ProductActions = ({
   inWishlist,
   onWishlistPress,
   themeColors,
+  onAttempt,
 }: ProductActionsProps) => {
   const insets = useSafeAreaInsets();
 
@@ -55,12 +57,13 @@ export const ProductActions = ({
         <View style={styles.addToCartButtonWrapper}>
           <AddToCartButton
             product={product}
-            selectedAttributes={selectedAttributes} // ✅ دا الأساس
+            selectedAttributes={selectedAttributes}
             buttonStyle={[
               styles.addToCartButton,
               !isAvailable && styles.disabledButton,
             ]}
             disabled={!isAvailable}
+            onPressAttempt={onAttempt}
           />
         </View>
 

@@ -20,7 +20,7 @@ export const QuickActionsBar = memo(({ colors }: { colors: any }) => {
       id: "categories",
       icon: "grid-outline" as const,
       label: i18n.t("home_exploreCategories"),
-      onPress: () => router.push("/(tabs)/explor"),
+      onPress: () => router.push("/(tabs)/explore"),
     },
     {
       id: "deals",

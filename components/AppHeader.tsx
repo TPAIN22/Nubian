@@ -103,7 +103,7 @@ function useHeaderActions(onNotificationPress?: () => void) {
   const router = useRouter();
 
   const handleLogoPress = () => { }; // No routing on logo press
-  const handleSearchPress = () => router.push('/(tabs)/explor');
+  const handleSearchPress = () => router.push('/(tabs)/explore');
   const handleCartPress = () => router.push('/(tabs)/cart');
 
   const handleNotificationPress = () => {

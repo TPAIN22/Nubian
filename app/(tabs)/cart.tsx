@@ -194,15 +194,6 @@ export default function CartScreen() {
     );
   }
 
-  // Loading
-  if (isLoading) {
-    return (
-      <View style={[styles.center, { backgroundColor: colors.surface }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <View style={[styles.cartContent, { backgroundColor: colors.surface }]}>

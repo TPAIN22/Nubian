@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner-native';
 import i18n from '@/utils/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axiosInstance from '@/services/api/client';
 
 const useWishlistStore = create(
   subscribeWithSelector((set, get) => {
@@ -74,7 +75,7 @@ const useWishlistStore = create(
           await axiosInstance.post(`/wishlist/${dbId}`, {});
           // Save to AsyncStorage after successful add
           await AsyncStorage.setItem('wishlist', JSON.stringify(get().wishlist));
-          toast.success(i18n.t('addedToWishlistTitle') || 'Added', i18n.t('addedToWishlistMsg') || 'Product added to wishlist');
+          toast.success(i18n.t('addedToWishlistTitle') || 'Added', { description: i18n.t('addedToWishlistMsg') || 'Product added to wishlist' });
         } catch (error) {
           set({ wishlist: prevWishlist, _wishlistIds: prevIds, error: error?.response?.data?.message || error.message });
           toast.error(i18n.t('error') || 'Error', error?.response?.data?.message || error.message);
@@ -94,7 +95,7 @@ const useWishlistStore = create(
           await axiosInstance.delete(`/wishlist/${productId}`);
           // Save to AsyncStorage after successful remove
           await AsyncStorage.setItem('wishlist', JSON.stringify(get().wishlist));
-          toast.info(i18n.t('removedFromWishlistTitle') || 'Removed', i18n.t('removedFromWishlistMsg') || 'Product removed from wishlist');
+          toast.info(i18n.t('removedFromWishlistTitle') || 'Removed', { description: i18n.t('removedFromWishlistMsg') || 'Product removed from wishlist' });
         } catch (error) {
           set({ wishlist: prevWishlist, _wishlistIds: prevIds, error: error?.response?.data?.message || error.message });
           toast.error(i18n.t('error') || 'Error', error?.response?.data?.message || error.message);

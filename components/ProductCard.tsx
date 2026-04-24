@@ -1,6 +1,6 @@
 // ProductCard.tsx
-import React, { useMemo, useRef, useState, useCallback } from "react";
-import { View, StyleSheet, Pressable, FlatList, type ViewToken, InteractionManager } from "react-native";
+import React, { useMemo, useCallback } from "react";
+import { View, StyleSheet, Pressable, InteractionManager } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
 import { Card } from "@/components/ui/card";
@@ -44,12 +44,8 @@ const ProductCard = React.memo(
     const { getToken } = useAuth();
     const { trackEvent } = useTracking();
 
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [containerWidth, setContainerWidth] = useState<number>(0);
-    const flatListRef = useRef<FlatList<string>>(null);
-
     const validImages = useMemo(() => (item ? cleanImages(item.images) : []), [item]);
-    const singleImage = validImages.length === 1 ? validImages[0] : null;
+    const displayImage = validImages[0] ?? null;
 
     // --- DEFINITIVE PRICING LOGIC ---
     // 1. Final Price: Prefer backend "displayFinalPrice", fallback to legacy getDisplayPrice
@@ -66,17 +62,6 @@ const ProductCard = React.memo(
     const discountPercentage = (item as any)?.displayDiscountPercentage ?? 0;
 
     const productHasDiscount = discountPercentage > 0;
-
-    // Debug Logging
-    if (__DEV__) {
-      // console.log(`[ProductCard] ID: ${item?.id}`);
-      console.log(`[ProductCard] Backend Display Fields:`, {
-        displayFinal: (item as any)?.displayFinalPrice,
-        displayOriginal: (item as any)?.displayOriginalPrice,
-        displayDiscount: (item as any)?.displayDiscountPercentage
-      });
-      console.log(`[ProductCard] Resolved: Final=${finalPrice}, Original=${originalPrice}, Discount=${discountPercentage}`);
-    }
 
     // PERFORMANCE: Start prefetch on press-in (while user's finger is still down)
     const handlePressIn = useCallback(() => {
@@ -127,69 +112,6 @@ const ProductCard = React.memo(
         });
       }
     }, [getToken, inWishlist, item, addToWishlist, removeFromWishlist, trackEvent]);
-
-    const measuredWidth = providedCardWidth || containerWidth;
-    const canRenderCarousel = measuredWidth > 0 && validImages.length > 1;
-
-    const renderImage = useCallback(
-      ({ item: imageUri }: { item: string }) => (
-        <View style={{ width: measuredWidth, height: measuredWidth }}>
-          <Pressable onPressIn={handlePressIn} onPress={handleClick} style={{ width: "100%", height: "100%" }}>
-            <Image
-              source={{ uri: imageUri }}
-              alt="product image"
-              style={[styles.productImage, { backgroundColor: colors.surface, width: "100%", height: "100%" }]}
-              contentFit="cover"
-              transition={300}
-            />
-          </Pressable>
-        </View>
-      ),
-      [measuredWidth, handleClick, handlePressIn, colors.surface]
-    );
-
-    const onContainerLayout = useCallback((e: any) => {
-      const w = e?.nativeEvent?.layout?.width ?? 0;
-      if (w > 0) setContainerWidth(w);
-    }, []);
-
-    const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      const first = viewableItems?.[0];
-      const idx = typeof first?.index === "number" ? first.index : 0;
-      setCurrentImageIndex(idx);
-    }).current;
-
-    const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
-    const viewabilityConfigCallbackPairs = useRef([{ viewabilityConfig, onViewableItemsChanged }]).current;
-
-    /*
-   * Discount Computation
-   * --------------------
-   * We calculate the discount percentage to display on the badge.
-   * Priority:
-   * 1. Local price difference check (Sanity Check) - if prices are same, NO discount.
-   * 2. Backend provided percentage (if trusted/available).
-   * 3. Local calculation based on resolved prices.
-   */
-
-
-    const renderPagination = () => {
-      if (validImages.length <= 1) return null;
-      return (
-        <View style={styles.pagination}>
-          {validImages.map((uri, index) => (
-            <View
-              key={`${uri}-${index}`}
-              style={[
-                styles.paginationDot,
-                { backgroundColor: colors.overlayLight },
-                index === currentImageIndex && { backgroundColor: colors.primary },
-              ]}
-            />
-          ))}
-        </View>
-      );
-    };
 
     if (!item) return null;
 
@@ -248,57 +170,22 @@ const ProductCard = React.memo(
             </Pressable>
           )}
 
-          {singleImage ? (
-            <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
+          <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
+            {displayImage ? (
               <Image
-                source={{ uri: singleImage }}
+                source={{ uri: displayImage }}
                 alt="product image"
                 style={[styles.productImage, { backgroundColor: colors.surface }]}
                 contentFit="cover"
                 transition={300}
+                recyclingKey={item.id}
               />
-            </Pressable>
-          ) : validImages.length > 1 ? (
-            <>
-              <View style={[styles.imageContainerWrapper, { overflow: "hidden" }]} onLayout={onContainerLayout}>
-                {canRenderCarousel ? (
-                  <FlatList
-                    ref={flatListRef}
-                    data={validImages}
-                    renderItem={renderImage}
-                    keyExtractor={(uri, index) => `${uri}-${index}`}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    bounces={false}
-                    decelerationRate="fast"
-                    snapToInterval={measuredWidth}
-                    snapToAlignment="start"
-                    viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}
-                    getItemLayout={(_, index) => ({ length: measuredWidth, offset: measuredWidth * index, index })}
-                    style={{ width: measuredWidth, height: measuredWidth }}
-                  />
-                ) : (
-                  <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
-                    <Image
-                      source={{ uri: validImages[0] as string }}
-                      alt="product image"
-                      style={[styles.productImage, { backgroundColor: colors.surface }]}
-                      contentFit="cover"
-                      transition={300}
-                    />
-                  </Pressable>
-                )}
-              </View>
-              {renderPagination()}
-            </>
-          ) : (
-            <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
+            ) : (
               <View style={[styles.productImage, { backgroundColor: colors.surface, justifyContent: "center", alignItems: "center" }]}>
                 <Ionicons name="image-outline" size={48} color={colors.text.veryLightGray} />
               </View>
-            </Pressable>
-          )}
+            )}
+          </Pressable>
 
           {discountPercentage > 0 && (
             <View style={[styles.discountBadge, { backgroundColor: colors.primary }]}>
@@ -349,13 +236,10 @@ const styles = StyleSheet.create({
   productCardFlex: { flex: 1 },
   imagePressable: { width: "100%", height: "100%" },
   imageContainer: { position: "relative", overflow: "hidden", width: "100%", minHeight: 0 },
-  imageContainerWrapper: { width: "100%", aspectRatio: 1, overflow: "hidden" },
   productImage: { width: "100%", height: "100%" },
   wishlistButton: { position: "absolute", top: 10, right: 10, zIndex: 2, borderRadius: 20, width: 36, height: 36, justifyContent: "center", alignItems: "center", borderWidth: 1 },
   discountBadge: { position: "absolute", top: 10, left: 10, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, zIndex: 2 },
   discountText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  pagination: { position: "absolute", bottom: 12, left: 0, right: 0, flexDirection: "row", justifyContent: "center", alignItems: "center", zIndex: 2 },
-  paginationDot: { width: 6, height: 6, borderRadius: 3, marginHorizontal: 3 },
   productInfo: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10, minHeight: 60 },
   productName: { fontSize: 12, fontWeight: "600", lineHeight: 18, marginBottom: 6, minHeight: 36 },
   priceContainer: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2, minHeight: 20 },

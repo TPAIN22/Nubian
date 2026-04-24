@@ -17,7 +17,7 @@ interface QuickCollectionsProps {
 }
 
 const MOCK_COLLECTIONS = [
-  { id: "1", title: "Brands", image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&q=80", action: () => router.push('/(tabs)/explor') },
+  { id: "1", title: "Brands", image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&q=80", action: () => router.push('/(tabs)/explore') },
   { id: "2", title: "New In", image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=300&q=80", action: () => navigateToNewArrivals() },
   { id: "3", title: "Spring &\nSummer", image: "https://images.unsplash.com/photo-1513094735237-8f2714d57c13?w=300&q=80", action: () => navigateToTrending() },
   { id: "4", title: "Plus-Size", image: "https://images.unsplash.com/photo-1574634534894-89d7576c8259?w=300&q=80", action: () => navigateToTopRated() },

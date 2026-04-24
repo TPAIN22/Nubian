@@ -37,10 +37,10 @@ export default function CurrencySelector({ visible, mandatory = false, onComplet
     const shouldShow = visible || (mandatory && !hasSelection);
 
     useEffect(() => {
-        if (shouldShow && countries.length === 0) {
+        if (countries.length === 0) {
             fetchMetadata();
         }
-    }, [shouldShow, countries.length, fetchMetadata]);
+    }, [countries.length, fetchMetadata]);
 
     useEffect(() => {
         setSelectedCountry(countryCode);

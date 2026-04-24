@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useCallback } from 'react';
 import axiosInstance from "@/services/api/client";
 import { useCurrencyStore } from './useCurrencyStore';
+import useCategoryStore from './useCategoryStore';
 
 const useItemStore = create(subscribeWithSelector((set, get) => ({
   // State
@@ -47,7 +48,7 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
     set({ error: null }),
 
   // Get all products with pagination
-  getAllProducts: async (limit = 90) => {
+  getAllProducts: async (limit = 20) => {
     const { _requestInProgress, _lastRequestTime } = get();
     const now = Date.now();
     const MIN_INTERVAL = 5000; // 5 seconds minimum between product requests
@@ -234,93 +235,14 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
     }
   },
 
-  // Get categories
+  // Get categories — delegates to useCategoryStore to avoid duplicate API calls
   getCategories: async () => {
-    const { _requestInProgress, _lastRequestTime, categories } = get();
-    const now = Date.now();
-    const MIN_INTERVAL = 10000; // 10 seconds minimum between category requests
-    
-    // Prevent duplicate requests
-    if (_requestInProgress.categories) {
-      return;
-    }
-    
-    // Throttle: Don't fetch if last fetch was less than MIN_INTERVAL ago
-    if (now - _lastRequestTime.categories < MIN_INTERVAL && _lastRequestTime.categories > 0) {
-      // Return existing categories if available
-      if (categories && categories.length > 0) {
-        return;
-      }
-    }
-    
-    set({ 
-      isCategoriesLoading: true, 
-      error: null,
-      _requestInProgress: { ..._requestInProgress, categories: true },
-      _lastRequestTime: { ..._lastRequestTime, categories: now }
-    });
-    
-    try {
-      const response = await axiosInstance.get("/categories");
+    return useCategoryStore.getState().fetchCategories();
+  },
 
-      // Try multiple response structure patterns
-      // Backend sends: res.json(categories) - so response.data is directly an array
-      let categories = [];
-      
-      // Pattern 1: response.data is directly an array (BACKEND FORMAT - nubian-auth)
-      if (Array.isArray(response.data)) {
-        categories = response.data;
-      }
-      // Pattern 2: response.data.categories (wrapped format)
-      else if (Array.isArray(response.data?.categories)) {
-        categories = response.data.categories;
-      }
-      // Pattern 3: response.data.data.categories (nested structure)
-      else if (Array.isArray(response.data?.data?.categories)) {
-        categories = response.data.data.categories;
-      }
-      // Pattern 4: response.data.data is directly an array
-      else if (Array.isArray(response.data?.data)) {
-        categories = response.data.data;
-      }
-      // Pattern 5: response.data.results (some APIs use 'results')
-      else if (Array.isArray(response.data?.results)) {
-        categories = response.data.results;
-      }
-      // Pattern 6: response.data.items (some APIs use 'items')
-      else if (Array.isArray(response.data?.items)) {
-        categories = response.data.items;
-      }
-
-      // Filter out inactive categories if they have isActive field
-      const originalLength = categories.length;
-      if (categories.length > 0) {
-        const hasIsActiveField = categories.some(c => c.hasOwnProperty('isActive'));
-        if (hasIsActiveField) {
-          categories = categories.filter((category) => category.isActive !== false);
-        }
-      }
-
-      const { _requestInProgress } = get();
-      set({ 
-        categories, 
-        isCategoriesLoading: false,
-        error: null,
-        _requestInProgress: { ..._requestInProgress, categories: false }
-      });
-    } catch (error) {
-      const errorMessage = error?.response?.data?.message 
-        || error?.message 
-        || "فشل في تحميل الأقسام";
-      
-      const { _requestInProgress } = get();
-      set({ 
-        error: errorMessage, 
-        isCategoriesLoading: false,
-        categories: [],
-        _requestInProgress: { ..._requestInProgress, categories: false }
-      });
-    }
+  // Select category and load products — delegates to useCategoryStore
+  selectCategoryAndLoadProducts: async (categoryId) => {
+    return useCategoryStore.getState().fetchProductsByCategory(categoryId, 1);
   },
 
   // Search products

@@ -81,12 +81,13 @@ const useCategoryStore = create<CategoryStoreState>((set, get) => ({
   },
 
   fetchCategoryById: async (id: string) => {
-    set({ productsLoading: true, productsError: null });
     try {
       const category = await getCategoryById(id);
-      set({ selectedCategory: category, productsError: null, productsLoading: false });
+      set({ selectedCategory: category });
     } catch (error: any) {
-      set({ productsError: error.message || "Failed to load category.", productsLoading: false });
+      // Category details are non-critical — don't block product display with productsError
+      console.warn('Failed to load category details:', error.message);
+      set({ selectedCategory: null });
     }
   },
 

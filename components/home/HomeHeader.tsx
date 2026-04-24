@@ -25,11 +25,9 @@ interface HomeHeaderProps {
 export const HomeHeader = memo(({ activeTab = "All", onTabPress, categories = [] }: HomeHeaderProps) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const currentScrollY = useScrollStore((state) => state.scrollY);
+  const isScrolled = useScrollStore((state) => state.isScrolled);
   const { theme } = useTheme();
   const cartQuantity = useCartQuantity();
-
-  const isScrolled = currentScrollY > 40;
   const headerBg = isScrolled ? theme.colors.surface : "transparent";
   const iconColor = isScrolled ? theme.colors.text.gray : "#FFF";
   const activeIconColor = isScrolled ? theme.colors.primary : "#FFF";
@@ -59,7 +57,7 @@ export const HomeHeader = memo(({ activeTab = "All", onTabPress, categories = []
 
         <Pressable
           style={[styles.searchBar, { backgroundColor: searchBg }]}
-          onPress={() => router.push('/(tabs)/explor')}
+          onPress={() => router.push('/(tabs)/explore')}
         >
           <View style={styles.searchIcons}>
             <Ionicons name="search-outline" size={20} color="#000" />

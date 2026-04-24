@@ -8,10 +8,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import i18n from '../../utils/i18n';
+import { useTheme } from '@/providers/ThemeProvider';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const AuthSheet = () => {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [loading, setLoading] = useState<'google' | 'facebook' | 'email' | null>(null);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -148,28 +151,28 @@ const AuthSheet = () => {
   }, [emailAddressId, isLoaded, signIn]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <View style={styles.backdrop}>
-        <Image 
-          style={styles.backdropImage} 
+        <Image
+          style={styles.backdropImage}
           source={require('../../assets/images/nubianLogo.png')}
           contentFit="cover"
         />
       </View>
 
       {/* Header */}
-      <Text style={styles.title}>{i18n.t('signInTitle')}</Text>
-      <Text style={styles.subtitle}>{i18n.t('signInSubtitle')}</Text>
+      <Text style={[styles.title, { color: colors.text.gray }]}>{i18n.t('signInTitle')}</Text>
+      <Text style={[styles.subtitle, { color: colors.text.veryLightGray }]}>{i18n.t('signInSubtitle')}</Text>
 
       {/* Google Button */}
       <TouchableOpacity
-        style={[styles.btn, styles.googleBtn]}
+        style={[styles.btn, styles.googleBtn, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
         onPress={() => handleOAuth('google')}
         disabled={loading !== null}
         activeOpacity={0.7}
       >
         {loading === 'google' ? (
-          <ActivityIndicator color="#666" />
+          <ActivityIndicator color={colors.text.veryLightGray} />
         ) : (
           <>
             <Image 
@@ -184,13 +187,13 @@ const AuthSheet = () => {
 
       {/* Facebook Button */}
       <TouchableOpacity
-        style={[styles.btn, styles.fbBtn]}
+        style={[styles.btn, styles.fbBtn, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
         onPress={() => handleOAuth('facebook')}
         disabled={loading !== null}
         activeOpacity={0.7}
       >
         {loading === 'facebook' ? (
-          <ActivityIndicator color="#666" />
+          <ActivityIndicator color={colors.text.veryLightGray} />
         ) : (
           <>
             <Image 
@@ -204,17 +207,17 @@ const AuthSheet = () => {
       </TouchableOpacity>
       {/* Divider */}
       <View style={styles.divider}>
-        <View style={styles.line} />
-        <Text style={styles.orText}>{i18n.t('or')}</Text>
-        <View style={styles.line} />
+        <View style={[styles.line, { backgroundColor: colors.borderLight }]} />
+        <Text style={[styles.orText, { color: colors.text.veryLightGray }]}>{i18n.t('or')}</Text>
+        <View style={[styles.line, { backgroundColor: colors.borderLight }]} />
       </View>
       {!pendingVerification ? (
         <>
           {/* Email Input */}
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.borderLight, backgroundColor: colors.surface, color: colors.text.gray }]}
             placeholder={i18n.t('yourEmail')}
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.text.veryLightGray}
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -224,7 +227,7 @@ const AuthSheet = () => {
           />
           {/* Send code button */}
           <TouchableOpacity
-            style={[styles.btn, styles.emailBtn]}
+            style={[styles.btn, styles.emailBtn, { backgroundColor: colors.primary }]}
             onPress={handleEmail}
             disabled={loading !== null || !email}
             activeOpacity={0.7}
@@ -240,8 +243,9 @@ const AuthSheet = () => {
         <>
           {/* Verification code input */}
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.borderLight, backgroundColor: colors.surface, color: colors.text.gray }]}
             placeholder={i18n.t('enterCodeSent')}
+            placeholderTextColor={colors.text.veryLightGray}
             keyboardType="number-pad"
             value={code}
             onChangeText={setCode}
@@ -251,7 +255,7 @@ const AuthSheet = () => {
 
           {/* Verify button */}
           <TouchableOpacity
-            style={[styles.btn, styles.emailBtn]}
+            style={[styles.btn, styles.emailBtn, { backgroundColor: colors.primary }]}
             onPress={handleVerifyCode}
             disabled={loading !== null || !code}
             activeOpacity={0.7}
@@ -269,7 +273,7 @@ const AuthSheet = () => {
             disabled={loading !== null}
             style={styles.resendBtn}
           >
-            <Text style={styles.resendText}>{i18n.t('resendCode')}</Text>
+            <Text style={[styles.resendText, { color: colors.primary }]}>{i18n.t('resendCode')}</Text>
           </TouchableOpacity>
 
           {/* Back button */}
@@ -280,27 +284,24 @@ const AuthSheet = () => {
             }}
             style={styles.backBtn}
           >
-            <Text style={styles.backText}>{i18n.t('changeEmail')}</Text>
+            <Text style={[styles.backText, { color: colors.text.veryLightGray }]}>{i18n.t('changeEmail')}</Text>
           </TouchableOpacity>
         </>
       )}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
+        <Text style={[styles.footerText, { color: colors.text.veryLightGray }]}>
           {i18n.t('dontHaveAccount')}{' '}
         </Text>
-          <Text
-            style={styles.footerLink}
-            onPress={() => router.push('/signup')}
-          >
-            {i18n.t('createNewAccount')}
-          </Text>
-      </View>
-       <Text style={styles.termsText}>
-            {i18n.t('bySigningUpAgree')}{' '}
-            <Text style={styles.link}>{i18n.t('termsAndConditions')}</Text>
-            {i18n.t('and')}
-            <Text style={styles.link}>{i18n.t('privacyPolicy')}</Text>
+        <Text style={[styles.footerLink, { color: colors.primary }]} onPress={() => router.push('/signup')}>
+          {i18n.t('createNewAccount')}
         </Text>
+      </View>
+      <Text style={[styles.termsText, { color: colors.text.veryLightGray }]}>
+        {i18n.t('bySigningUpAgree')}{' '}
+        <Text style={[styles.link, { color: colors.primary }]}>{i18n.t('termsAndConditions')}</Text>
+        {i18n.t('and')}
+        <Text style={[styles.link, { color: colors.primary }]}>{i18n.t('privacyPolicy')}</Text>
+      </Text>
     </View>
   );
 };
@@ -308,7 +309,6 @@ export default AuthSheet;
 const styles = StyleSheet.create({
   container: {
     padding: 24,
-    backgroundColor: '#fff',
     borderRadius: 20,
     gap: 16,
     flex: 1,
@@ -320,13 +320,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backdropImage: {
-    marginTop: 100,
-    width: 120,
-    height: 120,
-    resizeMode: 'cover', 
-    marginBottom: 54,
+    marginTop: 32,
+    width: 80,
+    height: 80,
+    resizeMode: 'cover',
+    marginBottom: 24,
   },
-
   googleBtnText: {
     color: '#707070',
     fontSize: 16,
@@ -340,14 +339,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#000',
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 34,
   },
   subtitle: {
     fontSize: 15,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 24,
@@ -367,18 +364,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   googleBtn: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   fbBtn: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
-  emailBtn: {
-    backgroundColor: '#000',
-  },
+  emailBtn: {},
   btnText: {
     color: '#fff',
     fontSize: 16,
@@ -396,22 +387,17 @@ const styles = StyleSheet.create({
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
   },
   orText: {
-    color: '#999',
     paddingHorizontal: 12,
     fontSize: 18,
   },
   input: {
     height: 52,
     borderWidth: 1.5,
-    borderColor: '#e0e0e0',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: '#fafafa',
-    color: '#000',
   },
   resendBtn: {
     alignItems: 'center',
@@ -427,7 +413,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   backText: {
-    color: '#999',
     fontSize: 14,
   },
   footer: {
@@ -438,18 +423,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 16,
-    color: '#666',
   },
   footerLink: {
     fontSize: 14,
-    color: '#007AFF',
   },
-  link: {
-    color: '#007AFF',
-  },
+  link: {},
   termsText: {
     fontSize: 13,
-    color: '#666',
     textAlign: 'center',
   },
 });
