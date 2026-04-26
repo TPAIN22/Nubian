@@ -6,6 +6,7 @@ import {
   getProductRecommendations,
   getCartRecommendations,
 } from '../api/recommendations.api';
+import { useCurrencyStore } from './useCurrencyStore';
 
 interface RecommendationState {
   // Home recommendations
@@ -55,7 +56,8 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
     set({ isHomeRecommendationsLoading: true, homeRecommendationsError: null });
 
     try {
-      const data = await getHomeRecommendations();
+      const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
+      const data = await getHomeRecommendations(currencyCode);
       set({
         homeRecommendations: data,
         isHomeRecommendationsLoading: false,
@@ -89,7 +91,8 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
     });
 
     try {
-      const data = await getProductRecommendations(productId);
+      const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
+      const data = await getProductRecommendations(productId, currencyCode);
       set({
         productRecommendations: {
           ...productRecommendations,
@@ -125,7 +128,8 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
     set({ isCartRecommendationsLoading: true, cartRecommendationsError: null });
 
     try {
-      const data = await getCartRecommendations();
+      const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
+      const data = await getCartRecommendations(currencyCode);
       set({
         cartRecommendations: data,
         isCartRecommendationsLoading: false,

@@ -8,6 +8,7 @@ import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useIsInWishlist, useWishlistActions } from "@/store/wishlistStore";
+import { useCurrencyStore } from "@/store/useCurrencyStore";
 import { useAuth } from "@clerk/clerk-expo";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
@@ -15,7 +16,6 @@ import useItemStore from "@/store/useItemStore";
 import { usePrefetchProduct, useSetInitialProduct } from "@/store/useProductCacheStore";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
-import { formatPrice } from "@/utils/priceUtils";
 import { cleanImages } from "@/utils/productUtils";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { markTapStartTime } from "@/hooks/useProductFetch";
@@ -35,6 +35,15 @@ const ProductCard = React.memo(
     const { theme } = useTheme();
     const colors = theme.colors;
 
+    // Re-render when currency metadata finishes loading (symbol/decimals become available).
+    // Do NOT subscribe to currencyCode here — doing so causes an immediate re-render
+    // with the new symbol applied to stale (old-currency) amounts before the re-fetch
+    // completes, producing e.g. "SAR 100" when 100 is still a USD price.
+    // The data-driven path (item.priceConverted / displayFinalPrice changing after
+    // re-fetch) handles the currency switch correctly via the React.memo comparator.
+    useCurrencyStore(state => state.currencies.length);
+    const formatPrice = useCurrencyStore(state => state.formatPrice);
+
     // Use optimized selectors - only re-render when this specific product's wishlist status changes
     const setProduct = useItemStore((state: any) => state.setProduct);
     const prefetchProduct = usePrefetchProduct();
@@ -48,15 +57,22 @@ const ProductCard = React.memo(
     const displayImage = validImages[0] ?? null;
 
     // --- DEFINITIVE PRICING LOGIC ---
-    // 1. Final Price: Prefer backend "displayFinalPrice", fallback to legacy getDisplayPrice
+    // 1. Final Price: prefer backend-computed fields in order of reliability.
+    //    displayFinalPrice — set when backend returns definitive pricing
+    //    priceConverted    — set when backend returns a currency-converted numeric
+    //    pricing.price     — client-side fallback (raw merchant price, may be in base currency)
     const pricing = useMemo(
       () => (item ? getDisplayPrice(item) : { price: 0, isFrom: false }),
       [item]
     );
-    const finalPrice = (item as any)?.displayFinalPrice ?? pricing.price;
+    const finalPrice = (item as any)?.displayFinalPrice
+      ?? (item as any)?.priceConverted
+      ?? pricing.price;
 
-    // 2. Original Price: Backend "displayOriginalPrice" is the Source of Truth.
-    const originalPrice = (item as any)?.displayOriginalPrice ?? finalPrice;
+    // 2. Original Price: same priority chain plus item.originalPrice
+    const originalPrice = (item as any)?.displayOriginalPrice
+      ?? (item as any)?.originalPrice
+      ?? finalPrice;
 
     // 3. Discount: Backend "displayDiscountPercentage" is the Source of Truth and includes Sanity Checks.
     const discountPercentage = (item as any)?.displayDiscountPercentage ?? 0;
@@ -148,7 +164,7 @@ const ProductCard = React.memo(
                   {pricing.isFrom && (
                     <Text style={{ fontSize: 10, color: colors.text.veryLightGray }}>From </Text>
                   )}
-                  {item.priceDisplay || formatPrice(finalPrice)}
+                  {formatPrice(finalPrice)}
                 </Text>
               </View>
             </View>
@@ -208,7 +224,7 @@ const ProductCard = React.memo(
               </Text>
             )}
             <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
-              {item.priceDisplay || formatPrice(finalPrice)}
+              {formatPrice(finalPrice)}
             </Text>
           </View>
         </View>
@@ -220,6 +236,10 @@ const ProductCard = React.memo(
   (prevProps, nextProps) => {
     // Re-render if item identity changes
     if (prevProps.item?.id !== nextProps.item?.id) return false;
+    // Re-render if prices change (e.g. after a currency switch triggers re-fetch)
+    if ((prevProps.item as any)?.displayFinalPrice !== (nextProps.item as any)?.displayFinalPrice) return false;
+    if ((prevProps.item as any)?.displayOriginalPrice !== (nextProps.item as any)?.displayOriginalPrice) return false;
+    if ((prevProps.item as any)?.priceConverted !== (nextProps.item as any)?.priceConverted) return false;
     // Re-render if visual props change
     if (prevProps.variant !== nextProps.variant) return false;
     if (prevProps.showWishlist !== nextProps.showWishlist) return false;

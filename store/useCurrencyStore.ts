@@ -166,13 +166,17 @@ export const useCurrencyStore = create<CurrencyState>()(
       formatPrice: (amount: number | undefined | null) => {
         const safeAmount = Number(amount) || 0;
         const currency = get().getSelectedCurrency();
-        
+
         if (!currency) {
+          const { currencyCode } = get();
+          if (currencyCode) {
+            return `${safeAmount.toFixed(2)} ${currencyCode}`;
+          }
           return `$${safeAmount.toFixed(2)}`;
         }
-        
+
         const formatted = safeAmount.toFixed(currency.decimals);
-        
+
         if (currency.symbolPosition === 'after') {
           return `${formatted} ${currency.symbol}`;
         }

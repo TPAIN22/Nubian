@@ -5,81 +5,156 @@ import {
   useCallback,
   useRef,
   useLayoutEffect,
-} from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+  memo,
+} from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   View,
   FlatList,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  ActivityIndicator,
   I18nManager,
   InteractionManager,
   Image as RNImage,
-} from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { Text } from "@/components/ui/text";
-import { Image } from "expo-image";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useProductFetch } from "@/hooks/useProductFetch";
-import { useIsInWishlist, useWishlistActions } from "@/store/wishlistStore";
-import i18n from "@/utils/i18n";
-import { useTheme } from "@/providers/ThemeProvider";
-import { markScreenMount } from "@/utils/performance";
-import { logPerf } from "@/hooks/useProductFetch";
+  Platform,
+} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  FadeIn,
+} from 'react-native-reanimated';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Text } from '@/components/ui/text';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useProductFetch } from '@/hooks/useProductFetch';
+import { useIsInWishlist, useWishlistActions } from '@/store/wishlistStore';
+import i18n from '@/utils/i18n';
+import { useTheme } from '@/providers/ThemeProvider';
+import { markScreenMount } from '@/utils/performance';
+import { logPerf } from '@/hooks/useProductFetch';
 
-import type { SelectedAttributes } from "@/domain/product/product.selectors";
-import { getAttributeOptions, normalizeSelectedAttributes } from "@/domain/product/product.selectors";
-import type { NormalizedProduct } from "@/domain/product/product.normalize";
-import { matchVariant, pickDisplayVariant } from "@/domain/variant/variant.match";
-import { isVariantSelectable } from "@/domain/product/product.guards";
-import { resolvePrice } from "@/domain/pricing/pricing.engine";
-import { formatPrice } from "@/utils/priceUtils";
-
-import { useRecommendationStore } from "@/store/useRecommendationStore";
-import { useTracking } from "@/hooks/useTracking";
+import type { SelectedAttributes } from '@/domain/product/product.selectors';
 import {
-  COLORS,
-  PRODUCT_DETAILS_CONFIG,
-} from "@/constants/productDetails";
+  getAttributeOptions,
+  normalizeSelectedAttributes,
+} from '@/domain/product/product.selectors';
+import type { NormalizedProduct } from '@/domain/product/product.normalize';
+import { matchVariant, pickDisplayVariant } from '@/domain/variant/variant.match';
+import { isVariantSelectable } from '@/domain/product/product.guards';
+import { resolvePrice } from '@/domain/pricing/pricing.engine';
+import { formatPrice } from '@/utils/priceUtils';
 
-import { ProductHeader } from "@/components/ProductDetails/ProductHeader";
-import { ProductImageCarousel } from "@/components/ProductDetails/ProductImageCarousel";
-import { ProductAttributes } from "@/components/ProductDetails/ProductAttributes";
-import Review from "@/components/Review";
-import { ProductRecommendations } from "@/components/ProductDetails/ProductRecommendations";
-import { ProductActions } from "@/components/ProductDetails/ProductActions";
-import { ZoomableImage } from "@/components/ProductDetails/ZoomableImageModal";
-import { ProductDetailsSkeleton } from "@/components/ProductDetails/ProductDetailsSkeleton";
+import { useRecommendationStore } from '@/store/useRecommendationStore';
+import { useTracking } from '@/hooks/useTracking';
+import { PRODUCT_DETAILS_CONFIG, COLORS } from '@/constants/productDetails';
+import type { LightColors, DarkColors } from '@/theme';
+
+import { ProductHeader } from '@/components/ProductDetails/ProductHeader';
+import { ProductImageCarousel } from '@/components/ProductDetails/ProductImageCarousel';
+import { ProductAttributes } from '@/components/ProductDetails/ProductAttributes';
+import Review from '@/components/Review';
+import { ProductRecommendations } from '@/components/ProductDetails/ProductRecommendations';
+import { ProductActions } from '@/components/ProductDetails/ProductActions';
+import { ZoomableImage } from '@/components/ProductDetails/ZoomableImageModal';
+import { ProductDetailsSkeleton } from '@/components/ProductDetails/ProductDetailsSkeleton';
+
+// ─── Collapsible Description ─────────────────────────────────────────────────
+
+interface CollapsibleDescriptionProps {
+  text: string;
+  colors: LightColors | DarkColors;
+}
+
+const CollapsibleDescription = memo(({ text, colors }: CollapsibleDescriptionProps) => {
+  const [expanded, setExpanded] = useState(false);
+  const rotation = useSharedValue(0);
+
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  const toggle = () => {
+    const next = !expanded;
+    rotation.value = withTiming(next ? 180 : 0, { duration: 220 });
+    setExpanded(next);
+  };
+
+  return (
+    <View style={[descStyles.container, { backgroundColor: colors.cardBackground }]}>
+      <TouchableOpacity
+        onPress={toggle}
+        style={descStyles.header}
+        activeOpacity={0.7}
+      >
+        <Text style={[descStyles.title, { color: colors.text.gray }]}>
+          {i18n.t('description') || 'Details'}
+        </Text>
+        <Animated.View style={chevronStyle}>
+          <Ionicons name="chevron-down" size={18} color={colors.text.mediumGray} />
+        </Animated.View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <Animated.View entering={FadeIn.duration(200)}>
+          <Text style={[descStyles.body, { color: colors.text.mediumGray }]}>{text}</Text>
+        </Animated.View>
+      )}
+    </View>
+  );
+});
+CollapsibleDescription.displayName = 'CollapsibleDescription';
+
+const descStyles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  body: {
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 14,
+  },
+});
+
+// ─── Section keys ─────────────────────────────────────────────────────────────
 
 const SECTIONS = [
-  "CAROUSEL",
-  "INFO",
-  "ATTRIBUTES",
-  "STOCK",
-  "DESCRIPTION",
-  "RECOMMENDATIONS",
-  "REVIEWS",
+  'CAROUSEL',
+  'INFO',
+  'ATTRIBUTES',
+  'DESCRIPTION',
+  'RECOMMENDATIONS',
+  'REVIEWS',
 ] as const;
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function Details() {
   const { theme } = useTheme();
   const colors = theme.colors;
-
   const router = useRouter();
   const params = useLocalSearchParams();
-  const productId = params.details ? String(params.details) : "";
+  const productId = params.details ? String(params.details) : '';
 
-  // Extract initial data from route params for instant render
   const initialData = useMemo(() => {
     if (!productId) return undefined;
     const name = params.name ? String(params.name) : undefined;
     const priceStr = params.price ? String(params.price) : undefined;
     const image = params.image ? String(params.image) : undefined;
-
     if (!name && !priceStr && !image) return undefined;
-
     return {
       id: productId,
       name,
@@ -88,22 +163,15 @@ export default function Details() {
     };
   }, [productId, params.name, params.price, params.image]);
 
-  // PERFORMANCE: Mark screen mount immediately
   useLayoutEffect(() => {
-    if (productId && __DEV__) {
-      markScreenMount(productId);
-    }
+    if (productId && __DEV__) markScreenMount(productId);
   }, [productId]);
 
-  // Use cached hook with initial data for instant render
   const { product, isLoading, error } = useProductFetch(productId, initialData);
-
-  // Use optimized wishlist selectors
   const { addToWishlist, removeFromWishlist } = useWishlistActions();
   const { trackEvent } = useTracking();
 
-  const [selectedAttributes, setSelectedAttributes] =
-    useState<SelectedAttributes>({});
+  const [selectedAttributes, setSelectedAttributes] = useState<SelectedAttributes>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDeferred, setShowDeferred] = useState(false);
@@ -112,7 +180,23 @@ export default function Details() {
 
   const lastTrackedRef = useRef<string | null>(null);
 
-  // recommendations
+  // Content fade-in on mount
+  const contentOpacity = useSharedValue(0);
+  const contentFadeStyle = useAnimatedStyle(() => ({ opacity: contentOpacity.value }));
+
+  useEffect(() => {
+    let cancelled = false;
+    requestAnimationFrame(() => {
+      if (!cancelled) {
+        contentOpacity.value = withTiming(1, { duration: 350 });
+        setShowDeferred(true);
+        logPerf(productId, 'HEAVY_SECTIONS_START');
+      }
+    });
+    return () => { cancelled = true; };
+  }, [productId]);
+
+  // Recommendations
   const {
     productRecommendations,
     isProductRecommendationsLoading,
@@ -121,7 +205,6 @@ export default function Details() {
   const recommendations = productRecommendations[productId];
   const isLoadingRecommendations = isProductRecommendationsLoading[productId];
 
-  // PERFORMANCE: Defer recommendations fetch until navigation animation completes
   useEffect(() => {
     if (!productId || !showDeferred) return;
     const task = InteractionManager.runAfterInteractions(() => {
@@ -130,34 +213,22 @@ export default function Details() {
     return () => task.cancel();
   }, [productId, fetchProductRecommendations, showDeferred]);
 
-  // PERFORMANCE: Defer analytics tracking until AFTER first paint (non-blocking)
   useEffect(() => {
     const id = (product as any)?.id;
     if (!id || !showDeferred) return;
     if (lastTrackedRef.current === id) return;
     lastTrackedRef.current = id;
-    // Fire-and-forget - don't await, wrapping ensures no blocking
     Promise.resolve().then(() => {
-      trackEvent("product_view", { productId: id, screen: "product_details" });
+      trackEvent('product_view', { productId: id, screen: 'product_details' });
     });
   }, [(product as any)?.id, trackEvent, showDeferred]);
 
   const viewProduct = product as NormalizedProduct | null;
 
-  // PERFORMANCE: Use requestAnimationFrame for fastest possible deferred render
-  useEffect(() => {
-    let cancelled = false;
-    // Wait for first paint, then enable heavy sections
-    requestAnimationFrame(() => {
-      if (!cancelled) {
-        setShowDeferred(true);
-        logPerf(productId, 'HEAVY_SECTIONS_START');
-      }
-    });
-    return () => { cancelled = true; };
-  }, [productId]);
-
-  const optionsMap = useMemo(() => (viewProduct ? getAttributeOptions(viewProduct) : {}), [viewProduct]);
+  const optionsMap = useMemo(
+    () => (viewProduct ? getAttributeOptions(viewProduct) : {}),
+    [viewProduct]
+  );
 
   const productAttributes = useMemo(() => {
     if (!viewProduct) return [];
@@ -167,7 +238,7 @@ export default function Details() {
     return Object.keys(optionsMap).map(key => ({
       name: key,
       displayName: key.charAt(0).toUpperCase() + key.slice(1),
-      required: true
+      required: true,
     }));
   }, [viewProduct, optionsMap]);
 
@@ -176,30 +247,19 @@ export default function Details() {
     [selectedAttributes]
   );
 
-  /** ✅ auto-init required attributes when options exist (regardless of type) */
   useEffect(() => {
     if (!productAttributes.length) return;
-
-    setSelectedAttributes((prev: SelectedAttributes) => {
+    setSelectedAttributes(prev => {
       const next: SelectedAttributes = { ...prev };
       let changed = false;
-
       for (const attr of productAttributes) {
-        const key = String(attr.name ?? "")
-          .trim()
-          .toLowerCase();
-
+        const key = String(attr.name ?? '').trim().toLowerCase();
         const options = optionsMap[key] || [];
-
-        // deterministic auto-select ONLY if backend provides exactly one option
-        if (attr.required && options.length === 1) {
-          if (!(next as any)[key]) {
-            (next as any)[key] = options[0]!;
-            changed = true;
-          }
+        if (attr.required && options.length === 1 && !(next as any)[key]) {
+          (next as any)[key] = options[0]!;
+          changed = true;
         }
       }
-
       return changed ? next : prev;
     });
   }, [productAttributes, optionsMap]);
@@ -209,212 +269,148 @@ export default function Details() {
     [viewProduct, normalizedSelection]
   );
 
-  const displayVariant = useMemo(
-    () => {
-      if (!viewProduct) return null;
-      // 1. Precise, selectable match (e.g. for cart)
-      if (matchingVariant) return matchingVariant;
+  const displayVariant = useMemo(() => {
+    if (!viewProduct) return null;
+    if (matchingVariant) return matchingVariant;
 
-      // 2. Lenient match for display (ignore stock, just check attributes)
-      // This ensures if user selects "Red", we show Red images even if that specific variant is OOS or partial
-      const selKeys = Object.keys(normalizedSelection);
-      if (selKeys.length > 0) {
-        const variants = Array.isArray(viewProduct.variants) ? viewProduct.variants : [];
-        for (const v of variants) {
-          if (v.isActive === false) continue; // Skip inactive
-
-          const attrs = v.attributes || {};
-          let ok = true;
-          for (const k of selKeys) {
-            // loose matching for string values
-            if (!attrs[k] || String(attrs[k]) !== String(normalizedSelection[k])) {
-              ok = false;
-              break;
-            }
+    const selKeys = Object.keys(normalizedSelection);
+    if (selKeys.length > 0) {
+      const variants = Array.isArray(viewProduct.variants) ? viewProduct.variants : [];
+      for (const v of variants) {
+        if (v.isActive === false) continue;
+        const attrs = v.attributes || {};
+        let ok = true;
+        for (const k of selKeys) {
+          if (!attrs[k] || String(attrs[k]) !== String(normalizedSelection[k])) {
+            ok = false;
+            break;
           }
-          if (ok) return v as any;
         }
+        if (ok) return v as any;
       }
+    }
 
-      // 3. Fallback
-      const picked = pickDisplayVariant(viewProduct);
-      return picked || null;
-    },
-    [viewProduct, matchingVariant, normalizedSelection]
-  );
+    const picked = pickDisplayVariant(viewProduct);
+    return picked || null;
+  }, [viewProduct, matchingVariant, normalizedSelection]);
 
   const productImages = useMemo(() => {
     if (!viewProduct) return [];
-
-    // 1. Get images for the currently selected/displayed variant
     const variantImages =
-      displayVariant?.images && displayVariant.images.length > 0
-        ? displayVariant.images
-        : [];
-
-    // 2. Get generic product images (always shown)
+      displayVariant?.images?.length > 0 ? displayVariant.images : [];
     const mainImages = viewProduct.images || [];
-
-    // 3. Fallback: If variant has images, use ONLY them to avoid Showing wrong-color general images.
-    // Otherwise, fallback to main product images.
     const images = variantImages.length > 0 ? variantImages : mainImages;
-
-    // 4. De-duplicate and filter valid strings
-    const uniqueImages = Array.from(new Set(images)).filter((img): img is string => !!img && typeof img === "string");
-
-    return uniqueImages.length > 0 ? uniqueImages : [];
+    return Array.from(new Set(images)).filter(
+      (img): img is string => !!img && typeof img === 'string'
+    );
   }, [viewProduct, displayVariant?.images]);
 
-  // PERFORMANCE: Defer image prefetching until navigation animation completes
   useEffect(() => {
     if (!productImages?.length) return;
-
     const task = InteractionManager.runAfterInteractions(() => {
       const first = productImages[0];
-      if (first) RNImage.prefetch(first).catch(() => { });
-
-      // Prefetch remaining images with a small delay
+      if (first) RNImage.prefetch(first).catch(() => {});
       setTimeout(() => {
         try {
-          const rest = productImages.slice(
-            PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX,
-            PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX +
-            PRODUCT_DETAILS_CONFIG.PREFETCH_IMAGE_COUNT
-          );
-          rest.forEach((uri: string) => uri && RNImage.prefetch(uri).catch(() => { }));
-        } catch { }
+          productImages
+            .slice(
+              PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX,
+              PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX +
+                PRODUCT_DETAILS_CONFIG.PREFETCH_IMAGE_COUNT
+            )
+            .forEach((uri: string) => uri && RNImage.prefetch(uri).catch(() => {}));
+        } catch {}
       }, 100);
     });
-
     return () => task.cancel();
   }, [productImages]);
 
-  // ✅ If user hasn't selected attributes yet, preload with displayVariant attrs to show price/stock and enable add-to-cart
   useEffect(() => {
     if (!displayVariant) return;
-    // if already selected something, skip
     if (Object.keys(selectedAttributes || {}).length > 0) return;
-
     const attrs = displayVariant.attributes || {};
     const lower: SelectedAttributes = {};
     Object.entries(attrs).forEach(([k, v]) => {
       const key = String(k).trim().toLowerCase();
-      const val = String(v ?? "").trim();
+      const val = String(v ?? '').trim();
       if (key && val) (lower as any)[key] = val;
     });
-    if (Object.keys(lower).length > 0) {
-      setSelectedAttributes(lower);
-    }
+    if (Object.keys(lower).length > 0) setSelectedAttributes(lower);
   }, [displayVariant, selectedAttributes]);
 
-
-
   const pricing = useMemo(
-    () => (viewProduct ? resolvePrice({ product: viewProduct, selectedVariant: matchingVariant || displayVariant }) : null),
+    () =>
+      viewProduct
+        ? resolvePrice({
+            product: viewProduct,
+            selectedVariant: matchingVariant || displayVariant,
+          })
+        : null,
     [viewProduct, matchingVariant, displayVariant]
   );
-
-  const flatListExtraData = useMemo(() => ({
-    selectedAttributes,
-    viewProductId: viewProduct?.id ?? null,
-    displayVariantId: (displayVariant as any)?._id ?? null,
-    pricingFinal: pricing?.final ?? null,
-    currentStock,
-    missingCount: missingRequiredAttributes.length,
-    showDeferred,
-    recsCount: (recommendations as any)?.length ?? 0,
-    isLoadingRecs: isLoadingRecommendations ?? false,
-  }), [
-    selectedAttributes,
-    viewProduct?.id,
-    (displayVariant as any)?._id,
-    pricing?.final,
-    currentStock,
-    missingRequiredAttributes.length,
-    showDeferred,
-    (recommendations as any)?.length,
-    isLoadingRecommendations,
-  ]);
 
   const currentPrice = pricing?.final ?? 0;
   const originalPrice = pricing?.original ?? pricing?.merchant ?? 0;
   const productHasDiscount = (pricing?.discount?.amount ?? 0) > 0;
-
-  const formattedFinalPrice = useMemo(
-    () => formatPrice(currentPrice),
-    [currentPrice]
+  const discountPct = Math.round(
+    (viewProduct as any)?.displayDiscountPercentage ||
+      pricing?.discount?.percentage ||
+      0
   );
+
+  const formattedFinalPrice = useMemo(() => formatPrice(currentPrice), [currentPrice]);
   const formattedOriginalPrice = useMemo(
-    () => (productHasDiscount ? formatPrice(originalPrice) : ""),
+    () => (productHasDiscount ? formatPrice(originalPrice) : ''),
     [originalPrice, productHasDiscount]
   );
 
   const currentStock = useMemo(() => {
     if (displayVariant) return displayVariant.stock ?? 0;
-    if (viewProduct && viewProduct.simple?.stock != null) return Number(viewProduct.simple.stock ?? 0);
+    if (viewProduct?.simple?.stock != null) return Number(viewProduct.simple.stock ?? 0);
     return 0;
   }, [displayVariant, viewProduct]);
 
-  /** ✅ required attributes missing? */
   const missingRequiredAttributes = useMemo(() => {
     if (!productAttributes.length) return [];
     const missing: string[] = [];
-
     for (const attr of productAttributes) {
-      const key = String(attr.name ?? "").trim().toLowerCase();
+      const key = String(attr.name ?? '').trim().toLowerCase();
       if (!attr.required) continue;
-
       const val = (normalizedSelection as any)[key];
-      if (!val || String(val).trim().length === 0)
-        missing.push(attr.displayName || attr.name);
+      if (!val || String(val).trim().length === 0) missing.push(attr.displayName || attr.name);
     }
     return missing;
   }, [productAttributes, normalizedSelection]);
 
-  /** ✅ final add-to-cart permission */
   const canAddToCart = useMemo(() => {
     if (!viewProduct) return false;
     if ((viewProduct as any)?.isActive === false) return false;
     if (missingRequiredAttributes.length > 0) return false;
-
-    // Special case: New backend treats simple products as having 1 variant but 0 attribute definitions
-    const isSingleVariantSimple = viewProduct.variants.length === 1 && productAttributes.length === 0;
-
-    // If product has variants, require valid matching selectable variant (or be a single-variant simple)
+    const isSingleVariantSimple =
+      viewProduct.variants.length === 1 && productAttributes.length === 0;
     if (viewProduct.variants.length > 0) {
       if (!matchingVariant && !isSingleVariantSimple) return false;
-      const target = matchingVariant || (isSingleVariantSimple ? viewProduct.variants[0] : null);
+      const target =
+        matchingVariant || (isSingleVariantSimple ? viewProduct.variants[0] : null);
       return isVariantSelectable(target);
     }
-
-    // Simple product fallback (legacy)
-    const stock = Number(viewProduct.simple?.stock ?? 0);
-    return stock > 0;
+    return Number(viewProduct.simple?.stock ?? 0) > 0;
   }, [viewProduct, missingRequiredAttributes.length, matchingVariant, productAttributes.length]);
 
-  /** wishlist - use optimized selector */
   const inWishlist = useIsInWishlist(viewProduct?.id);
 
   const handleWishlistPress = useCallback(async () => {
     if (!viewProduct?.id || wishlistLoading) return;
-
     setWishlistLoading(true);
     try {
-      // axios interceptor already attaches auth token
       if (inWishlist) await removeFromWishlist(viewProduct.id);
       else await addToWishlist({ ...(viewProduct as any), _id: viewProduct.id });
     } catch (e) {
-      console.error("wishlist error:", e);
+      console.error('wishlist error:', e);
     } finally {
       setWishlistLoading(false);
     }
-  }, [
-    viewProduct?.id,
-    wishlistLoading,
-    inWishlist,
-    removeFromWishlist,
-    addToWishlist,
-  ]);
+  }, [viewProduct?.id, wishlistLoading, inWishlist, removeFromWishlist, addToWishlist]);
 
   const openImageModal = useCallback((uri: string) => {
     setSelectedImage(uri);
@@ -422,22 +418,47 @@ export default function Details() {
   }, []);
   const closeImageModal = useCallback(() => setModalVisible(false), []);
 
-  /** ✅ attribute select handler */
-  const handleAttributeSelect = useCallback(
-    (attrName: string, value: string) => {
-      const keyLower = attrName.trim().toLowerCase();
-      setSelectedAttributes((prev: SelectedAttributes) => {
-        if ((prev as any)[keyLower] === value) return prev;
-        return { ...prev, [keyLower]: value };
-      });
-    },
-    []
+  const handleAttributeSelect = useCallback((attrName: string, value: string) => {
+    const keyLower = attrName.trim().toLowerCase();
+    setSelectedAttributes(prev => {
+      if ((prev as any)[keyLower] === value) return prev;
+      return { ...prev, [keyLower]: value };
+    });
+  }, []);
+
+  const flatListExtraData = useMemo(
+    () => ({
+      selectedAttributes,
+      viewProductId: viewProduct?.id ?? null,
+      displayVariantId: (displayVariant as any)?._id ?? null,
+      pricingFinal: pricing?.final ?? null,
+      currentStock,
+      missingCount: missingRequiredAttributes.length,
+      showDeferred,
+      recsCount: (recommendations as any)?.length ?? 0,
+      isLoadingRecs: isLoadingRecommendations ?? false,
+      cartAttempted,
+      themeMode: theme.mode,
+    }),
+    [
+      selectedAttributes,
+      viewProduct?.id,
+      (displayVariant as any)?._id,
+      pricing?.final,
+      currentStock,
+      missingRequiredAttributes.length,
+      showDeferred,
+      (recommendations as any)?.length,
+      isLoadingRecommendations,
+      cartAttempted,
+      theme.mode,
+    ]
   );
 
   const renderItem = useCallback(
     ({ item }: { item: string }) => {
       switch (item) {
-        case "CAROUSEL":
+        case 'CAROUSEL':
           return (
             <ProductImageCarousel
               images={productImages || []}
@@ -445,129 +466,129 @@ export default function Details() {
               onImagePress={openImageModal}
             />
           );
-        case "INFO":
+
+        case 'INFO':
           return viewProduct ? (
-            <View style={[styles.productInfoCard, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.infoSection, { backgroundColor: colors.cardBackground }]}>
+              {/* Category */}
               {!!viewProduct.categoryName && (
-                <Text style={{ fontSize: 13, color: colors.primary, marginBottom: 4, fontWeight: "600", textAlign: I18nManager.isRTL ? "right" : "left", textTransform: "uppercase" }}>
+                <Text
+                  style={[
+                    styles.categoryText,
+                    { color: colors.primary, textAlign: I18nManager.isRTL ? 'right' : 'left' },
+                  ]}
+                >
                   {viewProduct.categoryName}
                 </Text>
               )}
-              <Text style={[styles.productName, { color: colors.text.gray }]}>
+
+              {/* Name */}
+              <Text
+                style={[
+                  styles.productName,
+                  { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' },
+                ]}
+              >
                 {viewProduct.name}
               </Text>
-              <View style={styles.priceContainer}>
-                <View style={{ flexDirection: "row", alignItems: "baseline" }}>
-                  {pricing?.requiresSelection && !isLoading && (
-                    <Text style={{ fontSize: 14, color: colors.text.veryLightGray, marginRight: 4 }}>
-                      {i18n.t("from") || "From"}
-                    </Text>
-                  )}
-                  {isLoading && !formattedFinalPrice ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.price,
-                        { color: productHasDiscount ? COLORS.ERROR_RED : colors.text.gray },
-                      ]}
-                    >
-                      {formattedFinalPrice}
-                    </Text>
-                  )}
-                  {productHasDiscount && (
-                    <Text
-                      style={[
-                        styles.originalPrice,
-                        { color: colors.text.veryLightGray, marginLeft: 8 },
-                      ]}
-                    >
+
+              {/* Price row */}
+              <View style={styles.priceRow}>
+                {pricing?.requiresSelection && !isLoading && (
+                  <Text style={[styles.fromText, { color: colors.text.veryLightGray }]}>
+                    {i18n.t('from') || 'From'}{'  '}
+                  </Text>
+                )}
+                <Text
+                  style={[
+                    styles.finalPrice,
+                    { color: productHasDiscount ? colors.danger : colors.text.gray },
+                  ]}
+                >
+                  {formattedFinalPrice}
+                </Text>
+                {productHasDiscount && (
+                  <>
+                    <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
                       {formattedOriginalPrice}
                     </Text>
-                  )}
-                </View>
-                {productHasDiscount && (
-                  <View style={[styles.discountBadge, { backgroundColor: COLORS.ERROR_RED }]}>
-                    <Text style={styles.discountBadgeText}>
-                      {viewProduct?.displayDiscountPercentage || pricing?.discount?.percentage
-                        ? `-${Math.round((viewProduct as any)?.displayDiscountPercentage || pricing?.discount?.percentage || 0)}% OFF`
-                        : "Sale"}
+                    {discountPct > 0 && (
+                      <View style={[styles.discountBadge, { backgroundColor: colors.danger }]}>
+                        <Text style={styles.discountText}>-{discountPct}%</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+
+              {/* Stock indicator */}
+              <View style={styles.stockRow}>
+                {currentStock > 5 ? (
+                  <View style={styles.stockInner}>
+                    <View style={[styles.stockDot, { backgroundColor: colors.success }]} />
+                    <Text style={[styles.stockLabel, { color: colors.success }]}>
+                      {i18n.t('inStock') || 'In Stock'}
+                    </Text>
+                  </View>
+                ) : currentStock > 0 ? (
+                  <View style={styles.stockInner}>
+                    <View style={[styles.stockDot, { backgroundColor: colors.warning }]} />
+                    <Text style={[styles.stockLabel, { color: colors.warning }]}>
+                      {`${i18n.t('only') || 'Only'} ${currentStock} ${i18n.t('left') || 'left'}`}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.stockInner}>
+                    <View style={[styles.stockDot, { backgroundColor: colors.danger }]} />
+                    <Text style={[styles.stockLabel, { color: colors.danger }]}>
+                      {i18n.t('outOfStock') || 'Out of Stock'}
                     </Text>
                   </View>
                 )}
               </View>
+
+              {/* Missing attr warning */}
               {cartAttempted && missingRequiredAttributes.length > 0 && (
-                <Text style={[styles.missingText, { color: COLORS.ERROR_RED }]}>
-                  {`${i18n.t("pleaseSelect") || "Please select"}: ${missingRequiredAttributes.join(
-                    ", "
-                  )}`}
+                <Text style={[styles.missingText, { color: colors.danger }]}>
+                  {`${i18n.t('pleaseSelect') || 'Please select'}: ${missingRequiredAttributes.join(', ')}`}
                 </Text>
               )}
-            </View>
-          ) : null;
-        case "ATTRIBUTES":
-          return viewProduct ? (
-            <ProductAttributes
-              product={viewProduct}
-              selectedAttributes={selectedAttributes}
-              onAttributeSelect={handleAttributeSelect}
-              themeColors={colors}
-              pleaseSelectText={i18n.t("pleaseSelect") || "Please select"}
-            />
-          ) : null;
-        case "STOCK":
-          return (
-            <View style={[styles.stockContainer, { backgroundColor: colors.cardBackground }]}>
-              <Text style={[styles.stockText, { color: colors.text.gray }]}>
-                {i18n.t("stock") || "Stock"}:{" "}
-                {isLoading && currentStock === 0 ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : currentStock > 0 ? (
-                  <Text style={{ color: colors.primary, fontWeight: "600" }}>{currentStock}</Text>
-                ) : (
-                  <Text style={{ color: COLORS.ERROR_RED, fontWeight: "600" }}>
-                    {i18n.t("outOfStock") || "Out of Stock"}
-                  </Text>
-                )}
-              </Text>
+
+              {/* SKU */}
               {displayVariant?.sku && (
-                <Text style={{ fontSize: 13, color: colors.text.veryLightGray, marginTop: 4, paddingBottom: 4, textAlign: I18nManager.isRTL ? "right" : "left" }}>
+                <Text style={[styles.skuText, { color: colors.text.veryLightGray }]}>
                   SKU: {displayVariant.sku}
                 </Text>
               )}
             </View>
-          );
-        case "DESCRIPTION":
-          return viewProduct && viewProduct.description ? (
-            <View style={[styles.descriptionSection, { backgroundColor: colors.cardBackground }]}>
-              <Text
-                style={[
-                  styles.descriptionTitle,
-                  {
-                    color: colors.text.gray,
-                    textAlign: I18nManager.isRTL ? "right" : "left",
-                  },
-                ]}
-              >
-                {i18n.t("description") || "Description"}
-              </Text>
-              <Text
-                style={[
-                  styles.description,
-                  {
-                    color: colors.text.veryLightGray,
-                    textAlign: I18nManager.isRTL ? "right" : "left",
-                  },
-                ]}
-              >
-                {viewProduct.description}
-              </Text>
+          ) : null;
+
+        case 'ATTRIBUTES':
+          return viewProduct ? (
+            <View>
+              <View style={[styles.sectionDivider, { backgroundColor: colors.background }]} />
+              <ProductAttributes
+                product={viewProduct}
+                selectedAttributes={selectedAttributes}
+                onAttributeSelect={handleAttributeSelect}
+                themeColors={colors}
+                pleaseSelectText={i18n.t('pleaseSelect') || 'Please select'}
+              />
             </View>
           ) : null;
-        case "RECOMMENDATIONS":
+
+        case 'DESCRIPTION':
+          return viewProduct?.description ? (
+            <>
+              <View style={[styles.sectionDivider, { backgroundColor: colors.background }]} />
+              <CollapsibleDescription text={viewProduct.description} colors={colors} />
+            </>
+          ) : null;
+
+        case 'RECOMMENDATIONS':
           return showDeferred ? (
-            <View style={{ backgroundColor: colors.surface }}>
-              <View style={{ height: 10, backgroundColor: colors.background }} />
+            <View>
+              <View style={[styles.sectionDivider, { backgroundColor: colors.background }]} />
               <ProductRecommendations
                 recommendations={(recommendations as any) ?? null}
                 isLoading={isLoadingRecommendations ?? false}
@@ -575,14 +596,16 @@ export default function Details() {
               />
             </View>
           ) : null;
-        case "REVIEWS":
+
+        case 'REVIEWS':
           return showDeferred && viewProduct?.id ? (
-            <View style={{ backgroundColor: colors.surface }}>
-              <View style={{ height: 10, backgroundColor: colors.background }} />
+            <View>
+              <View style={[styles.sectionDivider, { backgroundColor: colors.background }]} />
               <Review productId={viewProduct.id} />
-              <View style={{ height: 140 }} />
+              <View style={{ height: 130 }} />
             </View>
           ) : null;
+
         default:
           return null;
       }
@@ -596,59 +619,43 @@ export default function Details() {
       pricing,
       formattedFinalPrice,
       formattedOriginalPrice,
+      discountPct,
+      currentStock,
       missingRequiredAttributes,
       selectedAttributes,
       handleAttributeSelect,
-      currentStock,
       showDeferred,
       recommendations,
       isLoadingRecommendations,
       displayVariant,
+      cartAttempted,
+      isLoading,
     ]
   );
 
+  // ── Guards ──────────────────────────────────────────────────────────────────
 
-  // Skeleton for Loading Phase (Initial param resolution or active fetch)
   const isInitializing = !viewProduct?.id || isLoading;
   if (isInitializing && !error) {
     return <ProductDetailsSkeleton colors={colors} />;
   }
 
-  // Error State
   if (error && !viewProduct) {
     return (
-      <View
-        style={[styles.errorContainer, { backgroundColor: colors.surface }]}
-      >
-        <Ionicons name="alert-circle-outline" size={60} color={colors.danger || colors.primary} />
-        <Text
-          style={[
-            styles.errorText,
-            {
-              color: colors.text.gray,
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-        >
-          {i18n.t("errorLoadingProduct") || "Error loading product"}
+      <View style={[styles.centered, { backgroundColor: colors.cardBackground }]}>
+        <Ionicons name="alert-circle-outline" size={56} color={colors.danger} />
+        <Text style={[styles.errorTitle, { color: colors.text.gray }]}>
+          {i18n.t('errorLoadingProduct') || 'Could not load product'}
         </Text>
-        <Text
-          style={[
-            styles.errorSubText,
-            {
-              color: colors.text.veryLightGray,
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-        >
+        <Text style={[styles.errorSub, { color: colors.text.veryLightGray }]}>
           {String(error)}
         </Text>
         <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: colors.primary, marginTop: 24, borderRadius: 12, paddingHorizontal: 30, paddingVertical: 15 }]}
-          onPress={() => router.replace("/(tabs)")}
+          style={[styles.backBtn, { backgroundColor: colors.primary }]}
+          onPress={() => router.replace('/(tabs)')}
         >
-          <Text style={[styles.backButtonText, { color: colors.text.white, fontWeight: 'bold' }]}>
-            {i18n.t("backToHome") || "Back to Home"}
+          <Text style={[styles.backBtnText, { color: colors.text.white }]}>
+            {i18n.t('backToHome') || 'Back to Home'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -657,62 +664,61 @@ export default function Details() {
 
   if (!viewProduct?.id && !isLoading) {
     return (
-      <View
-        style={[styles.errorContainer, { backgroundColor: colors.surface }]}
-      >
-        <Ionicons name="search-outline" size={60} color={colors.text.veryLightGray} />
-        <Text
-          style={[
-            styles.errorText,
-            {
-              color: colors.text.gray,
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-        >
-          {i18n.t("noProductAvailable") || "No product available"}
+      <View style={[styles.centered, { backgroundColor: colors.cardBackground }]}>
+        <Ionicons name="search-outline" size={56} color={colors.text.veryLightGray} />
+        <Text style={[styles.errorTitle, { color: colors.text.gray }]}>
+          {i18n.t('noProductAvailable') || 'Product not found'}
         </Text>
         <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: colors.primary, marginTop: 24, borderRadius: 12, paddingHorizontal: 30, paddingVertical: 15 }]}
-          onPress={() => router.replace("/(tabs)")}
+          style={[styles.backBtn, { backgroundColor: colors.primary }]}
+          onPress={() => router.replace('/(tabs)')}
         >
-          <Text style={[styles.backButtonText, { color: colors.text.white, fontWeight: 'bold' }]}>
-            {i18n.t("backToHome") || "Back to Home"}
+          <Text style={[styles.backBtnText, { color: colors.text.white }]}>
+            {i18n.t('backToHome') || 'Back to Home'}
           </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      <ProductHeader colors={colors} />
+  // ── Render ──────────────────────────────────────────────────────────────────
 
-      <FlatList
-        data={SECTIONS}
-        renderItem={renderItem}
-        keyExtractor={(item) => item}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        removeClippedSubviews
-        initialNumToRender={5}
-        maxToRenderPerBatch={3}
-        extraData={flatListExtraData}
+  return (
+    <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+      <Animated.View style={[{ flex: 1 }, contentFadeStyle]}>
+        <FlatList
+          data={SECTIONS}
+          renderItem={renderItem}
+          keyExtractor={item => item}
+          showsVerticalScrollIndicator={false}
+          bounces={Platform.OS === 'ios'}
+          alwaysBounceVertical={false}
+          removeClippedSubviews
+          initialNumToRender={4}
+          maxToRenderPerBatch={3}
+          windowSize={5}
+          extraData={flatListExtraData}
+          contentContainerStyle={styles.listContent}
+        />
+      </Animated.View>
+
+      {/* Floating overlay header */}
+      <ProductHeader
+        inWishlist={inWishlist}
+        wishlistLoading={wishlistLoading}
+        onWishlistPress={handleWishlistPress}
       />
 
-      {/* ✅ Bottom actions */}
+      {/* Sticky Add to Cart */}
       <ProductActions
         product={viewProduct as any}
         selectedAttributes={normalizedSelection}
         isAvailable={canAddToCart}
-        wishlistLoading={wishlistLoading}
-        inWishlist={inWishlist}
-        onWishlistPress={handleWishlistPress}
         themeColors={colors}
         onAttempt={() => setCartAttempted(true)}
       />
 
-      {/* ✅ Fullscreen Zoomable Image Modal */}
+      {/* Fullscreen zoom modal */}
       <Modal
         visible={modalVisible}
         transparent
@@ -720,15 +726,10 @@ export default function Details() {
         onRequestClose={closeImageModal}
       >
         <GestureHandlerRootView style={styles.modalContainer}>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={closeImageModal}
-          >
-            <Text style={styles.modalCloseText}>✕</Text>
+          <TouchableOpacity style={styles.modalClose} onPress={closeImageModal}>
+            <Ionicons name="close" size={26} color={colors.text.white} />
           </TouchableOpacity>
-          {selectedImage && (
-            <ZoomableImage uri={selectedImage} />
-          )}
+          {selectedImage && <ZoomableImage uri={selectedImage} />}
         </GestureHandlerRootView>
       </Modal>
     </View>
@@ -737,130 +738,138 @@ export default function Details() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollView: { flex: 1 },
+  listContent: { paddingBottom: 110 },
 
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+  // Info section
+  infoSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 8,
   },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 16,
-    textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: { textAlign: "center", fontSize: 18, marginBottom: 8 },
-  errorSubText: { textAlign: "center", fontSize: 14, marginBottom: 20 },
-
-  backButton: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 6 },
-  backButtonText: { fontSize: 16, fontWeight: "600" },
-
-  productDetails: { paddingBottom: 120 },
-
-  productInfoCard: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+  categoryText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
   productName: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 8,
-    lineHeight: 28,
-    textAlign: I18nManager.isRTL ? "right" : "left",
+    fontSize: 24,
+    fontWeight: '700',
+    lineHeight: 30,
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
-
-  priceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    marginTop: 4,
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
   },
-  price: {
-    paddingVertical: 4,
-    fontSize: 22,
-    fontWeight: "800",
-    textAlign: I18nManager.isRTL ? "right" : "left",
+  fromText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  finalPrice: {
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    lineHeight: 32,
   },
   originalPrice: {
-    paddingVertical: 4,
-    fontSize: 14,
-    fontWeight: "500",
-    textDecorationLine: "line-through",
-    textAlign: I18nManager.isRTL ? "right" : "left",
+    fontSize: 16,
+    fontWeight: '500',
+    textDecorationLine: 'line-through',
+   lineHeight: 20,
   },
   discountBadge: {
+    borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginLeft: 8,
-    alignSelf: "flex-start",
+    paddingVertical: 3,
   },
-  discountBadgeText: {
-    color: "#FFFFFF",
+  discountText: {
+    color: '#fff',
     fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
+    fontWeight: '700',
   },
-
+  stockRow: { marginBottom: 8 },
+  stockInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stockDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  stockLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   missingText: {
     marginTop: 10,
     fontSize: 12,
-    fontWeight: "600",
-    textAlign: I18nManager.isRTL ? "right" : "left",
+    fontWeight: '600',
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  skuText: {
+    fontSize: 12,
+    marginTop: 6,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
 
-  descriptionSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
+  // Section divider
+  sectionDivider: { height: 8 },
+
+  // Error / empty states
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
   },
-  descriptionTitle: {
-    paddingVertical: 6,
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 4,
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
   },
-  description: {
-    paddingVertical: 4,
-    fontSize: 14,
-    lineHeight: 22,
+  errorSub: {
+    fontSize: 13,
+    marginTop: 6,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  backBtn: {
+    borderRadius: 30,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  backBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 
-  stockContainer: { paddingHorizontal: 16, paddingVertical: 12, marginTop: 8 },
-  stockText: {
-    paddingVertical: 4,
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-
+  // Modal
   modalContainer: {
     flex: 1,
     backgroundColor: COLORS.MODAL_BACKGROUND,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  modalCloseButton: {
-    position: "absolute",
-    top: 50,
+  modalClose: {
+    position: 'absolute',
+    top: 56,
     right: 20,
     zIndex: 2,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 22,
   },
-  modalCloseText: { color: "#fff", fontSize: 24, fontWeight: "300" },
-  modalImageContainer: { width: "90%", height: "70%" },
-  modalImage: { width: "100%", height: "100%", borderRadius: 6 },
 });

@@ -1,105 +1,117 @@
-import { View, StyleSheet, TouchableOpacity, I18nManager, Platform } from 'react-native';
-import { Text } from '@/components/ui/text';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { LightColors, DarkColors } from '@/theme';
+import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { BlurView } from 'expo-blur';
+import { memo } from 'react';
+import { useTheme } from '@/providers/ThemeProvider';
 
 interface ProductHeaderProps {
-  colors: LightColors | DarkColors;
+  inWishlist: boolean;
+  wishlistLoading: boolean;
+  onWishlistPress: () => void;
 }
 
-export const ProductHeader = ({ colors }: ProductHeaderProps) => {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
+const OverlayButton = ({
+  onPress,
+  children,
+  disabled,
+  cardBg,
+}: {
+  onPress: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+  cardBg: string;
+}) => (
+  <TouchableOpacity
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.75}
+    style={styles.buttonOuter}
+    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+  >
+    {Platform.OS === 'ios' ? (
+      <BlurView intensity={60} tint="systemChromeMaterial" style={styles.buttonInner}>
+        {children}
+      </BlurView>
+    ) : (
+      <View style={[styles.buttonInner, { backgroundColor: cardBg }]}>{children}</View>
+    )}
+  </TouchableOpacity>
+);
 
-  return (
-    <View 
-      style={[
-        styles.header, 
-        { 
-          backgroundColor: colors.surface,
-          paddingTop: insets.top + 16,
-        },
-        I18nManager.isRTL && styles.headerRTL
-      ]}
-    >
-      <View style={styles.brandContainer}>
-        <Text 
-          style={[
-            styles.brandName,
-            { 
-              color: colors.text.gray,
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            }
-          ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit={false}
-        >
-          Nubian
-        </Text>
-      </View>
-      
-      <TouchableOpacity 
-        style={[
-          styles.cartIconButton,
-          { backgroundColor: colors.surface }
-        ]}
-        onPress={() => router.push("/(tabs)/cart")}
-        accessibilityLabel="Go to cart"
-        accessibilityRole="button"
-        activeOpacity={0.7}
+export const ProductHeader = memo(
+  ({ inWishlist, wishlistLoading, onWishlistPress }: ProductHeaderProps) => {
+    const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
+    const colors = theme.colors;
+
+    return (
+      <View
+        style={[styles.container, { paddingTop: insets.top + 8 }]}
+        pointerEvents="box-none"
       >
-        <Ionicons 
-          name="bag-outline" 
-          size={24} 
-          color={colors.text.gray} 
-        />
-      </TouchableOpacity>
-    </View>
-  );
-};
+        <OverlayButton onPress={() => router.back()} cardBg={colors.cardBackground + 'E0'}>
+          <Ionicons name="chevron-back" size={20} color={colors.text.gray} />
+        </OverlayButton>
+
+        <OverlayButton
+          onPress={onWishlistPress}
+          disabled={wishlistLoading}
+          cardBg={colors.cardBackground + 'E0'}
+        >
+          {wishlistLoading ? (
+            <ActivityIndicator size="small" color={colors.text.gray} />
+          ) : (
+            <Ionicons
+              name={inWishlist ? 'heart' : 'heart-outline'}
+              size={20}
+              color={inWishlist ? colors.danger : colors.text.gray}
+            />
+          )}
+        </OverlayButton>
+      </View>
+    );
+  }
+);
+ProductHeader.displayName = 'ProductHeader';
 
 const styles = StyleSheet.create({
-  header: {
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  buttonOuter: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
       },
     }),
   },
-  headerRTL: {
-    flexDirection: 'row-reverse',
-  },
-  brandContainer: {
+  buttonInner: {
     flex: 1,
     justifyContent: 'center',
-    marginRight: 12,
-  },
-  brandName: {
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 32,
-    textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-  cartIconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 22,
-    justifyContent: 'center',
     alignItems: 'center',
-    flexShrink: 0,
   },
 });

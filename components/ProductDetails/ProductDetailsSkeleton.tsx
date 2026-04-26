@@ -1,106 +1,197 @@
-import { useEffect } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat } from "react-native-reanimated";
+import { useEffect, memo } from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { LightColors, DarkColors } from '@/theme';
 
-export const ProductDetailsSkeleton = ({ colors }: { colors: any }) => {
-  const skeletonColor = colors.borderLight + '40';
-  const shimmerValue = useSharedValue(0.3);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const IMAGE_HEIGHT = SCREEN_WIDTH;
 
-  useEffect(() => {
-    shimmerValue.value = withRepeat(withTiming(0.7, { duration: 1000 }), -1, true);
-  }, []);
+const ShimmerBox = memo(
+  ({
+    width,
+    height,
+    borderRadius = 8,
+    shimmerColor,
+    style,
+  }: {
+    width: number | string;
+    height: number;
+    borderRadius?: number;
+    shimmerColor: string;
+    style?: object;
+  }) => {
+    const opacity = useSharedValue(0.4);
 
-  const animatedStyle = useAnimatedStyle(() => ({ opacity: shimmerValue.value }));
+    useEffect(() => {
+      opacity.value = withRepeat(withTiming(0.9, { duration: 900 }), -1, true);
+    }, []);
+
+    const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+    return (
+      <Animated.View
+        style={[
+          { width: width as any, height, borderRadius, backgroundColor: shimmerColor },
+          animStyle,
+          style,
+        ]}
+      />
+    );
+  }
+);
+ShimmerBox.displayName = 'ShimmerBox';
+
+export const ProductDetailsSkeleton = memo(({ colors }: { colors: LightColors | DarkColors }) => {
+  const insets = useSafeAreaInsets();
+  const shimmer = colors.borderLight;
+  const shimmerStrong = colors.borderMedium;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      <View style={{ height: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: skeletonColor }} />
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: skeletonColor }} />
+    <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+      {/* Image area */}
+      <ShimmerBox
+        width={SCREEN_WIDTH}
+        height={IMAGE_HEIGHT}
+        borderRadius={0}
+        shimmerColor={colors.surface}
+      />
+
+      {/* Overlay back/wishlist button skeletons */}
+      <View style={[styles.overlayButtons, { top: insets.top + 8 }]}>
+        <View style={[styles.skeletonButton, { backgroundColor: colors.cardBackground + 'CC' }]} />
+        <View style={[styles.skeletonButton, { backgroundColor: colors.cardBackground + 'CC' }]} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-        <View style={{ width: '100%', aspectRatio: 1, backgroundColor: skeletonColor }}>
-          <Animated.View style={[animatedStyle, { flex: 1, backgroundColor: colors.borderLight + '60' }]} />
-          <View style={{ position: 'absolute', bottom: 15, width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-            {[1, 2, 3].map(i => (
-              <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff', opacity: 0.5 }} />
-            ))}
-          </View>
+      {/* Pagination dots */}
+      <View style={styles.dots}>
+        {[0, 1, 2].map(i => (
+          <View
+            key={i}
+            style={[
+              styles.dot,
+              {
+                width: i === 0 ? 20 : 6,
+                backgroundColor: i === 0
+                  ? colors.text.gray + '55'
+                  : colors.text.gray + '25',
+              },
+            ]}
+          />
+        ))}
+      </View>
+
+      {/* Info section */}
+      <View style={[styles.infoSection, { backgroundColor: colors.cardBackground }]}>
+        <ShimmerBox width={80} height={12} borderRadius={6} shimmerColor={shimmer} style={{ marginBottom: 12 }} />
+        <ShimmerBox width="85%" height={26} borderRadius={6} shimmerColor={shimmerStrong} style={{ marginBottom: 6 }} />
+        <ShimmerBox width="55%" height={22} borderRadius={6} shimmerColor={shimmerStrong} style={{ marginBottom: 20 }} />
+
+        <View style={styles.priceRow}>
+          <ShimmerBox width={130} height={32} borderRadius={8} shimmerColor={colors.primary + '30'} />
+          <ShimmerBox width={60} height={20} borderRadius={6} shimmerColor={shimmer} />
         </View>
 
-        <View style={{ padding: 20 }}>
-          <Animated.View style={[animatedStyle, { width: 100, height: 14, borderRadius: 4, backgroundColor: colors.primary + '30', marginBottom: 8 }]} />
-          <Animated.View style={[animatedStyle, { width: '85%', height: 28, borderRadius: 6, backgroundColor: skeletonColor, marginBottom: 15 }]} />
+        <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 25, gap: 10 }}>
-            <Animated.View style={[animatedStyle, { width: 120, height: 35, borderRadius: 8, backgroundColor: colors.primary + '20' }]} />
-            <Animated.View style={[animatedStyle, { width: 60, height: 20, borderRadius: 4, backgroundColor: skeletonColor }]} />
-          </View>
-
-          <View style={{ height: 1, backgroundColor: colors.borderLight + '50', marginBottom: 25 }} />
-
-          <Animated.View style={[animatedStyle, { width: 80, height: 18, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 15 }]} />
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 30 }}>
-            {[1, 2, 3, 4].map(i => (
-              <Animated.View key={i} style={[animatedStyle, { width: 60, height: 45, borderRadius: 12, backgroundColor: skeletonColor }]} />
-            ))}
-          </View>
-
-          <Animated.View style={[animatedStyle, { width: 80, height: 18, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 15 }]} />
-          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 30 }}>
-            {[1, 2, 3].map(i => (
-              <Animated.View key={i} style={[animatedStyle, { width: 40, height: 40, borderRadius: 20, backgroundColor: skeletonColor, borderWidth: 1, borderColor: colors.borderLight }]} />
-            ))}
-          </View>
-
-          <View style={{ marginBottom: 30 }}>
-            <Animated.View style={[animatedStyle, { width: 140, height: 16, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 8 }]} />
-            <Animated.View style={[animatedStyle, { width: 100, height: 14, borderRadius: 4, backgroundColor: skeletonColor }]} />
-          </View>
-
-          <Animated.View style={[animatedStyle, { width: 120, height: 20, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 15 }]} />
-          {[1, 2, 3, 4].map(i => (
-            <Animated.View key={i} style={[animatedStyle, { width: i === 4 ? '60%' : '100%', height: 14, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 8 }]} />
+        {/* Attribute pills */}
+        <ShimmerBox width={56} height={12} borderRadius={6} shimmerColor={shimmer} style={{ marginBottom: 12 }} />
+        <View style={styles.pillsRow}>
+          {[70, 55, 65, 52].map((w, i) => (
+            <ShimmerBox key={i} width={w} height={42} borderRadius={100} shimmerColor={shimmerStrong} />
           ))}
-
-          <View style={{ marginTop: 40, paddingVertical: 20, borderTopWidth: 1, borderTopColor: colors.borderLight + '50' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Animated.View style={[animatedStyle, { width: 100, height: 22, borderRadius: 4, backgroundColor: skeletonColor }]} />
-              <Animated.View style={[animatedStyle, { width: 60, height: 18, borderRadius: 4, backgroundColor: skeletonColor }]} />
-            </View>
-            <View style={{ backgroundColor: skeletonColor, height: 100, borderRadius: 15, width: '100%' }} />
-          </View>
-
-          <View style={{ marginTop: 20 }}>
-            <Animated.View style={[animatedStyle, { width: 180, height: 22, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 20 }]} />
-            <View style={{ flexDirection: 'row', gap: 15 }}>
-              {[1, 2].map(i => (
-                <View key={i} style={{ flex: 1 }}>
-                  <Animated.View style={[animatedStyle, { aspectRatio: 0.8, borderRadius: 15, backgroundColor: skeletonColor, marginBottom: 10 }]} />
-                  <Animated.View style={[animatedStyle, { width: '80%', height: 14, borderRadius: 4, backgroundColor: skeletonColor, marginBottom: 6 }]} />
-                  <Animated.View style={[animatedStyle, { width: '50%', height: 14, borderRadius: 4, backgroundColor: colors.primary + '20' }]} />
-                </View>
-              ))}
-            </View>
-          </View>
         </View>
-        <View style={{ height: 100 }} />
-      </ScrollView>
 
-      <View style={{
-        position: 'absolute', bottom: 0, width: '100%',
-        padding: 16, paddingBottom: 32, backgroundColor: colors.surface,
-        borderTopWidth: 1, borderTopColor: colors.borderLight,
-        flexDirection: 'row', gap: 12,
-      }}>
-        <View style={{ width: 55, height: 55, borderRadius: 15, backgroundColor: skeletonColor }} />
-        <View style={{ flex: 1, height: 55, borderRadius: 15, backgroundColor: colors.primary + '40' }} />
+        <ShimmerBox width={56} height={12} borderRadius={6} shimmerColor={shimmer} style={{ marginBottom: 12, marginTop: 20 }} />
+        <View style={styles.pillsRow}>
+          {[42, 42, 42].map((_, i) => (
+            <ShimmerBox key={i} width={42} height={42} borderRadius={21} shimmerColor={shimmerStrong} />
+          ))}
+        </View>
+      </View>
+
+      {/* Sticky CTA skeleton */}
+      <View
+        style={[
+          styles.ctaArea,
+          {
+            paddingBottom: Math.max(insets.bottom, 16),
+            backgroundColor: colors.surface + 'F0',
+            borderTopColor: colors.borderLight,
+          },
+        ]}
+      >
+        <ShimmerBox
+          width="100%"
+          height={54}
+          borderRadius={30}
+          shimmerColor={colors.primary + '50'}
+        />
       </View>
     </View>
   );
-};
+});
+ProductDetailsSkeleton.displayName = 'ProductDetailsSkeleton';
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  overlayButtons: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  skeletonButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  dots: {
+    position: 'absolute',
+    top: IMAGE_HEIGHT - 28,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
+    alignItems: 'center',
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  infoSection: {
+    padding: 20,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginBottom: 24,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  ctaArea: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
 });

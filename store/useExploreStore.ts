@@ -123,11 +123,13 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
 
     try {
       const nextPage = page + 1;
+      const currencyCode = useCurrencyStore.getState().currencyCode;
       const response = await getExploreProducts({
         ...filters,
         sort,
         page: nextPage,
         limit,
+        currencyCode: currencyCode || undefined,
       });
 
       const { products } = get();

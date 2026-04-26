@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { HomeService } from "../services/home.service";
-import { getHomeRecommendations } from "../api/recommendations.api";
 import { useCurrencyStore } from "./useCurrencyStore";
 
 interface HomeState {
@@ -16,8 +15,9 @@ interface HomeState {
   isRefreshing: boolean;
   error: string | null;
 
-  lastFetchedAt: number | null;   // ✅ جديد
-  inFlight: Promise<void> | null; // ✅ dedupe
+  lastFetchedAt: number | null;
+  inFlight: Promise<void> | null;
+  inFlightCurrency: string | undefined;
 
   fetchHomeData: () => Promise<void>;
   refreshHomeData: () => Promise<void>;
@@ -26,38 +26,16 @@ interface HomeState {
 }
 
 async function buildHomePayload(currencyCode?: string) {
-  const [homeData, recommendations] = await Promise.all([
-    HomeService.fetchHomeData(currencyCode),
-    getHomeRecommendations(currencyCode).catch(() => null),
-  ]);
-
-  const activeCategories = HomeService.filterActiveCategories(homeData.categories);
-  const activeBanners = HomeService.filterActiveBanners(homeData.banners);
-  const verifiedStores = HomeService.filterVerifiedStores(homeData.stores);
-
-  const hasRecommendations =
-    recommendations &&
-    (recommendations.trending?.length ||
-      recommendations.forYou?.length ||
-      recommendations.flashDeals?.length ||
-      recommendations.newArrivals?.length);
+  const homeData = await HomeService.fetchHomeData(currencyCode);
 
   return {
-    banners: activeBanners,
-    categories: activeCategories,
-    trending: hasRecommendations
-      ? HomeService.filterAvailableProducts(recommendations.trending || [])
-      : HomeService.filterAvailableProducts(homeData.trending || []),
-    flashDeals: hasRecommendations
-      ? HomeService.filterAvailableProducts(recommendations.flashDeals || [])
-      : HomeService.filterAvailableProducts(homeData.flashDeals || []),
-    newArrivals: hasRecommendations
-      ? HomeService.filterAvailableProducts(recommendations.newArrivals || [])
-      : HomeService.filterAvailableProducts(homeData.newArrivals || []),
-    forYou: hasRecommendations
-      ? HomeService.filterAvailableProducts(recommendations.forYou || [])
-      : HomeService.filterAvailableProducts(homeData.forYou || []),
-    stores: verifiedStores,
+    banners:     HomeService.filterActiveBanners(homeData.banners),
+    categories:  HomeService.filterActiveCategories(homeData.categories),
+    trending:    HomeService.filterAvailableProducts(homeData.trending    || []),
+    flashDeals:  HomeService.filterAvailableProducts(homeData.flashDeals  || []),
+    newArrivals: HomeService.filterAvailableProducts(homeData.newArrivals || []),
+    forYou:      HomeService.filterAvailableProducts(homeData.forYou      || []),
+    stores:      HomeService.filterVerifiedStores(homeData.stores),
   };
 }
 
@@ -74,21 +52,22 @@ const initialState = {
   error: null,
   lastFetchedAt: null,
   inFlight: null,
+  inFlightCurrency: undefined,
 };
 
 export const useHomeStore = create<HomeState>((set, get) => ({
   ...initialState,
 
   fetchHomeData: async () => {
-    const { isLoading, inFlight } = get();
-    if (isLoading && inFlight) return inFlight;
+    const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
+    const { isLoading, inFlight, inFlightCurrency } = get();
+    // Reuse in-flight only when it was started for the same currency
+    if (isLoading && inFlight && inFlightCurrency === currencyCode) return inFlight;
 
-    // ✅ Set loading IMMEDIATELY before starting the task
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, inFlightCurrency: currencyCode });
 
     const task = (async () => {
       try {
-        const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
         const payload = await buildHomePayload(currencyCode);
         set({ ...payload, isLoading: false, error: null, lastFetchedAt: Date.now() });
       } catch (error: any) {
@@ -98,7 +77,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
           lastFetchedAt: Date.now(),
         });
       } finally {
-        set({ inFlight: null });
+        set({ inFlight: null, inFlightCurrency: undefined });
       }
     })();
 

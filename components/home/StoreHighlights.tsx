@@ -1,126 +1,189 @@
-import { memo } from "react";
-import { View, FlatList, Pressable, StyleSheet } from "react-native";
+import { memo, useEffect, useState, useCallback } from "react";
+import { View, FlatList, Pressable, StyleSheet, InteractionManager } from "react-native";
 import { Text } from "@/components/ui/text";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { Skeleton } from "moti/skeleton";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { HomeStore } from "@/api/home.api";
+import axiosInstance from "@/services/api/client";
 import { navigateToStore } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
 import i18n from "@/utils/i18n";
 
-export const StoreHighlights = memo(({ stores, colors }: { stores: HomeStore[]; colors: any }) => {
+interface Merchant {
+  _id: string;
+  name: string;
+  logo?: string | null;
+}
+
+interface Props {
+  colors: any;
+  isDark: boolean;
+}
+
+export const StoreHighlights = memo(({ colors, isDark }: Props) => {
   const { trackEvent } = useTracking();
-  if (stores.length === 0) return null;
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchMerchants = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await axiosInstance.get("/merchants/list", { params: { limit: 10 } });
+
+      const body = res.data?.data ?? res.data;
+      const list: any[] = Array.isArray(body?.data)
+        ? body.data
+        : Array.isArray(body)
+        ? body
+        : [];
+
+      setMerchants(
+        list.map((m: any) => ({
+          _id:  String(m._id),
+          name: m.storeName || m.name || "Store",
+          logo: m.logoUrl ?? m.logo ?? null,
+        }))
+      );
+    } catch {
+      // silent — section simply won't render
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchMerchants(); }, [fetchMerchants]);
+
+  const handlePress = useCallback(
+    (item: Merchant) => {
+      navigateToStore(item._id, item);
+      InteractionManager.runAfterInteractions(() => {
+        trackEvent("store_open", { storeId: item._id, screen: "home" });
+      });
+    },
+    [trackEvent]
+  );
+
+  if (!isLoading && merchants.length === 0) return null;
+
+  const cm = isDark ? "dark" : "light";
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader}>
+      {/* Section header — same accent-bar pattern as ProductSection */}
+      <View style={styles.header}>
         <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
-        <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
+        <Text style={[styles.title, { color: colors.text.gray }]}>
           {i18n.t("home_topStores")}
         </Text>
       </View>
-      <FlatList
-        horizontal
-        data={stores}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => {
-              trackEvent('store_open', {
-                storeId: item._id,
-                screen: 'home',
-              });
-              navigateToStore(item._id, item);
-            }}
-          >
-            <View style={[styles.storeCard, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
-              <View style={[styles.storeIconContainer, { backgroundColor: colors.surface }]}>
-                <Ionicons name="storefront" size={32} color={colors.primary} />
-              </View>
-              <Text style={[styles.storeName, { color: colors.text.gray }]} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View style={styles.storeRating}>
-                <Ionicons name="star" size={14} color={colors.warning} />
-                <Text style={[styles.storeRatingText, { color: colors.text.veryLightGray }]}>
-                  {item.rating.toFixed(1)}
+
+      {isLoading ? (
+        /* Skeleton row — same bubble dimensions */
+        <View style={styles.bubblesContent}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Skeleton
+              key={i}
+              height={88}
+              width={76}
+              radius={14}
+              colorMode={cm}
+            />
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          horizontal
+          data={merchants}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.bubblesContent}
+          renderItem={({ item }) => (
+            <Pressable onPress={() => handlePress(item)} style={styles.bubble}>
+              <View
+                style={[
+                  styles.bubbleImgWrap,
+                  { borderColor: colors.border, backgroundColor: colors.surface },
+                ]}
+              >
+                {item.logo ? (
+                  <Image
+                    source={{ uri: item.logo }}
+                    style={styles.bubbleImg}
+                    contentFit="cover"
+                    transition={200}
+                    recyclingKey={item._id}
+                  />
+                ) : (
+                  <Ionicons
+                    name="storefront"
+                    size={26}
+                    color={colors.text.lightGray}
+                  />
+                )}
+
+                {/* Same gradient as CategoryBubbles */}
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.68)"]}
+                  start={{ x: 0, y: 0.45 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+
+                <Text style={styles.bubbleName} numberOfLines={1}>
+                  {item.name}
                 </Text>
               </View>
-              {item.verified && (
-                <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
-                  <Ionicons name="checkmark-circle" size={12} color={colors.text.white} />
-                  <Text style={[styles.verifiedText, { color: colors.text.white }]}>{i18n.t("home_verified")}</Text>
-                </View>
-              )}
-            </View>
-          </Pressable>
-        )}
-        keyExtractor={(item, index) => `store-${item._id}-${index}`}
-      />
+            </Pressable>
+          )}
+        />
+      )}
     </View>
   );
 });
 StoreHighlights.displayName = "StoreHighlights";
 
 const styles = StyleSheet.create({
-  section: { marginTop: 25 },
-  sectionHeader: {
+  section: { marginTop: 4 },
+
+  header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 4,
     gap: 10,
-    textAlign: "center",
   },
-  accentBar: { width: 4, height: 22, borderRadius: 2 },
-  sectionTitle: { padding: 10, fontSize: 14, fontWeight: "bold", flex: 1, },
-  storeCard: {
-    width: 120,
-    padding: 12,
-    borderRadius: 12,
+  accentBar: { width: 4, height: 20, borderRadius: 2 },
+  title: { fontSize: 14, fontWeight: "bold" },
+
+  /* ── Exact match to CategoryBubbles ── */
+  bubblesContent: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 8,
+    gap: 10,
+    flexDirection: "row",
+  },
+  bubble: { width: 76 },
+  bubbleImgWrap: {
+    width: 76,
+    height: 88,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
     alignItems: "center",
-    marginRight: 12,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  storeIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
   },
-  storeName: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  storeRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 4,
-  },
-  storeRatingText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  verifiedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  verifiedText: {
+  bubbleImg: { width: "100%", height: "100%" },
+  bubbleName: {
+    position: "absolute",
+    bottom: 7,
+    left: 5,
+    right: 5,
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: "700",
+    textAlign: "center",
+    color: "#FFFFFF",
   },
 });

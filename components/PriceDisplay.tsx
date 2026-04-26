@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Colors from '@/locales/brandColors';
+import { useCurrencyStore } from '@/store/useCurrencyStore';
 
 interface PriceDisplayProps {
     priceUSD: number;
@@ -20,7 +21,7 @@ export default function PriceDisplay({
 }: PriceDisplayProps) {
     const fontSize = size === 'sm' ? 14 : size === 'lg' ? 24 : 18;
 
-    const { formatPrice } = require('@/utils/priceUtils');
+    const formatPrice = useCurrencyStore(state => state.formatPrice);
 
     return (
         <View style={styles.container}>

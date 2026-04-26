@@ -28,6 +28,7 @@ import { useHomeStore } from "@/store/useHomeStore";
 import useItemStore from "@/store/useItemStore";
 import { useExploreStore } from "@/store/useExploreStore";
 import useProductCacheStore from "@/store/useProductCacheStore";
+import { useRecommendationStore } from "@/store/useRecommendationStore";
 
 // Conditionally import expo-navigation-bar (not available in Expo Go)
 let NavigationBar: any = null;
@@ -209,12 +210,15 @@ function AppLoaderWithClerk() {
     const unsubscribe = useCurrencyStore.subscribe(
       (state) => state.currencyCode,
       (currencyCode, previousCurrencyCode) => {
-        // Only refresh if currency actually changed and wasn't null before (initial hydration)
-        if (currencyCode && previousCurrencyCode && currencyCode !== previousCurrencyCode) {
+        // Refresh on currency change AND on initial hydration (null → value).
+        // Without this, home data fetched on mount has no currency header (USD prices)
+        // and never gets re-fetched when AsyncStorage restores the saved currency.
+        if (currencyCode && currencyCode !== previousCurrencyCode) {
           useHomeStore.getState().fetchHomeData();
           useItemStore.getState().resetProducts();
           useExploreStore.getState().reset();
           useProductCacheStore.getState().clearAll();
+          useRecommendationStore.getState().reset();
         }
       }
     );

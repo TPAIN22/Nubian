@@ -37,17 +37,14 @@ export const FlashDealsCountdown = memo(({ colors }: { colors: any }) => {
       <View style={styles.countdownTimers}>
         <View style={[styles.countdownBox, { backgroundColor: colors.warning }]}>
           <Text style={styles.countdownNumber}>{String(timeLeft.hours).padStart(2, "0")}</Text>
-          <Text style={styles.countdownUnit}>{i18n.t("home_hoursShort")}</Text>
         </View>
         <Text style={[styles.countdownSeparator, { color: colors.warning }]}>:</Text>
         <View style={[styles.countdownBox, { backgroundColor: colors.warning }]}>
           <Text style={styles.countdownNumber}>{String(timeLeft.minutes).padStart(2, "0")}</Text>
-          <Text style={styles.countdownUnit}>{i18n.t("home_minutesShort")}</Text>
         </View>
         <Text style={[styles.countdownSeparator, { color: colors.warning }]}>:</Text>
         <View style={[styles.countdownBox, { backgroundColor: colors.warning }]}>
           <Text style={styles.countdownNumber}>{String(timeLeft.seconds).padStart(2, "0")}</Text>
-          <Text style={styles.countdownUnit}>{i18n.t("home_secondsShort")}</Text>
         </View>
       </View>
     </View>
@@ -61,7 +58,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 16,
     marginBottom: 12,
-    padding: 12,
+    padding: 8,
     borderRadius: 12,
     gap: 8,
   },
@@ -77,23 +74,18 @@ const styles = StyleSheet.create({
   },
   countdownBox: {
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 8,
     alignItems: "center",
     minWidth: 40,
   },
   countdownNumber: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "bold",
     color: "#fff",
   },
-  countdownUnit: {
-    fontSize: 9,
-    color: "#fff",
-    opacity: 0.8,
-  },
   countdownSeparator: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "bold",
   },
 });

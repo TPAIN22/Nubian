@@ -31,17 +31,13 @@ export type HomeProduct = ProductDTO;
 
 export interface HomeStore {
   _id: string;
-  id?: string; // Universal ID (maps to _id)
+  id?: string;
   name: string;
-  description?: string;
-  email: string;
   rating: number;
   verified: boolean;
-  orderCount: number;
-  totalRevenue: number;
-  // Deep linking fields
-  type?: 'store'; // Entity type
-  slug?: string; // URL-friendly identifier (e.g., "best-electronics-store")
+  logo?: string | null;
+  banner?: string | null;
+  type?: 'store';
 }
 
 export interface HomeData {

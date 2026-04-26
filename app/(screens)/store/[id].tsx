@@ -1,549 +1,810 @@
 import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  memo,
+  useMemo,
+} from 'react';
+import {
   View,
-  ScrollView,
   StyleSheet,
-  ActivityIndicator,
-  FlatList,
+  Animated,
   Pressable,
   RefreshControl,
+  useWindowDimensions,
+  InteractionManager,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/providers/ThemeProvider';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Card from "@/components/Card";
-import axiosInstance from "@/services/api/client";
-import { HomeProduct } from '@/api/home.api';
-import { navigateToProduct } from '@/utils/deepLinks';
+import { Skeleton } from 'moti/skeleton';
+import axiosInstance from '@/services/api/client';
+import ProductCard from '@/components/ProductCard';
+import { normalizeProduct } from '@/domain/product/product.normalize';
+import { useCurrencyStore } from '@/store/useCurrencyStore';
+import { useTracking } from '@/hooks/useTracking';
+import type { NormalizedProduct } from '@/domain/product/product.normalize';
 
-// Card width will be calculated responsively
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Store {
+interface Merchant {
   _id: string;
-  businessName: string;
-  businessDescription?: string;
-  businessEmail: string;
-  businessPhone?: string;
-  businessAddress?: string;
-  status: string;
+  storeName: string;
+  logoUrl?: string | null;
+  banner?: string | null;
   rating?: number;
+  totalReviews?: number;
+  description?: string;
+  status?: string;
   verified?: boolean;
-  orderCount?: number;
-  totalRevenue?: number;
+  categories?: string[];
+  city?: string;
+  merchantType?: string;
 }
 
-export default function StoreScreen() {
-  const { theme } = useTheme();
-  const Colors = theme.colors;
-  const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams();
-  const router = useRouter();
-  
-  const [store, setStore] = useState<Store | null>(null);
-  const [products, setProducts] = useState<HomeProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isFetching, setIsFetching] = useState(false); // Prevent duplicate calls
+interface Review {
+  _id: string;
+  userName: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
 
-  const fetchStoreData = useCallback(async () => {
-    if (!id) return;
-    
-    // Prevent duplicate calls
-    if (isFetching) {
-      console.log('Store fetch already in progress, skipping...');
-      return;
-    }
-    
-    try {
-      setIsFetching(true);
-      setIsLoading(true);
-      setError(null);
-      
-      // First fetch store details to get the merchant ID
-      const storeResponse = await axiosInstance.get(`/merchants/store/${id}`).catch(err => {
-        // Don't log 429 errors as warnings repeatedly
-        if (err?.response?.status !== 429) {
-          console.warn('[Store] Fetch error:', err?.response?.status, err?.response?.data?.message);
-        }
-        return { data: null };
-      });
-      
-      // Handle store data
-      const storeData = storeResponse.data?.data || storeResponse.data;
-      if (storeData) {
-        setStore(storeData);
-      }
-      
-      // Use the merchant ID from store data (or fallback to route param id)
-      const merchantId = storeData?._id || id;
-      
-      // Log what merchant ID we're using for debugging
-      if (__DEV__) {
-        console.log(`[Store ${id}] Store found:`, {
-          storeId: storeData?._id,
-          storeName: storeData?.businessName,
-          merchantId: merchantId,
-        });
-      }
-      
-      // Now fetch products using the new store products endpoint
-      const productsResponse = await axiosInstance.get(`/merchants/store/${merchantId}/products`, {
-        params: {
-          limit: 50,
-          page: 1,
-        }
-      }).catch(err => {
-        // Don't log 429 errors as warnings repeatedly (rate limiting)
-        if (err?.response?.status !== 429) {
-          console.warn('[Store Products] Fetch error:', err?.response?.status, err?.response?.data?.message);
-        }
-        return { data: { data: [] } };
-      });
-      
-      // Handle products response with multiple possible structures
-      let productsData: HomeProduct[] = [];
-      const responseData = productsResponse.data;
-      
-      // Debug: log the actual response structure to understand API format
-      if (__DEV__ && responseData) {
-        const dataLength = Array.isArray(responseData?.data) ? responseData.data.length : 'N/A';
-        console.log(`[Store ${id}] Products API Response:`, {
-          merchantIdUsed: merchantId,
-          responseType: typeof responseData,
-          isArray: Array.isArray(responseData),
-          keys: Object.keys(responseData || {}),
-          hasData: !!responseData?.data,
-          dataType: typeof responseData?.data,
-          dataIsArray: Array.isArray(responseData?.data),
-          dataLength: dataLength,
-          hasProducts: !!responseData?.products,
-          productsIsArray: Array.isArray(responseData?.products),
-          hasItems: !!responseData?.items,
-          hasMeta: !!responseData?.meta,
-          metaTotal: responseData?.meta?.total || 'N/A',
-          responsePreview: JSON.stringify(responseData).substring(0, 300),
-        });
-        
-        // If we got 0 products, check if maybe products don't have merchant field set
-        if (dataLength === 0) {
-          console.warn(`[Store ${id}] ⚠️ No products found for merchant ${merchantId}`);
-          console.warn(`[Store ${id}] This could mean:`);
-          console.warn(`  1. The store has no products`);
-          console.warn(`  2. Products don't have 'merchant' field set to this merchant ID`);
-          console.warn(`  3. Products are inactive or deleted`);
-        }
-      }
-      
-      // Pattern 1: { data: [...products], meta: {...} } - sendPaginated format
-      if (Array.isArray(responseData?.data) && responseData?.meta) {
-        productsData = responseData.data;
-      }
-      // Pattern 2: { data: [...products] } - simple data wrapper
-      else if (Array.isArray(responseData?.data)) {
-        productsData = responseData.data;
-      }
-      // Pattern 3: { products: [...] } - legacy format
-      else if (Array.isArray(responseData?.products)) {
-        productsData = responseData.products;
-      }
-      // Pattern 4: { items: [...] } - alternative format
-      else if (Array.isArray(responseData?.items)) {
-        productsData = responseData.items;
-      }
-      // Pattern 5: Direct array
-      else if (Array.isArray(responseData)) {
-        productsData = responseData;
-      }
-      
-      // Only log if we found products (to reduce console spam from 0 product stores)
-      if (productsData.length > 0) {
-        console.log(`[Store ${id}] ✓ Found ${productsData.length} products`);
-      } else if (__DEV__) {
-        console.log(`[Store ${id}] ⚠ No products found in response`);
-      }
-      setProducts(productsData);
-    } catch (err: any) {
-      // Only log non-rate-limit errors
-      if (err?.response?.status !== 429) {
-        console.error('Error fetching store data:', err?.response?.status, err?.response?.data?.message || err?.message);
-        const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load store data';
-        setError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      setIsFetching(false);
-    }
-  }, [id, isFetching]);
+type Tab = 'products' | 'reviews' | 'about';
 
-  useEffect(() => {
-    // Only fetch once when component mounts or id changes
-    if (id && !store && !isFetching) {
-      fetchStoreData();
-    }
-  }, [id]); // Only depend on id, not fetchStoreData to prevent infinite loops
+// ─── Layout constants ──────────────────────────────────────────────────────────
 
-  const onRefresh = useCallback(() => {
-    if (!isFetching && id) {
-      setIsRefreshing(true);
-      fetchStoreData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, isFetching]); // Depend on id and isFetching instead of fetchStoreData to prevent loops
+const BANNER_H = 230;
+const LOGO_SIZE = 80;
+const HERO_H = BANNER_H + 124; // banner + name/stats row
+const TAB_H = 52;
+const STICKY_NAV_H = 56;
+const CARD_GAP = 12;
+const H_PAD = 16;
 
-  const handleProductPress = useCallback((product: HomeProduct) => {
-    navigateToProduct(product._id, product);
-  }, []);
+// ─── StarRating ───────────────────────────────────────────────────────────────
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={[styles.loadingText, { color: Colors.text.gray }]}>
-            Loading store...
-          </Text>
-        </View>
-      </View>
-    );
-  }
+const StarRating = memo(
+  ({ rating, size = 13, color }: { rating: number; size?: number; color: string }) => (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Ionicons
+          key={i}
+          name={rating >= i ? 'star' : rating >= i - 0.5 ? 'star-half' : 'star-outline'}
+          size={size}
+          color={color}
+        />
+      ))}
+    </View>
+  )
+);
+StarRating.displayName = 'StarRating';
 
-  if (error || !store) {
-    return (
-      <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={Colors.danger} />
-          <Text style={[styles.errorText, { color: Colors.text.gray }]}>
-            {error || 'Store not found'}
-          </Text>
-          <Pressable
-            style={[styles.retryButton, { backgroundColor: Colors.primary }]}
-            onPress={fetchStoreData}
-          >
-            <Text style={[styles.retryButtonText, { color: Colors.text.white }]}>
-              Retry
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
+// ─── ReviewCard ───────────────────────────────────────────────────────────────
+
+const ReviewCard = memo(({ review, colors }: { review: Review; colors: any }) => {
+  const date = useMemo(
+    () =>
+      new Date(review.createdAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    [review.createdAt]
+  );
+
+  const initial = review.userName?.charAt(0)?.toUpperCase() ?? '?';
 
   return (
-    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: Colors.surface, paddingTop: insets.top + 10 }]}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.gray} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: Colors.text.gray }]}>
-          Store
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-          />
-        }
-      >
-        {/* Store Banner/Header */}
-        <View style={[styles.storeHeader, { backgroundColor: Colors.cardBackground }]}>
-          <View style={[styles.storeIconContainer, { backgroundColor: Colors.surface }]}>
-            <Ionicons name="storefront" size={64} color={Colors.primary} />
-          </View>
-          <Text style={[styles.storeName, { color: Colors.text.gray }]}>
-            {store.businessName}
-          </Text>
-          
-          {store.businessDescription && (
-            <Text style={[styles.storeDescription, { color: Colors.text.veryLightGray }]}>
-              {store.businessDescription}
-            </Text>
-          )}
-          
-          <View style={styles.storeStats}>
-            {store.rating !== undefined && (
-              <View style={styles.statItem}>
-                <Ionicons name="star" size={16} color={Colors.warning} />
-                <Text style={[styles.statText, { color: Colors.text.gray }]}>
-                  {store.rating.toFixed(1)}
-                </Text>
-              </View>
-            )}
-            {store.orderCount !== undefined && (
-              <View style={styles.statItem}>
-                <Ionicons name="bag" size={16} color={Colors.text.veryLightGray} />
-                <Text style={[styles.statText, { color: Colors.text.veryLightGray }]}>
-                  {store.orderCount} orders
-                </Text>
-              </View>
-            )}
-          </View>
-          
-          {store.status === 'APPROVED' && (
-            <View style={[styles.verifiedBadge, { backgroundColor: Colors.success }]}>
-              <Ionicons name="checkmark-circle" size={16} color={Colors.text.white} />
-              <Text style={[styles.verifiedText, { color: Colors.text.white }]}>
-                Verified Store
-              </Text>
-            </View>
-          )}
+    <View style={[rc.card, { backgroundColor: colors.cardBackground }]}>
+      <View style={rc.row}>
+        <View style={[rc.avatar, { backgroundColor: colors.primary + '18' }]}>
+          <Text style={[rc.initial, { color: colors.primary }]}>{initial}</Text>
         </View>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={[rc.name, { color: colors.text.gray }]}>{review.userName}</Text>
+          <StarRating rating={review.rating} color={colors.warning} />
+        </View>
+        <Text style={[rc.date, { color: colors.text.veryLightGray }]}>{date}</Text>
+      </View>
+      {!!review.comment && (
+        <Text style={[rc.comment, { color: colors.text.mediumGray }]}>{review.comment}</Text>
+      )}
+    </View>
+  );
+});
+ReviewCard.displayName = 'ReviewCard';
 
-        {/* Store Info */}
-        {(store.businessAddress || store.businessPhone || store.businessEmail) && (
-          <View style={[styles.storeInfo, { backgroundColor: Colors.cardBackground }]}>
-            <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>
-              Store Information
-            </Text>
-            {store.businessAddress && (
-              <View style={styles.infoItem}>
-                <Ionicons name="location-outline" size={20} color={Colors.text.veryLightGray} />
-                <Text style={[styles.infoText, { color: Colors.text.veryLightGray }]}>
-                  {store.businessAddress}
-                </Text>
-              </View>
-            )}
-            {store.businessPhone && (
-              <View style={styles.infoItem}>
-                <Ionicons name="call-outline" size={20} color={Colors.text.veryLightGray} />
-                <Text style={[styles.infoText, { color: Colors.text.veryLightGray }]}>
-                  {store.businessPhone}
-                </Text>
-              </View>
-            )}
-            {store.businessEmail && (
-              <View style={styles.infoItem}>
-                <Ionicons name="mail-outline" size={20} color={Colors.text.veryLightGray} />
-                <Text style={[styles.infoText, { color: Colors.text.veryLightGray }]}>
-                  {store.businessEmail}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
+const rc = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    marginHorizontal: H_PAD,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 1 },
+    }),
+  },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
+  avatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  initial: { fontSize: 16, fontWeight: '700' },
+  name: { fontSize: 14, fontWeight: '600' },
+  date: { fontSize: 11, marginTop: 2 },
+  comment: { fontSize: 14, lineHeight: 20 },
+});
 
-        {/* Products Section */}
-        <View style={styles.productsSection}>
-          <View style={styles.productsHeader}>
-            <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>
-              Products ({products.length})
+// ─── TabBar content ───────────────────────────────────────────────────────────
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'products', label: 'Products' },
+  { key: 'reviews', label: 'Reviews' },
+  { key: 'about', label: 'About' },
+];
+
+const TabBarContent = memo(
+  ({
+    activeTab,
+    onChange,
+    colors,
+  }: {
+    activeTab: Tab;
+    onChange: (t: Tab) => void;
+    colors: any;
+  }) => (
+    <View style={[tbs.wrap, { backgroundColor: colors.background }]}>
+      {TABS.map((t) => {
+        const active = activeTab === t.key;
+        return (
+          <Pressable
+            key={t.key}
+            style={tbs.tab}
+            onPress={() => onChange(t.key)}
+            hitSlop={6}
+          >
+            <Text
+              style={[
+                tbs.label,
+                { color: active ? colors.primary : colors.text.veryLightGray },
+              ]}
+            >
+              {t.label}
             </Text>
-          </View>
-          
-          {products.length === 0 && !isLoading ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="cube-outline" size={64} color={Colors.text.veryLightGray} />
-              <Text style={[styles.emptyText, { color: Colors.text.veryLightGray }]}>
-                No products available
-              </Text>
-            </View>
-          ) : products.length > 0 ? (
-            <FlatList
-              data={products}
-              numColumns={2}
-              scrollEnabled={false}
-              contentContainerStyle={styles.productsGrid}
-              columnWrapperStyle={styles.productsRow}
-              renderItem={({ item }) => (
-                <View style={{ flex: 1, marginBottom: 16, marginHorizontal: 8 }}>
-                  <Card
-                    item={item}
-                    handleSheetChanges={() => {}}
-                    handlePresentModalPress={() => handleProductPress(item)}
-                  />
-                </View>
-              )}
-              keyExtractor={(item) => item._id}
+            {active && (
+              <View style={[tbs.indicator, { backgroundColor: colors.primary }]} />
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  )
+);
+TabBarContent.displayName = 'TabBarContent';
+
+const tbs = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    height: TAB_H,
+    paddingHorizontal: H_PAD,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 4,
+    position: 'relative',
+  },
+  label: { fontSize: 14, fontWeight: '600' },
+  indicator: { position: 'absolute', bottom: 0, height: 2.5, width: '60%', borderRadius: 2 },
+});
+
+// ─── HeroSection ─────────────────────────────────────────────────────────────
+
+const HeroSection = memo(
+  ({
+    merchant,
+    colors,
+    isDark,
+  }: {
+    merchant: Merchant | null;
+    colors: any;
+    isDark: boolean;
+  }) => {
+    const rating = merchant?.rating ?? 0;
+    const reviews = merchant?.totalReviews ?? 0;
+
+    return (
+      <View>
+        {/* Banner */}
+        <View style={[hs.bannerWrap, { height: BANNER_H }]}>
+          {merchant?.banner ? (
+            <Image
+              source={{ uri: merchant.banner }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={400}
             />
           ) : (
-            <View style={styles.loadingProductsContainer}>
-              <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={[styles.loadingProductsText, { color: Colors.text.veryLightGray }]}>
-                Loading products...
-              </Text>
-            </View>
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: isDark ? colors.surface : colors.primary + '22' },
+              ]}
+            />
           )}
+          {/* Gradient overlay */}
+          <View style={hs.bannerOverlay} />
         </View>
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+        {/* Logo + info */}
+        <View style={[hs.infoWrap, { backgroundColor: colors.background }]}>
+          {/* Logo overlapping banner */}
+          <View style={hs.logoOuter}>
+            <View
+              style={[
+                hs.logoRing,
+                { backgroundColor: colors.background, borderColor: colors.background },
+              ]}
+            >
+              {merchant?.logoUrl ? (
+                <Image
+                  source={{ uri: merchant.logoUrl }}
+                  style={hs.logoImg}
+                  contentFit="cover"
+                  transition={300}
+                />
+              ) : (
+                <View
+                  style={[hs.logoImg, { backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }]}
+                >
+                  <Ionicons name="storefront" size={32} color={colors.primary} />
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Name + verified */}
+          <View style={{ marginTop: LOGO_SIZE / 2 + 8, alignItems: 'center', paddingHorizontal: H_PAD }}>
+            <View style={hs.nameRow}>
+              <Text style={[hs.name, { color: colors.text.gray }]} numberOfLines={1}>
+                {merchant?.storeName ?? ''}
+              </Text>
+              {(merchant?.status === 'approved' || merchant?.verified) && (
+                <Ionicons name="checkmark-circle" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
+              )}
+            </View>
+
+            {/* Rating row */}
+            {rating > 0 && (
+              <View style={hs.ratingRow}>
+                <StarRating rating={rating} size={14} color={colors.warning} />
+                <Text style={[hs.ratingNum, { color: colors.text.gray }]}>
+                  {rating.toFixed(1)}
+                </Text>
+                {reviews > 0 && (
+                  <Text style={[hs.reviewCount, { color: colors.text.veryLightGray }]}>
+                    ({reviews} reviews)
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }
+);
+HeroSection.displayName = 'HeroSection';
+
+const hs = StyleSheet.create({
+  bannerWrap: { width: '100%', overflow: 'hidden' },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  infoWrap: {
+    alignItems: 'center',
+    paddingBottom: 16,
+  },
+  logoOuter: {
+    marginTop: -(LOGO_SIZE / 2 + 3),
+    zIndex: 10,
+  },
+  logoRing: {
+    width: LOGO_SIZE + 6,
+    height: LOGO_SIZE + 6,
+    borderRadius: (LOGO_SIZE + 6) / 2,
+    borderWidth: 3,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 4 },
+    }),
+  },
+  logoImg: { width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: LOGO_SIZE / 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  name: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  ratingNum: { fontSize: 14, fontWeight: '600' },
+  reviewCount: { fontSize: 13 },
+});
+
+// ─── HeroSkeleton ─────────────────────────────────────────────────────────────
+
+const HeroSkeleton = memo(({ colors, isDark }: { colors: any; isDark: boolean }) => {
+  const cm = isDark ? 'dark' : 'light';
+  return (
+    <View style={{ backgroundColor: colors.background }}>
+      <Skeleton height={BANNER_H} width="100%" colorMode={cm} />
+      <View style={{ alignItems: 'center', paddingBottom: 16 }}>
+        <View style={{ marginTop: -(LOGO_SIZE / 2 + 4) }}>
+          <Skeleton height={LOGO_SIZE + 6} width={LOGO_SIZE + 6} radius={(LOGO_SIZE + 6) / 2} colorMode={cm} />
+        </View>
+        <View style={{ height: 16 }} />
+        <Skeleton height={22} width={160} radius={6} colorMode={cm} />
+        <View style={{ height: 8 }} />
+        <Skeleton height={14} width={110} radius={4} colorMode={cm} />
+      </View>
+      <View
+        style={{ height: TAB_H, flexDirection: 'row', gap: 12, paddingHorizontal: H_PAD, alignItems: 'center' }}
+      >
+        {[80, 70, 60].map((w, i) => (
+          <Skeleton key={i} height={28} width={w} radius={14} colorMode={cm} />
+        ))}
+      </View>
+    </View>
+  );
+});
+HeroSkeleton.displayName = 'HeroSkeleton';
+
+// ─── ProductSkeletons ─────────────────────────────────────────────────────────
+
+const ProductSkeletons = memo(
+  ({ colors, isDark, cardW }: { colors: any; isDark: boolean; cardW: number }) => {
+    const cm = isDark ? 'dark' : 'light';
+    return (
+      <View
+        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, paddingHorizontal: H_PAD, paddingTop: 16 }}
+      >
+        {Array.from({ length: 6 }).map((_, i) => (
+          <View
+            key={i}
+            style={{ width: cardW, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.cardBackground }}
+          >
+            <Skeleton height={cardW} width="100%" colorMode={cm} />
+            <View style={{ padding: 10, gap: 6 }}>
+              <Skeleton height={12} width="70%" radius={4} colorMode={cm} />
+              <Skeleton height={14} width={60} radius={4} colorMode={cm} />
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }
+);
+ProductSkeletons.displayName = 'ProductSkeletons';
+
+// ─── AboutSection ─────────────────────────────────────────────────────────────
+
+const AboutSection = memo(({ merchant, colors }: { merchant: Merchant | null; colors: any }) => (
+  <View style={[ab.wrap, { backgroundColor: colors.cardBackground }]}>
+    <Text style={[ab.title, { color: colors.text.gray }]}>About</Text>
+    <Text style={[ab.body, { color: colors.text.mediumGray }]}>
+      {merchant?.description?.trim() || 'No description provided.'}
+    </Text>
+  </View>
+));
+AboutSection.displayName = 'AboutSection';
+
+const ab = StyleSheet.create({
+  wrap: { margin: H_PAD, borderRadius: 20, padding: 20 },
+  title: { fontSize: 17, fontWeight: '700', marginBottom: 10 },
+  body: { fontSize: 15, lineHeight: 24 },
+});
+
+// ─── EmptyState ───────────────────────────────────────────────────────────────
+
+const EmptyState = memo(
+  ({ tab, colors }: { tab: Tab; colors: any }) => (
+    <View style={es.wrap}>
+      <Ionicons
+        name={tab === 'products' ? 'cube-outline' : 'chatbubble-ellipses-outline'}
+        size={52}
+        color={colors.text.veryLightGray}
+      />
+      <Text style={[es.label, { color: colors.text.veryLightGray }]}>
+        {tab === 'products' ? 'No products yet' : 'No reviews yet'}
+      </Text>
+    </View>
+  )
+);
+EmptyState.displayName = 'EmptyState';
+
+const es = StyleSheet.create({
+  wrap: { alignItems: 'center', paddingVertical: 64, gap: 14 },
+  label: { fontSize: 15 },
+});
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
+export default function MerchantDetailsScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const { theme, isDark } = useTheme();
+  const colors = theme.colors;
+  const { trackEvent } = useTracking();
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
+
+  const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [products, setProducts] = useState<NormalizedProduct[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>('products');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const CARD_W = (width - H_PAD * 2 - CARD_GAP) / 2;
+
+  // ── Sticky animations ──────────────────────────────────────────────────────
+  const navOpacity = scrollY.interpolate({
+    inputRange: [BANNER_H - 70, BANNER_H + 10],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const stickyTabY = scrollY.interpolate({
+    inputRange: [HERO_H - 16, HERO_H + 16],
+    outputRange: [-TAB_H, 0],
+    extrapolate: 'clamp',
+  });
+  const stickyTabOpacity = scrollY.interpolate({
+    inputRange: [HERO_H - 16, HERO_H + 16],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // ── Data fetching ──────────────────────────────────────────────────────────
+  const fetchMerchant = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await axiosInstance.get(`/merchants/store/${id}`);
+      const data = res.data?.data ?? res.data;
+      setMerchant(data ?? null);
+    } catch { /* silent */ }
+  }, [id]);
+
+  const fetchProducts = useCallback(
+    async (pg = 1) => {
+      if (!id) return;
+      try {
+        if (pg === 1) setIsLoading(true);
+        else setIsLoadingMore(true);
+
+        const res = await axiosInstance.get(`/merchants/store/${id}/products`, {
+          params: { page: pg, limit: 20, currencyCode },
+        });
+
+        const raw = res.data;
+        let items: any[] = [];
+        if (Array.isArray(raw?.data)) items = raw.data;
+        else if (Array.isArray(raw?.products)) items = raw.products;
+        else if (Array.isArray(raw)) items = raw;
+
+        const normalized = items.map((p) => {
+          try { return normalizeProduct(p); } catch { return p as NormalizedProduct; }
+        }).filter(Boolean) as NormalizedProduct[];
+
+        setProducts((prev) => (pg === 1 ? normalized : [...prev, ...normalized]));
+
+        const total = raw?.meta?.total ?? raw?.total ?? normalized.length;
+        setHasMore(pg * 20 < total);
+        setPage(pg);
+      } catch {
+        setError('Failed to load products');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [id, currencyCode]
+  );
+
+  const fetchReviews = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await axiosInstance.get(`/merchants/store/${id}/reviews`, {
+        params: { limit: 30 },
+      });
+      const data = res.data?.data ?? res.data ?? [];
+      setReviews(Array.isArray(data) ? data : []);
+    } catch { /* silent */ }
+  }, [id]);
+
+  useEffect(() => {
+    Promise.all([fetchMerchant(), fetchProducts(1), fetchReviews()]).finally(() =>
+      setIsLoading(false)
+    );
+    InteractionManager.runAfterInteractions(() => {
+      trackEvent('store_open', { storeId: id as string, screen: 'merchant_details' });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    Promise.all([fetchMerchant(), fetchProducts(1), fetchReviews()]);
+  }, [fetchMerchant, fetchProducts, fetchReviews]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!isLoadingMore && hasMore) fetchProducts(page + 1);
+  }, [isLoadingMore, hasMore, page, fetchProducts]);
+
+  const handleTabChange = useCallback(
+    (t: Tab) => {
+      setActiveTab(t);
+      scrollY.setValue(0);
+    },
+    [scrollY]
+  );
+
+  // ── Render helpers ─────────────────────────────────────────────────────────
+  const ListHeader = useMemo(
+    () => (
+      <>
+        <HeroSection merchant={merchant} colors={colors} isDark={isDark} />
+        <TabBarContent activeTab={activeTab} onChange={handleTabChange} colors={colors} />
+      </>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [merchant, colors, isDark, activeTab]
+  );
+
+  const renderProduct = useCallback(
+    ({ item, index }: { item: NormalizedProduct; index: number }) => (
+      <View style={{ width: CARD_W, marginLeft: index % 2 === 0 ? 0 : CARD_GAP }}>
+        <ProductCard item={item} variant="grid" />
+      </View>
+    ),
+    [CARD_W]
+  );
+
+  const renderReview = useCallback(
+    ({ item }: { item: Review }) => <ReviewCard review={item} colors={colors} />,
+    [colors]
+  );
+
+  const keyProduct = useCallback((item: NormalizedProduct) => item.id, []);
+  const keyReview = useCallback((item: Review) => item._id, []);
+
+  const scrollHandler = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: false,
+      }),
+    [scrollY]
+  );
+
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+    ),
+    [isRefreshing, handleRefresh, colors.primary]
+  );
+
+  // ── Skeleton ───────────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <View style={[s.root, { backgroundColor: colors.background }]}>
+        <View style={[s.fixedBack, { top: insets.top + 8 }]}>
+          <Pressable style={[s.backCircle, { backgroundColor: colors.cardBackground }]} onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="arrow-back" size={20} color={colors.text.gray} />
+          </Pressable>
+        </View>
+        <HeroSkeleton colors={colors} isDark={isDark} />
+        <ProductSkeletons colors={colors} isDark={isDark} cardW={CARD_W} />
+      </View>
+    );
+  }
+
+  // ── Error ──────────────────────────────────────────────────────────────────
+  if (error && !merchant) {
+    return (
+      <View style={[s.root, s.center, { backgroundColor: colors.background }]}>
+        <Ionicons name="alert-circle-outline" size={52} color={colors.text.veryLightGray} />
+        <Text style={[s.errorMsg, { color: colors.text.gray }]}>Could not load store</Text>
+        <Pressable style={[s.retryBtn, { backgroundColor: colors.primary }]} onPress={() => fetchProducts(1)}>
+          <Text style={{ color: colors.text.white, fontWeight: '600', fontSize: 15 }}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // ── Content ────────────────────────────────────────────────────────────────
+  return (
+    <View style={[s.root, { backgroundColor: colors.background }]}>
+
+      {/* ── Fixed back button (always visible) ── */}
+      <View style={[s.fixedBack, { top: insets.top + 8 }]}>
+        <Pressable
+          style={[s.backCircle, { backgroundColor: colors.cardBackground }]}
+          onPress={() => router.back()}
+          hitSlop={8}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.text.gray} />
+        </Pressable>
+      </View>
+
+      {/* ── Sticky collapsing nav header (merchant name appears on scroll) ── */}
+      <Animated.View
+        style={[
+          s.stickyNav,
+          {
+            opacity: navOpacity,
+            backgroundColor: colors.background,
+            paddingTop: insets.top,
+            borderBottomColor: colors.borderLight,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <Text style={[s.stickyNavTitle, { color: colors.text.gray }]} numberOfLines={1}>
+          {merchant?.storeName ?? ''}
+        </Text>
+      </Animated.View>
+
+      {/* ── Sticky tab bar (slides in when inline tabs scroll away) ── */}
+      <Animated.View
+        style={[
+          s.stickyTab,
+          {
+            top: insets.top + STICKY_NAV_H,
+            backgroundColor: colors.background,
+            borderBottomColor: colors.borderLight,
+            opacity: stickyTabOpacity,
+            transform: [{ translateY: stickyTabY }],
+          },
+        ]}
+      >
+        <TabBarContent activeTab={activeTab} onChange={handleTabChange} colors={colors} />
+      </Animated.View>
+
+      {/* ── Products tab ── */}
+      {activeTab === 'products' && (
+        <Animated.FlatList<NormalizedProduct>
+          data={products}
+          numColumns={2}
+          keyExtractor={keyProduct}
+          renderItem={renderProduct}
+          columnWrapperStyle={{ gap: CARD_GAP }}
+          contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 32 }]}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={<EmptyState tab="products" colors={colors} />}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={s.loadMore}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.4}
+          showsVerticalScrollIndicator={false}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          refreshControl={refreshControl}
+        />
+      )}
+
+      {/* ── Reviews tab ── */}
+      {activeTab === 'reviews' && (
+        <Animated.FlatList<Review>
+          data={reviews}
+          keyExtractor={keyReview}
+          renderItem={renderReview}
+          contentContainerStyle={[s.listContentSingle, { paddingBottom: insets.bottom + 32 }]}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={<EmptyState tab="reviews" colors={colors} />}
+          showsVerticalScrollIndicator={false}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          refreshControl={refreshControl}
+        />
+      )}
+
+      {/* ── About tab ── */}
+      {activeTab === 'about' && (
+        <Animated.ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          refreshControl={refreshControl}
+        >
+          {ListHeader}
+          <AboutSection merchant={merchant} colors={colors} />
+        </Animated.ScrollView>
+      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  center: { justifyContent: 'center', alignItems: 'center', gap: 16 },
+
+  // Fixed back button
+  fixedBack: {
+    position: 'absolute',
+    left: H_PAD,
+    zIndex: 200,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
+  backCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 3 },
+    }),
   },
-  headerTitle: {
-    padding: 10,
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+
+  // Sticky nav (merchant name)
+  stickyNav: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    height: STICKY_NAV_H,
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+  stickyNavTitle: { fontSize: 16, fontWeight: '700' },
+
+  // Sticky tab bar
+  stickyTab: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 99,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 24,
-    paddingHorizontal: 24,
+
+  // List content padding
+  listContent: { paddingHorizontal: H_PAD, paddingTop: 16 },
+  listContentSingle: { paddingTop: 16 },
+
+  // Load more indicator
+  loadMore: { paddingVertical: 24, alignItems: 'center' },
+
+  // Error screen
+  errorMsg: { fontSize: 16, textAlign: 'center' },
+  retryBtn: {
+    paddingHorizontal: 28,
     paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  storeHeader: {
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  storeIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  storeName: {
-    padding: 10,
-    fontSize: 24,
-    fontWeight: '700',
-    marginVertical: 8,
-    textAlign: 'center',
-  },
-  storeDescription: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-    padding: 10,
-  },
-  storeStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-    marginBottom: 16,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  verifiedText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  storeInfo: {
-    padding: 16,
-    marginBottom: 16,
-    marginHorizontal: 16,
-    borderRadius: 12,
-  },
-  sectionTitle: {
-    padding: 10,
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  infoText: {
-    padding: 10,
-    fontSize: 14,
-    flex: 1,
-  },
-  productsSection: {
-    paddingHorizontal: 16,
-  },
-  productsHeader: {
-    marginBottom: 16,
-  },
-  productsGrid: {
-    paddingBottom: 16,
-  },
-  productsRow: {
-    justifyContent: 'space-between',
-  },
-  emptyContainer: {
-    padding: 48,
-    alignItems: 'center',
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  loadingProductsContainer: {
-    padding: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingProductsText: {
-    marginTop: 16,
-    fontSize: 14,
+    borderRadius: 24,
+    marginTop: 8,
   },
 });

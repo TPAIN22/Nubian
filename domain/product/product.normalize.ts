@@ -214,9 +214,10 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     discountPercentage: asNum((raw as any)?.discountPercentage) ?? undefined,
     originalPrice: asNum((raw as any)?.originalPrice) ?? undefined,
 
-    // Definitive Display Pricing
-    displayOriginalPrice: asNum((raw as any)?.displayOriginalPrice) ?? undefined,
-    displayFinalPrice: asNum((raw as any)?.displayFinalPrice) ?? undefined,
+    // Definitive Display Pricing — fall back to priceConverted / originalPrice
+    // so that backends returning those field names are handled without code changes everywhere.
+    displayFinalPrice: asNum((raw as any)?.displayFinalPrice) ?? asNum((raw as any)?.priceConverted) ?? undefined,
+    displayOriginalPrice: asNum((raw as any)?.displayOriginalPrice) ?? asNum((raw as any)?.originalPrice) ?? undefined,
     displayDiscountPercentage: asNum((raw as any)?.displayDiscountPercentage) ?? undefined,
   };
 }

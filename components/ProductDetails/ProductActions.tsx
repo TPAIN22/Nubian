@@ -1,151 +1,99 @@
-import {
-  View,
-  StyleSheet,
-  Pressable,
-  ActivityIndicator,
-  I18nManager,
-  Platform,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text } from "@/components/ui/text";
-import AddToCartButton from "../AddToCartButton";
-import i18n from "@/utils/i18n";
-import type { SelectedAttributes } from "@/domain/product/product.selectors";
-import type { NormalizedProduct } from "@/domain/product/product.normalize";
-import type { LightColors, DarkColors } from "@/theme";
+import { View, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import { memo, useCallback } from 'react';
+import AddToCartButton from '../AddToCartButton';
+import type { SelectedAttributes } from '@/domain/product/product.selectors';
+import type { NormalizedProduct } from '@/domain/product/product.normalize';
+import type { LightColors, DarkColors } from '@/theme';
 
 interface ProductActionsProps {
   product: NormalizedProduct;
   selectedAttributes: SelectedAttributes;
   isAvailable: boolean;
-  wishlistLoading: boolean;
-  inWishlist: boolean;
-  onWishlistPress: () => void;
   themeColors: LightColors | DarkColors;
   onAttempt?: () => void;
 }
 
-export const ProductActions = ({
-  product,
-  selectedAttributes,
-  isAvailable,
-  wishlistLoading,
-  inWishlist,
-  onWishlistPress,
-  themeColors,
-  onAttempt,
-}: ProductActionsProps) => {
-  const insets = useSafeAreaInsets();
+export const ProductActions = memo(
+  ({ product, selectedAttributes, isAvailable, themeColors, onAttempt }: ProductActionsProps) => {
+    const insets = useSafeAreaInsets();
 
-  return (
-    <View
-      style={[
-        styles.bottomContainer,
-        {
-          paddingBottom: Math.max(insets.bottom, 20),
-          backgroundColor: themeColors.surface,
-          shadowColor: themeColors.text.dark,
-        },
-      ]}
-    >
+    const handleAttempt = useCallback(() => {
+      if (!isAvailable) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
+      onAttempt?.();
+    }, [isAvailable, onAttempt]);
+
+    const content = (
+      <View style={[styles.inner, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <AddToCartButton
+          product={product}
+          selectedAttributes={selectedAttributes}
+          buttonStyle={[styles.cartButton, !isAvailable && styles.cartButtonDisabled]}
+          disabled={!isAvailable}
+          onPressAttempt={handleAttempt}
+        />
+      </View>
+    );
+
+    if (Platform.OS === 'ios') {
+      return (
+        <BlurView intensity={85} tint="systemChromeMaterial" style={styles.container}>
+          {content}
+        </BlurView>
+      );
+    }
+
+    return (
       <View
         style={[
-          styles.actionButtonsRow,
-          I18nManager.isRTL && styles.actionButtonsRowRTL,
+          styles.container,
+          {
+            backgroundColor: themeColors.surface,
+            borderTopColor: themeColors.borderLight,
+          },
         ]}
       >
-        <View style={styles.addToCartButtonWrapper}>
-          <AddToCartButton
-            product={product}
-            selectedAttributes={selectedAttributes}
-            buttonStyle={[
-              styles.addToCartButton,
-              !isAvailable && styles.disabledButton,
-            ]}
-            disabled={!isAvailable}
-            onPressAttempt={onAttempt}
-          />
-        </View>
-
-        <Pressable
-          style={[
-            styles.wishlistButton,
-            {
-              borderColor: themeColors.borderLight,
-              backgroundColor: themeColors.cardBackground,
-            },
-            wishlistLoading && styles.wishlistButtonDisabled,
-          ]}
-          onPress={onWishlistPress}
-          disabled={wishlistLoading}
-          accessibilityLabel={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: wishlistLoading }}
-        >
-          {wishlistLoading ? (
-            <ActivityIndicator size="small" color={themeColors.text.dark} />
-          ) : (
-            <Text style={[styles.wishlistButtonText, { color: themeColors.text.gray }]}>
-              {i18n.t("wishlist") || "Wishlist"}
-            </Text>
-          )}
-        </Pressable>
+        {content}
       </View>
-    </View>
-  );
-};
+    );
+  }
+);
+ProductActions.displayName = 'ProductActions';
 
 const styles = StyleSheet.create({
-  bottomContainer: {
-    position: "absolute",
+  container: {
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 24,
+    borderTopWidth: StyleSheet.hairlineWidth,
     ...Platform.select({
       ios: {
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: -6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
+        shadowOpacity: 0.06,
+        shadowRadius: 20,
       },
       android: {
-        elevation: 8,
+        elevation: 10,
       },
     }),
   },
-  actionButtonsRow: {
-    flexDirection: "row",
-    gap: 16,
+  inner: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
-  actionButtonsRowRTL: {
-    flexDirection: "row-reverse",
+  cartButton: {
+    borderRadius: 30,
+    paddingVertical: 17,
   },
-  addToCartButtonWrapper: {
-    flex: 1,
-  },
-  addToCartButton: {
-    borderRadius: 8,
-    paddingVertical: 14,
-  },
-  disabledButton: {
-    opacity: 0.7,
-  },
-  wishlistButton: {
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    minWidth: 110,
-  },
-  wishlistButtonDisabled: {
-    opacity: 0.6,
-  },
-  wishlistButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
+  cartButtonDisabled: {
+    opacity: 0.65,
   },
 });

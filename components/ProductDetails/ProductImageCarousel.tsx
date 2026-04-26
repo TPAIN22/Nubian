@@ -1,195 +1,198 @@
-import { View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { Image } from 'expo-image';
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import {
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+  memo,
+} from 'react';
 import type { ViewabilityConfig, ViewToken } from 'react-native';
-import { Text } from '@/components/ui/text';
-import { PRODUCT_DETAILS_CONFIG, COLORS } from '@/constants/productDetails';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { PRODUCT_DETAILS_CONFIG } from '@/constants/productDetails';
 import type { LightColors, DarkColors } from '@/theme';
 
-const { SCREEN_WIDTH, IMAGE_HEIGHT } = PRODUCT_DETAILS_CONFIG;
+const { SCREEN_WIDTH } = PRODUCT_DETAILS_CONFIG;
+const IMAGE_HEIGHT = SCREEN_WIDTH;
 
-interface ProductImageCarouselProps {
+interface Props {
   images: string[];
   colors: LightColors | DarkColors;
   onImagePress?: (uri: string) => void;
 }
 
-export const ProductImageCarousel = ({ images, colors, onImagePress }: ProductImageCarouselProps) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [firstImageLoaded, setFirstImageLoaded] = useState(false);
-  const flatListRef = useRef<FlatList<string>>(null);
-  const prevFirstImageRef = useRef<string | null>(null);
+const PaginationDot = memo(
+  ({ active, activeColor, inactiveColor }: { active: boolean; activeColor: string; inactiveColor: string }) => {
+    const width = useSharedValue(active ? 20 : 6);
 
-  // Reset index and scroll to top when images change (e.g. variant selection)
-  // Only reset firstImageLoaded if the actual first image URL changed
-  useEffect(() => {
-    const firstImage = images?.[0] ?? null;
+    useEffect(() => {
+      width.value = withSpring(active ? 20 : 6, { damping: 18, stiffness: 220 });
+    }, [active]);
 
-    // Only reset loading state if the first image URL actually changed
-    if (firstImage !== prevFirstImageRef.current) {
-      setFirstImageLoaded(false);
-      prevFirstImageRef.current = firstImage;
-    }
-
-    setCurrentImageIndex(0);
-    if (flatListRef.current) {
-      flatListRef.current.scrollToOffset({ offset: 0, animated: false });
-    }
-  }, [images]);
-
-  // Ensure we have a valid images array
-  const validImages = useMemo(() => {
-    if (!images || !Array.isArray(images) || images.length === 0) {
-      return [];
-    }
-    return images.filter(img => img && typeof img === 'string' && img.trim().length > 0);
-  }, [images]);
-
-  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    const first = viewableItems?.[0];
-    const idx = typeof first?.index === "number" ? first.index : 0;
-    setCurrentImageIndex(idx);
-  }, []);
-
-  const viewabilityConfig: ViewabilityConfig = useMemo(() => ({
-    itemVisiblePercentThreshold: PRODUCT_DETAILS_CONFIG.PAGINATION_THRESHOLD
-  }), []);
-
-  const renderImageItem = useCallback(({ item: uri, index }: { item: string; index: number }) => {
-    const showOverlay = index === 0 && !firstImageLoaded;
-
-    if (!uri || typeof uri !== 'string') {
-      return (
-        <View style={styles.imageWrapper}>
-          <Text style={{ color: colors.text.veryLightGray }}>Invalid image</Text>
-        </View>
-      );
-    }
+    const animStyle = useAnimatedStyle(() => ({ width: width.value }));
 
     return (
+      <Animated.View
+        style={[
+          styles.dot,
+          { backgroundColor: active ? activeColor : inactiveColor },
+          animStyle,
+        ]}
+      />
+    );
+  }
+);
+PaginationDot.displayName = 'PaginationDot';
+
+export const ProductImageCarousel = memo(({ images, colors, onImagePress }: Props) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [firstLoaded, setFirstLoaded] = useState(false);
+  const flatListRef = useRef<FlatList<string>>(null);
+  const prevFirstRef = useRef<string | null>(null);
+
+  const validImages = useMemo(
+    () => images.filter(img => typeof img === 'string' && img.trim().length > 0),
+    [images]
+  );
+
+  useEffect(() => {
+    const first = validImages[0] ?? null;
+    if (first !== prevFirstRef.current) {
+      prevFirstRef.current = first;
+      setFirstLoaded(false);
+      setCurrentIndex(0);
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
+  }, [validImages]);
+
+  const viewabilityConfig: ViewabilityConfig = useMemo(
+    () => ({ itemVisiblePercentThreshold: 50 }),
+    []
+  );
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      const idx = viewableItems[0]?.index ?? 0;
+      setCurrentIndex(idx);
+    },
+    []
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: string; index: number }) => (
       <TouchableOpacity
-        style={styles.imageWrapper}
-        onPress={() => onImagePress?.(uri)}
-        activeOpacity={0.8}
-        accessibilityLabel={`Product image ${index + 1} of ${validImages.length}`}
-        accessibilityRole="imagebutton"
+        activeOpacity={0.92}
+        onPress={() => onImagePress?.(item)}
+        style={[styles.imageWrapper, { backgroundColor: colors.surface }]}
       >
         <Image
-          source={{ uri }}
-          alt="Product image"
-          contentFit="contain"
-          style={styles.productImage}
+          source={{ uri: item }}
+          contentFit="cover"
+          style={styles.image}
           cachePolicy="memory-disk"
-          priority={index === 0 ? "high" : "normal"}
-          onLoad={() => {
-            if (index === 0) setFirstImageLoaded(true);
-          }}
-          onError={(error) => {
-            if (__DEV__) {
-              console.warn('Image failed to load:', uri, error);
-            }
-          }}
+          priority={index === 0 ? 'high' : 'normal'}
+          onLoad={() => { if (index === 0) setFirstLoaded(true); }}
         />
-        {showOverlay && (
-          <View style={styles.imageLoaderOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color={COLORS.LOADING_INDICATOR} />
+        {index === 0 && !firstLoaded && (
+          <View
+            style={[styles.loaderOverlay, { backgroundColor: colors.surface + 'AA' }]}
+            pointerEvents="none"
+          >
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
       </TouchableOpacity>
-    );
-  }, [onImagePress, firstImageLoaded, validImages.length, colors.text.veryLightGray]);
+    ),
+    [onImagePress, firstLoaded, colors]
+  );
 
-  const renderPagination = useCallback(() => {
-    if (!validImages || validImages.length <= 1) return null;
-
+  if (validImages.length === 0) {
     return (
-      <View style={styles.pagination}>
-        {validImages.map((_, index: number) => (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              { backgroundColor: colors.text.white },
-              index === currentImageIndex && styles.activeDot
-            ]}
-          />
-        ))}
-      </View>
-    );
-  }, [validImages, currentImageIndex, colors.text.white]);
-
-  // Show placeholder if no images
-  if (!validImages || validImages.length === 0) {
-    return (
-      <View style={styles.imageSection}>
-        <View style={[styles.imageContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={{ color: colors.text.veryLightGray }}>No images available</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.surface }]}>
+        <View style={[styles.emptyIcon, { backgroundColor: colors.borderMedium }]} />
       </View>
     );
   }
 
+  const dotActiveColor = colors.text.gray;
+  const dotInactiveColor = colors.text.gray + '38';
+
   return (
-    <View style={styles.imageSection}>
-      <View style={styles.imageContainer}>
-        <FlatList
-          data={validImages}
-          keyExtractor={(item, index) => {
-            const url = item || `image-${index}`;
-            return `${url}-${index}`;
-          }}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          renderItem={renderImageItem}
-          ref={flatListRef}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
-          pagingEnabled
-          initialNumToRender={PRODUCT_DETAILS_CONFIG.INITIAL_NUM_TO_RENDER}
-          getItemLayout={(_, index) => ({
-            length: SCREEN_WIDTH,
-            offset: SCREEN_WIDTH * index,
-            index,
-          })}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={PRODUCT_DETAILS_CONFIG.MAX_RENDER_PER_BATCH}
-          windowSize={PRODUCT_DETAILS_CONFIG.FLATLIST_WINDOW_SIZE}
-        />
-        {renderPagination()}
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <FlatList
+        ref={flatListRef}
+        data={validImages}
+        renderItem={renderItem}
+        keyExtractor={(item, i) => `${item}-${i}`}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        getItemLayout={(_, i) => ({
+          length: SCREEN_WIDTH,
+          offset: SCREEN_WIDTH * i,
+          index: i,
+        })}
+        removeClippedSubviews
+        initialNumToRender={1}
+        maxToRenderPerBatch={2}
+        windowSize={3}
+      />
+      {validImages.length > 1 && (
+        <View style={styles.pagination}>
+          {validImages.map((_, i) => (
+            <PaginationDot
+              key={i}
+              active={i === currentIndex}
+              activeColor={dotActiveColor}
+              inactiveColor={dotInactiveColor}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
-};
+});
+ProductImageCarousel.displayName = 'ProductImageCarousel';
 
 const styles = StyleSheet.create({
-  imageSection: {
-    position: 'relative',
-  },
-  imageContainer: {
+  container: {
+    width: SCREEN_WIDTH,
     height: IMAGE_HEIGHT,
-    position: 'relative',
   },
   imageWrapper: {
     width: SCREEN_WIDTH,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    height: IMAGE_HEIGHT,
   },
-  productImage: {
+  image: {
     width: '100%',
     height: '100%',
-    borderRadius: 0,
   },
-  imageLoaderOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
-    backgroundColor: COLORS.IMAGE_LOADER_OVERLAY,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '50%',
+    marginTop: -36,
   },
   pagination: {
     position: 'absolute',
@@ -199,15 +202,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 5,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    width: 8,
-    height: 8,
+    height: 6,
+    borderRadius: 3,
   },
 });
