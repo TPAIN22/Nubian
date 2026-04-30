@@ -9,6 +9,7 @@ interface HomeState {
   flashDeals: any[];
   newArrivals: any[];
   forYou: any[];
+  brandsYouLove: any[];
   stores: any[];
 
   isLoading: boolean;
@@ -29,13 +30,14 @@ async function buildHomePayload(currencyCode?: string) {
   const homeData = await HomeService.fetchHomeData(currencyCode);
 
   return {
-    banners:     HomeService.filterActiveBanners(homeData.banners),
-    categories:  HomeService.filterActiveCategories(homeData.categories),
-    trending:    HomeService.filterAvailableProducts(homeData.trending    || []),
-    flashDeals:  HomeService.filterAvailableProducts(homeData.flashDeals  || []),
-    newArrivals: HomeService.filterAvailableProducts(homeData.newArrivals || []),
-    forYou:      HomeService.filterAvailableProducts(homeData.forYou      || []),
-    stores:      HomeService.filterVerifiedStores(homeData.stores),
+    banners:       HomeService.filterActiveBanners(homeData.banners),
+    categories:    HomeService.filterActiveCategories(homeData.categories),
+    trending:      HomeService.filterAvailableProducts(homeData.trending      || []),
+    flashDeals:    HomeService.filterAvailableProducts(homeData.flashDeals    || []),
+    newArrivals:   HomeService.filterAvailableProducts(homeData.newArrivals   || []),
+    forYou:        HomeService.filterAvailableProducts(homeData.forYou        || []),
+    brandsYouLove: HomeService.filterAvailableProducts(homeData.brandsYouLove || []),
+    stores:        HomeService.filterVerifiedStores(homeData.stores),
   };
 }
 
@@ -46,6 +48,7 @@ const initialState = {
   flashDeals: [],
   newArrivals: [],
   forYou: [],
+  brandsYouLove: [],
   stores: [],
   isLoading: false,
   isRefreshing: false,

@@ -1,208 +1,291 @@
-import { NormalizedProduct } from "../product/product.normalize";
+import { NormalizedProduct, ProductVariantDTO } from "../product/product.normalize";
 import { ResolvedPrice, PricingOptions } from "./pricing.types";
 
 /**
  * Authoritative pricing resolver for the mobile app.
- * 
- * Rules:
- * 1. If product has variants:
- *    - If no variant selected -> requiresSelection = true
- *    - If variant selected -> use variant-level pricing
- * 2. If product has NO variants:
- *    - Use product.simple fields
- * 3. NEVER use productLevelPricing for final totals (only for "From" display)
+ *
+ * The backend (lib/pricing.engine.js → enrichProductWithPricing) is the source
+ * of truth: it writes finalPrice / originalPrice / discountAmount /
+ * discountPercentage / hasDiscount onto the product root AND every variant.
+ * This function trusts those fields. We only fall back to local math when the
+ * payload comes from a legacy endpoint that didn't enrich.
  */
 export function resolvePrice({
   product,
   selectedVariant,
   currency = "USD",
 }: PricingOptions): ResolvedPrice {
-  // Safe access with fallbacks for non-normalized products
   const variants = Array.isArray(product?.variants) ? product.variants : [];
   const hasVariants = variants.length > 0;
-  const productLevelPricing = product?.productLevelPricing || {};
-  const simple = product?.simple || {};
 
-  // PRIORITY: If backend provided definitive display pricing and no variant is selected (or product is simple), use it.
-  // This ensures consistency with the backend calculations (sanity checks etc).
-  if (!selectedVariant && product?.displayFinalPrice !== undefined) {
-      const final = product.displayFinalPrice;
-      const original = product.displayOriginalPrice ?? final;
-      const discountAmount = Math.max(0, original - final);
-
-      return {
-          final,
-          merchant: product.merchantId ? (product.productLevelPricing?.merchantPrice || 0) : 0, // approximate
-          original,
-          currency,
-          requiresSelection: hasVariants, // If it has variants but none selected, it might still require selection
-          source: "definitive",
-          discount: (product.displayDiscountPercentage && product.displayDiscountPercentage > 0) 
-              ? { amount: discountAmount, percentage: product.displayDiscountPercentage } // amount is derivative, percentage is source of truth
-              : undefined,
-      };
-  }
-
-  // Case 1: Variant Product
   if (hasVariants) {
     if (!selectedVariant) {
-      // Get "From" price from productLevelPricing as a fallback for display
-      const final = productLevelPricing.finalPrice ?? 0;
-      const merchant = productLevelPricing.merchantPrice ?? 0;
-      const nubianMarkup = productLevelPricing.nubianMarkup ?? 10;
-
-      // The "normal" price is the merchant price plus the fixed Nubian markup
-      const normalPrice = merchant * (1 + nubianMarkup / 100);
-
-      let original = normalPrice;
-
-      if (productLevelPricing.discountPrice && productLevelPricing.discountPrice > 0) {
-        original = normalPrice;
-      } else if (normalPrice > final) {
-        original = normalPrice;
-      } else {
-        original = final;
-      }
-
-      const discountAmount = Math.max(0, original - final);
-      const discountPercentage = original > 0 ? Math.round((discountAmount / original) * 100) : 0;
-
-      return {
-        final,
-        merchant,
-        original,
-        currency,
-        requiresSelection: true,
-        source: "variant",
-        discount: discountAmount > 0 ? { amount: discountAmount, percentage: discountPercentage } : undefined,
-      };
+      return resolveFromPrice(product, variants, currency);
     }
+    return resolveVariant(selectedVariant, currency);
+  }
 
-    // Selected variant exists
-    let final = selectedVariant.finalPrice ?? selectedVariant.merchantPrice ?? 0;
-    
-    // FALLBACK: If final/merchant are 0, try the legacy "price" field
-    if (final <= 0) {
-        final = selectedVariant.price ?? 0;
-    }
+  return resolveSimple(product, currency);
+}
 
-    const merchant = selectedVariant.merchantPrice ?? 0;
-    const nubianMarkup = selectedVariant.nubianMarkup ?? 10;
-    
-    // The "normal" price is the merchant price plus the fixed Nubian markup
-    let normalPrice = merchant * (1 + nubianMarkup / 100);
-    if (normalPrice <= 0) normalPrice = final; // fallback
-    
-    let original = normalPrice;
-    
-    if (selectedVariant.discountPrice && selectedVariant.discountPrice > 0) {
-      // If there's a manual discount override, the "original" was the intended final price with markups
-      original = normalPrice;
-    } else if (normalPrice > final) {
-      // If normal price is higher than current final (e.g. negative dynamic markup), normal is original
-      original = normalPrice;
-    } else {
-      // Otherwise, no discount to show (original = final)
-      original = final;
-    }
+// ── Variant product, no variant selected (listing card "From X") ────────────
+function resolveFromPrice(
+  product: NormalizedProduct,
+  variants: ProductVariantDTO[],
+  currency: string,
+): ResolvedPrice {
+  // Prefer the converted root finalPrice. Backend convertProductPrices updates
+  // root finalPrice/originalPrice (and on normalized products, productLevelPricing
+  // mirrors them), but the display* aliases were historically left in USD — so
+  // reading the alias first gave stale numbers on currency-converted payloads.
+  const plp = product.productLevelPricing ?? {};
+  const rootFinal =
+    (product as any).finalPrice ??
+    plp.finalPrice ??
+    product.displayFinalPrice;
 
-    const discountAmount = Math.max(0, original - final);
-    const discountPercentage = original > 0 ? Math.round((discountAmount / original) * 100) : 0;
+  if (rootFinal !== undefined && rootFinal > 0) {
+    const final = rootFinal;
+    const original =
+      product.originalPrice ??
+      product.displayOriginalPrice ??
+      final;
+    return withDiscount({
+      final,
+      merchant: plp.merchantPrice ?? final,
+      original,
+      currency,
+      source: "definitive",
+      requiresSelection: true,
+      backendDiscount: {
+        amount: Math.max(0, original - final),
+        percentage:
+          product.discountPercentage ??
+          product.displayDiscountPercentage,
+      },
+    });
+  }
 
-    return {
+  // 2. Otherwise look at the cheapest variant (each variant carries its own
+  //    enriched pricing block).
+  const priced = variants
+    .filter((v) => v.isActive !== false)
+    .map((v) => resolveVariant(v, currency))
+    .filter((p) => p.final > 0)
+    .sort((a, b) => a.final - b.final);
+
+  const cheapest = priced[0];
+  if (cheapest) {
+    return { ...cheapest, requiresSelection: true };
+  }
+
+  // 3. Final legacy fallback — productLevelPricing only.
+  return localFallback({
+    merchant: plp.merchantPrice ?? 0,
+    nubianMarkup: plp.nubianMarkup ?? 30,
+    dynamicMarkup: plp.dynamicMarkup ?? 0,
+    legacyDiscountPrice: plp.discountPrice ?? undefined,
+    storedFinalPrice: plp.finalPrice ?? undefined,
+    currency,
+    source: "variant",
+    requiresSelection: true,
+  });
+}
+
+// ── Variant product, variant selected ────────────────────────────────────────
+function resolveVariant(variant: ProductVariantDTO, currency = "USD"): ResolvedPrice {
+  const merchant = variant.merchantPrice ?? variant.basePrice ?? 0;
+
+  if (variant.finalPrice !== undefined && variant.finalPrice > 0) {
+    const final = variant.finalPrice;
+    const original = variant.originalPrice ?? variant.listPrice ?? final;
+    return withDiscount({
       final,
       merchant,
       original,
       currency,
-      requiresSelection: false,
       source: "variant",
-      discount: discountAmount > 0 ? { amount: discountAmount, percentage: discountPercentage } : undefined,
-      breakdown: {
-        merchantPrice: selectedVariant.merchantPrice ?? 0,
-        nubianMarkup: selectedVariant.nubianMarkup ?? 0,
-        dynamicMarkup: selectedVariant.dynamicMarkup ?? 0,
-        finalPrice: selectedVariant.finalPrice ?? 0,
+      backendDiscount: {
+        amount: variant.discountAmount,
+        percentage: variant.discountPercentage,
       },
-    };
+      breakdown: {
+        merchantPrice: merchant,
+        nubianMarkup: variant.nubianMarkup ?? 30,
+        dynamicMarkup: variant.dynamicMarkup ?? 0,
+        finalPrice: final,
+      },
+    });
   }
 
-  // Case 2: Simple Product
-  const final = simple.finalPrice ?? simple.merchantPrice ?? 0;
+  return localFallback({
+    merchant,
+    nubianMarkup: variant.nubianMarkup ?? 30,
+    dynamicMarkup: variant.dynamicMarkup ?? 0,
+    legacyDiscountPrice: variant.discountPrice,
+    storedFinalPrice: variant.finalPrice,
+    currency,
+    source: "variant",
+    requiresSelection: false,
+  });
+}
+
+// ── Simple product (no variants) ─────────────────────────────────────────────
+function resolveSimple(product: NormalizedProduct, currency = "USD"): ResolvedPrice {
+  const simple = product.simple ?? ({} as NormalizedProduct["simple"]);
   const merchant = simple.merchantPrice ?? 0;
-  const nubianMarkup = simple.nubianMarkup ?? 10;
-  
-  // The "normal" price is the merchant price plus the fixed Nubian markup
-  const normalPrice = merchant * (1 + nubianMarkup / 100);
-  
-  let original = normalPrice;
-  
-  if (simple.discountPrice && simple.discountPrice > 0) {
-    // If there's a discount, the "original" is the normal calculated price (MSRP)
-    original = normalPrice;
-  } else if (normalPrice > final) {
-    original = normalPrice;
-  } else {
-    original = final;
+
+  // See resolveFromPrice for the priority rationale — converted root values win
+  // over the un-converted display* aliases.
+  const rootFinal =
+    (product as any).finalPrice ??
+    simple.finalPrice ??
+    product.displayFinalPrice;
+
+  if (rootFinal !== undefined && rootFinal > 0) {
+    const final = rootFinal;
+    const original =
+      product.originalPrice ??
+      product.displayOriginalPrice ??
+      final;
+    return withDiscount({
+      final,
+      merchant,
+      original,
+      currency,
+      source: "simple",
+      backendDiscount: {
+        amount: Math.max(0, original - final),
+        percentage:
+          product.discountPercentage ??
+          product.displayDiscountPercentage,
+      },
+    });
   }
 
-  const discountAmount = Math.max(0, original - final);
-  const discountPercentage = original > 0 ? Math.round((discountAmount / original) * 100) : 0;
+  return localFallback({
+    merchant,
+    nubianMarkup: simple.nubianMarkup ?? 30,
+    dynamicMarkup: simple.dynamicMarkup ?? 0,
+    legacyDiscountPrice: simple.discountPrice ?? undefined,
+    storedFinalPrice: simple.finalPrice ?? undefined,
+    currency,
+    source: "simple",
+    requiresSelection: false,
+  });
+}
+
+/**
+ * Helper to get the "From" price for list displays.
+ * Prefers backend's displayFinalPrice, then variant min, then merchantPrice.
+ */
+export function getDisplayPrice(product: NormalizedProduct): { price: number; isFrom: boolean } {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  const hasVariants = variants.length > 0;
+
+  if (hasVariants) {
+    const plp = product.productLevelPricing ?? {};
+    // Trust converted root finalPrice over the un-converted displayFinalPrice alias.
+    let price =
+      (product as any).finalPrice ??
+      plp.finalPrice ??
+      product.displayFinalPrice ??
+      0;
+    if (price <= 0) price = plp.merchantPrice ?? 0;
+
+    if (price <= 0) {
+      const variantPrices = variants
+        .filter((v) => v.isActive !== false)
+        .map((v) => v.finalPrice ?? v.merchantPrice ?? v.price ?? 0)
+        .filter((p) => p > 0);
+      if (variantPrices.length > 0) price = Math.min(...variantPrices);
+    }
+
+    return { price, isFrom: true };
+  }
+
+  const simple = product.simple ?? ({} as NormalizedProduct["simple"]);
+  let price =
+    (product as any).finalPrice ??
+    simple.finalPrice ??
+    product.displayFinalPrice ??
+    0;
+  if (price <= 0) price = simple.merchantPrice ?? 0;
+  return { price, isFrom: false };
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function withDiscount(args: {
+  final: number;
+  merchant: number;
+  original: number;
+  currency: string;
+  source: ResolvedPrice["source"];
+  requiresSelection?: boolean;
+  backendDiscount?: { amount?: number; percentage?: number };
+  breakdown?: ResolvedPrice["breakdown"];
+}): ResolvedPrice {
+  const { final, merchant, original, currency, source, requiresSelection, backendDiscount, breakdown } = args;
+
+  const amount =
+    backendDiscount?.amount !== undefined && backendDiscount.amount > 0
+      ? backendDiscount.amount
+      : Math.max(0, original - final);
+
+  const percentage =
+    backendDiscount?.percentage !== undefined && backendDiscount.percentage > 0
+      ? backendDiscount.percentage
+      : original > 0 && amount > 0
+        ? Math.round((amount / original) * 100)
+        : 0;
 
   return {
     final,
     merchant,
     original,
     currency,
-    requiresSelection: false,
-    source: "simple",
-    discount: discountAmount > 0 ? { amount: discountAmount, percentage: discountPercentage } : undefined,
-    breakdown: simple.finalPrice !== null ? {
-      merchantPrice: simple.merchantPrice ?? 0,
-      nubianMarkup: simple.nubianMarkup ?? 0,
-      dynamicMarkup: simple.dynamicMarkup ?? 0,
-      finalPrice: simple.finalPrice ?? 0,
-    } : undefined,
+    source,
+    requiresSelection: requiresSelection ?? false,
+    discount: amount > 0 ? { amount, percentage } : undefined,
+    breakdown,
   };
 }
 
-/**
- * Helper to get the "From" price for list displays
- */
-export function getDisplayPrice(product: NormalizedProduct): { price: number; isFrom: boolean } {
-  const variants = Array.isArray(product?.variants) ? product.variants : [];
-  const hasVariants = variants.length > 0;
-  const productLevelPricing = product?.productLevelPricing || {};
-  const simple = product?.simple || {};
-  
-  if (hasVariants) {
-    // Priority: calculated finalPrice > merchantPrice > minimum variant price
-    let price = productLevelPricing.finalPrice ?? 0;
-    if (price <= 0) price = productLevelPricing.merchantPrice ?? 0;
-    
-    // If still 0, try to find the minimum from variants directly
-    if (price <= 0 && variants.length > 0) {
-      const variantPrices = variants
-        .map(v => {
-            let p = v.finalPrice ?? v.merchantPrice ?? 0;
-            if (p <= 0) p = v.price ?? 0;
-            return p;
-        })
-        .filter(p => p > 0);
-      if (variantPrices.length > 0) price = Math.min(...variantPrices);
-    }
+function localFallback(args: {
+  merchant: number;
+  nubianMarkup: number;
+  dynamicMarkup: number;
+  legacyDiscountPrice?: number;
+  storedFinalPrice?: number;
+  currency: string;
+  source: ResolvedPrice["source"];
+  requiresSelection: boolean;
+}): ResolvedPrice {
+  const { merchant, nubianMarkup, dynamicMarkup, legacyDiscountPrice, storedFinalPrice, currency, source, requiresSelection } = args;
 
-    return {
-      price,
-      isFrom: true,
-    };
+  const listed = round2(merchant * (1 + nubianMarkup / 100));
+  const surged = round2(merchant * (1 + nubianMarkup / 100 + dynamicMarkup / 100));
+  let final = storedFinalPrice && storedFinalPrice > 0 ? storedFinalPrice : surged;
+
+  if (legacyDiscountPrice && legacyDiscountPrice > 0 && legacyDiscountPrice < final) {
+    final = legacyDiscountPrice;
   }
 
-  // Simple product fallback
-  let price = simple.finalPrice ?? 0;
-  if (price <= 0) price = simple.merchantPrice ?? 0;
-  
+  const original = Math.max(listed, surged);
+  const amount = Math.max(0, original - final);
+  const percentage = original > 0 && amount > 0 ? Math.round((amount / original) * 100) : 0;
+
   return {
-    price,
-    isFrom: false,
+    final,
+    merchant,
+    original,
+    currency,
+    source,
+    requiresSelection,
+    discount: amount > 0 ? { amount, percentage } : undefined,
+    breakdown: { merchantPrice: merchant, nubianMarkup, dynamicMarkup, finalPrice: final },
   };
 }
+
+const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;

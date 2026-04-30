@@ -1,5 +1,6 @@
 import axiosInstance from "@/services/api/client";
 import type { HomeProduct } from "./home.api";
+import { normalizeProduct } from "@/domain/product/product.normalize";
 
 export interface ProductRecommendations {
   similarItems: HomeProduct[];
@@ -44,8 +45,12 @@ function unwrapData<T>(response: any): T {
 
 function safeList(list: any): HomeProduct[] {
   if (!Array.isArray(list)) return [];
-  // فلتر: لازم يكون في _id (أو id حسب أنواعك)
-  return list.filter((p) => p && (p._id || (p as any).id));
+  // Filter out malformed entries, then normalize at the API boundary so
+  // downstream code never re-runs normalizeProduct (and never has to guess
+  // which raw alias holds the converted price).
+  return list
+    .filter((p) => p && (p._id || (p as any).id))
+    .map((p) => normalizeProduct(p));
 }
 
 function excludeProduct(list: HomeProduct[], productId?: string) {

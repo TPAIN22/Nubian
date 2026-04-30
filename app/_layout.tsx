@@ -214,11 +214,16 @@ function AppLoaderWithClerk() {
         // Without this, home data fetched on mount has no currency header (USD prices)
         // and never gets re-fetched when AsyncStorage restores the saved currency.
         if (currencyCode && currencyCode !== previousCurrencyCode) {
-          useHomeStore.getState().fetchHomeData();
           useItemStore.getState().resetProducts();
           useExploreStore.getState().reset();
           useProductCacheStore.getState().clearAll();
           useRecommendationStore.getState().reset();
+          // /home is now the single source of truth for home product lists
+          // (brandsYouLove included). /recommendations/home is no longer used
+          // by the home screen, so we don't need to refetch it on currency
+          // change. Per-product / per-cart recommendations re-fetch lazily
+          // when those screens mount, after reset() wiped the stale entries.
+          useHomeStore.getState().fetchHomeData();
         }
       }
     );

@@ -44,7 +44,7 @@ import type { NormalizedProduct } from '@/domain/product/product.normalize';
 import { matchVariant, pickDisplayVariant } from '@/domain/variant/variant.match';
 import { isVariantSelectable } from '@/domain/product/product.guards';
 import { resolvePrice } from '@/domain/pricing/pricing.engine';
-import { formatPrice } from '@/utils/priceUtils';
+import { formatPrice, formatMoney, getProductFinalMoney, getProductOriginalMoney } from '@/utils/priceUtils';
 
 import { useRecommendationStore } from '@/store/useRecommendationStore';
 import { useTracking } from '@/hooks/useTracking';
@@ -349,19 +349,32 @@ export default function Details() {
     [viewProduct, matchingVariant, displayVariant]
   );
 
-  const currentPrice = pricing?.final ?? 0;
-  const originalPrice = pricing?.original ?? pricing?.merchant ?? 0;
-  const productHasDiscount = (pricing?.discount?.amount ?? 0) > 0;
+  // Prefer the typed Money envelope from the backend (currency-aware,
+  // pre-formatted). Fall back to the legacy resolved-price chain for payloads
+  // that don't carry an envelope yet.
+  const finalMoney = getProductFinalMoney(viewProduct, matchingVariant || displayVariant);
+  const originalMoney = getProductOriginalMoney(viewProduct, matchingVariant || displayVariant);
+
+  const currentPrice = finalMoney?.amount ?? pricing?.final ?? 0;
+  const originalPrice = originalMoney?.amount ?? pricing?.original ?? pricing?.merchant ?? 0;
+  const productHasDiscount = (pricing?.discount?.amount ?? 0) > 0 || (originalPrice > currentPrice);
   const discountPct = Math.round(
     (viewProduct as any)?.displayDiscountPercentage ||
+      (viewProduct as any)?.price?.discountPercentage ||
       pricing?.discount?.percentage ||
       0
   );
 
-  const formattedFinalPrice = useMemo(() => formatPrice(currentPrice), [currentPrice]);
+  const formattedFinalPrice = useMemo(
+    () => (finalMoney ? formatMoney(finalMoney) : formatPrice(currentPrice)),
+    [finalMoney, currentPrice]
+  );
   const formattedOriginalPrice = useMemo(
-    () => (productHasDiscount ? formatPrice(originalPrice) : ''),
-    [originalPrice, productHasDiscount]
+    () => {
+      if (!productHasDiscount) return '';
+      return originalMoney ? formatMoney(originalMoney) : formatPrice(originalPrice);
+    },
+    [originalMoney, originalPrice, productHasDiscount]
   );
 
   const currentStock = useMemo(() => {

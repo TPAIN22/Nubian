@@ -11,16 +11,22 @@ import { useCurrencyStore } from './useCurrencyStore';
 interface RecommendationState {
   // Home recommendations
   homeRecommendations: HomeRecommendations | null;
+  homeRecommendationsCurrency: string | null;
+  homeInFlightCurrency: string | null;
   isHomeRecommendationsLoading: boolean;
   homeRecommendationsError: string | null;
 
   // Product recommendations (cached by product ID)
   productRecommendations: Record<string, ProductRecommendations>;
+  productRecommendationsCurrency: Record<string, string | null>;
+  productInFlightCurrency: Record<string, string | null>;
   isProductRecommendationsLoading: Record<string, boolean>;
   productRecommendationsError: Record<string, string | null>;
 
   // Cart recommendations
   cartRecommendations: HomeProduct[];
+  cartRecommendationsCurrency: string | null;
+  cartInFlightCurrency: string | null;
   isCartRecommendationsLoading: boolean;
   cartRecommendationsError: string | null;
 
@@ -36,46 +42,83 @@ interface RecommendationState {
 
 const initialState = {
   homeRecommendations: null,
+  homeRecommendationsCurrency: null,
+  homeInFlightCurrency: null,
   isHomeRecommendationsLoading: false,
   homeRecommendationsError: null,
   productRecommendations: {},
+  productRecommendationsCurrency: {},
+  productInFlightCurrency: {},
   isProductRecommendationsLoading: {},
   productRecommendationsError: {},
   cartRecommendations: [],
+  cartRecommendationsCurrency: null,
+  cartInFlightCurrency: null,
   isCartRecommendationsLoading: false,
   cartRecommendationsError: null,
 };
+
+const currentCurrency = (): string | null =>
+  useCurrencyStore.getState().currencyCode || null;
 
 export const useRecommendationStore = create<RecommendationState>((set, get) => ({
   ...initialState,
 
   fetchHomeRecommendations: async () => {
-    const { isHomeRecommendationsLoading } = get();
-    if (isHomeRecommendationsLoading) return; // Prevent duplicate calls
+    const reqCurrency = currentCurrency();
+    const { isHomeRecommendationsLoading, homeInFlightCurrency } = get();
 
-    set({ isHomeRecommendationsLoading: true, homeRecommendationsError: null });
+    // Short-circuit only when the SAME currency is already in flight.
+    if (isHomeRecommendationsLoading && homeInFlightCurrency === reqCurrency) return;
+
+    set({
+      isHomeRecommendationsLoading: true,
+      homeRecommendationsError: null,
+      homeInFlightCurrency: reqCurrency,
+    });
 
     try {
-      const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
-      const data = await getHomeRecommendations(currencyCode);
+      const data = await getHomeRecommendations(reqCurrency || undefined);
+      // Drop stale: user switched currency mid-flight.
+      if (currentCurrency() !== reqCurrency) return;
       set({
         homeRecommendations: data,
+        homeRecommendationsCurrency: reqCurrency,
         isHomeRecommendationsLoading: false,
         homeRecommendationsError: null,
+        homeInFlightCurrency: null,
       });
     } catch (error: any) {
+      if (currentCurrency() !== reqCurrency) return;
       set({
         isHomeRecommendationsLoading: false,
         homeRecommendationsError: error?.message || 'Failed to load home recommendations',
+        homeInFlightCurrency: null,
       });
     }
   },
 
   fetchProductRecommendations: async (productId: string) => {
-    const { isProductRecommendationsLoading, productRecommendations } = get();
-    
-    // Skip if already loading or cached
-    if (isProductRecommendationsLoading[productId] || productRecommendations[productId]) {
+    const reqCurrency = currentCurrency();
+    const {
+      isProductRecommendationsLoading,
+      productRecommendations,
+      productRecommendationsCurrency,
+      productInFlightCurrency,
+    } = get();
+
+    // Cache hit only if it was fetched at the current currency.
+    if (
+      productRecommendations[productId] &&
+      productRecommendationsCurrency[productId] === reqCurrency
+    ) {
+      return;
+    }
+    // Loading hit only if the in-flight request is for the current currency.
+    if (
+      isProductRecommendationsLoading[productId] &&
+      productInFlightCurrency[productId] === reqCurrency
+    ) {
       return;
     }
 
@@ -84,6 +127,10 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
         ...isProductRecommendationsLoading,
         [productId]: true,
       },
+      productInFlightCurrency: {
+        ...productInFlightCurrency,
+        [productId]: reqCurrency,
+      },
       productRecommendationsError: {
         ...get().productRecommendationsError,
         [productId]: null,
@@ -91,16 +138,24 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
     });
 
     try {
-      const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
-      const data = await getProductRecommendations(productId, currencyCode);
+      const data = await getProductRecommendations(productId, reqCurrency || undefined);
+      if (currentCurrency() !== reqCurrency) return;
       set({
         productRecommendations: {
-          ...productRecommendations,
+          ...get().productRecommendations,
           [productId]: data,
         },
+        productRecommendationsCurrency: {
+          ...get().productRecommendationsCurrency,
+          [productId]: reqCurrency,
+        },
         isProductRecommendationsLoading: {
-          ...isProductRecommendationsLoading,
+          ...get().isProductRecommendationsLoading,
           [productId]: false,
+        },
+        productInFlightCurrency: {
+          ...get().productInFlightCurrency,
+          [productId]: null,
         },
         productRecommendationsError: {
           ...get().productRecommendationsError,
@@ -108,10 +163,15 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
         },
       });
     } catch (error: any) {
+      if (currentCurrency() !== reqCurrency) return;
       set({
         isProductRecommendationsLoading: {
-          ...isProductRecommendationsLoading,
+          ...get().isProductRecommendationsLoading,
           [productId]: false,
+        },
+        productInFlightCurrency: {
+          ...get().productInFlightCurrency,
+          [productId]: null,
         },
         productRecommendationsError: {
           ...get().productRecommendationsError,
@@ -122,50 +182,63 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
   },
 
   fetchCartRecommendations: async () => {
-    const { isCartRecommendationsLoading } = get();
-    if (isCartRecommendationsLoading) return;
+    const reqCurrency = currentCurrency();
+    const { isCartRecommendationsLoading, cartInFlightCurrency } = get();
+    if (isCartRecommendationsLoading && cartInFlightCurrency === reqCurrency) return;
 
-    set({ isCartRecommendationsLoading: true, cartRecommendationsError: null });
+    set({
+      isCartRecommendationsLoading: true,
+      cartRecommendationsError: null,
+      cartInFlightCurrency: reqCurrency,
+    });
 
     try {
-      const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
-      const data = await getCartRecommendations(currencyCode);
+      const data = await getCartRecommendations(reqCurrency || undefined);
+      if (currentCurrency() !== reqCurrency) return;
       set({
         cartRecommendations: data,
+        cartRecommendationsCurrency: reqCurrency,
         isCartRecommendationsLoading: false,
         cartRecommendationsError: null,
+        cartInFlightCurrency: null,
       });
     } catch (error: any) {
+      if (currentCurrency() !== reqCurrency) return;
       set({
         isCartRecommendationsLoading: false,
         cartRecommendationsError: error?.message || 'Failed to load cart recommendations',
+        cartInFlightCurrency: null,
       });
     }
   },
 
   clearProductRecommendations: (productId?: string) => {
-    const { productRecommendations, isProductRecommendationsLoading, productRecommendationsError } = get();
-    
+    const {
+      productRecommendations,
+      productRecommendationsCurrency,
+      productInFlightCurrency,
+      isProductRecommendationsLoading,
+      productRecommendationsError,
+    } = get();
+
     if (productId) {
-      // Clear specific product
-      const newRecommendations = { ...productRecommendations };
-      delete newRecommendations[productId];
-      
-      const newLoading = { ...isProductRecommendationsLoading };
-      delete newLoading[productId];
-      
-      const newError = { ...productRecommendationsError };
-      delete newError[productId];
-      
+      const dropKey = (m: Record<string, any>) => {
+        const next = { ...m };
+        delete next[productId];
+        return next;
+      };
       set({
-        productRecommendations: newRecommendations,
-        isProductRecommendationsLoading: newLoading,
-        productRecommendationsError: newError,
+        productRecommendations: dropKey(productRecommendations),
+        productRecommendationsCurrency: dropKey(productRecommendationsCurrency),
+        productInFlightCurrency: dropKey(productInFlightCurrency),
+        isProductRecommendationsLoading: dropKey(isProductRecommendationsLoading),
+        productRecommendationsError: dropKey(productRecommendationsError),
       });
     } else {
-      // Clear all
       set({
         productRecommendations: {},
+        productRecommendationsCurrency: {},
+        productInFlightCurrency: {},
         isProductRecommendationsLoading: {},
         productRecommendationsError: {},
       });
@@ -175,6 +248,7 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
   clearHomeRecommendations: () => {
     set({
       homeRecommendations: null,
+      homeRecommendationsCurrency: null,
       homeRecommendationsError: null,
     });
   },
@@ -182,6 +256,7 @@ export const useRecommendationStore = create<RecommendationState>((set, get) => 
   clearCartRecommendations: () => {
     set({
       cartRecommendations: [],
+      cartRecommendationsCurrency: null,
       cartRecommendationsError: null,
     });
   },

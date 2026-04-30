@@ -1,6 +1,5 @@
 import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from "../api/home.api";
 import { hasAnyActiveStock } from "@/utils/cartUtils";
-import { getDiscountPercent, getFinalPrice, getOriginalPrice } from "@/utils/priceUtils";
 
 export class HomeService {
   static async fetchHomeData(currencyCode?: string): Promise<HomeData> {
@@ -17,34 +16,23 @@ export class HomeService {
     return hasAnyActiveStock(product as any);
   }
 
-  /** ✅ Filter products by availability (stock + active + merchant approved) */
+  /** ✅ Filter products by availability (stock + active + merchant approved).
+   *  Trusts backend-converted prices — no client-side re-derivation of money
+   *  fields (which used to overwrite the converted finalPrice with whatever
+   *  the legacy fallback chain picked, occasionally leaking USD numbers). */
   static filterAvailableProducts(products: HomeProduct[]): HomeProduct[] {
     if (!Array.isArray(products) || products.length === 0) return [];
 
     return products
       .filter((product) => {
         const p: any = product;
-
-        // merchant gate
         if (p.merchant && p.merchant.status && p.merchant.status !== "APPROVED") return false;
-
-        // product active + stock
         return this.hasStock(product);
       })
-      .map((product) => {
-        // ✅ enrich without mutating original
-        const finalPrice = getFinalPrice(product as any, { strategy: "lowest" });
-        const originalPrice = getOriginalPrice(product as any, { strategy: "lowest" });
-        const discount = getDiscountPercent(originalPrice, finalPrice);
-
-        return {
-          ...product,
-          hasStock: this.hasStock(product),
-          finalPrice,
-          // keep discountPrice as compare-at (old price) as-is, don't overwrite
-          discount,
-        } as HomeProduct;
-      });
+      .map((product) => ({
+        ...product,
+        hasStock: this.hasStock(product),
+      } as HomeProduct));
   }
 
   static filterActiveCategories(categories: HomeCategory[]): HomeCategory[] {
@@ -61,11 +49,14 @@ export class HomeService {
 
   static isFlashDeal(product: HomeProduct): boolean {
     const p: any = product;
-    return (p.discount ?? 0) > 0 && (p.hasStock ?? this.hasStock(product));
+    const pct = p.price?.discountPercentage ?? p.discountPercentage ?? p.displayDiscountPercentage ?? 0;
+    return pct > 0 && (p.hasStock ?? this.hasStock(product));
   }
 
   static sortByDiscount(products: HomeProduct[]): HomeProduct[] {
-    return [...products].sort((a: any, b: any) => (b.discount ?? 0) - (a.discount ?? 0));
+    const pct = (p: any) =>
+      p.price?.discountPercentage ?? p.discountPercentage ?? p.displayDiscountPercentage ?? 0;
+    return [...products].sort((a, b) => pct(b) - pct(a));
   }
 
   static sortByRating(products: HomeProduct[]): HomeProduct[] {

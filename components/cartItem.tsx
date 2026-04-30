@@ -13,10 +13,13 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/cartUtils";
 
 import {
-  formatPrice as formatPriceUtil,
+  formatMoney,
+  getProductFinalMoney,
+  getProductOriginalMoney,
   getFinalPrice,
   getOriginalPrice,
-  hasDiscount
+  hasDiscount,
+  type Money,
 } from "@/utils/priceUtils";
 import { normalizeProduct } from "@/domain/product/product.normalize";
 import { matchVariant } from "@/domain/variant/variant.match";
@@ -65,20 +68,42 @@ const CartItem = React.memo(function CartItem({
     return matchVariant(normalizedProduct, attributes);
   }, [normalizedProduct, attributes]);
 
+  // Prefer typed Money envelope; fall back to legacy resolver for older payloads.
+  const finalUnitMoney = useMemo(
+    () => getProductFinalMoney(normalizedProduct, matchingVariant),
+    [normalizedProduct, matchingVariant]
+  );
+  const originalUnitMoney = useMemo(
+    () => getProductOriginalMoney(normalizedProduct, matchingVariant),
+    [normalizedProduct, matchingVariant]
+  );
+
   const finalUnit = useMemo(() => {
+    if (finalUnitMoney) return finalUnitMoney.amount;
     if (!normalizedProduct) return 0;
     return getFinalPrice(normalizedProduct, { variant: matchingVariant });
-  }, [normalizedProduct, matchingVariant]);
+  }, [finalUnitMoney, normalizedProduct, matchingVariant]);
 
   const originalUnit = useMemo(() => {
+    if (originalUnitMoney) return originalUnitMoney.amount;
     if (!normalizedProduct) return 0;
     return getOriginalPrice(normalizedProduct, { variant: matchingVariant });
-  }, [normalizedProduct, matchingVariant]);
+  }, [originalUnitMoney, normalizedProduct, matchingVariant]);
 
-  const hasDisc = useMemo(() => hasDiscount(normalizedProduct, { variant: matchingVariant }), [normalizedProduct, matchingVariant]);
+  const hasDisc = useMemo(() => {
+    if (finalUnitMoney && originalUnitMoney) {
+      return originalUnitMoney.amount > finalUnitMoney.amount;
+    }
+    return hasDiscount(normalizedProduct, { variant: matchingVariant });
+  }, [finalUnitMoney, originalUnitMoney, normalizedProduct, matchingVariant]);
 
   const totalFinal = finalUnit * validQty;
   const totalOriginal = originalUnit * validQty;
+
+  // Build a Money envelope for the line total when we have currency context,
+  // so formatting uses the right symbol/decimals/locale.
+  const buildLineMoney = (amount: number, src: Money | null): Money | number =>
+    src ? { amount, currency: src.currency, decimals: src.decimals } : amount;
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.cardBackground }]}>
@@ -157,14 +182,14 @@ const CartItem = React.memo(function CartItem({
                   { color: Colors.text.veryLightGray },
                 ]}
               >
-                {formatPriceUtil(totalOriginal)}
+                {formatMoney(buildLineMoney(totalOriginal, originalUnitMoney))}
               </Text>
             )}
             <Text
               style={[styles.price, { color: Colors.success }]}
               numberOfLines={1}
             >
-              {formatPriceUtil(totalFinal)}
+              {formatMoney(buildLineMoney(totalFinal, finalUnitMoney))}
             </Text>
           </View>
         </View>

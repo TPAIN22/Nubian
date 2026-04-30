@@ -1,5 +1,5 @@
 import axiosInstance from "@/services/api/client";
-import type { ProductDTO } from "@/domain/product/product.types";
+import { normalizeProduct, type NormalizedProduct } from "@/domain/product/product.normalize";
 
 export interface HomeBanner {
   _id: string;
@@ -26,8 +26,10 @@ export interface HomeCategory {
   slug?: string; // URL-friendly identifier (e.g., "electronics", "clothing")
 }
 
-// Backend Product schema is the source of truth for all product fields.
-export type HomeProduct = ProductDTO;
+// HomeProduct is normalized at the API boundary so downstream code never
+// re-runs normalizeProduct (was a duplication smell — and any new code path
+// that read raw fields could resurface currency-leak bugs).
+export type HomeProduct = NormalizedProduct;
 
 export interface HomeStore {
   _id: string;
@@ -47,6 +49,7 @@ export interface HomeData {
   flashDeals: HomeProduct[];
   newArrivals: HomeProduct[];
   forYou: HomeProduct[];
+  brandsYouLove: HomeProduct[];
   stores: HomeStore[];
 }
 
@@ -66,13 +69,17 @@ export const getHomeData = async (currencyCode?: string): Promise<HomeData> => {
       throw new Error('Invalid response structure');
     }
 
+    const norm = (list: any): NormalizedProduct[] =>
+      Array.isArray(list) ? list.map(normalizeProduct) : [];
+
     return {
       banners: data.banners || [],
       categories: data.categories || [],
-      trending: data.trending || [],
-      flashDeals: data.flashDeals || [],
-      newArrivals: data.newArrivals || [],
-      forYou: data.forYou || [],
+      trending:      norm(data.trending),
+      flashDeals:    norm(data.flashDeals),
+      newArrivals:   norm(data.newArrivals),
+      forYou:        norm(data.forYou),
+      brandsYouLove: norm(data.brandsYouLove),
       stores: data.stores || [],
     };
   } catch (error: any) {

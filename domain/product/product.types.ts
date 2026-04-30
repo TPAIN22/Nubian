@@ -25,11 +25,34 @@ export type ProductVariantDTO = {
   nubianMarkup?: number;
   dynamicMarkup?: number;
   merchantDiscount?: number;
+
+  // Authoritative pricing block from backend pricing engine (lib/pricing.engine.js).
+  // Trust these — never recompute from merchantPrice + nubianMarkup.
+  basePrice?: number;
+  listPrice?: number;
+  originalPrice?: number;
   finalPrice?: number;
+  discountAmount?: number;
+  discountPercentage?: number;
+  hasDiscount?: boolean;
+
+  // Legacy field — kept for back-compat with old simple products only.
   discountPrice?: number;
-  
+
   priceConverted?: number;
   priceDisplay?: string;
+
+  // Typed Money envelope from backend (canonical going forward).
+  // Stored under `priceEnvelope` rather than `price` because variant.price
+  // is overloaded as a numeric mirror in the legacy schema.
+  priceEnvelope?: {
+    final?: { amount: number; currency: string; formatted?: string; decimals?: number; rate?: number; rateProvider?: string; rateDate?: string | null; rateUnavailable?: boolean };
+    original?: { amount: number; currency: string; formatted?: string; decimals?: number; rate?: number; rateProvider?: string; rateDate?: string | null; rateUnavailable?: boolean };
+    list?: { amount: number; currency: string; formatted?: string; decimals?: number; rate?: number; rateProvider?: string; rateDate?: string | null; rateUnavailable?: boolean };
+    discountAmount?: { amount: number; currency: string; formatted?: string; decimals?: number; rate?: number; rateProvider?: string; rateDate?: string | null; rateUnavailable?: boolean };
+    discountPercentage?: number;
+    hasDiscount?: boolean;
+  };
 
   stock: number;
   images?: string[];
@@ -56,7 +79,25 @@ export type ProductDTO = {
 
   nubianMarkup?: number;
   dynamicMarkup?: number;
-  finalPrice?: number; // may be populated even for variant products (UI convenience)
+
+  // Authoritative root pricing block (lowest active variant when applicable).
+  basePrice?: number;
+  listPrice?: number;
+  originalPrice?: number;
+  finalPrice?: number;
+  discountAmount?: number;
+  discountPercentage?: number;
+  hasDiscount?: boolean;
+  discount?: {
+    type?: 'percentage' | 'fixed' | null;
+    value?: number;
+    isActive?: boolean;
+    startsAt?: string | null;
+    endsAt?: string | null;
+    maxDiscount?: number | null;
+  } | null;
+
+  // Legacy field — kept for back-compat with old simple products only.
   discountPrice?: number;
 
   sizes?: string[]; // legacy

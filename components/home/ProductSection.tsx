@@ -1,11 +1,10 @@
-import React, { memo, useMemo, useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import { View, FlatList, Pressable, StyleSheet, useWindowDimensions } from "react-native";
 import { Text } from "@/components/ui/text";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import ItemCard from "@/components/Card";
 import ItemCardSkeleton from "@/components/ItemCardSkeleton";
 import { HomeProduct } from "@/api/home.api";
-import { normalizeProduct } from "@/domain/product/product.normalize";
 import { FlashDealsCountdown } from "./FlashDealsCountdown";
 import i18n from "@/utils/i18n";
 
@@ -30,12 +29,10 @@ export const ProductSection = memo(({
   const cardWidth = screenWidth * 0.45;
   const itemWidth = cardWidth + 12; 
 
-  const normalizedProducts = useMemo(
-    () => products.map(normalizeProduct),
-    [products]
-  );
-
-  const renderItem = useCallback(({ item }: { item: ReturnType<typeof normalizeProduct> }) => (
+  // Products are already normalized at the API boundary (home.api.ts /
+  // recommendations.api.ts). No client-side re-normalization here — that path
+  // used to silently re-introduce the price-alias confusion.
+  const renderItem = useCallback(({ item }: { item: HomeProduct }) => (
     <View style={{ width: cardWidth, marginRight: 12 }}>
       <ItemCard
         item={item}
@@ -44,7 +41,7 @@ export const ProductSection = memo(({
     </View>
   ), [cardWidth]);
 
-  const keyExtractor = useCallback((item: ReturnType<typeof normalizeProduct>, index: number) =>
+  const keyExtractor = useCallback((item: HomeProduct, index: number) =>
     `${title}-${item.id}-${index}`, [title]);
 
   const getItemLayout = useCallback((_: any, index: number) => ({
@@ -97,7 +94,7 @@ export const ProductSection = memo(({
       {showCountdown && <FlashDealsCountdown colors={colors} />}
       <FlatList
         horizontal
-        data={normalizedProducts}
+        data={products}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
         renderItem={renderItem}

@@ -25,7 +25,6 @@ import { useRouter } from "expo-router";
 
 import { useTheme } from "@/providers/ThemeProvider";
 import { useHomeQuery } from "@/hooks/useHomeQuery";
-import { useRecommendationStore } from "@/store/useRecommendationStore";
 import useCartStore from "@/store/useCartStore";
 import useCategoryStore from "@/store/useCategoryStore";
 import { useTracking } from "@/hooks/useTracking";
@@ -207,12 +206,18 @@ function IndexContent() {
 
   // ── Data ──────────────────────────────────────────────────────────────────
 
+  // Single source of truth for home product lists: useHomeStore via useHomeQuery.
+  // The /home backend endpoint now returns brandsYouLove too (was the only thing
+  // that used to require a parallel call to /recommendations/home). This kills
+  // the dual-source desync that caused stale-currency data to win after a
+  // currency switch.
   const {
     banners,
-    trending: homeTrending,
-    flashDeals: homeFlashDeals,
-    newArrivals: homeNewArrivals,
-    forYou: homeForYou,
+    trending,
+    flashDeals,
+    newArrivals,
+    forYou,
+    brandsYouLove,
     isLoading: homeLoading,
     isRefreshing,
     refresh,
@@ -221,19 +226,7 @@ function IndexContent() {
   const { categories: rawCategories, fetchCategories } = useCategoryStore();
   const categories = useMemo(() => rawCategories ?? [], [rawCategories]);
 
-  const {
-    homeRecommendations,
-    isHomeRecommendationsLoading,
-    fetchHomeRecommendations,
-  } = useRecommendationStore();
-
-  const forYou      = homeRecommendations?.forYou       ?? homeForYou;
-  const trending    = homeRecommendations?.trending     ?? homeTrending;
-  const flashDeals  = homeRecommendations?.flashDeals   ?? homeFlashDeals;
-  const newArrivals = homeRecommendations?.newArrivals  ?? homeNewArrivals;
-  const brandsYouLove = homeRecommendations?.brandsYouLove ?? [];
-
-  const isProductsLoading = homeLoading || isHomeRecommendationsLoading;
+  const isProductsLoading = homeLoading;
 
   // ── Scroll animation ──────────────────────────────────────────────────────
 
@@ -306,17 +299,10 @@ function IndexContent() {
     fetchCategories();
   }, [fetchCategories]);
 
-  useEffect(() => {
-    if (!homeRecommendations && !isHomeRecommendationsLoading) {
-      fetchHomeRecommendations();
-    }
-  }, [homeRecommendations, isHomeRecommendationsLoading, fetchHomeRecommendations]);
-
   const handleRefresh = useCallback(() => {
     refresh();
     fetchCategories();
-    fetchHomeRecommendations();
-  }, [refresh, fetchCategories, fetchHomeRecommendations]);
+  }, [refresh, fetchCategories]);
 
   // ── Empty state ───────────────────────────────────────────────────────────
 
@@ -418,12 +404,12 @@ function IndexContent() {
             isLoading={isProductsLoading}
             onViewAll={navigateToNewArrivals}
           />
-          {(brandsYouLove.length > 0 || isHomeRecommendationsLoading) && (
+          {(brandsYouLove.length > 0 || homeLoading) && (
             <ProductSection
               title={i18n.t("home_brandsYouLove")}
               products={brandsYouLove}
               colors={colors}
-              isLoading={isHomeRecommendationsLoading}
+              isLoading={homeLoading}
             />
           )}
         </Animated.View>

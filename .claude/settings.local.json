@@ -7,7 +7,8 @@
       "Bash(python -c \"import sys,json; pkg=json.load\\(sys.stdin\\); deps={**pkg.get\\('dependencies',{}\\), **pkg.get\\('devDependencies',{}\\)}; [print\\(k,':',v\\) for k in ['expo-blur','react-native-reanimated','expo-linear-gradient','react-native-safe-area-context','react-native-reanimated-carousel','expo-image','expo-router','i18n-js','react-i18next'] if k in deps]\")",
       "Bash(git stash *)",
       "Bash(grep -E \"\\\\.\\(js|ts\\)$\")",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(git *)"
     ]
   }
 }

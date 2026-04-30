@@ -66,20 +66,51 @@ const apiClient = axios.create({
   },
 });
 
+// Wait until the persisted currency store has rehydrated from AsyncStorage before
+// allowing the first request out the door. Without this, the very first money-
+// bearing fetch (Home on cold start) goes out with no currency header, the
+// backend returns USD numbers, and the formatter wraps them in the user's symbol.
+let hydrationPromise: Promise<void> | null = null;
+function awaitCurrencyHydration() {
+  const { useCurrencyStore } = require("@/store/useCurrencyStore");
+  if (useCurrencyStore.getState().isLoaded) return Promise.resolve();
+  if (hydrationPromise) return hydrationPromise;
+  hydrationPromise = new Promise<void>((resolve) => {
+    const unsub = useCurrencyStore.subscribe(
+      (state: any) => state.isLoaded,
+      (loaded: boolean) => {
+        if (loaded) {
+          unsub();
+          resolve();
+        }
+      }
+    );
+    // Safety net: never block the app indefinitely if persist never reports.
+    setTimeout(() => {
+      try { unsub(); } catch {}
+      resolve();
+    }, 1500);
+  });
+  return hydrationPromise;
+}
+
 apiClient.interceptors.request.use(
   async (config) => {
     try {
+      // Block the request until currency rehydrates so x-currency is always set.
+      await awaitCurrencyHydration();
+
       const token = await getToken();
       if (token) {
         config.headers = config.headers ?? {};
         config.headers.Authorization = `Bearer ${token}`;
       }
-      
+
       // Inject currency and country from store
       // We use require to avoid circular dependency if useCurrencyStore imports apiClient
       const { useCurrencyStore } = require("@/store/useCurrencyStore");
       const { currencyCode, countryCode } = useCurrencyStore.getState();
-      
+
       if (currencyCode) {
         config.headers['x-currency'] = currencyCode;
       }

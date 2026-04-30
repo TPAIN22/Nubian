@@ -16,6 +16,7 @@ import useItemStore from "@/store/useItemStore";
 import { usePrefetchProduct, useSetInitialProduct } from "@/store/useProductCacheStore";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
+import { getProductFinalMoney, getProductOriginalMoney, formatMoney } from "@/utils/priceUtils";
 import { cleanImages } from "@/utils/productUtils";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { markTapStartTime } from "@/hooks/useProductFetch";
@@ -57,25 +58,42 @@ const ProductCard = React.memo(
     const displayImage = validImages[0] ?? null;
 
     // --- DEFINITIVE PRICING LOGIC ---
-    // 1. Final Price: prefer backend-computed fields in order of reliability.
-    //    displayFinalPrice — set when backend returns definitive pricing
-    //    priceConverted    — set when backend returns a currency-converted numeric
-    //    pricing.price     — client-side fallback (raw merchant price, may be in base currency)
+    // Backend convertProductPrices updates root finalPrice/originalPrice (and
+    // variant equivalents), but the display* aliases were historically left in
+    // USD. ProductSection also runs normalizeProduct, which drops root finalPrice
+    // and stashes the converted value under productLevelPricing/simple. So we
+    // probe normalized fields first and fall through to the engine — never
+    // trusting display* on the primary path, since on a SAR/EGP/etc payload it
+    // would render a USD number with the new currency symbol.
     const pricing = useMemo(
       () => (item ? getDisplayPrice(item) : { price: 0, isFrom: false }),
       [item]
     );
-    const finalPrice = (item as any)?.displayFinalPrice
+    // Prefer the typed Money envelope; fall back to the legacy field chain
+    // for payloads that pre-date the envelope migration.
+    const finalMoney = getProductFinalMoney(item);
+    const originalMoney = getProductOriginalMoney(item);
+
+    const finalPrice = finalMoney?.amount
+      ?? (item as any)?.finalPrice
+      ?? (item as any)?.productLevelPricing?.finalPrice
+      ?? (item as any)?.simple?.finalPrice
       ?? (item as any)?.priceConverted
       ?? pricing.price;
 
-    // 2. Original Price: same priority chain plus item.originalPrice
-    const originalPrice = (item as any)?.displayOriginalPrice
+    const originalPrice = originalMoney?.amount
       ?? (item as any)?.originalPrice
       ?? finalPrice;
 
-    // 3. Discount: Backend "displayDiscountPercentage" is the Source of Truth and includes Sanity Checks.
-    const discountPercentage = (item as any)?.displayDiscountPercentage ?? 0;
+    // Single rendering helpers: prefer the envelope's pre-formatted string
+    // (canonical, currency-aware, decimals-correct) over the local formatter.
+    const renderFinal    = () => finalMoney    ? formatMoney(finalMoney)    : formatPrice(finalPrice);
+    const renderOriginal = () => originalMoney ? formatMoney(originalMoney) : formatPrice(originalPrice);
+
+    // Percentages are currency-invariant, so either alias is fine.
+    const discountPercentage = (item as any)?.discountPercentage
+      ?? (item as any)?.displayDiscountPercentage
+      ?? 0;
 
     const productHasDiscount = discountPercentage > 0;
 
@@ -157,14 +175,14 @@ const ProductCard = React.memo(
               <View style={styles.horizontalPriceContainer}>
                 {productHasDiscount && (
                   <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
-                    {formatPrice(originalPrice)}
+                    {renderOriginal()}
                   </Text>
                 )}
                 <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
                   {pricing.isFrom && (
                     <Text style={{ fontSize: 10, color: colors.text.veryLightGray }}>From </Text>
                   )}
-                  {formatPrice(finalPrice)}
+                  {renderFinal()}
                 </Text>
               </View>
             </View>
@@ -220,11 +238,11 @@ const ProductCard = React.memo(
           <View style={styles.priceContainer}>
             {productHasDiscount && (
               <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]} numberOfLines={1}>
-                {formatPrice(originalPrice)}
+                {renderOriginal()}
               </Text>
             )}
             <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
-              {formatPrice(finalPrice)}
+              {renderFinal()}
             </Text>
           </View>
         </View>
@@ -237,9 +255,17 @@ const ProductCard = React.memo(
     // Re-render if item identity changes
     if (prevProps.item?.id !== nextProps.item?.id) return false;
     // Re-render if prices change (e.g. after a currency switch triggers re-fetch)
+    if ((prevProps.item as any)?.finalPrice !== (nextProps.item as any)?.finalPrice) return false;
+    if ((prevProps.item as any)?.originalPrice !== (nextProps.item as any)?.originalPrice) return false;
+    if ((prevProps.item as any)?.productLevelPricing?.finalPrice !== (nextProps.item as any)?.productLevelPricing?.finalPrice) return false;
+    if ((prevProps.item as any)?.simple?.finalPrice !== (nextProps.item as any)?.simple?.finalPrice) return false;
+    if ((prevProps.item as any)?.priceConverted !== (nextProps.item as any)?.priceConverted) return false;
     if ((prevProps.item as any)?.displayFinalPrice !== (nextProps.item as any)?.displayFinalPrice) return false;
     if ((prevProps.item as any)?.displayOriginalPrice !== (nextProps.item as any)?.displayOriginalPrice) return false;
-    if ((prevProps.item as any)?.priceConverted !== (nextProps.item as any)?.priceConverted) return false;
+    // Money envelope changes (currency switch landed a new payload)
+    if ((prevProps.item as any)?.price?.final?.amount !== (nextProps.item as any)?.price?.final?.amount) return false;
+    if ((prevProps.item as any)?.price?.final?.currency !== (nextProps.item as any)?.price?.final?.currency) return false;
+    if ((prevProps.item as any)?.price?.original?.amount !== (nextProps.item as any)?.price?.original?.amount) return false;
     // Re-render if visual props change
     if (prevProps.variant !== nextProps.variant) return false;
     if (prevProps.showWishlist !== nextProps.showWishlist) return false;

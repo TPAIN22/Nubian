@@ -1,5 +1,22 @@
 import type { ProductAttributeDefDTO, ProductDTO, ProductVariantDTO } from "./product.types";
+import type { Money } from "@/utils/priceUtils";
 export type { ProductAttributeDefDTO, ProductDTO, ProductVariantDTO };
+
+export type ProductPriceEnvelope = {
+  final?: Money;
+  original?: Money;
+  list?: Money;
+  discountAmount?: Money;
+  discountPercentage?: number;
+  hasDiscount?: boolean;
+};
+
+export type ProductCurrencyMeta = {
+  code: string;
+  symbol: string;
+  decimals: number;
+  symbolPosition: "before" | "after";
+};
 
 export type NormalizedProduct = {
   id: string;
@@ -63,6 +80,11 @@ export type NormalizedProduct = {
   displayOriginalPrice?: number;
   displayFinalPrice?: number;
   displayDiscountPercentage?: number;
+
+  // Typed Money envelope from the backend (canonical going forward).
+  // Optional: legacy payloads / cache entries may not have it.
+  price?: ProductPriceEnvelope;
+  currency?: ProductCurrencyMeta;
 };
 
 function asString(v: any): string {
@@ -121,17 +143,56 @@ function normalizeVariantAttributes(attrs: any, attrDefs?: ProductAttributeDefDT
   return out;
 }
 
+function passthroughMoney(m: any): Money | undefined {
+  if (!m || typeof m !== "object") return undefined;
+  if (typeof m.amount !== "number" || typeof m.currency !== "string") return undefined;
+  return {
+    amount: m.amount,
+    currency: m.currency,
+    formatted: typeof m.formatted === "string" ? m.formatted : undefined,
+    decimals: typeof m.decimals === "number" ? m.decimals : undefined,
+    rate: typeof m.rate === "number" ? m.rate : undefined,
+    rateProvider: typeof m.rateProvider === "string" ? m.rateProvider : undefined,
+    rateDate: typeof m.rateDate === "string" ? m.rateDate : null,
+    rateUnavailable: typeof m.rateUnavailable === "boolean" ? m.rateUnavailable : undefined,
+  };
+}
+
+function passthroughEnvelope(p: any): ProductPriceEnvelope | undefined {
+  if (!p || typeof p !== "object") return undefined;
+  return {
+    final:    passthroughMoney(p.final),
+    original: passthroughMoney(p.original),
+    list:     passthroughMoney(p.list),
+    discountAmount: passthroughMoney(p.discountAmount),
+    discountPercentage: typeof p.discountPercentage === "number" ? p.discountPercentage : undefined,
+    hasDiscount: typeof p.hasDiscount === "boolean" ? p.hasDiscount : undefined,
+  };
+}
+
 function normalizeVariant(v: any, attrDefs?: ProductAttributeDefDTO[]): ProductVariantDTO {
+  const variantPrice = passthroughEnvelope(v?.price);
+  // `price` on a variant is overloaded in the legacy schema (number) vs the new
+  // envelope (object). Preserve the envelope under a separate field for safety.
   return {
     _id: asString(v?._id),
     sku: asString(v?.sku),
     attributes: normalizeVariantAttributes(v?.attributes, attrDefs),
     merchantPrice: Number(v?.merchantPrice ?? 0),
-    price: Number(v?.price ?? v?.merchantPrice ?? 0),
+    price: typeof v?.price === "number" ? v.price : Number(v?.merchantPrice ?? 0),
+    priceEnvelope: variantPrice,
     nubianMarkup: asNum(v?.nubianMarkup) ?? undefined,
     dynamicMarkup: asNum(v?.dynamicMarkup) ?? undefined,
     merchantDiscount: asNum(v?.merchantDiscount) ?? undefined,
-    finalPrice: asNum(v?.finalPrice) ?? undefined,
+
+    basePrice:          asNum(v?.basePrice) ?? undefined,
+    listPrice:          asNum(v?.listPrice) ?? undefined,
+    originalPrice:      asNum(v?.originalPrice) ?? undefined,
+    finalPrice:         asNum(v?.finalPrice) ?? undefined,
+    discountAmount:     asNum(v?.discountAmount) ?? undefined,
+    discountPercentage: asNum(v?.discountPercentage) ?? undefined,
+    hasDiscount:        typeof v?.hasDiscount === "boolean" ? v.hasDiscount : undefined,
+
     discountPrice: asNum(v?.discountPrice) ?? undefined,
     priceConverted: asNum(v?.priceConverted) ?? undefined,
     priceDisplay: asString(v?.priceDisplay) || undefined,
@@ -219,6 +280,21 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     displayFinalPrice: asNum((raw as any)?.displayFinalPrice) ?? asNum((raw as any)?.priceConverted) ?? undefined,
     displayOriginalPrice: asNum((raw as any)?.displayOriginalPrice) ?? asNum((raw as any)?.originalPrice) ?? undefined,
     displayDiscountPercentage: asNum((raw as any)?.displayDiscountPercentage) ?? undefined,
+
+    // Typed Money envelope (canonical). Carried verbatim from the backend.
+    price: passthroughEnvelope((raw as any)?.price),
+    currency: passthroughCurrencyMeta((raw as any)?.currency),
+  };
+}
+
+function passthroughCurrencyMeta(c: any): ProductCurrencyMeta | undefined {
+  if (!c || typeof c !== "object") return undefined;
+  if (typeof c.code !== "string") return undefined;
+  return {
+    code: c.code,
+    symbol: typeof c.symbol === "string" ? c.symbol : c.code,
+    decimals: typeof c.decimals === "number" ? c.decimals : 2,
+    symbolPosition: c.symbolPosition === "after" ? "after" : "before",
   };
 }
 
