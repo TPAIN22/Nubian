@@ -7,21 +7,47 @@ import {
   StyleSheet,
   Animated,
   Platform,
+  Text,
+  LayoutAnimation,
+  UIManager,
 } from "react-native";
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import Svg, { Path } from "react-native-svg";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useItemStore from "@/store/useItemStore";
-import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
+import { useCartQuantity } from "../../store/useCartStore";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
 
-interface TabIconProps {
-  iconType: 'home' | 'cart' | 'search' | 'profile' | 'wishlist';
-  focused: boolean;
-  label: string;
+type IconType = "home" | "cart" | "search" | "profile" | "wishlist";
+
+const ACTIVE_FLEX = 2.2;
+const INACTIVE_FLEX = 1;
+
+interface RouteMeta {
+  iconType: IconType;
+  labelKey: string;
 }
 
-// Custom Icon Components
+// route name → icon + label mapping
+const ROUTE_META: Record<string, RouteMeta> = {
+  index: { iconType: "home", labelKey: "home" },
+  cart: { iconType: "cart", labelKey: "cart" },
+  explore: { iconType: "search", labelKey: "explore" },
+  profile: { iconType: "profile", labelKey: "profile" },
+  wishlist: { iconType: "wishlist", labelKey: "wishlist" },
+};
+
+/* ---------------- Icons ---------------- */
+
 const HomeIcon = ({ size, color }: { size: number; color: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -82,106 +108,61 @@ const WishlistIcon = ({ size, color }: { size: number; color: string }) => (
   </Svg>
 );
 
-const TabIcon: FC<TabIconProps> = ({ iconType, focused, label }) => {
+const renderIcon = (iconType: IconType, size: number, color: string) => {
+  switch (iconType) {
+    case "home":
+      return <HomeIcon size={size} color={color} />;
+    case "cart":
+      return <CartIcon size={size} color={color} />;
+    case "search":
+      return <SearchIcon size={size} color={color} />;
+    case "profile":
+      return <ProfileIcon size={size} color={color} />;
+    case "wishlist":
+      return <WishlistIcon size={size} color={color} />;
+  }
+};
+
+/* ---------------- Tab Item ---------------- */
+
+interface TabItemProps {
+  iconType: IconType;
+  label: string;
+  focused: boolean;
+  onPress: () => void;
+  badgeCount?: number;
+}
+
+const TabItem: FC<TabItemProps> = ({
+  iconType,
+  label,
+  focused,
+  onPress,
+  badgeCount,
+}) => {
   const { theme } = useTheme();
-  const scaleAnim = useRef(new Animated.Value(focused ? 1.1 : 1)).current;
-  const opacityAnim = useRef(new Animated.Value(focused ? 1 : 0.5)).current;
-  const indicatorScale = useRef(new Animated.Value(focused ? 1 : 0)).current;
-  const backgroundScale = useRef(new Animated.Value(focused ? 1 : 0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(focused ? 1 : 0.55)).current;
+  const pressAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleAnim, {
-        toValue: focused ? 1.1 : 1,
+        toValue: focused ? 1.05 : 1,
         useNativeDriver: true,
         tension: 280,
         friction: 12,
       }),
       Animated.timing(opacityAnim, {
-        toValue: focused ? 1 : 0.5,
-        duration: 250,
+        toValue: focused ? 1 : 0.55,
+        duration: 220,
         useNativeDriver: true,
-      }),
-      Animated.spring(indicatorScale, {
-        toValue: focused ? 1 : 0,
-        useNativeDriver: true,
-        tension: 180,
-        friction: 10,
-      }),
-      Animated.spring(backgroundScale, {
-        toValue: focused ? 1 : 0,
-        useNativeDriver: true,
-        tension: 200,
-        friction: 10,
       }),
     ]).start();
   }, [focused]);
 
-  const iconSize = focused ? 26 : 24;
-  const iconColor = focused ? theme.colors.primary : theme.colors.text.veryLightGray;
-
-  const renderIcon = () => {
-    switch (iconType) {
-      case 'home':
-        return <HomeIcon size={iconSize} color={iconColor} />;
-      case 'cart':
-        return <CartIcon size={iconSize} color={iconColor} />;
-      case 'search':
-        return <SearchIcon size={iconSize} color={iconColor} />;
-      case 'profile':
-        return <ProfileIcon size={iconSize} color={iconColor} />;
-      case 'wishlist':
-        return <WishlistIcon size={iconSize} color={iconColor} />;
-      default:
-        return <HomeIcon size={iconSize} color={iconColor} />;
-    }
-  };
-
-  return (
-    <View style={styles.tabIconContainer} accessible accessibilityLabel={label}>
-      <Animated.View
-        style={[
-          styles.iconWrapper,
-          {
-            transform: [{ scale: scaleAnim }],
-            opacity: opacityAnim,
-          },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.iconBackground,
-            {
-              transform: [{ scale: backgroundScale }],
-              opacity: backgroundScale,
-              backgroundColor: theme.colors.primary + "15",
-            },
-          ]}
-        />
-        <View style={styles.iconContent}>
-          {renderIcon()}
-        </View>
-        <Animated.View
-          style={[
-            styles.activeIndicator,
-            {
-              transform: [{ scaleX: indicatorScale }],
-              opacity: indicatorScale,
-              backgroundColor: theme.colors.primary,
-              shadowColor: theme.colors.primary,
-            },
-          ]}
-        />
-      </Animated.View>
-    </View>
-  );
-};
-
-const CustomTabButton = (props: BottomTabBarButtonProps) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
+    Animated.spring(pressAnim, {
       toValue: 0.92,
       useNativeDriver: true,
       tension: 300,
@@ -190,7 +171,7 @@ const CustomTabButton = (props: BottomTabBarButtonProps) => {
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
+    Animated.spring(pressAnim, {
       toValue: 1,
       useNativeDriver: true,
       tension: 300,
@@ -198,71 +179,183 @@ const CustomTabButton = (props: BottomTabBarButtonProps) => {
     }).start();
   };
 
+  const handlePress = () => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync().catch(() => {});
+    }
+    onPress();
+  };
+
+  const iconColor = focused
+    ? theme.colors.primary
+    : theme.colors.text.veryLightGray;
+
+  const hasBadge = (badgeCount ?? 0) > 0;
+  const badgeText = (badgeCount ?? 0) > 99 ? "99+" : String(badgeCount);
+
   return (
     <Pressable
-      onPress={props.onPress}
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={() => [
-        styles.tabButton,
-        props.style,
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: focused }}
+      style={[
+        styles.tabItem,
+        focused ? styles.tabItemFocused : styles.tabItemUnfocused,
       ]}
     >
       <Animated.View
-        style={{
-          transform: [{ scale: scaleAnim }],
-          width: '100%',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        style={[
+          styles.itemInner,
+          focused
+            ? { backgroundColor: theme.colors.primary + "15" }
+            : null,
+          { transform: [{ scale: pressAnim }] },
+        ]}
       >
-        {props.children}
+        <Animated.View
+          style={{
+            transform: [{ scale: scaleAnim }],
+            opacity: opacityAnim,
+          }}
+        >
+          <View style={styles.iconContent}>
+            {renderIcon(iconType, 24, iconColor)}
+            {hasBadge && (
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderColor: theme.colors.surface,
+                  },
+                ]}
+                accessibilityLabel={`${badgeCount} items in cart`}
+              >
+                <Text style={styles.badgeText} numberOfLines={1}>
+                  {badgeText}
+                </Text>
+              </View>
+            )}
+          </View>
+        </Animated.View>
+
+        {focused && (
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.label,
+              { color: theme.colors.primary, marginLeft: 8 },
+            ]}
+          >
+            {label}
+          </Text>
+        )}
       </Animated.View>
     </Pressable>
   );
 };
 
-export default function TabsLayout() {
-  const { isTabBarVisible } = useItemStore();
-  const insets = useSafeAreaInsets();
-  const safeAreaBottom = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 8);
-  const iconAreaHeight = 60; // Height for icon area only
+/* ---------------- Custom Tab Bar ---------------- */
+
+const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { isTabBarVisible } = useItemStore();
+  const cartCount = useCartQuantity();
+
+  // Smooth flex transition when active tab changes.
+  // LayoutAnimation runs natively — far cheaper than Animated.Value(flex)
+  // which has to round-trip the JS bridge per frame.
+  useEffect(() => {
+    LayoutAnimation.configureNext({
+      duration: 200,
+      update: { type: "easeInEaseOut" },
+    });
+  }, [state.index]);
+
+  if (!isTabBarVisible) return null;
+
+  const safeAreaBottom = Math.max(insets.bottom, Platform.OS === "ios" ? 20 : 8);
+
+  return (
+    <View
+      style={[
+        styles.tabBar,
+        {
+          backgroundColor: theme.colors.surface,
+          paddingBottom: safeAreaBottom,
+          borderTopColor: isDark
+            ? `${theme.colors.borderLight}30`
+            : theme.colors.borderLight,
+          shadowColor: theme.colors.shadow,
+        },
+      ]}
+    >
+      <View style={styles.tabBarRow}>
+        {state.routes.map((route, i) => {
+          const meta = ROUTE_META[route.name];
+          if (!meta) return null;
+
+          const focused = state.index === i;
+          const { options } = descriptors[route.key]!;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
+            }
+          };
+
+          const labelText =
+            (typeof options.tabBarLabel === "string"
+              ? options.tabBarLabel
+              : null) ??
+            i18n.t(meta.labelKey) ??
+            meta.labelKey;
+
+          return (
+            <View
+              key={route.key}
+              style={[
+                styles.tabSlot,
+                { flex: focused ? ACTIVE_FLEX : INACTIVE_FLEX },
+              ]}
+            >
+              <TabItem
+                iconType={meta.iconType}
+                label={labelText}
+                focused={focused}
+                onPress={onPress}
+                badgeCount={meta.iconType === "cart" ? cartCount : undefined}
+              />
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+/* ---------------- Layout ---------------- */
+
+export default function TabsLayout() {
+  const { theme } = useTheme();
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.surface }}>
       <Tabs
         detachInactiveScreens
+        tabBar={(props) => <CustomTabBar {...props} />}
         screenOptions={{
           tabBarHideOnKeyboard: true,
-          tabBarShowLabel: false,
-          tabBarStyle: [
-            styles.tabBar,
-            { 
-              display: isTabBarVisible ? "flex" : "none",
-              paddingBottom: safeAreaBottom,
-              paddingTop: 0,
-              height: iconAreaHeight + safeAreaBottom,
-              minHeight: iconAreaHeight + safeAreaBottom,
-              backgroundColor: theme.colors.surface,
-              borderTopColor: isDark 
-                ? `${theme.colors.borderLight}30` // ~19% opacity in dark mode for dimmer border
-                : theme.colors.borderLight,
-              borderTopWidth: 1,
-              marginBottom: 0,
-              ...Platform.select({
-                ios: {
-                  shadowColor: theme.colors.shadow,
-                },
-                android: {
-                  backgroundColor: theme.colors.surface,
-                },
-              }),
-            },
-          ],
-          tabBarButton: (props) => <CustomTabButton {...props} />,
-          tabBarActiveTintColor: theme.colors.primary,
-          tabBarInactiveTintColor: theme.colors.text.veryLightGray,
           headerShadowVisible: false,
           headerStyle: [styles.header, { backgroundColor: theme.colors.cardBackground }],
           headerTintColor: theme.colors.text.gray,
@@ -272,82 +365,21 @@ export default function TabsLayout() {
         }}
         initialRouteName="index"
       >
-        <Tabs.Screen
-          name="index"
-          options={{
-            tabBarHideOnKeyboard: true,
-            headerShown: false,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                iconType="home"
-                focused={focused}
-                label={i18n.t("home")}
-              />
-            ),
-          }}
-        />
-
+        <Tabs.Screen name="index" options={{ headerShown: false }} />
         <Tabs.Screen
           name="cart"
           options={{
             headerShown: true,
             headerStyle: { backgroundColor: theme.colors.cardBackground },
-            headerTintColor: theme.colors.text.gray,
-            headerTitleStyle: { color: theme.colors.text.gray },
-            headerShadowVisible: false,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                iconType="cart"
-                focused={focused}
-                label={i18n.t("cart")}
-              />
-            ),
           }}
         />
-
-        <Tabs.Screen
-          name="explore"
-          options={{
-            headerShown: false,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                iconType="search"
-                focused={focused}
-                label={i18n.t("explore")}
-              />
-            ),
-          }}
-        />
-
-        <Tabs.Screen
-          name="profile"
-          options={{
-            headerShown: false,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                iconType="profile"
-                focused={focused}
-                label={i18n.t("profile")}
-              />
-            ),
-          }}
-        />
-
+        <Tabs.Screen name="explore" options={{ headerShown: false }} />
+        <Tabs.Screen name="profile" options={{ headerShown: false }} />
         <Tabs.Screen
           name="wishlist"
           options={{
             headerShown: true,
             headerStyle: { backgroundColor: theme.colors.cardBackground },
-            headerTintColor: theme.colors.text.gray,
-            headerTitleStyle: { color: theme.colors.text.gray },
-            headerShadowVisible: false,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                iconType="wishlist"
-                focused={focused}
-                label={i18n.t("wishlist") || "Wishlist"}
-              />
-            ),
           }}
         />
       </Tabs>
@@ -355,95 +387,97 @@ export default function TabsLayout() {
   );
 }
 
+/* ---------------- Styles ---------------- */
+
 const styles = StyleSheet.create({
   tabBar: {
-    borderTopWidth: 0,
-    paddingHorizontal: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderTopWidth: 1,
+    paddingHorizontal: 8,
+    paddingTop: 8,
     ...Platform.select({
       ios: {
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 18,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
       },
       android: {
-        elevation: 12,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        elevation: 16,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
       },
     }),
   },
 
-  tabButton: {
+  tabBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 56,
+  },
+
+  tabSlot: {
+    height: "100%",
+    paddingHorizontal: 2,
+  },
+
+  tabItem: {
     flex: 1,
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    height: '100%',
-    borderRadius: 12,
-    position: 'relative',
   },
 
-  tabIconContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: '100%',
-    height: '100%',
-  },
+  tabItemFocused: {},
+  tabItemUnfocused: {},
 
-  iconWrapper: {
+  itemInner: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    width: 44,
     height: 44,
+    paddingHorizontal: 12,
     borderRadius: 22,
-    position: 'relative',
-    overflow: 'visible',
+    minWidth: 44,
   },
 
   iconContent: {
     alignItems: "center",
     justifyContent: "center",
-    width: '100%',
-    height: '100%',
+    position: "relative",
   },
 
-  iconBackground: {
-    position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
   },
 
-  activeIndicator: {
-    position: 'absolute',
-    bottom: -4,
-    width: 28,
-    height: 3,
-    borderRadius: 1.5,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+    lineHeight: 12,
+    includeFontPadding: false,
   },
 
-  // Header Styles
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+    includeFontPadding: false,
+  },
+
   header: {
     elevation: 0,
     shadowOpacity: 0,
     borderBottomWidth: 0,
-  },
-
-  headerTitleContainer: {
-    width: "100%",
   },
 });

@@ -1,385 +1,480 @@
-import { useState, useRef, useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
   Dimensions,
-  Animated,
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
-import i18n from '../../utils/i18n';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MotiView } from 'moti';
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Colors from '@/locales/brandColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width, height } = Dimensions.get('window');
+import { useColors } from '@/hooks/useColors';
+import i18n from '../../utils/i18n';
 
-// Onboarding steps data
-const ONBOARDING_STEPS = [
+const { width: SCREEN_W } = Dimensions.get('window');
+const ONBOARDING_KEY = 'hasSeenOnboarding';
+
+type IconName = keyof typeof Feather.glyphMap;
+
+type Slide = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  icon: IconName;
+  image?: any;
+};
+
+const SLIDES: Slide[] = [
   {
-    id: 'step1',
-    title: i18n.t('onboarding_subtitle'),
-    description: i18n.t('onboarding_description1'),
+    id: 'curated',
+    eyebrow: 'For you',
+    title: 'Curated for You',
+    description:
+      'A personalised feed shaped by what you love — quiet picks, not noise.',
+    icon: 'star',
     image: require('../../assets/images/onboard1.svg'),
-    imageStyle: { width: Math.min(350, width * 0.85), height: 300 },
   },
   {
-    id: 'step2',
-    title: i18n.t('onboarding_subtitle2'),
-    description: i18n.t('onboarding_description2'),
-    image: require('../../assets/images/address.svg'),
-    imageStyle: { width: Math.min(350, width * 0.8), height: 300 },
+    id: 'logistics',
+    eyebrow: 'Worldwide',
+    title: 'Global Logistics',
+    description:
+      'Fast, traceable shipping from trusted partners — to your doorstep, anywhere.',
+    icon: 'truck',
+    image: require('../../assets/images/onboard3.webp'),
   },
   {
-    id: 'step3',
-    title: i18n.t('onboarding_subtitle3'),
-    description: i18n.t('onboarding_description3'),
-    image: require('../../assets/images/ordering.svg'),
-    imageStyle: { width: Math.min(350, width * 0.85), height: 300 },
-  },
-  {
-    id: 'final',
-    title: i18n.t('paragraph'),
-    description: '',
+    id: 'secure',
+    eyebrow: 'Protected',
+    title: 'Secure Checkout',
+    description:
+      'Bank-grade encryption and buyer protection on every order, every time.',
+    icon: 'shield',
     image: require('../../assets/images/onboard4.webp'),
-    imageStyle: { width: width, height: height },
-    isFinal: true,
   },
 ];
 
-const ONBOARDING_COMPLETED_KEY = 'hasSeenOnboarding';
-
-
 export default function OnboardingScreen() {
-  // All hooks must be called before any conditional returns
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const listRef = useRef<FlatList<Slide>>(null);
+  const [index, setIndex] = useState(0);
 
-  const currentStepData = ONBOARDING_STEPS[currentStep];
-  const isLastRegularStep = currentStep === ONBOARDING_STEPS.length - 2;
+  const lastIndex = SLIDES.length - 1;
+  const isLast = index === lastIndex;
 
-  // Simple transition animation
-  const animateTransition = useCallback((newStep: number) => {
-    if (isTransitioning) return;
-
-    setIsTransitioning(true);
-
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => {
-      setCurrentStep(newStep);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      }).start(() => {
-        setIsTransitioning(false);
-      });
-    });
-  }, [isTransitioning, fadeAnim]);
-
-  const handleGetStarted = useCallback(async () => {
+  const markSeen = useCallback(async () => {
     try {
-      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('Error saving onboarding completion:', error);
-      router.replace('/(tabs)');
+      await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    } catch {
+      // non-fatal
     }
-  }, [router]);
+  }, []);
+
+  const goGuest = useCallback(async () => {
+    await markSeen();
+    await AsyncStorage.setItem('isGuest', 'true');
+    router.replace('/(tabs)');
+  }, [markSeen, router]);
+
+  const goSignIn = useCallback(async () => {
+    await markSeen();
+    router.replace('/(auth)/signin');
+  }, [markSeen, router]);
+
+  const goAuthChoice = useCallback(async () => {
+    await markSeen();
+    router.replace('/(auth)/welcome');
+  }, [markSeen, router]);
+
+  const goTo = useCallback((next: number) => {
+    listRef.current?.scrollToOffset({
+      offset: next * SCREEN_W,
+      animated: true,
+    });
+    setIndex(next);
+  }, []);
 
   const handleNext = useCallback(() => {
-    if (isTransitioning) return;
-
-    if (currentStep < ONBOARDING_STEPS.length - 1) {
-      animateTransition(currentStep + 1);
-    } else {
-      handleGetStarted();
+    if (__DEV__) console.log('[onboarding] CTA pressed, index=', index, 'isLast=', isLast);
+    if (isLast) {
+      goAuthChoice();
+      return;
     }
-  }, [currentStep, isTransitioning, animateTransition, handleGetStarted]);
+    goTo(index + 1);
+  }, [isLast, index, goTo, goAuthChoice]);
 
-  const handleSkip = useCallback(() => {
-    handleGetStarted();
-  }, [handleGetStarted]);
+  const onMomentumEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const i = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+      if (i !== index) setIndex(i);
+    },
+    [index]
+  );
 
-  // Handle final screen with gradient overlay
-  if (currentStepData?.isFinal) {
-    return (
-      <View style={styles.container}>
-        <Image
-          source={currentStepData.image}
-          style={currentStepData.imageStyle}
-          contentFit="cover"
-          priority="high"
-          cachePolicy="memory-disk"
-        />
-
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
-          locations={[0, 0.6, 1]}
-          style={styles.gradientOverlay}
-        >
-          <Animated.View
-            style={[
-              styles.finalContent,
-              {
-                opacity: fadeAnim,
-              }
-            ]}
-          >
-            <Text style={styles.finalTitle}>
-              {currentStepData.title}
-            </Text>
-
-            <TouchableOpacity
-              onPress={handleGetStarted}
-              style={styles.getStartedButton}
-              activeOpacity={0.8}
-              disabled={isTransitioning}
-            >
-              <Text style={styles.getStartedButtonText}>
-                {i18n.t('startShopping')}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </LinearGradient>
-      </View>
-    );
-  }
+  const ctaLabel = isLast ? i18n.t('getStarted') : i18n.t('next');
+  const ctaLabelFallback = isLast ? 'Get Started' : 'Next';
 
   return (
-    <View style={styles.container}>
-      
-      {/* Skip Button */}
-      <View style={styles.skipContainer}>
-        <TouchableOpacity 
-          onPress={handleSkip} 
-          style={styles.skipButton}
-          activeOpacity={0.7}
-          disabled={isTransitioning}
+    <View style={[styles.root, { backgroundColor: '#000' }]}>
+      {/* Carousel area — flex fills space ABOVE the footer, never overlaps it */}
+      <View style={styles.carouselArea}>
+        <FlatList
+          ref={listRef}
+          data={SLIDES}
+          keyExtractor={(item) => item.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onMomentumEnd}
+          keyboardShouldPersistTaps="handled"
+          style={StyleSheet.absoluteFill}
+          renderItem={({ item, index: i }) => (
+            <ValuePropSlide slide={item} active={i === index} />
+          )}
+          getItemLayout={(_, i) => ({
+            length: SCREEN_W,
+            offset: SCREEN_W * i,
+            index: i,
+          })}
+          onScrollToIndexFailed={(info) => {
+            listRef.current?.scrollToOffset({
+              offset: info.index * SCREEN_W,
+              animated: true,
+            });
+          }}
+        />
+
+        {/* Top overlay sits inside the carousel area only */}
+        <View
+          pointerEvents="box-none"
+          style={[styles.topOverlay, { paddingTop: insets.top }]}
         >
-          <Text style={styles.skipText}>{i18n.t('onboarding_skip')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Main Content */}
-      <Animated.View
-        style={[
-          styles.contentContainer,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
-      >
-        {/* Image */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={currentStepData?.image}
-            style={currentStepData?.imageStyle}
-            contentFit="contain"
-            priority="high"
-            cachePolicy="memory-disk"
-          />
-        </View>
-
-        {/* Text Content */}
-        <View style={styles.textContainer}>
-          <Text style={styles.title} numberOfLines={3}>
-            {currentStepData?.title}
-          </Text>
-          <Text style={styles.description} numberOfLines={4}>
-            {currentStepData?.description}
-          </Text>
-        </View>
-
-        {/* Bottom Section */}
-        <View style={styles.bottomSection}>
-          {/* Pagination Dots */}
-          <View style={styles.dotsContainer}>
-            {ONBOARDING_STEPS.slice(0, -1).map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  index === currentStep && styles.dotActive,
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* Button Container */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              onPress={handleNext}
-              style={styles.primaryButton}
-              activeOpacity={0.8}
-              disabled={isTransitioning}
+          <MotiView
+            from={{ opacity: 0, translateY: -8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 450 }}
+            style={[
+              styles.rewardBanner,
+              {
+                backgroundColor: 'rgba(0,0,0,0.45)',
+                borderColor: 'rgba(255,255,255,0.2)',
+              },
+            ]}
+          >
+            <Feather name="gift" size={14} color="#FFFFFF" />
+            <Text
+              style={[styles.rewardText, { color: '#FFFFFF' }]}
+              numberOfLines={1}
             >
-              <Text style={styles.primaryButtonText}>
-                {isLastRegularStep
-                  ? i18n.t('startShopping')
-                  : i18n.t('onboarding_next')
-                }
+              Finish onboarding to unlock{' '}
+              <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>10% off</Text>{' '}
+              your first order
+            </Text>
+          </MotiView>
+
+          <View style={styles.header}>
+            <Text style={[styles.brand, { color: '#FFFFFF', letterSpacing: 4 }]}>
+              NUBIAN
+            </Text>
+            <TouchableOpacity onPress={goGuest} hitSlop={12} activeOpacity={0.6}>
+              <Text style={[styles.skip, { color: 'rgba(255,255,255,0.85)' }]}>
+                {i18n.t('onboarding_skip')}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-      </Animated.View>
+      </View>
+
+      {/* Footer is a real flex sibling — NOT layered on top of the FlatList,
+          so the FlatList's pan responder cannot swallow the press. */}
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: Math.max(insets.bottom, 16) + 8 },
+        ]}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)', '#000']}
+          locations={[0, 0.4, 1]}
+          style={styles.footerGradient}
+        />
+        <Dots count={SLIDES.length} active={index} />
+
+        <TouchableOpacity
+          onPress={handleNext}
+          activeOpacity={0.85}
+          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+          accessibilityRole="button"
+          accessibilityLabel={ctaLabel || ctaLabelFallback}
+          style={[styles.cta, { backgroundColor: colors.primary }]}
+        >
+          <View style={styles.ctaInner} pointerEvents="none">
+            <Text style={styles.ctaText}>{ctaLabel || ctaLabelFallback}</Text>
+            <View style={styles.ctaArrow}>
+              <Feather
+                name={isLast ? 'log-in' : 'arrow-right'}
+                size={16}
+                color={colors.primary}
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={goSignIn}
+          hitSlop={10}
+          activeOpacity={0.7}
+          style={styles.secondaryRow}
+        >
+          <Text style={styles.secondaryHint}>Already have an account?</Text>
+          <Text style={[styles.secondaryLink, { color: '#FFFFFF' }]}>
+            Sign in
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
+/* ---------------- Value-prop slide ---------------- */
+
+function ValuePropSlide({ slide, active }: { slide: Slide; active: boolean }) {
+  return (
+    <View style={[styles.slide, { width: SCREEN_W }]}>
+      {slide.image && (
+        <Image
+          source={slide.image}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          priority="high"
+          cachePolicy="memory-disk"
+        />
+      )}
+
+      <LinearGradient
+        pointerEvents="none"
+        colors={['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
+        locations={[0.35, 0.7, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <MotiView
+        key={active ? `${slide.id}-on` : `${slide.id}-off`}
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: active ? 1 : 0.6, translateY: 0 }}
+        transition={{ type: 'timing', duration: 500 }}
+        style={styles.slideOverlay}
+        pointerEvents="none"
+      >
+        <View style={styles.iconBadge}>
+          <Feather name={slide.icon} size={20} color="#FFFFFF" />
+        </View>
+
+        <Text style={styles.eyebrowOverlay}>{slide.eyebrow.toUpperCase()}</Text>
+        <Text style={styles.titleOverlay}>{slide.title}</Text>
+        <Text style={styles.descriptionOverlay}>{slide.description}</Text>
+      </MotiView>
+    </View>
+  );
+}
+
+/* ---------------- Dots ---------------- */
+
+function Dots({ count, active }: { count: number; active: number }) {
+  return (
+    <View style={styles.dots}>
+      {Array.from({ length: count }).map((_, i) => {
+        const isActive = i === active;
+        return (
+          <MotiView
+            key={i}
+            animate={{
+              width: isActive ? 24 : 6,
+              backgroundColor: isActive
+                ? '#FFFFFF'
+                : 'rgba(255,255,255,0.45)',
+            }}
+            transition={{ type: 'timing', duration: 280 }}
+            style={styles.dot}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+/* ---------------- Styles ---------------- */
+
 const styles = StyleSheet.create({
-  container: {
+  root: { flex: 1 },
+
+  carouselArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    overflow: 'hidden',
   },
-  skipContainer: {
+
+  topOverlay: {
     position: 'absolute',
-    top: height * 0.06,
-    right: 20,
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 10,
+    elevation: 10,
   },
-  skipButton: {
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
+
+  rewardBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    height: 40,
-    width: 100,
+    gap: 8,
+    alignSelf: 'center',
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  skipText: {
-    color: Colors.text.black,
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'center',
-      lineHeight: 40,
-  },
-  contentContainer: {
-    flex: 1,
+  rewardText: { fontSize: 12, fontWeight: '400' },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
-  imageContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: height * 0.12,
-    marginBottom: height * 0.02,
-  },
-  textContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+  brand: { fontSize: 12, fontWeight: '600' },
+  skip: { fontSize: 14, fontWeight: '500' },
+
+  /* Slides */
+  slide: { flex: 1, overflow: 'hidden' },
+  slideOverlay: {
     flex: 1,
-    maxHeight: height * 0.25,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    paddingHorizontal: 32,
+    paddingBottom: 28,
+    gap: 12,
   },
-  title: {
-    fontSize: Math.min(36, width * 0.09),
-    color: Colors.text.black,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: Math.min(44, width * 0.11),
-    paddingVertical: 15,
-  },
-  description: {
-    paddingVertical: 15,
-    fontSize: 16,
-    color: Colors.text.mediumGray,
-    fontWeight: '400',
-    lineHeight: 24,
-    textAlign: 'center',
-    paddingHorizontal: 10,
-  },
-  bottomSection: {
+  iconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    gap: 14,
-    marginBottom: height * 0.03,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.25)',
+    marginBottom: 8,
   },
-  dotsContainer: {
+  eyebrowOverlay: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 3,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  titleOverlay: {
+    fontSize: 34,
+    fontWeight: '400',
+    color: '#FFFFFF',
+    lineHeight: 42,
+  },
+  descriptionOverlay: {
+    fontSize: 15,
+    fontWeight: '300',
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 22,
+    maxWidth: 360,
+  },
+
+  /* Footer — real flex sibling at bottom, NOT absolute */
+  footer: {
+    paddingHorizontal: 28,
+    paddingTop: 24,
+    gap: 18,
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  footerGradient: {
+    position: 'absolute',
+    top: -60,
+    left: 0,
+    right: 0,
+    height: 60,
+  },
+  dots: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 30,
+    gap: 6,
+    height: 12,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.gray[300],
-    marginHorizontal: 5,
-  },
-  dotActive: {
-    width: 32,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.text.black,
-  },
-  buttonContainer: {
+  dot: { height: 6, borderRadius: 999 },
+
+  cta: {
     width: '100%',
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: Math.min(width * 0.25, 80),
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.text.black,
-  },
-  primaryButtonText: {
-    color: Colors.text.white,
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    letterSpacing: 1.5,
-    lineHeight: 38,
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    width: width,
-    paddingVertical: 60,
-    paddingBottom: 80,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  finalContent: {
+    height: 56,
+    borderRadius: 999,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 40,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  finalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: Colors.text.white,
-    letterSpacing: 1.5,
-    paddingHorizontal: 30,
-    lineHeight: 40,
+  ctaInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingLeft: 8,
   },
-  getStartedButton: {
-    backgroundColor: Colors.background,
-    paddingVertical: 12,
-    paddingHorizontal: Math.min(width * 0.25, 80),
-    borderRadius: 8,
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
   },
-  getStartedButtonText: {
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: Colors.text.black,
-    letterSpacing: 1.5,
-    lineHeight: 38,
+  ctaArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
+  secondaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  secondaryHint: {
+    fontSize: 13,
+    fontWeight: '300',
+    color: 'rgba(255,255,255,0.7)',
+  },
+  secondaryLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });

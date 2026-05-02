@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Alert, ActivityIndicator, StyleSheet, TouchableOpacity, TextInput, I18nManager } from 'react-native';
+import { View, Alert, ActivityIndicator, StyleSheet, TouchableOpacity, TextInput, I18nManager, Linking } from 'react-native';
 import { Text } from '@/components/ui/text';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import i18n from '@/utils/i18n';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useTracking } from '@/hooks/useTracking';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -23,6 +24,14 @@ const SignUpSheet = () => {
   const router = useRouter();
   const { startSSOFlow } = useSSO();
   const { signUp, isLoaded, setActive } = useSignUp();
+  const { mergeSession } = useTracking();
+
+  const finalizeSignedIn = useCallback(async () => {
+    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    await AsyncStorage.removeItem('isGuest');
+    await mergeSession();
+    router.replace('/(tabs)');
+  }, [mergeSession, router]);
 
   const redirectUrl = AuthSession.makeRedirectUri({
     native: 'sdnubian://sso-callback',
@@ -39,8 +48,7 @@ const SignUpSheet = () => {
 
       if (result.createdSessionId && result.setActive) {
         await result.setActive({ session: result.createdSessionId });
-        await AsyncStorage.setItem('pendingSessionId', result.createdSessionId);
-        router.replace('/');
+        await finalizeSignedIn();
       }
     } catch (err: any) {
       if (err?.code !== 'oauth_access_denied') {
@@ -49,7 +57,7 @@ const SignUpSheet = () => {
     } finally {
       setLoading(null);
     }
-  }, [startSSOFlow, redirectUrl, router]);
+  }, [startSSOFlow, redirectUrl, finalizeSignedIn]);
 
   // Email sign-up handler
   const handleEmail = useCallback(async () => {
@@ -79,13 +87,11 @@ const SignUpSheet = () => {
     } catch (err: any) {
       console.error('Sign-up error:', err);
       const errorMessage = err.errors?.[0]?.message || i18n.t('errorCreateAcount');
-      
-      // رسائل خطأ مخصصة
-      if (errorMessage.includes('already exists')) {
+
+      if (errorMessage.includes('already exists') || errorMessage.includes('taken')) {
         Alert.alert(i18n.t('error'), i18n.t('emailTaken'));
       } else {
-       if (errorMessage.includes('taken'))
-         Alert.alert(i18n.t('error'), i18n.t('emailTaken'));
+        Alert.alert(i18n.t('error'), errorMessage);
       }
     } finally {
       setLoading(null);
@@ -110,7 +116,7 @@ const SignUpSheet = () => {
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
         Alert.alert('🎉', i18n.t('successCreateAcount'));
-        router.replace('/');
+        await finalizeSignedIn();
       } else {
         Alert.alert(i18n.t('error'), i18n.t('invalidCode'));
       }
@@ -121,7 +127,7 @@ const SignUpSheet = () => {
     } finally {
       setLoading(null);
     }
-  }, [code, isLoaded, signUp, setActive, router]);
+  }, [code, isLoaded, signUp, setActive, finalizeSignedIn]);
 
   // إعادة إرسال الكود
   const handleResendCode = useCallback(async () => {
@@ -242,9 +248,19 @@ const SignUpSheet = () => {
           {/* Terms */}
           <Text style={[styles.termsText, { color: colors.text.veryLightGray }]}>
             {i18n.t('signUpTerms')}{' '}
-            <Text style={[styles.link, { color: colors.primary }]}>{i18n.t('termsAndConditions')}</Text>
+            <Text
+              style={[styles.link, { color: colors.primary }]}
+              onPress={() => Linking.openURL('https://nubian-sd.store/terms-and-conditions')}
+            >
+              {i18n.t('termsAndConditions')}
+            </Text>
             {i18n.t('and')}{' '}
-            <Text style={[styles.link, { color: colors.primary }]}>{i18n.t('privacyPolicy')}</Text>
+            <Text
+              style={[styles.link, { color: colors.primary }]}
+              onPress={() => Linking.openURL('https://nubian-sd.store/privacy-policy')}
+            >
+              {i18n.t('privacyPolicy')}
+            </Text>
           </Text>
         </>
       ) : (
