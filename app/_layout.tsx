@@ -21,7 +21,6 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
 import { Toaster } from "sonner-native";
-import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
 import { useHomeStore } from "@/store/useHomeStore";
@@ -51,9 +50,8 @@ if (Platform.OS === "android" && NavigationBar) {
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
-    shouldSetBadge: true, // Enable badge count
+    shouldSetBadge: true,
     shouldShowBanner: true,
     shouldShowList: true,
   }),

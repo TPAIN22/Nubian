@@ -32,7 +32,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = React.memo(
-  ({ item, onPress, variant = "grid", showWishlist = true, cardWidth: providedCardWidth }: ProductCardProps) => {
+  ({ item, onPress, variant = "grid", showWishlist = true }: ProductCardProps) => {
     const { theme } = useTheme();
     const colors = theme.colors;
 

@@ -361,12 +361,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
   }, [quote?.subtotal, cart?.totalPrice, itemsPayload]);
 
   const payableAmountText = useMemo(() => {
-    // Fix: If quote.total is 0 (backend bug), fallback to orderAmount
-    const effectiveTotal = (quote?.total && quote.total > 0) ? quote.total : orderAmount;
-
-    // If shipping is involved but quote.total was 0, we should technically add shipping, 
-    // but orderAmount is usually just subtotal. Let's assume orderAmount is the best we have if quote fails.
-    // Ideally: fallbackTotal = orderAmount + (quote?.shippingFee || 0).
+    // If quote.total is 0 (backend bug), fall back to orderAmount + shipping
     const fallbackTotal = (quote?.total && quote.total > 0) ? quote.total : (orderAmount + (quote?.shippingFee || 0));
 
     const amount =
@@ -616,6 +611,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
           orderNumber: order?.orderNumber,
         },
       });
+      return;
     } catch (e: any) {
       const errData = e?.response?.data;
       const details = errData?.error?.details;
@@ -635,6 +631,7 @@ export default function CheckOutModal({ handleClose }: { handleClose: () => void
       toast.error(status ? `${serverMsg} (HTTP ${status})` : serverMsg || i18n.t("orderError"));
 
       // ❌ do NOT close on failure
+      return;
     } finally {
       setIsLoading(false);
     }

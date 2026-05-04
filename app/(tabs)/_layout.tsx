@@ -9,15 +9,8 @@ import {
   Platform,
   Text,
   LayoutAnimation,
-  UIManager,
 } from "react-native";
 
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 import Svg, { Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

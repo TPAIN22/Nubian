@@ -6,10 +6,8 @@
     "icon": "./assets/images/nubianscreen.png",
     "scheme": "sdnubian",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "jsEngine": "hermes",
       "bundleIdentifier": "dev.expo.nubian",
       "config": {
         "usesNonExemptEncryption": false
@@ -26,7 +24,6 @@
     },
     "android": {
       "versionCode": 14,
-      "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/nubianscreen.png",
         "backgroundColor": "#ffffff"
@@ -78,8 +75,8 @@
           "android": {
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
             "minSdkVersion": 24,
             "resizeableActivity": true,
             "windowSoftInputMode": "adjustResize"

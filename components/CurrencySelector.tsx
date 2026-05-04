@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCurrencyStore, useHasSelectedCurrency } from '@/store/useCurrencyStore';
 import { useUser } from '@clerk/clerk-expo';
 import { LinearGradient } from 'expo-linear-gradient';

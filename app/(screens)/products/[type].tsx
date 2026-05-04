@@ -25,6 +25,7 @@ import { ExploreSort } from "@/api/explore.api";
 import useItemStore from "@/store/useItemStore";
 import ProductCard from "@/components/ProductCard";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
+import type { CategoryDetails as Category } from "@/api/category.api";
 
 type Product = NormalizedProduct;
 
@@ -103,6 +104,7 @@ const ProductsScreen = () => {
 
   // Category store
   const { categories, fetchCategories } = useCategoryStore();
+  const typedCategories: Category[] = categories;
 
   // Handlers
   const handleProductView = useCallback((product: Product) => {
@@ -440,7 +442,7 @@ const ProductsScreen = () => {
                     </Text>
                   </TouchableOpacity>
 
-                  {categories.map((cat) => (
+                  {typedCategories.map((cat: Category) => (
                     <TouchableOpacity
                       key={cat._id}
                       style={[

@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { View, FlatList, Pressable, StyleSheet, I18nManager } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
@@ -12,10 +12,6 @@ import {
   navigateToTopRated,
 } from "@/utils/deepLinks";
 
-interface QuickCollectionsProps {
-  colors: any;
-}
-
 const MOCK_COLLECTIONS = [
   { id: "1", title: "Brands", image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&q=80", action: () => router.push('/(tabs)/explore') },
   { id: "2", title: "New In", image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=300&q=80", action: () => navigateToNewArrivals() },
@@ -24,7 +20,7 @@ const MOCK_COLLECTIONS = [
   { id: "5", title: "Fandom", image: "https://images.unsplash.com/photo-1583316174775-bd6dc0e9f298?w=300&q=80", action: () => navigateToFlashDeals() },
 ];
 
-export const QuickCollections = memo(({ colors }: QuickCollectionsProps) => {
+export const QuickCollections = memo(() => {
   const isRTL = I18nManager.isRTL;
 
   return (

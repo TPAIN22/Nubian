@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
 
 export default function TestFetch() {

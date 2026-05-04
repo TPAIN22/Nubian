@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { View, StyleSheet } from "react-native";
 import { Text } from "@/components/ui/text";
 import { LinearGradient } from "expo-linear-gradient";

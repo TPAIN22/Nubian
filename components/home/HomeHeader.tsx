@@ -30,7 +30,6 @@ export const HomeHeader = memo(({ activeTab = "All", onTabPress, categories = []
   const cartQuantity = useCartQuantity();
   const headerBg = isScrolled ? theme.colors.surface : "transparent";
   const iconColor = isScrolled ? theme.colors.text.gray : "#FFF";
-  const activeIconColor = isScrolled ? theme.colors.primary : "#FFF";
   const searchBg = isScrolled ? (theme.mode === 'dark' ? '#2A2A2A' : '#F5F5F5') : "#FFF";
   const textColor = isScrolled ? theme.colors.text.gray : "rgba(255, 255, 255, 0.9)";
   const activeTextColor = isScrolled ? theme.colors.text.primary : "#FFF";

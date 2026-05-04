@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { View, FlatList, Pressable, StyleSheet, I18nManager } from "react-native";
 import { Text } from "@/components/ui/text";
 import Ionicons from "@expo/vector-icons/Ionicons";

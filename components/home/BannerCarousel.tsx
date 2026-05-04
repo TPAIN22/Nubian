@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback } from "react";
 import { View, StyleSheet, Pressable, I18nManager } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";

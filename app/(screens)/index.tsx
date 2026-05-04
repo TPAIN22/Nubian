@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Text } from "@/components/ui/text";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import useItemStore from "@/store/useItemStore";
 import NoNetworkScreen from "../NoNetworkScreen";
 import { useNetwork } from "@/providers/NetworkProvider";

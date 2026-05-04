@@ -42,9 +42,8 @@ export default function Profile() {
   const scrollY = useRef(0);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [isCurrencyModalVisible, setIsCurrencyModalVisible] = useState(false);
-  const { countryCode, currencyCode, countries, currencies } = useCurrencyStore();
+  const { currencyCode, currencies } = useCurrencyStore();
 
-  const currentCountry = countries.find(c => c.code === countryCode);
   const currentCurrency = currencies.find(c => c.code === currencyCode);
 
 

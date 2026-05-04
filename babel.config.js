@@ -25,8 +25,9 @@ module.exports = function (api) {
         'transform-remove-console',
         { exclude: ['error', 'warn'] }
       ]] : []),
-      // react-native-reanimated plugin MUST be last - do not move this!
-      'react-native-reanimated/plugin'
+      // react-native-worklets plugin MUST be last - do not move this!
+      // (Reanimated 4 moved the worklet babel plugin into react-native-worklets.)
+      'react-native-worklets/plugin'
     ]
   };
 };

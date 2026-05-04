@@ -3,29 +3,11 @@ import type { FC } from "react";
 import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, ScrollView } from "react-native";
 import { Text } from '@/components/ui/text';
 import useAddressStore from '@/store/addressStore';
+import type { Address } from '@/store/addressStore';
 import useLocationStore from '@/store/locationStore';
-import { useAuth } from '@clerk/clerk-expo';
 import i18n from "@/utils/i18n";
 import { useTheme } from '@/providers/ThemeProvider';
 import LocationPicker, { LocationData } from '@/components/LocationPicker';
-
-interface Address {
-  _id: string;
-  name: string;
-  countryId?: string;
-  cityId?: string;
-  subCityId?: string;
-  countryName?: string;
-  cityName?: string;
-  subCityName?: string;
-  city: string;
-  area: string;
-  street: string;
-  building: string;
-  phone: string;
-  notes?: string;
-  isDefault: boolean;
-}
 
 interface AddressFormProps {
   visible: boolean;
@@ -65,11 +47,11 @@ const AddressForm: FC<AddressFormProps> = ({
 
   const validate = () => {
     const newErrors: {[key: string]: string} = {};
-    if (!form.name.trim()) newErrors.name = i18n.t('addressForm_recipientName');
-    if (!form.subCityId && !form.area.trim()) newErrors.location = i18n.t('addressForm_locationRequired');
-    if (!form.street.trim()) newErrors.street = i18n.t('addressForm_street');
-    if (!form.building.trim()) newErrors.building = i18n.t('addressForm_building');
-    if (!form.phone.trim()) newErrors.phone = i18n.t('addressForm_phone');
+    if (!(form.name ?? '').trim()) newErrors.name = i18n.t('addressForm_recipientName');
+    if (!form.subCityId && !(form.area ?? '').trim()) newErrors.location = i18n.t('addressForm_locationRequired');
+    if (!(form.street ?? '').trim()) newErrors.street = i18n.t('addressForm_street');
+    if (!(form.building ?? '').trim()) newErrors.building = i18n.t('addressForm_building');
+    if (!(form.phone ?? '').trim()) newErrors.phone = i18n.t('addressForm_phone');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -78,7 +60,7 @@ const AddressForm: FC<AddressFormProps> = ({
     setForm(prev => ({
       ...prev,
       ...location,
-      area: location.subCityName || prev.area
+      area: location.subCityName || prev.area || ''
     }));
     setErrors(prev => ({ ...prev, location: '' }));
     setLocationPickerVisible(false);
@@ -124,7 +106,7 @@ const AddressForm: FC<AddressFormProps> = ({
                 ]}
                 placeholder={i18n.t('addressForm_recipientNamePlaceholder')}
                 placeholderTextColor={Colors.text.veryLightGray}
-                value={form.name}
+                value={form.name ?? ''}
                 onChangeText={text => setForm(prev => ({ ...prev, name: text }))}
                 returnKeyType="next"
                 onSubmitEditing={() => inputRefs.current['phone']?.focus()}
@@ -152,7 +134,7 @@ const AddressForm: FC<AddressFormProps> = ({
                 ]}
                 placeholder={i18n.t('addressForm_phonePlaceholder')}
                 placeholderTextColor={Colors.text.veryLightGray}
-                value={form.phone}
+                value={form.phone ?? ''}
                 onChangeText={text => setForm(prev => ({ ...prev, phone: text }))}
                 keyboardType="phone-pad"
                 returnKeyType="next"
@@ -215,7 +197,7 @@ const AddressForm: FC<AddressFormProps> = ({
                 ]}
                 placeholder={i18n.t('addressForm_streetPlaceholder')}
                 placeholderTextColor={Colors.text.veryLightGray}
-                value={form.street}
+                value={form.street ?? ''}
                 onChangeText={text => setForm(prev => ({ ...prev, street: text }))}
                 returnKeyType="next"
                 onSubmitEditing={() => inputRefs.current['building']?.focus()}
@@ -242,7 +224,7 @@ const AddressForm: FC<AddressFormProps> = ({
                 ]}
                 placeholder={i18n.t('addressForm_buildingPlaceholder')}
                 placeholderTextColor={Colors.text.veryLightGray}
-                value={form.building}
+                value={form.building ?? ''}
                 onChangeText={text => setForm(prev => ({ ...prev, building: text }))}
                 returnKeyType="next"
                 onSubmitEditing={() => inputRefs.current['notes']?.focus()}
@@ -321,7 +303,6 @@ const AddressForm: FC<AddressFormProps> = ({
           cityName: form.cityName,
           subCityName: form.subCityName
         }}
-        language={i18n.language === 'ar' ? 'ar' : 'en'}
       />
     </Modal>
   );
@@ -332,41 +313,36 @@ export default function AddressesTab() {
   const Colors = theme.colors;
   const { addresses, fetchAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress, isLoading, error, clearError } = useAddressStore();
   const { initialize: initializeLocations } = useLocationStore();
-  const { getToken } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [editAddress, setEditAddress] = useState<Address | null>(null);
 
   useEffect(() => {
-    getToken().then(token => fetchAddresses(token));
+    fetchAddresses();
     initializeLocations();
-  }, []);
+  }, [fetchAddresses, initializeLocations]);
 
   const handleAdd = async (form: Omit<Address, '_id'>) => {
-    const token = await getToken();
-    await addAddress(form, token);
+    await addAddress(form);
     setModalVisible(false);
   };
-  
+
   const handleEdit = async (form: Omit<Address, '_id'>) => {
     if (!editAddress) return;
-    const token = await getToken();
-    await updateAddress(editAddress._id, form, token);
+    await updateAddress(editAddress._id, form);
     setEditAddress(null);
   };
-  
+
   const handleDelete = async (id: string) => {
     Alert.alert(i18n.t('deleteConfirm'), i18n.t('deleteAddressConfirm'), [
       { text: i18n.t('cancel'), style: 'cancel' },
       { text: i18n.t('delete'), style: 'destructive', onPress: async () => {
-        const token = await getToken();
-        await deleteAddress(id, token);
+        await deleteAddress(id);
       }}
     ]);
   };
-  
+
   const handleSetDefault = async (id: string) => {
-    const token = await getToken();
-    await setDefaultAddress(id, token);
+    await setDefaultAddress(id);
   };
 
   if (isLoading) {

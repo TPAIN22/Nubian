@@ -317,7 +317,6 @@ export default function AddressForm ({
           cityName: form.cityName,
           subCityName: form.subCityName
         }}
-        language={i18n.language === 'ar' ? 'ar' : 'en'}
       />
     </Modal>
   );

@@ -9,6 +9,21 @@ export interface Address {
   street: string;
   phone: string;
   isDefault?: boolean;
+
+  // Optional UI / form fields
+  name?: string;
+  area?: string;
+  building?: string;
+  notes?: string;
+
+  // Location selection (provided by LocationPicker)
+  countryId?: string;
+  cityId?: string;
+  subCityId?: string;
+  countryName?: string;
+  cityName?: string;
+  subCityName?: string;
+
   [key: string]: any; // لو عندك حقول إضافية
 }
 

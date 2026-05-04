@@ -1,9 +1,8 @@
 import { create } from 'zustand';
 import axios from 'axios';
-import { Platform } from 'react-native';
 
 // Configure Base URL based on environment (simplified for now, ideally use env vars)
-// Assuming running on emulator/device. 
+// Assuming running on emulator/device.
 // Android Emulator uses 10.0.2.2 for localhost. iOS uses localhost.
 const getBaseUrl = () => {
     // Basic check, might need adjustment based on user's setup
@@ -23,13 +22,6 @@ interface Ticket {
     priority: string;
     createdAt: string;
     slaDeadline?: string;
-}
-
-interface Message {
-    _id: string;
-    senderRole: string;
-    message: string;
-    createdAt: string;
 }
 
 interface TicketStore {

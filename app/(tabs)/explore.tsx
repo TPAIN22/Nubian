@@ -12,8 +12,6 @@ import {
   Animated,
   Keyboard,
   LayoutAnimation,
-  Platform,
-  UIManager,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useLocalSearchParams } from "expo-router";
@@ -35,10 +33,6 @@ import ItemCardSkeleton from "@/components/ItemCardSkeleton";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { Image } from "expo-image";
-
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const RECENT_KEY = "nubian_recent_searches";
 const MAX_RECENT = 6;

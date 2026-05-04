@@ -29,7 +29,6 @@ interface LocationPickerProps {
   onClose: () => void;
   onSelect: (location: LocationData) => void;
   initialValues?: LocationData;
-  language?: string; // 'ar' or 'en'
 }
 
 const LocationPicker: React.FC<LocationPickerProps> = ({
@@ -37,7 +36,6 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   onClose,
   onSelect,
   initialValues,
-  language = 'ar'
 }) => {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -56,7 +54,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [selectedSubCity, setSelectedSubCity] = useState<string | null>(null);
+  const [, setSelectedSubCity] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<'country' | 'city' | 'subcity'>('country');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -110,14 +108,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       countryId: selectedCountry || undefined,
       cityId: selectedCity || undefined,
       subCityId: subCityId,
-      countryName: selectedCountryData ? (language === 'ar' ? selectedCountryData.nameAr : selectedCountryData.nameEn) : undefined,
-      cityName: selectedCityData ? (language === 'ar' ? selectedCityData.nameAr : selectedCityData.nameEn) : undefined,
-      subCityName: selectedSubCityData ? (language === 'ar' ? selectedSubCityData.nameAr : selectedSubCityData.nameEn) : undefined,
+      countryName: selectedCountryData?.name,
+      cityName: selectedCityData?.name,
+      subCityName: selectedSubCityData?.name,
     };
 
     onSelect(locationData);
     onClose();
-  }, [selectedCountry, selectedCity, countries, citiesByCountryId, subCitiesByCityId, language, onSelect, onClose]);
+  }, [selectedCountry, selectedCity, countries, citiesByCountryId, subCitiesByCityId, onSelect, onClose]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 'subcity') {
@@ -132,28 +130,24 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   }, [currentStep]);
 
   const getCurrentData = useCallback(() => {
+    const matches = (item: { name?: string }) =>
+      searchQuery === '' || (item.name ?? '').toLowerCase().includes(searchQuery.toLowerCase());
+
     switch (currentStep) {
       case 'country':
-        return countries.filter((item: any) =>
-          searchQuery === '' ||
-          (language === 'ar' ? item.nameAr : item.nameEn).toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      case 'city':
+        return countries.filter(matches);
+      case 'city': {
         const cities = selectedCountry ? getCitiesForCountry(selectedCountry) : [];
-        return cities.filter((item: any) =>
-          searchQuery === '' ||
-          (language === 'ar' ? item.nameAr : item.nameEn).toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      case 'subcity':
+        return cities.filter(matches);
+      }
+      case 'subcity': {
         const subCities = selectedCity ? getSubCitiesForCity(selectedCity) : [];
-        return subCities.filter((item: any) =>
-          searchQuery === '' ||
-          (language === 'ar' ? item.nameAr : item.nameEn).toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        return subCities.filter(matches);
+      }
       default:
         return [];
     }
-  }, [currentStep, countries, selectedCountry, selectedCity, searchQuery, language, getCitiesForCountry, getSubCitiesForCity]);
+  }, [currentStep, countries, selectedCountry, selectedCity, searchQuery, getCitiesForCountry, getSubCitiesForCity]);
 
   const getCurrentTitle = () => {
     switch (currentStep) {
@@ -245,10 +239,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
                     <Ionicons name="location-outline" size={20} color={colors.primary} />
                     <View style={styles.itemText}>
                       <Text style={[styles.itemTitle, { color: colors.text.gray }]}>
-                        {language === 'ar' ? item.nameAr : item.nameEn}
-                      </Text>
-                      <Text style={[styles.itemSubtitle, { color: colors.text.veryLightGray }]}>
-                        {language === 'ar' ? item.nameEn : item.nameAr}
+                        {item.name}
                       </Text>
                     </View>
                   </View>
@@ -352,10 +343,6 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: '500',
-  },
-  itemSubtitle: {
-    fontSize: 14,
-    marginTop: 2,
   },
   emptyContainer: {
     alignItems: 'center',

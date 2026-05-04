@@ -89,6 +89,7 @@ export const useProductFetch = (
         images: initialData.images || [],
         attributeDefs: [],
         variants: [],
+        dynamicPricingEnabled: true,
         simple: {
           stock: null,
           merchantPrice: null,

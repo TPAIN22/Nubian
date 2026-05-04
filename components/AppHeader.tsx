@@ -30,7 +30,6 @@ interface AppHeaderProps {
 }
 
 
-const SCROLL_THRESHOLD = 10;
 const ICON_SIZE = 22;
 const SEARCH_ICON_SIZE = 18;
 
@@ -66,9 +65,8 @@ const SHADOWS = {
 function useHeaderState() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const currentScrollY = useScrollStore((state) => state.scrollY);
+  const isScrolled = useScrollStore((state) => state.isScrolled);
 
-  const isScrolled = currentScrollY > SCROLL_THRESHOLD;
   const isRTL = I18nManager.isRTL;
   const isDark = theme.mode === 'dark';
 
