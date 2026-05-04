@@ -3,7 +3,7 @@ import {
   View,
   Pressable,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   Animated,
   I18nManager,
 } from "react-native";
@@ -11,8 +11,6 @@ import { Text } from "@/components/ui/text";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
-
-const { width } = Dimensions.get("window");
 
 interface CheckoutProps {
   total: number;
@@ -29,8 +27,13 @@ export default function Checkout({
   disabled = false,
   currency: propCurrency,
 }: CheckoutProps) {
-  const currencyCode = useCurrencyStore(state => state.currencyCode);
-  const currency = propCurrency || currencyCode || "USD";
+  const { width } = useWindowDimensions();
+  const activeCurrencyCode = useCurrencyStore(state => state.currencyCode);
+  // Prefer the explicit `currency` prop (the currency the `total` was computed
+  // in — e.g. cart.currencyCode). Only fall back to the active store currency
+  // when the caller hasn't told us; if neither is set, render no symbol rather
+  // than a bogus hardcoded one.
+  const currency = propCurrency || activeCurrencyCode || "";
   const { theme } = useTheme();
   const colors = theme.colors;
 
@@ -82,20 +85,25 @@ export default function Checkout({
     handleCheckout();
   }, [isDisabled, handleCheckout]);
 
-  const getSelectedCurrency = useCurrencyStore(state => state.getSelectedCurrency);
-  const selectedCurrency = getSelectedCurrency();
-  const displaySymbol = selectedCurrency?.symbol || currency;
+  // Resolve the currency object for the currency the total is denominated in,
+  // not the user's active currency — those can diverge during currency switches.
+  const currencies = useCurrencyStore(state => state.currencies);
+  const resolvedCurrency = useMemo(
+    () => currencies.find((c) => c.code === currency) ?? null,
+    [currencies, currency]
+  );
+  const displaySymbol = resolvedCurrency?.symbol || currency || "";
 
   const formattedTotal = useMemo(() => {
-    const decimals = selectedCurrency?.decimals ?? 2;
+    const decimals = resolvedCurrency?.decimals ?? 2;
     return total.toLocaleString(undefined, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
-  }, [total, selectedCurrency]);
+  }, [total, resolvedCurrency]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { width }]}>
       <Animated.View
         style={[
           styles.buttonContainer,
@@ -149,7 +157,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingVertical: 2,
     paddingHorizontal: 16,
-    width,
   },
 
   buttonContainer: {

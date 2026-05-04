@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { useCallback, useMemo } from 'react';
-import { toast } from 'sonner-native';
+import { toast } from '@/utils/toast';
 import i18n from '@/utils/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '@/services/api/client';

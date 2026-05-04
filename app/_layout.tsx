@@ -17,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NetworkProvider, useNetwork } from "@/providers/NetworkProvider";
 import { LanguageProvider } from "@/utils/LanguageContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
@@ -273,7 +274,7 @@ function AppLoaderWithClerk() {
           <Stack.Screen name="(screens)" />
         </Stack>
         <CurrencySelector mandatory />
-        <Toaster position="top-center" duration={3000} richColors />
+        <Toaster position="top-center" duration={3000} richColors offset={60} />
       </>
     </NotificationProvider>
   );
@@ -282,26 +283,28 @@ function AppLoaderWithClerk() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <LanguageProvider>
-          <ThemeProvider>
-            <KeyboardProvider>
-              <ClerkProvider>
-                <NetworkProvider>
-                  <View
-                    style={{
-                      direction: I18nManager.isRTL ? "rtl" : "ltr",
-                      flex: 1,
-                    }}
-                  >
-                    <AppLoaderWithClerk />
-                  </View>
-                </NetworkProvider>
-              </ClerkProvider>
-            </KeyboardProvider>
-          </ThemeProvider>
-        </LanguageProvider>
-      </BottomSheetModalProvider>
+      <SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <LanguageProvider>
+            <ThemeProvider>
+              <KeyboardProvider>
+                <ClerkProvider>
+                  <NetworkProvider>
+                    <View
+                      style={{
+                        direction: I18nManager.isRTL ? "rtl" : "ltr",
+                        flex: 1,
+                      }}
+                    >
+                      <AppLoaderWithClerk />
+                    </View>
+                  </NetworkProvider>
+                </ClerkProvider>
+              </KeyboardProvider>
+            </ThemeProvider>
+          </LanguageProvider>
+        </BottomSheetModalProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

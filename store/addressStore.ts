@@ -160,12 +160,18 @@ const useAddressStore = create<AddressState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
+      const wasDefault = get().addresses.find((a) => a._id === id)?.isDefault;
+
       await axiosInstance.delete(`/addresses/${id}`);
 
       set({
         addresses: get().addresses.filter((a) => a._id !== id),
         isLoading: false,
       });
+
+      if (wasDefault) {
+        await get().fetchAddresses();
+      }
     } catch (error: any) {
       set({
         error: error?.response?.data?.message || error.message,

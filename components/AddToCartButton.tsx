@@ -6,6 +6,7 @@ import { useUser } from "@clerk/clerk-expo";
 import useItemStore from "@/store/useItemStore";
 import i18n from "@/utils/i18n";
 import { useTracking } from "@/hooks/useTracking";
+import { useRouter } from "expo-router";
 import type { SelectedAttributes } from "@/domain/product/product.selectors";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { matchVariant } from "@/domain/variant/variant.match";
@@ -15,7 +16,7 @@ import {
   mergeSizeAndAttributes,
   normalizeAttributes,
 } from "@/utils/cartUtils";
-import { toast } from "sonner-native";
+import { toast } from "@/utils/toast";
 
 type Props = {
   product: NormalizedProduct;
@@ -41,10 +42,11 @@ const AddToCartButton = ({
   const { theme } = useTheme();
   const colors = theme.colors;
   const { addToCart, clearError, fetchCart } = useCartStore();
-  const { isSignedIn } = useUser();
+  const { isSignedIn, isLoaded: isAuthLoaded, user: clerkUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const { setSignInModelVisible } = useItemStore();
   const { trackEvent } = useTracking();
+  const router = useRouter();
 
   const buttonTitle = title || i18n.t("addToCart");
 
@@ -120,23 +122,43 @@ const AddToCartButton = ({
   }, [product, isLoading, disabled, availability.reason, requiredValidation.missing]);
 
   const handleAddToCart = useCallback(async () => {
+    console.log("[AddToCart] press", {
+      productId: product?.id,
+      productName: (product as any)?.name,
+      isSignedIn,
+      isAuthLoaded,
+      clerkUserId: clerkUser?.id ?? null,
+      isButtonDisabled,
+      isLoading,
+      disabledProp: disabled,
+      availability,
+      requiredMissing: requiredValidation.missing,
+      hasVariants,
+      matchingVariantId: matchingVariant?._id ?? null,
+      mergedAttributes,
+      simpleStock,
+    });
     onPressAttempt?.();
     if (isButtonDisabled) {
-      // show helpful toast in case user taps fast
-      if (!availability.ok) {
-        if (availability.reason === "missing_required") {
-          toast.info(i18n.t("selectAttributesFirst") || "Please select required attributes", {
-            description: requiredValidation.missing.length ? `Missing: ${requiredValidation.missing.join(", ")}` : "",
-          });
-        } else if (availability.reason === "no_variant") {
-          toast.info("Not available", {
-            description: "Please select a valid combination of attributes",
-          });
-        } else if (availability.reason === "out_of_stock") {
-          toast.error("Out of stock", {
-            description: "Out of stock",
-          });
-        }
+      console.log("[AddToCart] blocked — button disabled", {
+        reason: availability.reason,
+        disabledProp: disabled,
+        isLoading,
+      });
+      if (availability.reason === "missing_required") {
+        toast.info(i18n.t("selectAttributesFirst") || "Please select required attributes", {
+          description: requiredValidation.missing.length ? `Missing: ${requiredValidation.missing.join(", ")}` : "",
+        });
+      } else if (availability.reason === "no_variant") {
+        toast.info("Not available", {
+          description: "Please select a valid combination of attributes",
+        });
+      } else if (availability.reason === "out_of_stock") {
+        toast.error("Out of stock");
+      } else if (availability.reason === "inactive_product") {
+        toast.error("Product unavailable");
+      } else if (!isLoading) {
+        toast.info(i18n.t("selectAttributesFirst") || "Please select required attributes");
       }
       return;
     }
@@ -145,16 +167,37 @@ const AddToCartButton = ({
       setIsLoading(true);
       clearError?.();
 
-      if (!isSignedIn) {
-        setSignInModelVisible(true);
-        toast.error(i18n.t("pleaseSignInFirst") || "Please sign in first", {
-          description: i18n.t("pleaseSignInFirst") || "Please sign in first",
-        },);
+      if (!isAuthLoaded) {
+        console.log("[AddToCart] blocked — auth not loaded yet");
+        toast.info(i18n.t("loading") || "Loading…");
         return;
       }
 
-      // ✅ أهم سطر: ابعت نفس attributes اللي اخترتها
+      if (!isSignedIn) {
+        console.log("[AddToCart] blocked — user not signed in, routing to /(auth)/signin", {
+          isAuthLoaded,
+        });
+        setSignInModelVisible(true);
+        toast.error(i18n.t("pleaseSignInFirst") || "Please sign in first");
+        router.push("/(auth)/signin");
+        return;
+      }
+
+      console.log("[AddToCart] calling store.addToCart", {
+        productId: product.id,
+        size: mergedAttributes.size || "",
+        attributes: mergedAttributes,
+      });
+
       await addToCart(product.id, 1, mergedAttributes.size || "", mergedAttributes);
+
+      const stateAfter = useCartStore.getState();
+      console.log("[AddToCart] store.addToCart resolved", {
+        cartProductsCount: stateAfter.cart?.products?.length ?? 0,
+        cartTotalQuantity: stateAfter.cart?.totalQuantity ?? 0,
+        cartTotalPrice: stateAfter.cart?.totalPrice ?? 0,
+        storeError: stateAfter.error,
+      });
 
       trackEvent("add_to_cart", {
         productId: product.id,
@@ -164,11 +207,16 @@ const AddToCartButton = ({
       });
 
       setTimeout(() => {
-        fetchCart().catch(() => { });
+        fetchCart().catch((e: any) => console.log("[AddToCart] fetchCart after add failed", e?.message));
       }, 100);
 
       toast.success(i18n.t("addedToCart") || "Added to cart");
     } catch (err: any) {
+      console.log("[AddToCart] error", {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+      });
       const msg = err?.response?.data?.message || err?.message || "Error";
       toast.error(i18n.t("addToCartError") || `Add to cart error: ${msg}`);
     } finally {
@@ -180,10 +228,17 @@ const AddToCartButton = ({
     availability.reason,
     requiredValidation.missing,
     isSignedIn,
+    isAuthLoaded,
+    clerkUser?.id,
     setSignInModelVisible,
+    router,
     clearError,
     addToCart,
-    product.id,
+    product,
+    disabled,
+    isLoading,
+    availability,
+    simpleStock,
     mergedAttributes,
     trackEvent,
     fetchCart,
@@ -195,8 +250,9 @@ const AddToCartButton = ({
     <View style={styles.container}>
       <Pressable
         style={[styles.button, { backgroundColor: colors.primary }, buttonStyle, isButtonDisabled && styles.disabledButton]}
-        disabled={isButtonDisabled}
+        disabled={isLoading}
         onPress={handleAddToCart}
+        accessibilityState={{ disabled: isButtonDisabled }}
       >
         {isLoading ? (
           <ActivityIndicator size="small" color="#FFFFFFFF" />

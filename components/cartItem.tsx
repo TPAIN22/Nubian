@@ -3,7 +3,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  useWindowDimensions,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import React, { useMemo } from "react";
@@ -11,6 +10,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { useTheme } from "@/providers/ThemeProvider";
 import { extractCartItemAttributes, getAttributesDisplayText } from "@/utils/cartUtils";
+import i18n from "@/utils/i18n";
 
 import {
   formatMoney,
@@ -25,6 +25,16 @@ import { normalizeProduct } from "@/domain/product/product.normalize";
 import { matchVariant } from "@/domain/variant/variant.match";
 
 import { navigateToProduct } from "@/utils/deepLinks";
+import type { CartItem as CartLineItem } from "@/types/cart.types";
+
+interface CartItemProps {
+  item: CartLineItem;
+  increment: (item: CartLineItem) => void;
+  decrement: (item: CartLineItem) => void;
+  deleteItem: (item: CartLineItem) => void;
+  isUpdating: boolean;
+  imageSize?: number;
+}
 
 const CartItem = React.memo(function CartItem({
   item,
@@ -32,18 +42,12 @@ const CartItem = React.memo(function CartItem({
   decrement,
   deleteItem,
   isUpdating,
-}: any) {
+  imageSize = 100,
+}: CartItemProps) {
   const { theme } = useTheme();
   const Colors = theme.colors;
-  const { width: screenWidth } = useWindowDimensions();
-  
-  const PLACEHOLDER_IMAGE =
-    "https://placehold.co/80x100/eeeeee/aaaaaa?text=No+Image";
 
-  const imageUri = item?.product?.images?.[0] || PLACEHOLDER_IMAGE;
-
-  // Responsive image size
-  const imageSize = screenWidth < 360 ? 80 : screenWidth < 600 ? 100 : 120;
+  const imageUri: string | null = (item?.product as any)?.images?.[0] || null;
 
   // ✅ Extract attributes safely (handles Map/object/legacy size)
   const attributes = useMemo(() => extractCartItemAttributes(item), [item]);
@@ -100,10 +104,17 @@ const CartItem = React.memo(function CartItem({
   const totalFinal = finalUnit * validQty;
   const totalOriginal = originalUnit * validQty;
 
-  // Build a Money envelope for the line total when we have currency context,
-  // so formatting uses the right symbol/decimals/locale.
   const buildLineMoney = (amount: number, src: Money | null): Money | number =>
     src ? { amount, currency: src.currency, decimals: src.decimals } : amount;
+
+  const finalTotalLabel = useMemo(
+    () => formatMoney(buildLineMoney(totalFinal, finalUnitMoney)),
+    [totalFinal, finalUnitMoney]
+  );
+  const originalTotalLabel = useMemo(
+    () => formatMoney(buildLineMoney(totalOriginal, originalUnitMoney)),
+    [totalOriginal, originalUnitMoney]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.cardBackground }]}>
@@ -115,11 +126,27 @@ const CartItem = React.memo(function CartItem({
           }
         }}
       >
-        <Image
-          source={{ uri: imageUri }}
-          style={[styles.productImage, { width: imageSize, height: imageSize }]}
-          contentFit="cover"
-        />
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            style={[styles.productImage, { width: imageSize, height: imageSize }]}
+            contentFit="cover"
+          />
+        ) : (
+          <View
+            style={[
+              styles.productImage,
+              styles.imagePlaceholder,
+              {
+                width: imageSize,
+                height: imageSize,
+                backgroundColor: Colors.surface,
+              },
+            ]}
+          >
+            <Ionicons name="image-outline" size={Math.round(imageSize * 0.4)} color={Colors.text.veryLightGray} />
+          </View>
+        )}
       </TouchableOpacity>
 
       <View style={styles.details}>
@@ -155,6 +182,10 @@ const CartItem = React.memo(function CartItem({
                 { backgroundColor: Colors.cardBackground },
               ]}
               onPress={() => decrement(item)}
+              disabled={isUpdating}
+              accessibilityRole="button"
+              accessibilityLabel={i18n.t("cart_decreaseQuantity") || "Decrease quantity"}
+              accessibilityState={{ disabled: isUpdating }}
             >
               <Ionicons name="remove" size={18} color={Colors.text.gray} />
             </TouchableOpacity>
@@ -169,6 +200,10 @@ const CartItem = React.memo(function CartItem({
                 { backgroundColor: Colors.cardBackground },
               ]}
               onPress={() => increment(item)}
+              disabled={isUpdating}
+              accessibilityRole="button"
+              accessibilityLabel={i18n.t("cart_increaseQuantity") || "Increase quantity"}
+              accessibilityState={{ disabled: isUpdating }}
             >
               <Ionicons name="add" size={18} color={Colors.text.gray} />
             </TouchableOpacity>
@@ -182,14 +217,14 @@ const CartItem = React.memo(function CartItem({
                   { color: Colors.text.veryLightGray },
                 ]}
               >
-                {formatMoney(buildLineMoney(totalOriginal, originalUnitMoney))}
+                {originalTotalLabel}
               </Text>
             )}
             <Text
               style={[styles.price, { color: Colors.success }]}
               numberOfLines={1}
             >
-              {formatMoney(buildLineMoney(totalFinal, finalUnitMoney))}
+              {finalTotalLabel}
             </Text>
           </View>
         </View>
@@ -199,6 +234,9 @@ const CartItem = React.memo(function CartItem({
         style={[styles.trashContainer, { backgroundColor: Colors.error + "20" }]}
         onPress={() => deleteItem(item)}
         disabled={isUpdating}
+        accessibilityRole="button"
+        accessibilityLabel={i18n.t("cart_removeItem") || "Remove item"}
+        accessibilityState={{ disabled: isUpdating, busy: isUpdating }}
       >
         {isUpdating ? (
           <ActivityIndicator size="small" color={Colors.error} />
@@ -223,6 +261,10 @@ const styles = StyleSheet.create({
   },
   productImage: {
     borderRadius: 8,
+  },
+  imagePlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   details: {
     flex: 1,

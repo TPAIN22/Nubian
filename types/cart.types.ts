@@ -22,6 +22,21 @@ export interface CartItem {
 }
 
 /**
+ * Snapshot of the coupon applied to the cart. The backend recomputes
+ * `discountAmount` against the current subtotal on every save, so this is the
+ * value to display.
+ */
+export interface AppliedCoupon {
+  couponId?: string;
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+  maxDiscount?: number | null;
+  minOrderAmount?: number;
+  discountAmount: number;
+}
+
+/**
  * Cart interface
  * Represents the entire cart
  */
@@ -30,7 +45,16 @@ export interface Cart {
   user?: string;
   products: CartItem[];
   totalQuantity: number;
+  /** Sum of unitFinalPrice * quantity, before discount/shipping. */
+  subtotal?: number;
+  /** Currently-applied coupon discount in the active currency. */
+  discount?: number;
+  /** Shipping fee in the active currency (0 until shipping is implemented). */
+  shipping?: number;
+  /** Final amount: subtotal - discount + shipping (clamped at 0). */
   totalPrice: number;
+  appliedCoupon?: AppliedCoupon | null;
+  currencyCode?: string;
   createdAt?: string;
   updatedAt?: string;
 }

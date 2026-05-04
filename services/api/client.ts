@@ -27,15 +27,15 @@ const fetchAdapter = async (config: any) => {
     if (timeoutId) clearTimeout(timeoutId);
 
     const responseText = await response.text();
-    let responseData = responseText;
-    
+    let responseData: any = responseText;
+
     try {
       responseData = JSON.parse(responseText);
     } catch (e) {
       // Keep as text if not JSON
     }
 
-    return {
+    const axiosResponse = {
       data: responseData,
       status: response.status,
       statusText: response.statusText,
@@ -43,6 +43,22 @@ const fetchAdapter = async (config: any) => {
       config,
       request: null,
     };
+
+    const validateStatus = config.validateStatus || ((s: number) => s >= 200 && s < 300);
+    if (!validateStatus(response.status)) {
+      const serverMsg =
+        (responseData && typeof responseData === "object" && (responseData.error?.message || responseData.message)) ||
+        `Request failed with status code ${response.status}`;
+      const err: any = new Error(serverMsg);
+      err.config = config;
+      err.code = response.status >= 500 ? "ERR_BAD_RESPONSE" : "ERR_BAD_REQUEST";
+      err.response = axiosResponse;
+      err.request = null;
+      err.isAxiosError = true;
+      throw err;
+    }
+
+    return axiosResponse;
   } catch (error: any) {
     if (timeoutId) clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
