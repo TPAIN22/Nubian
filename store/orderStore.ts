@@ -1,6 +1,8 @@
 import { create } from "zustand";
+import axiosInstance from "@/services/api/client";
+import { describeError } from "@/utils/apiError";
 
-/* ================= SAFE TYPES ================= */
+/* ================= TYPES ================= */
 
 type OrderStatus =
   | "pending"
@@ -8,32 +10,65 @@ type OrderStatus =
   | "processing"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "PLACED"
+  | "PAID"
+  | "REJECTED";
 
-type Order = {
+export type Order = {
   _id: string;
-  orderNumber: string;
+  id?: string;
+  orderNumber?: string;
   status: OrderStatus;
-  totalAmount: number;
+  totalAmount?: number;
+  total?: number;
+  subtotal?: number;
+  shippingFee?: number;
+  currency?: string;
 
   city?: string;
-  address?: string;
+  address?: any;
 
-  productsDetails: {
-    name: string;
+  items?: {
+    productId: string;
+    name?: string;
+    price?: number;
+    quantity: number;
+    image?: string;
+    attributes?: Record<string, string>;
   }[];
 
+  productsDetails?: { name: string }[];
   productsCount?: number;
+
+  paymentMethod?: string;
+  paymentStatus?: string;
+  proofUrl?: string;
+
+  createdAt?: string;
+  estimatedDeliveryAt?: string;
 };
 
-type CreateOrderPayload = {
+export type CreateOrderPayload = {
   addressId?: string;
-  items: unknown[];
-
-  paymentMethod: string;
-
+  shippingAddress?: string;
+  phoneNumber?: string;
+  items: {
+    productId: string;
+    quantity: number;
+    unitPrice?: number;
+    attributes?: Record<string, string>;
+    [k: string]: unknown;
+  }[];
+  paymentMethod: "CASH" | "BANKAK" | string;
+  couponCode?: string;
+  transferProof?: string;
+  paymentProofUrl?: string;
   proofFileUri?: string;
+  idempotencyKey?: string;
 };
+
+const extractServerMessage = (e: any): string => describeError(e);
 
 /* ================= STORE ================= */
 
@@ -45,9 +80,10 @@ type OrderStore = {
   error: string | null;
 
   getUserOrders: () => Promise<void>;
-  getOrderById: (id: string) => Promise<void>;
-  createOrder: (payload: CreateOrderPayload) => Promise<void>;
+  getOrderById: (id: string) => Promise<Order | null>;
+  createOrder: (payload: CreateOrderPayload) => Promise<Order>;
 
+  clearError: () => void;
   clearOrders: () => void;
 };
 
@@ -58,67 +94,59 @@ const useOrderStore = create<OrderStore>((set) => ({
   isLoading: false,
   error: null,
 
-  /* ===== MOCK SAFE CALL ===== */
   getUserOrders: async () => {
-    set({ isLoading: true });
-
+    set({ isLoading: true, error: null });
     try {
-      // 👇 حط API هنا
-      const data: Order[] = [];
-
-      set({
-        orders: data,
-        isLoading: false,
-      });
-    } catch {
-      set({
-        error: "error",
-        isLoading: false,
-      });
+      const { data } = await axiosInstance.get("/orders/my-orders");
+      const orders: Order[] = Array.isArray(data) ? data : data?.orders ?? [];
+      set({ orders, isLoading: false });
+    } catch (e: any) {
+      set({ error: extractServerMessage(e), isLoading: false });
     }
   },
 
   getOrderById: async (id) => {
-    set({ isLoading: true });
-
+    set({ isLoading: true, error: null });
     try {
-      const order: Order = {
-        _id: id,
-        orderNumber: "123",
-        status: "pending",
-        totalAmount: 0,
-        productsDetails: [],
-      };
-
-      set({
-        selectedOrder: order,
-        isLoading: false,
-      });
-    } catch {
-      set({
-        error: "error",
-        isLoading: false,
-      });
+      const { data } = await axiosInstance.get(`/orders/${id}`);
+      const order: Order = data?.order ?? data;
+      set({ selectedOrder: order, isLoading: false });
+      return order;
+    } catch (e: any) {
+      set({ error: extractServerMessage(e), isLoading: false });
+      return null;
     }
   },
 
-  createOrder: async () => {
-    set({ isLoading: true });
-
+  createOrder: async (payload) => {
+    set({ isLoading: true, error: null });
     try {
-      set({ isLoading: false });
-    } catch {
-      set({
-        error: "error",
+      const headers: Record<string, string> = {};
+      if (payload.idempotencyKey) {
+        headers["Idempotency-Key"] = payload.idempotencyKey;
+      }
+      const { idempotencyKey: _omit, ...body } = payload;
+      const { data } = await axiosInstance.post("/orders", body, { headers });
+      const order: Order = data?.order ?? data;
+      set((state) => ({
+        orders: order?._id ? [order, ...state.orders] : state.orders,
+        selectedOrder: order ?? state.selectedOrder,
         isLoading: false,
-      });
+      }));
+      return order;
+    } catch (e: any) {
+      set({ error: extractServerMessage(e), isLoading: false });
+      throw e;
     }
   },
+
+  clearError: () => set({ error: null }),
 
   clearOrders: () =>
     set({
       orders: [],
       selectedOrder: null,
+      error: null,
     }),
 }));
 

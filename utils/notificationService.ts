@@ -15,7 +15,7 @@ export interface Notification {
   isRead: boolean;
   sentAt: string;
   expiresAt?: string;
-  status: 'pending' | 'sent' | 'failed' | 'delivered';
+  status: 'pending' | 'queued' | 'retrying' | 'sent' | 'failed' | 'delivered';
   category: 'transactional' | 'merchant_alerts' | 'behavioral' | 'marketing' | 'system';
   priority: number;
   createdAt: string;

@@ -1,19 +1,18 @@
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
-import CheckOutModal from "@/components/checkOutModal";
-import { useTheme } from "@/providers/ThemeProvider";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import CheckOutModal from "@/components/checkOutModal";
+import { useCheckoutTheme } from "@/components/checkout";
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
-  const Colors = theme.colors;
+  const t = useCheckoutTheme();
 
   return (
     <BottomSheetModalProvider>
-    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-      <CheckOutModal handleClose={() => router.back()} />
-    </View>
+      <View style={[styles.container, { backgroundColor: t.surface }]}>
+        <CheckOutModal handleClose={() => router.back()} />
+      </View>
     </BottomSheetModalProvider>
   );
 }

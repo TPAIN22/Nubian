@@ -36,6 +36,8 @@ interface CartItemProps {
   imageSize?: number;
 }
 
+const HAIRLINE = StyleSheet.hairlineWidth;
+
 const CartItem = React.memo(function CartItem({
   item,
   increment,
@@ -49,7 +51,6 @@ const CartItem = React.memo(function CartItem({
 
   const imageUri: string | null = (item?.product as any)?.images?.[0] || null;
 
-  // ✅ Extract attributes safely (handles Map/object/legacy size)
   const attributes = useMemo(() => extractCartItemAttributes(item), [item]);
   const attributesText = useMemo(
     () => getAttributesDisplayText(attributes),
@@ -61,7 +62,6 @@ const CartItem = React.memo(function CartItem({
     return raw ? normalizeProduct(raw) : null;
   }, [item?.product]);
 
-  // ✅ IMPORTANT: price must be calculated using selectedAttributes => variant price
   const validQty =
     typeof item?.quantity === "number" && !isNaN(item.quantity)
       ? item.quantity
@@ -72,7 +72,6 @@ const CartItem = React.memo(function CartItem({
     return matchVariant(normalizedProduct, attributes);
   }, [normalizedProduct, attributes]);
 
-  // Prefer typed Money envelope; fall back to legacy resolver for older payloads.
   const finalUnitMoney = useMemo(
     () => getProductFinalMoney(normalizedProduct, matchingVariant),
     [normalizedProduct, matchingVariant]
@@ -116,21 +115,32 @@ const CartItem = React.memo(function CartItem({
     [totalOriginal, originalUnitMoney]
   );
 
+  const goToProduct = () => {
+    if (item?.product?._id) {
+      navigateToProduct(item.product._id, item.product);
+    }
+  };
+
+  const productName = item?.product?.name || "Product";
+  const productLinkLabel = `${productName}${attributesText ? `, ${attributesText}` : ""}`;
+
   return (
-    <View style={[styles.container, { backgroundColor: Colors.cardBackground }]}>
+    <View style={[styles.container, isUpdating && styles.containerUpdating]}>
       <TouchableOpacity
-        style={styles.imgContainer}
-        onPress={() => {
-          if (item?.product?._id) {
-            navigateToProduct(item.product._id, item.product);
-          }
-        }}
+        onPress={goToProduct}
+        activeOpacity={0.7}
+        accessibilityRole="imagebutton"
+        accessibilityLabel={productLinkLabel}
       >
         {imageUri ? (
           <Image
             source={{ uri: imageUri }}
-            style={[styles.productImage, { width: imageSize, height: imageSize }]}
+            style={[
+              styles.productImage,
+              { width: imageSize, height: imageSize },
+            ]}
             contentFit="cover"
+            accessibilityLabel={productName}
           />
         ) : (
           <View
@@ -140,88 +150,125 @@ const CartItem = React.memo(function CartItem({
               {
                 width: imageSize,
                 height: imageSize,
-                backgroundColor: Colors.surface,
+                backgroundColor: Colors.cardBackground,
               },
             ]}
           >
-            <Ionicons name="image-outline" size={Math.round(imageSize * 0.4)} color={Colors.text.veryLightGray} />
+            <Ionicons
+              name="image-outline"
+              size={Math.round(imageSize * 0.35)}
+              color={Colors.text.veryLightGray}
+            />
           </View>
         )}
       </TouchableOpacity>
 
       <View style={styles.details}>
-        <TouchableOpacity
-          style={styles.nameAndSize}
-          onPress={() => {
-            if (item?.product?._id) {
-              navigateToProduct(item.product._id, item.product);
-            }
-          }}
-        >
-          <Text
-            style={[styles.productName, { color: Colors.text.gray }]}
-            numberOfLines={2}
+        <View style={styles.topRow}>
+          <TouchableOpacity
+            style={styles.nameWrap}
+            onPress={goToProduct}
+            activeOpacity={0.7}
           >
-            {item?.product?.name || "Product Name"}
-          </Text>
-
-          {attributesText ? (
             <Text
-              style={[styles.productSize, { color: Colors.text.veryLightGray }]}
+              style={[styles.productName, { color: Colors.text.gray }]}
+              numberOfLines={2}
             >
-              {attributesText}
+              {item?.product?.name || "Product"}
             </Text>
-          ) : null}
-        </TouchableOpacity>
 
-        <View style={styles.priceAndQuantity}>
-          <View style={[styles.quantity, { backgroundColor: Colors.surface }]}>
+            {attributesText ? (
+              <Text
+                style={[
+                  styles.productAttrs,
+                  { color: Colors.text.veryLightGray },
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {attributesText}
+              </Text>
+            ) : null}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => deleteItem(item)}
+            disabled={isUpdating}
+            accessibilityRole="button"
+            accessibilityLabel={i18n.t("cart_removeItem") || "Remove item"}
+            accessibilityState={{ disabled: isUpdating, busy: isUpdating }}
+            hitSlop={10}
+            style={styles.removeBtn}
+          >
+            {isUpdating ? (
+              <ActivityIndicator size="small" color={Colors.text.veryLightGray} />
+            ) : (
+              <Ionicons
+                name="close"
+                size={18}
+                color={Colors.text.veryLightGray}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.bottomRow}>
+          <View
+            style={[
+              styles.stepper,
+              { borderColor: Colors.text.veryLightGray },
+            ]}
+            accessibilityRole="adjustable"
+            accessibilityLabel={i18n.t("cart_quantity") || "Quantity"}
+            accessibilityValue={{ text: String(validQty) }}
+          >
             <TouchableOpacity
-              style={[
-                styles.quantityButton,
-                { backgroundColor: Colors.cardBackground },
-              ]}
+              style={styles.stepperBtn}
               onPress={() => decrement(item)}
               disabled={isUpdating}
               accessibilityRole="button"
-              accessibilityLabel={i18n.t("cart_decreaseQuantity") || "Decrease quantity"}
+              accessibilityLabel={
+                i18n.t("cart_decreaseQuantity") || "Decrease quantity"
+              }
               accessibilityState={{ disabled: isUpdating }}
+              hitSlop={8}
             >
-              <Ionicons name="remove" size={18} color={Colors.text.gray} />
+              <Ionicons name="remove" size={16} color={Colors.text.gray} />
             </TouchableOpacity>
 
-            <Text style={[styles.quantityText, { color: Colors.text.gray }]}>
+            <Text style={[styles.qtyText, { color: Colors.text.gray }]}>
               {validQty}
             </Text>
 
             <TouchableOpacity
-              style={[
-                styles.quantityButton,
-                { backgroundColor: Colors.cardBackground },
-              ]}
+              style={styles.stepperBtn}
               onPress={() => increment(item)}
               disabled={isUpdating}
               accessibilityRole="button"
-              accessibilityLabel={i18n.t("cart_increaseQuantity") || "Increase quantity"}
+              accessibilityLabel={
+                i18n.t("cart_increaseQuantity") || "Increase quantity"
+              }
               accessibilityState={{ disabled: isUpdating }}
+              hitSlop={8}
             >
-              <Ionicons name="add" size={18} color={Colors.text.gray} />
+              <Ionicons name="add" size={16} color={Colors.text.gray} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.priceContainer}>
-            {hasDisc && (
+          <View style={styles.priceWrap}>
+            {hasDisc ? (
               <Text
                 style={[
-                  styles.originalPriceText,
+                  styles.originalPrice,
                   { color: Colors.text.veryLightGray },
                 ]}
+                numberOfLines={1}
               >
                 {originalTotalLabel}
               </Text>
-            )}
+            ) : null}
             <Text
-              style={[styles.price, { color: Colors.success }]}
+              style={[styles.price, { color: Colors.text.gray }]}
               numberOfLines={1}
             >
               {finalTotalLabel}
@@ -229,21 +276,6 @@ const CartItem = React.memo(function CartItem({
           </View>
         </View>
       </View>
-
-      <TouchableOpacity
-        style={[styles.trashContainer, { backgroundColor: Colors.error + "20" }]}
-        onPress={() => deleteItem(item)}
-        disabled={isUpdating}
-        accessibilityRole="button"
-        accessibilityLabel={i18n.t("cart_removeItem") || "Remove item"}
-        accessibilityState={{ disabled: isUpdating, busy: isUpdating }}
-      >
-        {isUpdating ? (
-          <ActivityIndicator size="small" color={Colors.error} />
-        ) : (
-          <Ionicons name="trash-outline" size={20} color={Colors.error} />
-        )}
-      </TouchableOpacity>
     </View>
   );
 });
@@ -253,14 +285,14 @@ export default CartItem;
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    borderRadius: 12,
-    padding: 5,
+    alignItems: "flex-start",
+    gap: 14,
   },
-  imgContainer: {
-    marginRight: 16,
+  containerUpdating: {
+    opacity: 0.55,
   },
   productImage: {
-    borderRadius: 8,
+    borderRadius: 6,
   },
   imagePlaceholder: {
     justifyContent: "center",
@@ -269,69 +301,72 @@ const styles = StyleSheet.create({
   details: {
     flex: 1,
     justifyContent: "space-between",
+    minHeight: 80,
   },
-  nameAndSize: {
-    marginBottom: 8,
+  topRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  nameWrap: {
+    flex: 1,
   },
   productName: {
     fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
+    fontWeight: "500",
+    lineHeight: 19,
   },
-  productSize: {
+  productAttrs: {
     fontSize: 12,
+    marginTop: 4,
+    fontWeight: "400",
   },
-  priceAndQuantity: {
+  removeBtn: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    flexWrap: "wrap",
+    marginTop: 12,
     gap: 8,
   },
-  quantity: {
+  stepper: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 20,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderWidth: HAIRLINE,
+    borderRadius: 6,
+    paddingHorizontal: 2,
   },
-  quantityButton: {
-    width: 32,
-    height: 32,
+  stepperBtn: {
+    width: 36,
+    height: 36,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 20,
-    margin: 2,
   },
-  quantityText: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginHorizontal: 12,
+  qtyText: {
+    fontSize: 13,
+    fontWeight: "500",
+    minWidth: 18,
+    textAlign: "center",
   },
-  priceContainer: {
+  priceWrap: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     gap: 6,
-    marginLeft: 22,
-    flexShrink: 0,
-    minWidth: 80,
+    flexShrink: 1,
   },
-  price: {
-    fontSize: 14,
-    fontWeight: "700",
-    flexShrink: 0,
-  },
-  originalPriceText: {
+  originalPrice: {
     fontSize: 12,
     textDecorationLine: "line-through",
     fontWeight: "400",
   },
-  trashContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: 28,
-    height: 28,
-    borderRadius: 20,
-    marginLeft: 12,
+  price: {
+    fontSize: 14,
+    fontWeight: "600",
+    flexShrink: 0,
   },
 });

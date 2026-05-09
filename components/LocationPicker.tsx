@@ -1,19 +1,27 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Modal,
-  Pressable,
   ActivityIndicator,
+  FlatList,
+  I18nManager,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
   TextInput,
+  View,
 } from "react-native";
-import { Text } from '@/components/ui/text';
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import i18n from '../utils/i18n';
-import { useTheme } from '@/providers/ThemeProvider';
-import useLocationStore from '@/store/locationStore';
+import { Text } from "@/components/ui/text";
+import i18n from "@/utils/i18n";
+import useLocationStore from "@/store/locationStore";
+import {
+  radius,
+  spacing,
+  typography,
+  useCheckoutTheme,
+} from "@/components/checkout";
 
 export interface LocationData {
   countryId?: string;
@@ -24,6 +32,18 @@ export interface LocationData {
   subCityName?: string;
 }
 
+/**
+ * Backend returns `nameEn` / `nameAr` (see apps/backend/src/models/country.model.js
+ * and friends). Pick whichever matches the active language, falling back across
+ * locales and the legacy `name` field so older cached records keep rendering.
+ */
+const localizedName = (item: any): string => {
+  if (!item) return "";
+  const isAr = i18n.language === "ar";
+  if (isAr) return item.nameAr || item.nameEn || item.name || "";
+  return item.nameEn || item.nameAr || item.name || "";
+};
+
 interface LocationPickerProps {
   visible: boolean;
   onClose: () => void;
@@ -31,14 +51,18 @@ interface LocationPickerProps {
   initialValues?: LocationData;
 }
 
+type Step = "country" | "city" | "subcity";
+
 const LocationPicker: React.FC<LocationPickerProps> = ({
   visible,
   onClose,
   onSelect,
   initialValues,
 }) => {
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const t = useCheckoutTheme();
+  const insets = useSafeAreaInsets();
+  const writingDirection: "ltr" | "rtl" =
+    i18n.language === "ar" ? "rtl" : "ltr";
 
   const {
     countries,
@@ -49,311 +73,528 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     loadCities,
     loadSubCities,
     getCitiesForCountry,
-    getSubCitiesForCity
+    getSubCitiesForCity,
   } = useLocationStore();
 
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [, setSelectedSubCity] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<'country' | 'city' | 'subcity'>('country');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [step, setStep] = useState<Step>("country");
+  const [search, setSearch] = useState("");
 
-  // Reset state when modal opens
   useEffect(() => {
-    if (visible) {
-      loadCountries();
-      setSelectedCountry(initialValues?.countryId || null);
-      setSelectedCity(initialValues?.cityId || null);
-      setSelectedSubCity(initialValues?.subCityId || null);
-      setCurrentStep('country');
-      setSearchQuery('');
-    }
-  }, [visible]); // Only depend on visible, not initialValues
+    if (!visible) return;
+    loadCountries();
+    setSelectedCountry(initialValues?.countryId || null);
+    setSelectedCity(initialValues?.cityId || null);
+    setSelectedSubCity(initialValues?.subCityId || null);
+    setStep("country");
+    setSearch("");
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load cities when country changes (use ref to track if we've already loaded)
   useEffect(() => {
-    if (selectedCountry && visible) {
-      loadCities(selectedCountry);
-    }
-  }, [selectedCountry, visible]); // Remove loadCities from dependencies
+    if (selectedCountry && visible) loadCities(selectedCountry);
+  }, [selectedCountry, visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load subcities when city changes
   useEffect(() => {
-    if (selectedCity && visible) {
-      loadSubCities(selectedCity);
-    }
-  }, [selectedCity, visible]); // Remove loadSubCities from dependencies
+    if (selectedCity && visible) loadSubCities(selectedCity);
+  }, [selectedCity, visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleCountrySelect = useCallback((countryId: string) => {
-    setSelectedCountry(countryId);
+  const onPickCountry = useCallback((id: string) => {
+    setSelectedCountry(id);
     setSelectedCity(null);
     setSelectedSubCity(null);
-    setCurrentStep('city');
-    setSearchQuery('');
+    setStep("city");
+    setSearch("");
   }, []);
 
-  const handleCitySelect = useCallback((cityId: string) => {
-    setSelectedCity(cityId);
+  const onPickCity = useCallback((id: string) => {
+    setSelectedCity(id);
     setSelectedSubCity(null);
-    setCurrentStep('subcity');
-    setSearchQuery('');
+    setStep("subcity");
+    setSearch("");
   }, []);
 
-  const handleSubCitySelect = useCallback((subCityId: string) => {
-    const selectedCountryData = countries.find((c: any) => c._id === selectedCountry);
-    const selectedCityData = citiesByCountryId[selectedCountry || '']?.find((c: any) => c._id === selectedCity);
-    const selectedSubCityData = subCitiesByCityId[selectedCity || '']?.find((s: any) => s._id === subCityId);
+  const onPickSubCity = useCallback(
+    (id: string) => {
+      const country = countries.find((c: any) => c._id === selectedCountry);
+      const city = citiesByCountryId[selectedCountry || ""]?.find(
+        (c: any) => c._id === selectedCity,
+      );
+      const sub = subCitiesByCityId[selectedCity || ""]?.find(
+        (s: any) => s._id === id,
+      );
 
-    const locationData: LocationData = {
-      countryId: selectedCountry || undefined,
-      cityId: selectedCity || undefined,
-      subCityId: subCityId,
-      countryName: selectedCountryData?.name,
-      cityName: selectedCityData?.name,
-      subCityName: selectedSubCityData?.name,
-    };
+      onSelect({
+        countryId: selectedCountry || undefined,
+        cityId: selectedCity || undefined,
+        subCityId: id,
+        countryName: localizedName(country),
+        cityName: localizedName(city),
+        subCityName: localizedName(sub),
+      });
+      onClose();
+    },
+    [
+      countries,
+      selectedCountry,
+      selectedCity,
+      citiesByCountryId,
+      subCitiesByCityId,
+      onSelect,
+      onClose,
+    ],
+  );
 
-    onSelect(locationData);
-    onClose();
-  }, [selectedCountry, selectedCity, countries, citiesByCountryId, subCitiesByCityId, onSelect, onClose]);
-
-  const handleBack = useCallback(() => {
-    if (currentStep === 'subcity') {
-      setCurrentStep('city');
+  const onBack = useCallback(() => {
+    if (step === "subcity") {
+      setStep("city");
       setSelectedSubCity(null);
-    } else if (currentStep === 'city') {
-      setCurrentStep('country');
+    } else if (step === "city") {
+      setStep("country");
       setSelectedCity(null);
       setSelectedSubCity(null);
     }
-    setSearchQuery('');
-  }, [currentStep]);
+    setSearch("");
+  }, [step]);
 
-  const getCurrentData = useCallback(() => {
-    const matches = (item: { name?: string }) =>
-      searchQuery === '' || (item.name ?? '').toLowerCase().includes(searchQuery.toLowerCase());
+  const data = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    // Match against the localized name as well as the alternate locale and
+    // any legacy `name`, so users searching in either language still find rows.
+    const matches = (item: any) => {
+      if (!q) return true;
+      return [item.nameEn, item.nameAr, item.name, localizedName(item)]
+        .some(v => String(v ?? "").toLowerCase().includes(q));
+    };
 
-    switch (currentStep) {
-      case 'country':
-        return countries.filter(matches);
-      case 'city': {
-        const cities = selectedCountry ? getCitiesForCountry(selectedCountry) : [];
-        return cities.filter(matches);
-      }
-      case 'subcity': {
-        const subCities = selectedCity ? getSubCitiesForCity(selectedCity) : [];
-        return subCities.filter(matches);
-      }
-      default:
-        return [];
+    if (step === "country") return countries.filter(matches);
+    if (step === "city") {
+      return selectedCountry ? getCitiesForCountry(selectedCountry).filter(matches) : [];
     }
-  }, [currentStep, countries, selectedCountry, selectedCity, searchQuery, getCitiesForCountry, getSubCitiesForCity]);
+    return selectedCity ? getSubCitiesForCity(selectedCity).filter(matches) : [];
+  }, [
+    step,
+    countries,
+    selectedCountry,
+    selectedCity,
+    search,
+    getCitiesForCountry,
+    getSubCitiesForCity,
+  ]);
 
-  const getCurrentTitle = () => {
-    switch (currentStep) {
-      case 'country':
-        return i18n.t('location_selectCountry');
-      case 'city':
-        return i18n.t('location_selectCity');
-      case 'subcity':
-        return i18n.t('location_selectSubCity');
-      default:
-        return '';
-    }
-  };
+  const title =
+    step === "country"
+      ? i18n.t("location_selectCountry") || "Select country"
+      : step === "city"
+        ? i18n.t("location_selectCity") || "Select city"
+        : i18n.t("location_selectSubCity") || "Select area";
 
-  const getCurrentPlaceholder = () => {
-    switch (currentStep) {
-      case 'country':
-        return i18n.t('location_searchCountry');
-      case 'city':
-        return i18n.t('location_searchCity');
-      case 'subcity':
-        return i18n.t('location_searchSubCity');
-      default:
-        return '';
-    }
-  };
+  const placeholder =
+    step === "country"
+      ? i18n.t("location_searchCountry") || "Search country"
+      : step === "city"
+        ? i18n.t("location_searchCity") || "Search city"
+        : i18n.t("location_searchSubCity") || "Search area";
 
-  const canGoBack = currentStep !== 'country';
+  const stepIcon: React.ComponentProps<typeof Ionicons>["name"] =
+    step === "country"
+      ? "earth-outline"
+      : step === "city"
+        ? "business-outline"
+        : "navigate-outline";
 
-  if (!visible) return null;
+  // Breadcrumb pieces
+  const country = countries.find((c: any) => c._id === selectedCountry);
+  const city = citiesByCountryId[selectedCountry || ""]?.find(
+    (c: any) => c._id === selectedCity,
+  );
+
+  const renderItem = ({ item }: { item: any }) => (
+    <Pressable
+      onPress={() => {
+        if (step === "country") onPickCountry(item._id);
+        else if (step === "city") onPickCity(item._id);
+        else onPickSubCity(item._id);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={localizedName(item)}
+      style={({ pressed }) => [
+        styles.item,
+        {
+          backgroundColor: pressed ? t.surfaceMuted : "transparent",
+          borderBottomColor: t.divider,
+        },
+      ]}
+    >
+      <View
+        style={[styles.itemIcon, { backgroundColor: t.accentSoft }]}
+      >
+        <Ionicons name={stepIcon} size={16} color={t.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[styles.itemTitle, { color: t.textPrimary, writingDirection }]}
+          numberOfLines={1}
+        >
+          {localizedName(item)}
+        </Text>
+      </View>
+      <Ionicons
+        name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+        size={16}
+        color={t.textTertiary}
+      />
+    </Pressable>
+  );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalOverlay}>
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-        />
-        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            {canGoBack && (
-              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color={colors.primary} />
-              </TouchableOpacity>
-            )}
-            <Text style={[styles.modalTitle, { color: colors.text.gray }]}>
-              {getCurrentTitle()}
-            </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text.veryLightGray} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color={colors.text.veryLightGray} style={styles.searchIcon} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text.gray }]}
-              placeholder={getCurrentPlaceholder()}
-              placeholderTextColor={colors.text.veryLightGray}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-
-          {/* Content */}
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.text.veryLightGray }]}>
-                {i18n.t('loading')}
-              </Text>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={[styles.backdrop, { backgroundColor: t.overlay }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.kav}
+        >
+          <View
+            style={[
+              styles.sheet,
+              {
+                backgroundColor: t.surface,
+                paddingBottom: Math.max(insets.bottom, spacing.md),
+              },
+            ]}
+          >
+            {/* Drag handle */}
+            <View style={styles.handleWrap}>
+              <View
+                style={[styles.handle, { backgroundColor: t.borderStrong }]}
+              />
             </View>
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-              {getCurrentData().map((item: any) => (
-                <TouchableOpacity
-                  key={item._id}
-                  style={[styles.item, { borderBottomColor: colors.borderLight }]}
-                  onPress={() => {
-                    if (currentStep === 'country') handleCountrySelect(item._id);
-                    else if (currentStep === 'city') handleCitySelect(item._id);
-                    else if (currentStep === 'subcity') handleSubCitySelect(item._id);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.itemContent}>
-                    <Ionicons name="location-outline" size={20} color={colors.primary} />
-                    <View style={styles.itemText}>
-                      <Text style={[styles.itemTitle, { color: colors.text.gray }]}>
-                        {item.name}
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.text.veryLightGray} />
-                </TouchableOpacity>
-              ))}
 
-              {getCurrentData().length === 0 && !isLoading && (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="location-outline" size={48} color={colors.text.veryLightGray} />
-                  <Text style={[styles.emptyText, { color: colors.text.veryLightGray }]}>
-                    {searchQuery ? i18n.t('location_noResults') : i18n.t('location_noData')}
+            {/* Header */}
+            <View style={styles.header}>
+              <Pressable
+                onPress={step === "country" ? onClose : onBack}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  step === "country"
+                    ? i18n.t("close") || "Close"
+                    : i18n.t("back") || "Back"
+                }
+                hitSlop={12}
+                style={({ pressed }) => [
+                  styles.headerBtn,
+                  { backgroundColor: t.surfaceMuted },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Ionicons
+                  name={
+                    step === "country"
+                      ? "close"
+                      : I18nManager.isRTL
+                        ? "chevron-forward"
+                        : "chevron-back"
+                  }
+                  size={18}
+                  color={t.textPrimary}
+                />
+              </Pressable>
+              <View style={{ flex: 1, alignItems: "center" }}>
+                <Text
+                  style={[styles.title, { color: t.textPrimary }]}
+                  numberOfLines={1}
+                >
+                  {title}
+                </Text>
+                <Text
+                  style={[styles.stepIndicator, { color: t.textTertiary }]}
+                >
+                  {step === "country"
+                    ? `1 / 3`
+                    : step === "city"
+                      ? `2 / 3`
+                      : `3 / 3`}
+                </Text>
+              </View>
+              <View style={styles.headerBtn} />
+            </View>
+
+            {/* Breadcrumb */}
+            {step !== "country" ? (
+              <View style={styles.crumbWrap}>
+                <View
+                  style={[
+                    styles.crumb,
+                    { backgroundColor: t.surfaceMuted, borderColor: t.border },
+                  ]}
+                >
+                  <Ionicons name="earth-outline" size={12} color={t.accent} />
+                  <Text
+                    style={[styles.crumbText, { color: t.textPrimary }]}
+                    numberOfLines={1}
+                  >
+                    {localizedName(country) || "—"}
                   </Text>
                 </View>
-              )}
-            </ScrollView>
-          )}
-        </View>
+                {step === "subcity" ? (
+                  <>
+                    <Ionicons
+                      name={
+                        I18nManager.isRTL ? "chevron-back" : "chevron-forward"
+                      }
+                      size={12}
+                      color={t.textTertiary}
+                    />
+                    <View
+                      style={[
+                        styles.crumb,
+                        {
+                          backgroundColor: t.surfaceMuted,
+                          borderColor: t.border,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="business-outline"
+                        size={12}
+                        color={t.accent}
+                      />
+                      <Text
+                        style={[styles.crumbText, { color: t.textPrimary }]}
+                        numberOfLines={1}
+                      >
+                        {localizedName(city) || "—"}
+                      </Text>
+                    </View>
+                  </>
+                ) : null}
+              </View>
+            ) : null}
+
+            {/* Search */}
+            <View
+              style={[
+                styles.search,
+                {
+                  backgroundColor: t.surfaceMuted,
+                  borderColor: t.border,
+                  flexDirection: I18nManager.isRTL ? "row-reverse" : "row",
+                },
+              ]}
+            >
+              <Ionicons
+                name="search"
+                size={16}
+                color={t.textTertiary}
+              />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder={placeholder}
+                placeholderTextColor={t.textTertiary}
+                style={[
+                  styles.searchInput,
+                  {
+                    color: t.textPrimary,
+                    textAlign: I18nManager.isRTL ? "right" : "left",
+                  },
+                ]}
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              {search ? (
+                <Pressable
+                  onPress={() => setSearch("")}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18n.t("clear") || "Clear"}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={16}
+                    color={t.textTertiary}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
+
+            {/* List */}
+            {isLoading ? (
+              <View style={styles.loading}>
+                <ActivityIndicator size="small" color={t.accent} />
+                <Text
+                  style={[styles.loadingText, { color: t.textTertiary }]}
+                >
+                  {i18n.t("loading") || "Loading…"}
+                </Text>
+              </View>
+            ) : data.length === 0 ? (
+              <View style={styles.empty}>
+                <View
+                  style={[
+                    styles.emptyIcon,
+                    { backgroundColor: t.surfaceMuted },
+                  ]}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={26}
+                    color={t.textTertiary}
+                  />
+                </View>
+                <Text
+                  style={[styles.emptyText, { color: t.textPrimary }]}
+                >
+                  {search
+                    ? i18n.t("location_noResults") || "No matches"
+                    : i18n.t("location_noData") || "Nothing here yet"}
+                </Text>
+                {search ? (
+                  <Text
+                    style={[styles.emptyHint, { color: t.textTertiary }]}
+                  >
+                    {i18n.t("location_noResultsHint") ||
+                      "Try a different spelling or shorter query."}
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <FlatList
+                data={data}
+                renderItem={renderItem}
+                keyExtractor={(item: any) => String(item._id)}
+                style={styles.list}
+                contentContainerStyle={{ paddingBottom: spacing.md }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              />
+            )}
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  backdrop: { flex: 1 },
+  kav: { flex: 1, justifyContent: "flex-end" },
+  sheet: {
+    maxHeight: "85%",
+    minHeight: "55%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
   },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    minHeight: '50%',
+
+  handleWrap: { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
+  handle: { width: 36, height: 4, borderRadius: 2 },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    minHeight: 48,
+    gap: spacing.sm,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  headerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  backButton: {
-    padding: 8,
+  title: { ...typography.subtitle, fontSize: 16 },
+  stepIndicator: { ...typography.label, marginTop: 2, letterSpacing: 0.6 },
+
+  crumbWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.sm,
   },
-  closeButton: {
-    padding: 8,
+  crumb: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexShrink: 1,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
+  crumbText: { ...typography.caption, fontWeight: "600" },
+
+  search: {
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderRadius: radius.input,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  scrollView: {
-    flex: 1,
-  },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: "500", padding: 0 },
+
+  list: { flex: 1 },
   item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.base,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 52,
   },
-  itemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  itemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemTitle: { ...typography.body, fontSize: 15, fontWeight: "500" },
+
+  loading: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
   },
-  itemText: {
-    marginLeft: 12,
+  loadingText: { ...typography.caption },
+
+  empty: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    gap: spacing.sm,
   },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: '500',
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 16,
-    textAlign: 'center',
-  },
+  emptyText: { ...typography.bodyStrong, textAlign: "center" },
+  emptyHint: { ...typography.caption, textAlign: "center", maxWidth: 240 },
 });
 
 export default LocationPicker;

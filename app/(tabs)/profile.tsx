@@ -6,7 +6,6 @@ import {
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  Dimensions,
   I18nManager,
   Linking,
   Switch,
@@ -15,7 +14,7 @@ import { Text } from "@/components/ui/text";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { useNavigation, useRouter } from "expo-router";
 import { Image } from "expo-image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -27,7 +26,14 @@ import { useTheme } from "@/providers/ThemeProvider";
 import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
 
-const { width } = Dimensions.get("window");
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
+type Row = {
+  title: string;
+  icon: IoniconName;
+  onPress: () => void;
+  trailing?: string;
+};
 
 export default function Profile() {
   const { theme, themeMode, setThemeMode, isDark } = useTheme();
@@ -40,99 +46,70 @@ export default function Profile() {
   const [isUserLoaded, setIsUserLoaded] = useState(false);
   const navigation = useNavigation();
   const scrollY = useRef(0);
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const signInSheetRef = useRef<BottomSheetModal>(null);
+  const languageSheetRef = useRef<BottomSheetModal>(null);
   const [isCurrencyModalVisible, setIsCurrencyModalVisible] = useState(false);
   const { currencyCode, currencies } = useCurrencyStore();
 
-  const currentCurrency = currencies.find(c => c.code === currencyCode);
+  const currentCurrency = currencies.find((c) => c.code === currencyCode);
+  const currentLanguageLabel =
+    i18n.locale === "ar" ? i18n.t("profile_arabic") : i18n.t("profile_english");
 
+  const initials = useMemo(() => {
+    const f = user?.firstName?.[0] ?? "";
+    const l = user?.lastName?.[0] ?? "";
+    return (f + l).toUpperCase() || "?";
+  }, [user?.firstName, user?.lastName]);
 
-  // callbacks
-  const handlePresentModalPress = useCallback(() => {
-    //bottomSheetModalRef.current?.present();
+  const handlePresentSignIn = useCallback(() => {
     router.push("/signin");
-  }, []);
-  const handleSheetChanges = useCallback(() => { }, []);
+  }, [router]);
 
-  // العناصر التي تحتاج تسجيل دخول
-  const userOnlyOptions = [
+  const handleSheetChanges = useCallback(() => {}, []);
+
+  const accountRows: Row[] = [
     {
       title: i18n.t("editProfile"),
-      action: () => {
-        router.push("/editProfile");
-      },
-      icon: "person-outline" as const,
-      color: Colors.info,
+      icon: "person-outline",
+      onPress: () => router.push("/editProfile"),
     },
     {
       title: i18n.t("notifications"),
-      action: () => {
-        router.push("/notification");
-      },
-      icon: "notifications-outline" as const,
-      color: Colors.yellow,
+      icon: "notifications-outline",
+      onPress: () => router.push("/notification"),
     },
     {
       title: i18n.t("orders"),
-      action: () => {
-        router.push("/order");
-      },
-      icon: "receipt-outline" as const,
-      color: Colors.success,
+      icon: "receipt-outline",
+      onPress: () => router.push("/order"),
     },
     {
       title: i18n.t("shippingAddresses"),
-      action: () => {
-        router.push("/addresses");
-      },
-      icon: "location-outline" as const,
-      color: Colors.accent,
+      icon: "location-outline",
+      onPress: () => router.push("/addresses"),
     },
   ];
 
-  // العناصر المتاحة للجميع (بدون تسجيل دخول)
-  const publicOptions = [
-    {
-      title: i18n.t("privacyPolicy"),
-
-      action: () => {
-        Linking.openURL("https://nubian-sd.store/privacy-policy");
-      },
-      icon: "shield-outline" as const,
-      color: Colors.purple,
-    },
-    {
-      title: i18n.t("security"),
-      action: () => {
-        // يمكن إضافة الوظيفة هنا
-      },
-      icon: "lock-closed-outline" as const,
-      color: Colors.orange,
-    },
+  const helpRows: Row[] = [
     {
       title: i18n.t("support"),
-      action: () => {
-        router.push("/(screens)/support");
-      },
-      icon: "help-circle-outline" as const,
-      color: Colors.cyan,
+      icon: "help-circle-outline",
+      onPress: () => router.push("/(screens)/support"),
+    },
+    {
+      title: i18n.t("privacyPolicy"),
+      icon: "shield-outline",
+      onPress: () => Linking.openURL("https://nubian-sd.store/privacy-policy"),
     },
     {
       title: i18n.t("exchange"),
-      action: () => {
-        Linking.openURL("https://nubian-sd.store/exchange-policy");
-      },
-      icon: "return-up-back" as const,
-      color: Colors.lime,
+      icon: "return-up-back",
+      onPress: () => Linking.openURL("https://nubian-sd.store/exchange-policy"),
     },
     {
-      title: i18n.t("currency") || "Currency",
-      subtitle: currentCurrency ? `${currentCurrency.name} (${currentCurrency.symbol})` : currencyCode,
-      action: () => {
-        setIsCurrencyModalVisible(true);
-      },
-      icon: "cash-outline" as const,
-      color: Colors.primary,
+      title: i18n.t("security"),
+      icon: "lock-closed-outline",
+      onPress: () => {},
     },
   ];
 
@@ -152,15 +129,12 @@ export default function Profile() {
         headerTitle: i18n.t("profile"),
         headerStyle: {
           backgroundColor: theme.colors.cardBackground,
-          elevation: 4,
-          shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         headerTitleStyle: {
           color: theme.colors.text.gray,
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: "600",
         },
       });
@@ -179,250 +153,427 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    if (loaded && isSignedIn && user) {
-      setIsUserLoaded(true);
-    } else {
-      setIsUserLoaded(false);
-    }
+    setIsUserLoaded(Boolean(loaded && isSignedIn && user));
   }, [loaded, isSignedIn, user]);
 
-  const renderOptionItem = (option: any, index: number) => (
-    <TouchableOpacity
-      key={index}
-      onPress={option.action}
-      style={[styles.optionItem, { borderBottomColor: theme.colors.borderLight }]}
-      activeOpacity={0.7}
-    >
-      <View style={styles.optionLeft}>
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: `${option.color}15` },
-          ]}
-        >
-          <Ionicons name={option.icon} size={20} color={option.color} />
+  const renderRow = (
+    {
+      title,
+      icon,
+      onPress,
+      trailing,
+      isLast,
+      tone = "default",
+      rightSlot,
+    }: {
+      title: string;
+      icon: IoniconName;
+      onPress?: () => void;
+      trailing?: string;
+      isLast: boolean;
+      tone?: "default" | "danger";
+      rightSlot?: React.ReactNode;
+    },
+    key: string | number
+  ) => {
+    const titleColor =
+      tone === "danger" ? theme.colors.error : theme.colors.text.gray;
+    const iconColor =
+      tone === "danger" ? theme.colors.error : theme.colors.text.mediumGray;
+    const chevronColor =
+      tone === "danger" ? theme.colors.error : theme.colors.text.veryLightGray;
+
+    return (
+      <TouchableOpacity
+        key={key}
+        onPress={onPress}
+        activeOpacity={0.6}
+        style={[
+          styles.row,
+          !isLast && {
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: theme.colors.borderLight,
+          },
+        ]}
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name={icon} size={22} color={iconColor} />
+          <Text style={[styles.rowTitle, { color: titleColor }]}>{title}</Text>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.optionText, { color: theme.colors.text.gray }]}>{option.title}</Text>
-          {option.subtitle && (
-            <Text style={[styles.optionSubtitle, { color: theme.colors.text.veryLightGray, fontSize: 12 }]}>
-              {option.subtitle}
+        <View style={styles.rowRight}>
+          {trailing ? (
+            <Text
+              style={[
+                styles.rowTrailing,
+                { color: theme.colors.text.veryLightGray },
+              ]}
+            >
+              {trailing}
             </Text>
-          )}
+          ) : null}
+          {rightSlot ? (
+            rightSlot
+          ) : onPress ? (
+            <Ionicons
+              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+              size={18}
+              color={chevronColor}
+            />
+          ) : null}
         </View>
-      </View>
-      <Ionicons
-        name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-        size={20}
-        color={theme.colors.gray[300]}
-      />
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (!loaded) {
     return (
       <View
         style={[
           styles.loadingContainer,
-          { direction: I18nManager.isRTL ? "rtl" : "ltr" },
+          {
+            direction: I18nManager.isRTL ? "rtl" : "ltr",
+            backgroundColor: theme.colors.background,
+          },
         ]}
       >
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        style={[styles.container, { backgroundColor: theme.colors.surface }]}
+        style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           {
-            paddingTop: headerHeight + 20,
-            paddingBottom: tabbarHeight + 40,
+            paddingTop: headerHeight + 16,
+            paddingBottom: tabbarHeight + 32,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* عرض معلومات المستخدم أو دعوة لتسجيل الدخول */}
         {isUserLoaded && user ? (
-          /* Profile Header */
-          <View style={[styles.profileHeader, { backgroundColor: theme.colors.cardBackground }]}>
-            <View style={styles.avatarContainer}>
-              <Image source={{ uri: user?.imageUrl }} style={[styles.avatar, { borderColor: theme.colors.primary }]} />
-              <View style={[styles.onlineIndicator, { backgroundColor: theme.colors.success, borderColor: theme.colors.background }]} />
-            </View>
+          <View
+            style={[
+              styles.profileHeader,
+              { backgroundColor: theme.colors.cardBackground },
+            ]}
+          >
+            {user?.imageUrl ? (
+              <Image source={{ uri: user.imageUrl }} style={styles.avatar} />
+            ) : (
+              <View
+                style={[
+                  styles.avatar,
+                  styles.avatarFallback,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.avatarInitials,
+                    { color: theme.colors.text.gray },
+                  ]}
+                >
+                  {initials}
+                </Text>
+              </View>
+            )}
             <View style={styles.userInfo}>
-              <Text style={[styles.welcomeText, { color: theme.colors.text.veryLightGray }]}>{i18n.t("welcome")}</Text>
-              <Text style={[styles.userName, { color: theme.colors.text.gray }]}>
+              <Text
+                style={[
+                  styles.userName,
+                  { color: theme.colors.text.gray },
+                ]}
+              >
                 {user?.firstName} {user?.lastName}
               </Text>
-              <Text style={[styles.userEmail, { color: theme.colors.text.veryLightGray }]}>
+              <Text
+                style={[
+                  styles.userEmail,
+                  { color: theme.colors.text.veryLightGray },
+                ]}
+              >
                 {user?.primaryEmailAddress?.emailAddress}
               </Text>
             </View>
           </View>
         ) : (
-          /* Sign In Invitation */
-          <View style={[styles.signInInvitation, { backgroundColor: theme.colors.cardBackground }]}>
-            <Image
-              source={require("../../assets/images/profilelogin.svg")}
-              style={styles.signInImage}
-            />
-            <View style={styles.signInTextContainer}>
-              <Text style={[styles.signInTitle, { color: theme.colors.primary }]}>
-                {i18n.t("signInToContinue")}
-              </Text>
-              <Text style={[styles.signInSubtitle, { color: theme.colors.text.veryLightGray }]}>
-                {i18n.t("profile_signInSubtitle")}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={handlePresentModalPress}
-              style={[styles.loginButton, { backgroundColor: theme.colors.primary }]}
-              activeOpacity={0.8}
+          <View
+            style={[
+              styles.signInBlock,
+              { backgroundColor: theme.colors.cardBackground },
+            ]}
+          >
+            <Text
+              style={[
+                styles.signInLabel,
+                { color: theme.colors.text.veryLightGray },
+              ]}
             >
-              <Text style={styles.loginButtonText}>{i18n.t("signIn")}</Text>
-              <Ionicons name="arrow-forward" size={20} color={Colors.text.white} />
+              {i18n.t("welcome")}
+            </Text>
+            <Text
+              style={[styles.signInTitle, { color: theme.colors.text.gray }]}
+            >
+              {i18n.t("signInToContinue")}
+            </Text>
+            <Text
+              style={[
+                styles.signInSubtitle,
+                { color: theme.colors.text.veryLightGray },
+              ]}
+            >
+              {i18n.t("profile_signInSubtitle")}
+            </Text>
+            <TouchableOpacity
+              onPress={handlePresentSignIn}
+              style={[
+                styles.signInButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.signInButtonText}>{i18n.t("signIn")}</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* عرض خيارات المستخدم فقط إذا كان مسجل دخول */}
         {isUserLoaded && user && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text.gray }]}>{i18n.t("profile")}</Text>
-            <View style={[styles.optionsContainer, { backgroundColor: theme.colors.cardBackground }]}>
-              {userOnlyOptions.map((option, index) =>
-                renderOptionItem(option, index)
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: theme.colors.text.veryLightGray },
+              ]}
+            >
+              {(i18n.t("account") as string) || i18n.t("profile")}
+            </Text>
+            <View
+              style={[
+                styles.group,
+                { backgroundColor: theme.colors.cardBackground },
+              ]}
+            >
+              {accountRows.map((row, i) =>
+                renderRow(
+                  {
+                    title: row.title,
+                    icon: row.icon,
+                    onPress: row.onPress,
+                    isLast: i === accountRows.length - 1,
+                  },
+                  i
+                )
               )}
             </View>
           </View>
         )}
 
-        {/* عرض الخيارات العامة دائماً */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text.gray }]}>{i18n.t("seeAlso")}</Text>
-          <View style={[styles.optionsContainer, { backgroundColor: theme.colors.cardBackground }]}>
-            {publicOptions.map((option, index) =>
-              renderOptionItem(option, index)
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: theme.colors.text.veryLightGray },
+            ]}
+          >
+            {(i18n.t("preferences") as string) || i18n.t("languageSettings")}
+          </Text>
+          <View
+            style={[
+              styles.group,
+              { backgroundColor: theme.colors.cardBackground },
+            ]}
+          >
+            {renderRow(
+              {
+                title: i18n.t("language") || "Language",
+                icon: "language-outline",
+                onPress: () => languageSheetRef.current?.present(),
+                trailing: currentLanguageLabel,
+                isLast: false,
+              },
+              "lang"
+            )}
+            {renderRow(
+              {
+                title: i18n.t("currency") || "Currency",
+                icon: "cash-outline",
+                onPress: () => setIsCurrencyModalVisible(true),
+                trailing: currentCurrency
+                  ? `${currentCurrency.code} (${currentCurrency.symbol})`
+                  : currencyCode,
+                isLast: false,
+              },
+              "currency"
+            )}
+            {renderRow(
+              {
+                title: i18n.t("darkMode") || "Dark Mode",
+                icon: "moon-outline",
+                isLast: true,
+                rightSlot: (
+                  <Switch
+                    value={isDark}
+                    onValueChange={(value) => {
+                      const newMode = value ? "dark" : "light";
+                      if (themeMode !== newMode) {
+                        setThemeMode(newMode);
+                      }
+                    }}
+                    trackColor={{
+                      false: theme.colors.gray[300],
+                      true: theme.colors.primary,
+                    }}
+                    thumbColor={theme.colors.background}
+                    ios_backgroundColor={theme.colors.gray[300]}
+                  />
+                ),
+              },
+              "dark"
             )}
           </View>
         </View>
 
-        {/* Language Settings Section - متاح دائماً */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text.gray }]}>{i18n.t("languageSettings")}</Text>
-          <View style={[styles.languageContainer, { backgroundColor: theme.colors.cardBackground }]}>
-            <TouchableOpacity
-              style={[
-                styles.languageButton,
-                i18n.locale === "ar" && { backgroundColor: theme.colors.primary },
-              ]}
-              onPress={() => changeLanguage("ar")}
-              disabled={i18n.locale === "ar"}
-            >
-              <Text
-                style={[
-                  styles.languageButtonText,
-                  { color: i18n.locale === "ar" ? theme.colors.text.white : theme.colors.text.veryLightGray },
-                ]}
-              >
-                {i18n.t("profile_arabic")}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.languageButton,
-                i18n.locale === "en" && { backgroundColor: theme.colors.primary },
-              ]}
-              onPress={() => changeLanguage("en")}
-              disabled={i18n.locale === "en"}
-            >
-              <Text
-                style={[
-                  styles.languageButtonText,
-                  { color: i18n.locale === "en" ? theme.colors.text.white : theme.colors.text.veryLightGray },
-                ]}
-              >
-                {i18n.t("profile_english")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Dark Mode Settings Section - متاح دائماً */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{i18n.t("appearance") || "Appearance"}</Text>
-          <View style={[styles.optionsContainer, { backgroundColor: theme.colors.cardBackground }]}>
-            <TouchableOpacity
-              style={styles.optionItem}
-              activeOpacity={0.7}
-            >
-              <View style={styles.optionLeft}>
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: `${theme.colors.primary}15` },
-                  ]}
-                >
-                  <Ionicons name="moon-outline" size={20} color={theme.colors.primary} />
-                </View>
-                <Text style={[styles.optionText, { color: theme.colors.text.gray }]}>
-                  {i18n.t("darkMode") || "Dark Mode"}
-                </Text>
-              </View>
-              <Switch
-                value={isDark}
-                onValueChange={(value) => {
-                  const newMode = value ? 'dark' : 'light';
-                  // Only update if different from current mode (skip if already set)
-                  if (themeMode !== newMode) {
-                    setThemeMode(newMode);
-                  }
-                }}
-                trackColor={{ false: theme.colors.gray[300], true: theme.colors.primary }}
-                thumbColor={theme.colors.background}
-                ios_backgroundColor={theme.colors.gray[300]}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* عرض زر تسجيل الخروج فقط إذا كان المستخدم مسجل دخول */}
-        {isUserLoaded && user && (
-          <TouchableOpacity
-            onPress={() => signOut()}
-            style={[styles.logoutButton, { backgroundColor: theme.colors.cardBackground }]}
-            activeOpacity={0.7}
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: theme.colors.text.veryLightGray },
+            ]}
           >
-            <View style={styles.logoutContent}>
-              <View style={[styles.logoutIconContainer, { backgroundColor: `${theme.colors.error}15` }]}>
-                <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />
-              </View>
-              <Text style={[styles.logoutText, { color: theme.colors.error }]}>{i18n.t("logout")}</Text>
+            {(i18n.t("helpAndLegal") as string) || i18n.t("seeAlso")}
+          </Text>
+          <View
+            style={[
+              styles.group,
+              { backgroundColor: theme.colors.cardBackground },
+            ]}
+          >
+            {helpRows.map((row, i) =>
+              renderRow(
+                {
+                  title: row.title,
+                  icon: row.icon,
+                  onPress: row.onPress,
+                  isLast: i === helpRows.length - 1,
+                },
+                i
+              )
+            )}
+          </View>
+        </View>
+
+        {isUserLoaded && user && (
+          <View style={styles.section}>
+            <View
+              style={[
+                styles.group,
+                { backgroundColor: theme.colors.cardBackground },
+              ]}
+            >
+              {renderRow(
+                {
+                  title: i18n.t("logout"),
+                  icon: "log-out-outline",
+                  onPress: () => signOut(),
+                  isLast: true,
+                  tone: "danger",
+                },
+                "logout"
+              )}
             </View>
-            <Ionicons
-              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-              size={20}
-              color={theme.colors.error}
-            />
-          </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
 
-      {/* Bottom Sheet Modal */}
       <BottomSheetModal
-        ref={bottomSheetModalRef}
+        ref={signInSheetRef}
         onChange={handleSheetChanges}
-        backgroundStyle={[styles.bottomSheetBackground, { backgroundColor: theme.colors.cardBackground }]}
-        handleIndicatorStyle={[styles.bottomSheetIndicator, { backgroundColor: theme.colors.gray[300] }]}
+        backgroundStyle={[
+          styles.sheetBackground,
+          { backgroundColor: theme.colors.cardBackground },
+        ]}
+        handleIndicatorStyle={[
+          styles.sheetIndicator,
+          { backgroundColor: theme.colors.gray[300] },
+        ]}
       >
-        <BottomSheetView style={styles.contentContainer}>
+        <BottomSheetView style={styles.sheetContent}>
           <GoogleSignInSheet />
+        </BottomSheetView>
+      </BottomSheetModal>
+
+      <BottomSheetModal
+        ref={languageSheetRef}
+        snapPoints={["28%"]}
+        backgroundStyle={[
+          styles.sheetBackground,
+          { backgroundColor: theme.colors.cardBackground },
+        ]}
+        handleIndicatorStyle={[
+          styles.sheetIndicator,
+          { backgroundColor: theme.colors.gray[300] },
+        ]}
+      >
+        <BottomSheetView style={styles.languageSheet}>
+          <Text
+            style={[
+              styles.sheetTitle,
+              { color: theme.colors.text.gray },
+            ]}
+          >
+            {i18n.t("languageSettings")}
+          </Text>
+          {(["ar", "en"] as const).map((code, i, arr) => {
+            const active = i18n.locale === code;
+            const label =
+              code === "ar"
+                ? i18n.t("profile_arabic")
+                : i18n.t("profile_english");
+            return (
+              <TouchableOpacity
+                key={code}
+                onPress={() => {
+                  if (!active) changeLanguage(code);
+                  languageSheetRef.current?.dismiss();
+                }}
+                activeOpacity={0.6}
+                style={[
+                  styles.row,
+                  i !== arr.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: theme.colors.borderLight,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.rowTitle,
+                    {
+                      color: active
+                        ? theme.colors.primary
+                        : theme.colors.text.gray,
+                      fontWeight: active ? "600" : "400",
+                    },
+                  ]}
+                >
+                  {label}
+                </Text>
+                {active && (
+                  <Ionicons
+                    name="checkmark"
+                    size={20}
+                    color={theme.colors.primary}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </BottomSheetView>
       </BottomSheetModal>
 
@@ -437,7 +588,6 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 30,
   },
   loadingContainer: {
     flex: 1,
@@ -446,209 +596,146 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
   },
 
-  // Sign In Invitation Styles
-  signInInvitation: {
-    alignItems: "center",
-    padding: 24,
-    borderRadius: 16,
-    marginBottom: 24,
-    marginTop: 24,
-  },
-  signInImage: {
-    width: width * 0.4,
-    height: 120,
-    marginBottom: 16,
-  },
-  signInTextContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  signInTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 8,
-    textAlign: "center",
-    lineHeight: 28,
-  },
-  signInSubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: 10,
-  },
-  loginButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
-    minWidth: 160,
-  },
-  loginButtonText: {
-    color: Colors.text.white,
-    fontSize: 16,
-    fontWeight: "600",
-    marginHorizontal: 8,
-  },
-
-  // Profile Header Styles
+  // Profile header
   profileHeader: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-  },
-  avatarContainer: {
-    position: "relative",
-    marginHorizontal: 16,
+    borderRadius: 14,
+    marginBottom: 24,
+    gap: 16,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 40,
-    borderWidth: 3,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
-  onlineIndicator: {
-    position: "absolute",
-    bottom: 2,
-    right: I18nManager.isRTL ? 2 : undefined,
-    left: I18nManager.isRTL ? undefined : 2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.success,
-    borderWidth: 3,
-    borderColor: Colors.text.white,
+  avatarFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInitials: {
+    fontSize: 20,
+    fontWeight: "600",
   },
   userInfo: {
     flex: 1,
     alignItems: I18nManager.isRTL ? "flex-end" : "flex-start",
-    lineHeight: 24,
-  },
-  welcomeText: {
-    fontSize: 14,
-    marginBottom: 4,
-    lineHeight: 24,
   },
   userName: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 4,
-    lineHeight: 48,
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 2,
   },
   userEmail: {
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 13,
   },
 
-  // Section Styles
-  section: {
-    marginBottom: 32,
+  // Sign-in block
+  signInBlock: {
+    padding: 24,
+    borderRadius: 14,
+    marginBottom: 24,
+    alignItems: I18nManager.isRTL ? "flex-end" : "flex-start",
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 16,
-    paddingHorizontal: 4,
-    textAlign: "left",
-    lineHeight: 34,
-  },
-  optionsContainer: {
-    borderRadius: 16,
-  },
-
-  // Option Item Styles
-  optionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  optionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 16,
-  },
-  optionText: {
-    fontSize: 17,
-    fontWeight: "400",
-    lineHeight: 24,
-  },
-  optionSubtitle: {
+  signInLabel: {
     fontSize: 12,
-    marginTop: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
-
-  // Language Settings Styles
-  languageContainer: {
-    flexDirection: "row",
-    borderRadius: 16,
-    padding: 8,
+  signInTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 6,
   },
-  languageButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  signInSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  signInButton: {
+    alignSelf: "stretch",
+    height: 48,
     borderRadius: 12,
     alignItems: "center",
-    marginHorizontal: 4,
+    justifyContent: "center",
   },
-  languageButtonText: {
+  signInButtonText: {
+    color: Colors.text.white,
     fontSize: 16,
-    fontWeight: "500",
-    lineHeight: 24,
+    fontWeight: "600",
   },
 
-  // Logout Styles
-  logoutButton: {
+  // Section
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  group: {
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+
+  // Row
+  row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 56,
   },
-  logoutContent: {
+  rowLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    gap: 14,
   },
-  logoutIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  rowRight: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 16,
+    gap: 8,
   },
-  logoutText: {
-    fontSize: 17,
-    fontWeight: "500",
+  rowTitle: {
+    fontSize: 16,
+    fontWeight: "400",
+  },
+  rowTrailing: {
+    fontSize: 14,
   },
 
-  // Bottom Sheet Styles
-  bottomSheetBackground: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+  // Sheets
+  sheetBackground: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
-  bottomSheetIndicator: {
+  sheetIndicator: {
     width: 40,
     borderRadius: 10,
+  },
+  sheetContent: {
+    paddingHorizontal: 20,
+  },
+  languageSheet: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  sheetTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
 });

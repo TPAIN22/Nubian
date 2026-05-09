@@ -1,5 +1,11 @@
 import { create } from "zustand";
 import axiosInstance from "@/services/api/client";
+import { describeError } from "@/utils/apiError";
+
+const addressKey = (a: Partial<Address>): string =>
+  [a.name, a.city, a.area, a.street, a.building, a.phone]
+    .map((v) => String(v ?? "").trim().toLowerCase())
+    .join("|");
 
 /* ================= TYPES ================= */
 
@@ -105,17 +111,22 @@ const useAddressStore = create<AddressState>((set, get) => ({
         ? get().addresses
         : [];
 
+      // Dedupe: if the server returned an address that matches an existing one
+      // (same key OR same _id), replace rather than prepend a duplicate.
+      const newKey = addressKey(newAddress);
+      const filtered = currentAddresses.filter(
+        (a) => a._id !== newAddress._id && addressKey(a) !== newKey
+      );
+
       set({
-        addresses: [newAddress, ...currentAddresses],
+        addresses: [newAddress, ...filtered],
         isLoading: false,
       });
 
       return newAddress;
     } catch (error: any) {
-      const msg = error?.response?.data?.message || error.message;
-
       set({
-        error: msg,
+        error: describeError(error),
         isLoading: false,
       });
 
@@ -149,7 +160,7 @@ const useAddressStore = create<AddressState>((set, get) => ({
       });
     } catch (error: any) {
       set({
-        error: error?.response?.data?.message || error.message,
+        error: describeError(error),
         isLoading: false,
       });
     }
@@ -174,7 +185,7 @@ const useAddressStore = create<AddressState>((set, get) => ({
       }
     } catch (error: any) {
       set({
-        error: error?.response?.data?.message || error.message,
+        error: describeError(error),
         isLoading: false,
       });
     }
@@ -196,7 +207,7 @@ const useAddressStore = create<AddressState>((set, get) => ({
       });
     } catch (error: any) {
       set({
-        error: error?.response?.data?.message || error.message,
+        error: describeError(error),
         isLoading: false,
       });
     }

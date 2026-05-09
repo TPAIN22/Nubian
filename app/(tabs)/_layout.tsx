@@ -362,7 +362,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="cart"
           options={{
-            headerShown: true,
+            headerShown: false,
             headerStyle: { backgroundColor: theme.colors.cardBackground },
           }}
         />

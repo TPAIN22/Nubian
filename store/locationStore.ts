@@ -3,21 +3,40 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '@/services/api/client';
 
 // ===== Types =====
+// Backend models (apps/backend/src/models/{country,city,subcity}.model.js) store
+// `nameEn` and `nameAr`. Older code paths sometimes set a flat `name`; keep it
+// optional so the same shape works in either case. Use `localizedName()` from
+// the LocationPicker rather than reading `name` directly.
 type Country = {
   _id: string;
-  name: string;
+  nameEn?: string;
+  nameAr?: string;
+  name?: string;
+  code?: string;
+  isActive?: boolean;
+  sortOrder?: number;
 };
 
 type City = {
   _id: string;
-  name: string;
-  country: string;
+  nameEn?: string;
+  nameAr?: string;
+  name?: string;
+  country?: string;
+  countryId?: string;
+  isActive?: boolean;
+  sortOrder?: number;
 };
 
 type SubCity = {
   _id: string;
-  name: string;
-  city: string;
+  nameEn?: string;
+  nameAr?: string;
+  name?: string;
+  city?: string;
+  cityId?: string;
+  isActive?: boolean;
+  sortOrder?: number;
 };
 
 type LocationStore = {
