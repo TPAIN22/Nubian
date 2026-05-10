@@ -22,6 +22,7 @@ import {
   typography,
   useCheckoutTheme,
 } from "@/components/checkout";
+import Colors from "@/locales/brandColors";
 
 /**
  * Mirrors the backend `Address` model in `apps/backend/src/models/address.model.js`.
@@ -641,17 +642,10 @@ export default function AddressForm({
                 accessibilityLabel={
                   i18n.t("addressForm_cancel") || "Cancel"
                 }
-                style={({ pressed }) => [
-                  styles.cancelBtn,
-                  {
-                    borderColor: t.border,
-                    backgroundColor: t.card,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
+                style={[styles.cancelBtn,  { backgroundColor: "red" }]}
               >
                 <Text
-                  style={[styles.cancelText, { color: t.textPrimary }]}
+                  style={[styles.cancelText, { color: "#fff" }]}
                 >
                   {i18n.t("addressForm_cancel") || "Cancel"}
                 </Text>
@@ -664,18 +658,13 @@ export default function AddressForm({
                     ? i18n.t("addressForm_save") || "Save"
                     : i18n.t("addressForm_add") || "Add address"
                 }
-                style={({ pressed }) => [
-                  styles.saveBtn,
-                  {
-                    backgroundColor: t.isDark ? "#FFFFFF" : "#111827",
-                    opacity: pressed ? 0.92 : 1,
-                  },
-                ]}
-              >
+               style={[styles.saveBtn, { backgroundColor: Colors.secondary }]}
+               >
+              
                 <Text
                   style={[
                     styles.saveText,
-                    { color: t.isDark ? "#111827" : "#FFFFFF" },
+                    { color: '#fff' },
                   ]}
                 >
                   {isEditing
@@ -913,6 +902,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: "center",
+    
   },
   switchKnob: {
     width: 22,
@@ -933,26 +923,27 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginLeft: 4,
   },
-
   footer: {
     flexDirection: "row",
     gap: spacing.sm,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
+    alignItems: "flex-start",
+    justifyContent: "space-around",
+ },
   cancelBtn: {
-    flex: 1,
-    height: 52,
+    flex: 0.3,
+    height: 42,
     borderRadius: radius.button,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
+    
   },
   cancelText: { ...typography.bodyStrong },
   saveBtn: {
-    flex: 2,
-    height: 52,
+    flex: 0.3,
+    height: 42,
     borderRadius: radius.button,
     alignItems: "center",
     justifyContent: "center",
