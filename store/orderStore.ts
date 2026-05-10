@@ -98,7 +98,12 @@ const useOrderStore = create<OrderStore>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await axiosInstance.get("/orders/my-orders");
-      const orders: Order[] = Array.isArray(data) ? data : data?.orders ?? [];
+      // Backend wraps responses in { success, data, meta } via lib/response.js.
+      // Tolerate both wrapped and raw shapes so this store works against either.
+      const payload = data?.data ?? data;
+      const orders: Order[] = Array.isArray(payload)
+        ? payload
+        : payload?.orders ?? [];
       set({ orders, isLoading: false });
     } catch (e: any) {
       set({ error: extractServerMessage(e), isLoading: false });
@@ -109,7 +114,7 @@ const useOrderStore = create<OrderStore>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await axiosInstance.get(`/orders/${id}`);
-      const order: Order = data?.order ?? data;
+      const order: Order = data?.data ?? data?.order ?? data;
       set({ selectedOrder: order, isLoading: false });
       return order;
     } catch (e: any) {
@@ -127,7 +132,7 @@ const useOrderStore = create<OrderStore>((set) => ({
       }
       const { idempotencyKey: _omit, ...body } = payload;
       const { data } = await axiosInstance.post("/orders", body, { headers });
-      const order: Order = data?.order ?? data;
+      const order: Order = data?.data ?? data?.order ?? data;
       set((state) => ({
         orders: order?._id ? [order, ...state.orders] : state.orders,
         selectedOrder: order ?? state.selectedOrder,

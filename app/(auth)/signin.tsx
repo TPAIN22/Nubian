@@ -308,14 +308,14 @@ const AuthSheet = () => {
         {i18n.t('bySigningUpAgree')}{' '}
         <Text
           style={[styles.link, { color: colors.primary }]}
-          onPress={() => Linking.openURL('https://nubian-sd.store/terms-and-conditions')}
+          onPress={() => Linking.openURL('https://nubian-sd.com/terms-and-conditions')}
         >
           {i18n.t('termsAndConditions')}
         </Text>
         {i18n.t('and')}
         <Text
           style={[styles.link, { color: colors.primary }]}
-          onPress={() => Linking.openURL('https://nubian-sd.store/privacy-policy')}
+          onPress={() => Linking.openURL('https://nubian-sd.com/privacy-policy')}
         >
           {i18n.t('privacyPolicy')}
         </Text>

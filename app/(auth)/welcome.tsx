@@ -193,14 +193,14 @@ export default function WelcomeScreen() {
         {i18n.t('bySigningUpAgree') || 'By continuing, you agree to our'}{' '}
         <Text
           style={[styles.termsLink, { color: colors.primary }]}
-          onPress={() => Linking.openURL('https://nubian-sd.store/terms-and-conditions')}
+          onPress={() => Linking.openURL('https://nubian-sd.com/terms-and-conditions')}
         >
           {i18n.t('termsAndConditions') || 'Terms'}
         </Text>{' '}
         {i18n.t('and') || 'and'}{' '}
         <Text
           style={[styles.termsLink, { color: colors.primary }]}
-          onPress={() => Linking.openURL('https://nubian-sd.store/privacy-policy')}
+          onPress={() => Linking.openURL('https://nubian-sd.com/privacy-policy')}
         >
           {i18n.t('privacyPolicy') || 'Privacy Policy'}
         </Text>

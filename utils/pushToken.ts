@@ -80,7 +80,7 @@ export async function registerForPushNotificationsAsync(_userId?: string | null)
     // For now, we'll send without auth (anonymous tokens are allowed)
     
     // Send token to new API endpoint
-    const response = await fetch(`${API_BASE_URL}/notifications/tokens`, {
+    const response = await fetch(`${API_BASE_URL}notifications/tokens`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -159,7 +159,7 @@ export async function registerPushTokenWithAuth(authToken: string) {
     const appVersion = Constants.expoConfig?.version || '1.0.0';
     const osVersion = `${Platform.OS} ${Device.osVersion || ''}`.trim();
 
-    const response = await fetch(`${API_BASE_URL}/notifications/tokens`, {
+    const response = await fetch(`${API_BASE_URL}notifications/tokens`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

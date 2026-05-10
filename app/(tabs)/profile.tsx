@@ -99,12 +99,12 @@ export default function Profile() {
     {
       title: i18n.t("privacyPolicy"),
       icon: "shield-outline",
-      onPress: () => Linking.openURL("https://nubian-sd.store/privacy-policy"),
+      onPress: () => Linking.openURL("https://nubian-sd.com/privacy-policy"),
     },
     {
       title: i18n.t("exchange"),
       icon: "return-up-back",
-      onPress: () => Linking.openURL("https://nubian-sd.store/exchange-policy"),
+      onPress: () => Linking.openURL("https://nubian-sd.com/exchange-policy"),
     },
     {
       title: i18n.t("security"),
