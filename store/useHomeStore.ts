@@ -26,6 +26,20 @@ interface HomeState {
   reset: () => void;
 }
 
+const HARD_TIMEOUT_MS = 20_000;
+
+function withHardTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    promise.then(
+      (v) => { clearTimeout(id); resolve(v); },
+      (e) => { clearTimeout(id); reject(e); },
+    );
+  });
+}
+
 async function buildHomePayload(currencyCode?: string) {
   const homeData = await HomeService.fetchHomeData(currencyCode);
 
@@ -71,7 +85,11 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
     const task = (async () => {
       try {
-        const payload = await buildHomePayload(currencyCode);
+        const payload = await withHardTimeout(
+          buildHomePayload(currencyCode),
+          HARD_TIMEOUT_MS,
+          "home fetch",
+        );
         set({ ...payload, isLoading: false, error: null, lastFetchedAt: Date.now() });
       } catch (error: any) {
         set({
@@ -97,7 +115,11 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
     try {
       const currencyCode = useCurrencyStore.getState().currencyCode || undefined;
-      const payload = await buildHomePayload(currencyCode);
+      const payload = await withHardTimeout(
+        buildHomePayload(currencyCode),
+        HARD_TIMEOUT_MS,
+        "home refresh",
+      );
       set({ ...payload, isRefreshing: false, error: null, lastFetchedAt: Date.now() });
     } catch (error: any) {
       set({ isRefreshing: false, error: error?.message || "Failed to refresh home data" });

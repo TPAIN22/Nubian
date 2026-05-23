@@ -44,7 +44,8 @@ export default function CreateTicketScreen() {
         { text: 'OK', onPress: () => router.back() }
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create ticket');
+      const storeError = useTicketStore.getState().error;
+      Alert.alert('Error', storeError || error.message || 'Failed to create ticket');
     }
   };
 
@@ -80,8 +81,8 @@ export default function CreateTicketScreen() {
           >
             <Picker.Item label="Order Issue" value="order_issue" />
             <Picker.Item label="Payment Issue" value="payment_issue" />
+            <Picker.Item label="Merchant Complaint" value="merchant_complaint" />
             <Picker.Item label="Product Quality (Dispute)" value="product_report" />
-            <Picker.Item label="Delivery Delay" value="delivery" />
             <Picker.Item label="Fraud / Scams" value="fraud" />
             <Picker.Item label="Health Risk" value="health_risk" />
             <Picker.Item label="Other" value="other" />
@@ -109,7 +110,10 @@ export default function CreateTicketScreen() {
         />
 
         {/* Attachments Placeholder */}
-        <TouchableOpacity className="border-dashed border-2 border-gray-300 rounded-lg p-4 items-center mb-6">
+        <TouchableOpacity
+          className="border-dashed border-2 border-gray-300 rounded-lg p-4 items-center mb-6"
+          onPress={() => Alert.alert('Coming soon', 'Photo attachments will be supported in a future update.')}
+        >
           <Text className="text-gray-500">Tap to upload images (proof)</Text>
         </TouchableOpacity>
 

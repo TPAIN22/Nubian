@@ -116,7 +116,14 @@ apiClient.interceptors.request.use(
       // Block the request until currency rehydrates so x-currency is always set.
       await awaitCurrencyHydration();
 
-      const token = await getToken();
+      // Bound the token fetch so a not-yet-loaded Clerk SDK can't block the
+      // request. Cold start: Clerk can take 30s+ to hydrate; without this race
+      // every request sat behind it and the home screen stayed on skeletons.
+      // Guest endpoints (home, categories, etc.) work fine without auth.
+      const token = await Promise.race<string | null>([
+        getToken(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 500)),
+      ]);
       if (token) {
         config.headers = config.headers ?? {};
         config.headers.Authorization = `Bearer ${token}`;

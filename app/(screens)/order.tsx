@@ -1,638 +1,1260 @@
-import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, TouchableOpacity, Pressable } from "react-native";
-import { Text } from "@/components/ui/text";
-import { useEffect, useState } from "react";
-import useOrderStore from "@/store/orderStore";
-import { Image } from "expo-image";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+
+import { Text } from "@/components/ui/text";
 import i18n from "@/utils/i18n";
-import { useTheme } from "@/providers/ThemeProvider";
-import { getFinalPrice, getOriginalPrice, hasDiscount, formatPrice as formatPriceUtil } from "@/utils/priceUtils";
+import useOrderStore from "@/store/orderStore";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { normalizeProduct } from "@/domain/product/product.normalize";
+import {
+  getFinalPrice,
+  getOriginalPrice,
+  hasDiscount,
+} from "@/utils/priceUtils";
+import {
+  PressableScale,
+  Skeleton,
+  spacing,
+  radius,
+  typography,
+  useCheckoutTheme,
+  withAlpha,
+  type CheckoutPalette,
+} from "@/components/checkout";
+
+// ─── Status helpers ─────────────────────────────────────────────────────────
+
+type StatusKey =
+  | "pending"
+  | "confirmed"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+type Filter = "all" | StatusKey;
+
+const FILTERS: Filter[] = [
+  "all",
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+
+function statusToKey(raw?: string): StatusKey {
+  switch ((raw || "").toLowerCase()) {
+    case "paid":
+    case "placed":
+    case "processing":
+    case "confirmed":
+      return "confirmed";
+    case "shipped":
+      return "shipped";
+    case "delivered":
+      return "delivered";
+    case "cancelled":
+    case "rejected":
+      return "cancelled";
+    case "pending":
+    default:
+      return "pending";
+  }
+}
+
+function statusColors(t: CheckoutPalette, key: StatusKey) {
+  switch (key) {
+    case "pending":
+      return { bg: t.warningSoft, fg: t.warning };
+    case "confirmed":
+      return { bg: t.accentSoft, fg: t.accent };
+    case "shipped":
+      return { bg: withAlpha("#3b82f6", 0.12), fg: "#2563eb" };
+    case "delivered":
+      return { bg: t.successSoft, fg: t.success };
+    case "cancelled":
+      return { bg: t.errorSoft, fg: t.error };
+  }
+}
+
+function statusLabel(key: StatusKey) {
+  const map: Record<StatusKey, string> = {
+    pending: i18n.t("orderStatusPending") || "Pending",
+    confirmed: i18n.t("orderStatusConfirmed") || "Confirmed",
+    shipped: i18n.t("orderStatusShipped") || "Shipped",
+    delivered: i18n.t("orderStatusDelivered") || "Delivered",
+    cancelled: i18n.t("orderStatusCancelled") || "Cancelled",
+  };
+  return map[key];
+}
+
+function statusIcon(key: StatusKey): keyof typeof Ionicons.glyphMap {
+  switch (key) {
+    case "pending":
+      return "time-outline";
+    case "confirmed":
+      return "checkmark-circle-outline";
+    case "shipped":
+      return "airplane-outline";
+    case "delivered":
+      return "checkmark-done-circle-outline";
+    case "cancelled":
+      return "close-circle-outline";
+  }
+}
+
+// ─── Formatting helpers ─────────────────────────────────────────────────────
+
+function formatCurrency(amount: number, code?: string) {
+  const safe =
+    typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
+  const currency = code || i18n.t("currency") || "USD";
+  return `${safe.toLocaleString()} ${currency}`;
+}
+
+function formatDate(dateString?: string) {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatDateTime(dateString?: string) {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function orderDisplay(order: any) {
+  const code = order?.currencyCodeSelected || i18n.t("currency") || "USD";
+  const final =
+    order?.finalAmountConverted ??
+    order?.finalAmount ??
+    order?.totalAmount ??
+    0;
+  const subtotal = order?.totalAmountConverted ?? order?.totalAmount ?? 0;
+  const discount = order?.discountAmountConverted ?? order?.discountAmount ?? 0;
+  return { code, final, subtotal, discount };
+}
+
+function productsCount(products: any[]): number {
+  if (!Array.isArray(products)) return 0;
+  return products.reduce((acc, p) => acc + (Number(p?.quantity) || 1), 0);
+}
+
+function paymentMethodText(method?: string) {
+  switch ((method || "").toLowerCase()) {
+    case "cash":
+      return i18n.t("paymentMethodCash") || "Cash";
+    case "card":
+      return i18n.t("paymentMethodCard") || "Card";
+    case "bank":
+    case "bankak":
+      return i18n.t("paymentMethodBank") || "Bank transfer";
+    default:
+      return method || "—";
+  }
+}
+
+function paymentStatusText(s?: string) {
+  switch ((s || "").toLowerCase()) {
+    case "paid":
+      return i18n.t("paymentStatusPaid") || "Paid";
+    case "failed":
+      return i18n.t("paymentStatusFailed") || "Failed";
+    case "pending":
+      return i18n.t("paymentStatusPending") || "Pending";
+    default:
+      return s || "—";
+  }
+}
+
+// ─── Screen ─────────────────────────────────────────────────────────────────
 
 export default function Order() {
-  const { theme } = useTheme();
-  const Colors = theme.colors;
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const t = useCheckoutTheme();
+
   const { getUserOrders, orders, error, isLoading } = useOrderStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedOrders, setExpandedOrders] = useState<{ [key: string]: boolean }>({});
-  const router = useRouter();
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [filter, setFilter] = useState<Filter>("all");
 
-  // جلب الطلبات تلقائيًا عند فتح الصفحة
   useEffect(() => {
-    const fetchInitialOrders = async () => {
-      try {
-        await getUserOrders();
-      } catch {
-        // يمكن عرض رسالة خطأ إذا لزم الأمر
-      }
-    };
-    fetchInitialOrders();
-  }, []);
-
-  const fetchOrders = async () => {
-    try {
-      await getUserOrders();
-    } catch {
-      Alert.alert(i18n.t('error'), i18n.t('failedToLoadOrders'));
-    }
-  };
+    getUserOrders().catch(() => {});
+  }, [getUserOrders]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchOrders();
+    await getUserOrders().catch(() => {});
     setRefreshing(false);
   };
 
-  const toggleOrderExpansion = (orderId: string) => {
-    setExpandedOrders(prev => ({
-      ...prev,
-      [orderId]: !prev[orderId]
-    }));
-  };
+  const toggle = (id: string) =>
+    setExpanded((p) => ({ ...p, [id]: !p[id] }));
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SD', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const filtered = useMemo(() => {
+    if (filter === "all") return orders;
+    return orders.filter((o: any) => statusToKey(o.status) === filter);
+  }, [orders, filter]);
 
-  const formatCurrency = (amount: number) => {
-    const validAmount = typeof amount === 'number' && !isNaN(amount) && isFinite(amount) ? amount : 0;
-    return `${validAmount.toLocaleString()} ${i18n.t('currency')}`;
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '#f39c12';
-      case 'confirmed':
-        return '#27ae60';
-      case 'shipped':
-        return '#3498db';
-      case 'delivered':
-        return '#2ecc71';
-      case 'cancelled':
-        return '#e74c3c';
-      default:
-        return '#95a5a6';
+  const counts = useMemo(() => {
+    const c: Record<Filter, number> = {
+      all: orders.length,
+      pending: 0,
+      confirmed: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0,
+    };
+    for (const o of orders as any[]) {
+      c[statusToKey(o.status)]++;
     }
-  };
+    return c;
+  }, [orders]);
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return i18n.t('orderStatusPending');
-      case 'confirmed':
-        return i18n.t('orderStatusConfirmed');
-      case 'shipped':
-        return i18n.t('orderStatusShipped');
-      case 'delivered':
-        return i18n.t('orderStatusDelivered');
-      case 'cancelled':
-        return i18n.t('orderStatusCancelled');
-      default:
-        return status;
-    }
-  };
+  const Header = (
+    <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={i18n.t("back") || "Back"}
+        style={({ pressed }) => [
+          styles.iconBtn,
+          {
+            backgroundColor: t.card,
+            borderColor: t.border,
+            opacity: pressed ? 0.6 : 1,
+          },
+        ]}
+      >
+        <Ionicons name="chevron-back" size={20} color={t.textPrimary} />
+      </Pressable>
 
-  const getPaymentStatusText = (paymentStatus: string) => {
-    switch (paymentStatus) {
-      case 'pending':
-        return i18n.t('paymentStatusPending');
-      case 'paid':
-        return i18n.t('paymentStatusPaid');
-      case 'failed':
-        return i18n.t('paymentStatusFailed');
-      default:
-        return paymentStatus;
-    }
-  };
+      <View style={styles.headerCenter}>
+        <Text style={[styles.headerTitle, { color: t.textPrimary }]}>
+          {i18n.t("myOrders") || "My orders"}
+        </Text>
+        {orders.length > 0 ? (
+          <Text style={[styles.headerSubtitle, { color: t.textTertiary }]}>
+            {orders.length}{" "}
+            {orders.length === 1
+              ? i18n.t("orderUnitOne") || "order"
+              : i18n.t("orderUnitMany") || "orders"}
+          </Text>
+        ) : null}
+      </View>
 
-  const getPaymentMethodText = (method: string) => {
-    switch (method) {
-      case 'cash':
-        return i18n.t('paymentMethodCash');
-      case 'card':
-        return i18n.t('paymentMethodCard');
-      case 'bank':
-        return i18n.t('paymentMethodBank');
-      default:
-        return method;
-    }
-  };
+      <View style={{ width: 36 }} />
+    </View>
+  );
 
-  // حساب عدد المنتجات من المصفوفة
-  const getProductsCount = (products: any[]) => {
-    if (!products || !Array.isArray(products)) return 0;
-    return products.reduce((total, product) => total + (product.quantity || 1), 0);
-  };
-
+  // ── Loading skeleton ────────────────────────────────────────────────────
   if (isLoading && orders.length === 0) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: Colors.surface }]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={[styles.loadingText, { color: Colors.text.veryLightGray }]}>{i18n.t('loadingOrders')}</Text>
+      <View style={[styles.root, { backgroundColor: t.surface }]}>
+        {Header}
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
+          {[0, 1, 2].map((i) => (
+            <View
+              key={i}
+              style={[
+                styles.card,
+                { backgroundColor: t.card, borderColor: t.border },
+              ]}
+            >
+              <Skeleton width="55%" height={18} />
+              <View style={{ height: spacing.sm }} />
+              <Skeleton width="35%" height={12} />
+              <View style={{ height: spacing.md }} />
+              <Skeleton width="100%" height={60} />
+              <View style={{ height: spacing.md }} />
+              <Skeleton width="40%" height={20} />
+            </View>
+          ))}
+        </View>
       </View>
     );
   }
 
-  if (error) {
+  // ── Error state ─────────────────────────────────────────────────────────
+  if (error && orders.length === 0) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: Colors.surface }]}>
-        <Text style={[styles.errorText, { color: Colors.error }]}>{i18n.t('errorOccurred')}: {error}</Text>
+      <View style={[styles.root, { backgroundColor: t.surface }]}>
+        {Header}
+        <EmptyState
+          icon="alert-circle-outline"
+          tone="error"
+          title={i18n.t("errorOccurred") || "Something went wrong"}
+          subtitle={error}
+          ctaLabel={i18n.t("tryAgain") || "Try again"}
+          onCta={onRefresh}
+          t={t}
+        />
       </View>
     );
   }
 
-  if (orders.length === 0) {
+  // ── Empty state ─────────────────────────────────────────────────────────
+  if (!isLoading && orders.length === 0) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: Colors.surface }]}>
-        <Text style={[styles.emptyText, { color: Colors.text.veryLightGray }]}>{i18n.t('noOrders')}</Text>
+      <View style={[styles.root, { backgroundColor: t.surface }]}>
+        {Header}
+        <EmptyState
+          icon="bag-handle-outline"
+          tone="accent"
+          title={i18n.t("noOrders") || "No orders yet"}
+          subtitle={
+            i18n.t("noOrdersHint") ||
+            "Your orders will appear here once you place one."
+          }
+          ctaLabel={i18n.t("startShopping") || "Start shopping"}
+          onCta={() => router.replace("/(tabs)")}
+          t={t}
+        />
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: Colors.surface }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <Text style={[styles.title, { color: Colors.text.gray }]}>{i18n.t('myOrders')} ({orders.length})</Text>
+    <View style={[styles.root, { backgroundColor: t.surface }]}>
+      {Header}
 
-      {orders.map((order: any) => (
-        <View key={order._id} style={[styles.orderCard, { backgroundColor: Colors.cardBackground }]}>
-          {/* رأس البطاقة */}
-          <TouchableOpacity
-            style={[styles.orderHeader, { borderBottomColor: Colors.borderLight }]}
-            onPress={() => toggleOrderExpansion(order._id)}
-          >
-            <View style={styles.headerContent}>
-              <Text style={[styles.orderNumber, { color: Colors.text.gray }]}>{order.orderNumber}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
-                <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
-              </View>
-            </View>
-            <Text style={[styles.expandText, { color: Colors.primary }]}>
-              {expandedOrders[order._id] ? i18n.t('hideDetails') : i18n.t('showDetails')}
-            </Text>
-          </TouchableOpacity>
-
-          {/* زر تتبع الطلب */}
-          <Pressable
-            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, alignSelf: 'flex-end' }}
-            onPress={() => router.push(`/order-tracking/${order._id}`)}
-          >
-            <Ionicons name="location-outline" size={18} color={Colors.primary} />
-            <Text style={{ color: Colors.primary, marginLeft: 4 }}>{i18n.t('trackOrder')}</Text>
-          </Pressable>
-
-          {/* معلومات سريعة */}
-          <View style={styles.quickInfo}>
-            <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: Colors.text.veryLightGray }]}>{i18n.t('date')}:</Text>
-              <Text style={[styles.infoValue, { color: Colors.text.gray }]}>{formatDate(order.orderDate)}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: Colors.text.veryLightGray }]}>{i18n.t('products')}:</Text>
-              <Text style={[styles.infoValue, { color: Colors.text.gray }]}>{getProductsCount(order.productsDetails)} {i18n.t('productUnit')}</Text>
-            </View>
-          </View>
-
-          {/* Coupon Information */}
-          {order.couponDetails && order.couponDetails.code && (
-            <View style={[styles.couponSection, { borderTopColor: Colors.borderLight }]}>
-              <Text style={[styles.couponLabel, { color: Colors.text.gray }]}>كوبون الخصم:</Text>
-              <Text style={[styles.couponCode, { color: Colors.primary }]}>{order.couponDetails.code}</Text>
-              {order.discountAmount > 0 && (
-                <Text style={[styles.discountAmount, { color: Colors.success }]}>
-                  خصم: {formatCurrency(order.discountAmount)}
+      {/* Filter chips */}
+      <View style={styles.filterRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: spacing.lg,
+            gap: spacing.sm,
+          }}
+        >
+          {FILTERS.map((key) => {
+            const active = filter === key;
+            const label =
+              key === "all"
+                ? i18n.t("all") || "All"
+                : statusLabel(key);
+            const count = counts[key];
+            return (
+              <Pressable
+                key={key}
+                onPress={() => setFilter(key)}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: active ? t.textPrimary : t.card,
+                    borderColor: active ? t.textPrimary : t.border,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: active ? t.surface : t.textSecondary },
+                  ]}
+                >
+                  {label}
+                  {count > 0 ? ` · ${count}` : ""}
                 </Text>
-              )}
-            </View>
-          )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
-          {/* المجموع */}
-          <View style={[styles.totalSection, { borderTopColor: Colors.borderLight }]}>
-            <Text style={[styles.totalLabel, { color: Colors.text.gray }]}>المجموع الكلي:</Text>
-            <Text style={[styles.totalAmount, { color: Colors.success }]}>
-              {formatCurrency(order.finalAmount || order.totalAmount)}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: spacing.lg,
+          paddingBottom: insets.bottom + spacing.xxl,
+          gap: spacing.md,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={t.accent}
+            colors={[t.accent]}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {filtered.length === 0 ? (
+          <Animated.View
+            entering={FadeIn.duration(220)}
+            style={[
+              styles.card,
+              {
+                backgroundColor: t.card,
+                borderColor: t.border,
+                alignItems: "center",
+                paddingVertical: spacing.xxl,
+              },
+            ]}
+          >
+            <Ionicons name="filter-outline" size={28} color={t.textTertiary} />
+            <Text
+              style={[
+                styles.emptyTitle,
+                { color: t.textPrimary, marginTop: spacing.sm },
+              ]}
+            >
+              {i18n.t("noOrdersForFilter") ||
+                "No orders match this filter"}
             </Text>
-            {order.discountAmount > 0 && (
-              <View style={styles.originalTotal}>
-                <Text style={[styles.originalTotalText, { color: Colors.text.veryLightGray }]}>
-                  قبل الخصم: {formatCurrency(order.totalAmount)}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* التفاصيل الموسعة */}
-          {expandedOrders[order._id] && (
-            <View style={[styles.expandedDetails, { borderTopColor: Colors.borderLight }]}>
-              {/* تفاصيل الطلب */}
-              <View style={styles.orderDetails}>
-                <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>معلومات التوصيل</Text>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>المدينة:</Text>
-                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{order.city}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>العنوان:</Text>
-                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{order.address}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>رقم الهاتف:</Text>
-                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{order.phoneNumber}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>طريقة الدفع:</Text>
-                  <Text style={[styles.detailValue, { color: Colors.text.gray }]}>{getPaymentMethodText(order.paymentMethod)}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: Colors.text.veryLightGray }]}>حالة الدفع:</Text>
-                  <Text style={[styles.detailValue, {
-                    color: order.paymentStatus === 'paid' ? Colors.success : Colors.warning
-                  }]}>
-                    {getPaymentStatusText(order.paymentStatus)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* تفاصيل المنتجات */}
-              <View style={styles.productsSection}>
-                <Text style={[styles.sectionTitle, { color: Colors.text.gray }]}>المنتجات ({getProductsCount(order.productsDetails)})</Text>
-                {order.productsDetails && order.productsDetails.length > 0 ? (
-                  order.productsDetails.map((product: any, index: number) => {
-                    const productId = product.productId || product._id;
-                    return (
-                      <Pressable
-                        key={product._id || index}
-                        style={[styles.productCard, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}
-                        onPress={() => {
-                          if (productId) {
-                            navigateToProduct(productId, {
-                              _id: productId,
-                              name: product.name || product.productName,
-                              price: product.price || 0,
-                              discountPrice: product.discountPrice,
-                              images: product.images || [],
-                            });
-                          }
-                        }}
-                      >
-                        <View style={styles.productInfo}>
-                          {/* صورة المنتج - إذا كانت متوفرة */}
-                          {product.images && Array.isArray(product.images) && product.images[0] && (
-                            <Image
-                              source={{ uri: product.images[0] }}
-                              style={[styles.productImage, { backgroundColor: Colors.borderLight }]}
-                              contentFit="cover"
-                            />
-                          )}
-                          <View style={styles.productDetails}>
-                            <Text style={[styles.productName, { color: Colors.text.gray }]} numberOfLines={2}>
-                              {product.name || product.productName || 'منتج غير محدد'}
-                            </Text>
-                            <View style={styles.productPricing}>
-                              {(() => {
-                                // Use definitive fields if available (from backend enrichment)
-                                let finalPrice = product.displayFinalPrice ?? product.price ?? 0;
-                                let originalPrice = product.displayOriginalPrice ?? product.originalPrice ?? 0;
-                                let productHasDiscount = (product.displayDiscountPercentage ?? 0) > 0;
-
-                                // Fallback: If no definitive fields, try to simulate (Legacy)
-                                if (product.displayFinalPrice === undefined && product.displayOriginalPrice === undefined) {
-                                  const productObj = normalizeProduct({
-                                    _id: product.productId || product._id || '',
-                                    name: product.name || '',
-                                    merchantPrice: product.merchantPrice || product.price || 0,
-                                    finalPrice: product.price || 0,
-                                    images: product.images || [],
-                                    variants: [],
-                                  } as any);
-
-                                  finalPrice = getFinalPrice(productObj);
-                                  originalPrice = getOriginalPrice(productObj);
-                                  productHasDiscount = hasDiscount(productObj);
-                                }
-
-                                const quantity = product.quantity || 1;
-                                const totalFinalPrice = finalPrice * quantity;
-
-                                return (
-                                  <>
-                                    {productHasDiscount ? (
-                                      <>
-                                        <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
-                                          <Text style={{ textDecorationLine: 'line-through' }}>
-                                            {formatPriceUtil(originalPrice)}
-                                          </Text>
-                                          {' '}{formatPriceUtil(finalPrice)} × {quantity}
-                                        </Text>
-                                        <Text style={[styles.productTotal, { color: Colors.success }]}>
-                                          = {formatPriceUtil(totalFinalPrice)}
-                                        </Text>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Text style={[styles.productPrice, { color: Colors.text.veryLightGray }]}>
-                                          {formatPriceUtil(finalPrice)} × {quantity}
-                                        </Text>
-                                        <Text style={[styles.productTotal, { color: Colors.success }]}>
-                                          = {formatPriceUtil(totalFinalPrice)}
-                                        </Text>
-                                      </>
-                                    )}
-                                  </>
-                                );
-                              })()}
-                            </View>
-                          </View>
-                        </View>
-                      </Pressable>
-                    );
-                  })
-                ) : (
-                  <Text style={[styles.noProductsText, { color: Colors.text.veryLightGray }]}>لا توجد تفاصيل منتجات</Text>
-                )}
-              </View>
-
-              {/* تاريخ آخر تحديث */}
-              <Text style={[styles.updateDate, { color: Colors.text.veryLightGray }]}>
-                آخر تحديث: {formatDate(order.updatedAt)}
-              </Text>
-            </View>
-          )}
-        </View>
-      ))}
-    </ScrollView>
+          </Animated.View>
+        ) : (
+          filtered.map((order: any, idx: number) => (
+            <OrderCard
+              key={order._id}
+              order={order}
+              expanded={!!expanded[order._id]}
+              onToggle={() => toggle(order._id)}
+              onTrack={() =>
+                router.push(`/order-tracking/${order._id}` as any)
+              }
+              index={idx}
+              t={t}
+            />
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
+// ─── OrderCard ──────────────────────────────────────────────────────────────
+
+type OrderCardProps = {
+  order: any;
+  expanded: boolean;
+  onToggle: () => void;
+  onTrack: () => void;
+  index: number;
+  t: CheckoutPalette;
+};
+
+function OrderCard({
+  order,
+  expanded,
+  onToggle,
+  onTrack,
+  index,
+  t,
+}: OrderCardProps) {
+  const statusKey = statusToKey(order.status);
+  const sc = statusColors(t, statusKey);
+  const display = orderDisplay(order);
+  const products: any[] = order.productsDetails || [];
+  const itemCount = productsCount(products);
+
+  // First 4 thumbnails for the preview strip
+  const thumbs: string[] = products
+    .map((p) => (Array.isArray(p?.images) ? p.images[0] : undefined))
+    .filter((u): u is string => typeof u === "string" && u.length > 0)
+    .slice(0, 4);
+  const moreCount = Math.max(0, products.length - thumbs.length);
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(280).delay(Math.min(index, 6) * 40)}
+      style={[
+        styles.card,
+        { backgroundColor: t.card, borderColor: t.border },
+      ]}
+    >
+      {/* Top row: order # + status pill */}
+      <View style={styles.cardTopRow}>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={[typography.label, styles.cardEyebrow, { color: t.textTertiary }]}
+          >
+            {i18n.t("orderNumberLabel") || "Order"}
+          </Text>
+          <Text
+            style={[styles.orderNumber, { color: t.textPrimary }]}
+            numberOfLines={1}
+          >
+            #{order.orderNumber || (order._id || "").slice(-6)}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.statusPill,
+            { backgroundColor: sc.bg },
+          ]}
+        >
+          <Ionicons name={statusIcon(statusKey)} size={12} color={sc.fg} />
+          <Text style={[styles.statusText, { color: sc.fg }]}>
+            {statusLabel(statusKey)}
+          </Text>
+        </View>
+      </View>
+
+      {/* Meta row */}
+      <View style={styles.metaRow}>
+        <View style={styles.metaItem}>
+          <Ionicons name="calendar-outline" size={12} color={t.textTertiary} />
+          <Text style={[styles.metaText, { color: t.textTertiary }]}>
+            {formatDate(order.orderDate || order.createdAt)}
+          </Text>
+        </View>
+        <View style={[styles.metaDot, { backgroundColor: t.textTertiary }]} />
+        <View style={styles.metaItem}>
+          <Ionicons name="cube-outline" size={12} color={t.textTertiary} />
+          <Text style={[styles.metaText, { color: t.textTertiary }]}>
+            {itemCount}{" "}
+            {itemCount === 1
+              ? i18n.t("item") || "item"
+              : i18n.t("items") || "items"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Item thumbnail strip */}
+      {thumbs.length > 0 ? (
+        <View style={styles.thumbStrip}>
+          {thumbs.map((uri, i) => (
+            <View
+              key={`${uri}-${i}`}
+              style={[
+                styles.thumbWrap,
+                {
+                  borderColor: t.border,
+                  backgroundColor: t.surfaceMuted,
+                  marginLeft: i === 0 ? 0 : -10,
+                  zIndex: thumbs.length - i,
+                },
+              ]}
+            >
+              <Image
+                source={{ uri }}
+                style={styles.thumbImg}
+                contentFit="cover"
+                transition={150}
+              />
+            </View>
+          ))}
+          {moreCount > 0 ? (
+            <View
+              style={[
+                styles.thumbWrap,
+                styles.thumbMore,
+                {
+                  borderColor: t.border,
+                  backgroundColor: t.surfaceMuted,
+                  marginLeft: -10,
+                },
+              ]}
+            >
+              <Text style={[styles.thumbMoreText, { color: t.textSecondary }]}>
+                +{moreCount}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Coupon (if any) */}
+      {order?.couponDetails?.code ? (
+        <View
+          style={[
+            styles.couponBanner,
+            { backgroundColor: t.accentSoft },
+          ]}
+        >
+          <Ionicons name="pricetag-outline" size={14} color={t.accent} />
+          <Text style={[styles.couponText, { color: t.accent }]}>
+            {order.couponDetails.code}
+          </Text>
+          {display.discount > 0 ? (
+            <Text style={[styles.couponSave, { color: t.accent }]}>
+              −{formatCurrency(display.discount, display.code)}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Total */}
+      <View
+        style={[styles.totalRow, { borderTopColor: t.divider }]}
+      >
+        <View>
+          <Text
+            style={[typography.label, { color: t.textTertiary }]}
+          >
+            {i18n.t("orderTotalLabel") || "Total"}
+          </Text>
+          {display.discount > 0 ? (
+            <Text style={[styles.totalStruck, { color: t.textTertiary }]}>
+              {formatCurrency(display.subtotal, display.code)}
+            </Text>
+          ) : null}
+        </View>
+        <Text style={[styles.totalAmount, { color: t.textPrimary }]}>
+          {formatCurrency(display.final, display.code)}
+        </Text>
+      </View>
+
+      {/* Action row */}
+      <View style={styles.actionRow}>
+        <PressableScale
+          onPress={onTrack}
+          accessibilityRole="button"
+          style={[
+            styles.actionBtn,
+            styles.actionPrimary,
+            { backgroundColor: t.textPrimary },
+          ]}
+        >
+          <Ionicons name="navigate-outline" size={16} color={t.surface} />
+          <Text style={[styles.actionPrimaryText, { color: t.surface }]}>
+            {i18n.t("trackOrder") || "Track order"}
+          </Text>
+        </PressableScale>
+
+        <PressableScale
+          onPress={onToggle}
+          accessibilityRole="button"
+          style={[
+            styles.actionBtn,
+            styles.actionSecondary,
+            { borderColor: t.border, backgroundColor: t.card },
+          ]}
+        >
+          <Text
+            style={[styles.actionSecondaryText, { color: t.textPrimary }]}
+          >
+            {expanded
+              ? i18n.t("hideDetails") || "Hide details"
+              : i18n.t("showDetails") || "View details"}
+          </Text>
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={t.textPrimary}
+          />
+        </PressableScale>
+      </View>
+
+      {/* Expanded section */}
+      {expanded ? (
+        <Animated.View
+          entering={FadeIn.duration(180)}
+          style={[styles.expanded, { borderTopColor: t.divider }]}
+        >
+          <ExpandedDetails order={order} t={t} />
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  );
+}
+
+// ─── ExpandedDetails ────────────────────────────────────────────────────────
+
+function ExpandedDetails({
+  order,
+  t,
+}: {
+  order: any;
+  t: CheckoutPalette;
+}) {
+  const display = orderDisplay(order);
+  const products: any[] = order.productsDetails || [];
+
+  return (
+    <View style={{ gap: spacing.lg }}>
+      {/* Delivery */}
+      <Section
+        title={i18n.t("deliveryInfo") || "Delivery information"}
+        t={t}
+      >
+        <DetailRow
+          label={i18n.t("city") || "City"}
+          value={order.city || "—"}
+          t={t}
+        />
+        <DetailRow
+          label={i18n.t("address") || "Address"}
+          value={
+            typeof order.address === "string"
+              ? order.address
+              : [
+                  order?.address?.name,
+                  order?.address?.subCityName || order?.address?.area,
+                  order?.address?.cityName || order?.address?.city,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "—"
+          }
+          t={t}
+        />
+        <DetailRow
+          label={i18n.t("phoneNumber") || "Phone"}
+          value={order.phoneNumber || "—"}
+          t={t}
+        />
+        <DetailRow
+          label={i18n.t("paymentMethod") || "Payment method"}
+          value={paymentMethodText(order.paymentMethod)}
+          t={t}
+        />
+        <DetailRow
+          label={i18n.t("paymentStatus") || "Payment status"}
+          value={paymentStatusText(order.paymentStatus)}
+          valueColor={
+            (order.paymentStatus || "").toLowerCase() === "paid"
+              ? t.success
+              : (order.paymentStatus || "").toLowerCase() === "failed"
+                ? t.error
+                : t.warning
+          }
+          t={t}
+        />
+      </Section>
+
+      {/* Items */}
+      <Section
+        title={`${i18n.t("orderedItems") || "Items in this order"} (${productsCount(
+          products,
+        )})`}
+        t={t}
+      >
+        {products.length === 0 ? (
+          <Text style={[typography.body, { color: t.textTertiary }]}>
+            {i18n.t("noProductsDetails") || "No item details available"}
+          </Text>
+        ) : (
+          <View style={{ gap: spacing.sm }}>
+            {products.map((p: any, idx: number) => (
+              <ProductRow
+                key={p?._id || idx}
+                product={p}
+                fallbackCode={display.code}
+                t={t}
+              />
+            ))}
+          </View>
+        )}
+      </Section>
+
+      {/* Last updated */}
+      {order.updatedAt ? (
+        <Text
+          style={[
+            typography.caption,
+            { color: t.textTertiary, textAlign: "center" },
+          ]}
+        >
+          {i18n.t("lastUpdated") || "Last updated"}: {formatDateTime(order.updatedAt)}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function Section({
+  title,
+  t,
+  children,
+}: {
+  title: string;
+  t: CheckoutPalette;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <Text
+        style={[
+          typography.label,
+          {
+            color: t.textTertiary,
+            textTransform: "uppercase",
+          },
+        ]}
+      >
+        {title}
+      </Text>
+      <View style={{ gap: spacing.xs + 2 }}>{children}</View>
+    </View>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  valueColor,
+  t,
+}: {
+  label: string;
+  value: string;
+  valueColor?: string;
+  t: CheckoutPalette;
+}) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={[typography.body, { color: t.textTertiary }]}>
+        {label}
+      </Text>
+      <Text
+        style={[
+          typography.bodyStrong,
+          { color: valueColor || t.textPrimary, flexShrink: 1, textAlign: "right" },
+        ]}
+        numberOfLines={2}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+// ─── ProductRow ─────────────────────────────────────────────────────────────
+
+function ProductRow({
+  product,
+  fallbackCode,
+  t,
+}: {
+  product: any;
+  fallbackCode: string;
+  t: CheckoutPalette;
+}) {
+  const id = product?.productId || product?._id;
+  const onPress = () => {
+    if (!id) return;
+    navigateToProduct(
+      id,
+      {
+        _id: id,
+        name: product.name || product.productName,
+        price: product.price || 0,
+        discountPrice: product.discountPrice,
+        images: product.images || [],
+      } as any,
+      { variantId: product?.variantId || null }
+    );
+  };
+
+  // Pricing: prefer pre-computed display fields; fall back to normalized product.
+  let finalPrice: number =
+    product.displayFinalPrice ?? product.price ?? 0;
+  let originalPrice: number =
+    product.displayOriginalPrice ?? product.originalPrice ?? 0;
+  let productHasDiscount = (product.displayDiscountPercentage ?? 0) > 0;
+
+  if (
+    product.displayFinalPrice === undefined &&
+    product.displayOriginalPrice === undefined
+  ) {
+    const normalized = normalizeProduct({
+      _id: id || "",
+      name: product.name || "",
+      merchantPrice: product.merchantPrice || product.price || 0,
+      finalPrice: product.price || 0,
+      images: product.images || [],
+      variants: [],
+    } as any);
+    finalPrice = getFinalPrice(normalized);
+    originalPrice = getOriginalPrice(normalized);
+    productHasDiscount = hasDiscount(normalized);
+  }
+
+  const qty = Number(product.quantity) || 1;
+  const lineTotal = finalPrice * qty;
+  const code = product.currencyCode || fallbackCode;
+  const img = Array.isArray(product.images) ? product.images[0] : undefined;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.productRow,
+        {
+          backgroundColor: t.surfaceMuted,
+          borderColor: t.border,
+          opacity: pressed && id ? 0.85 : 1,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.productImgWrap,
+          { borderColor: t.border, backgroundColor: t.card },
+        ]}
+      >
+        {img ? (
+          <Image
+            source={{ uri: img }}
+            style={styles.productImg}
+            contentFit="cover"
+            transition={150}
+          />
+        ) : (
+          <Ionicons name="image-outline" size={20} color={t.textTertiary} />
+        )}
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text
+          style={[typography.bodyStrong, { color: t.textPrimary }]}
+          numberOfLines={2}
+        >
+          {product.name || product.productName || i18n.t("product") || "Product"}
+        </Text>
+        <View style={styles.productPriceRow}>
+          {productHasDiscount ? (
+            <Text style={[typography.caption, { color: t.textTertiary }]}>
+              <Text style={{ textDecorationLine: "line-through" }}>
+                {formatCurrency(originalPrice, code)}
+              </Text>{" "}
+              · {formatCurrency(finalPrice, code)} × {qty}
+            </Text>
+          ) : (
+            <Text style={[typography.caption, { color: t.textTertiary }]}>
+              {formatCurrency(finalPrice, code)} × {qty}
+            </Text>
+          )}
+        </View>
+      </View>
+      <Text style={[typography.bodyStrong, { color: t.textPrimary }]}>
+        {formatCurrency(lineTotal, code)}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ─── EmptyState ─────────────────────────────────────────────────────────────
+
+function EmptyState({
+  icon,
+  title,
+  subtitle,
+  ctaLabel,
+  onCta,
+  tone,
+  t,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  onCta?: () => void;
+  tone: "accent" | "error";
+  t: CheckoutPalette;
+}) {
+  const ringBg = tone === "error" ? t.errorSoft : t.accentSoft;
+  const ringFg = tone === "error" ? t.error : t.accent;
+  return (
+    <View style={styles.emptyWrap}>
+      <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", gap: spacing.md }}>
+        <View style={[styles.emptyIconRing, { backgroundColor: ringBg }]}>
+          <Ionicons name={icon} size={32} color={ringFg} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: t.textPrimary }]}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text
+            style={[
+              typography.body,
+              {
+                color: t.textTertiary,
+                textAlign: "center",
+                paddingHorizontal: spacing.lg,
+              },
+            ]}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
+        {ctaLabel && onCta ? (
+          <PressableScale
+            onPress={onCta}
+            accessibilityRole="button"
+            style={[
+              styles.emptyCta,
+              { backgroundColor: t.textPrimary },
+            ]}
+          >
+            <Text style={[typography.subtitle, { color: t.surface }]}>
+              {ctaLabel}
+            </Text>
+          </PressableScale>
+        ) : null}
+      </Animated.View>
+    </View>
+  );
+}
+
+// ─── Styles ─────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
+  root: { flex: 1 },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: spacing.md,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  headerCenter: {
     flex: 1,
-    padding: 16,
-    paddingTop: 40,
+    alignItems: "center",
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerTitle: {
+    ...typography.title,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 48,
+  headerSubtitle: {
+    ...typography.caption,
+    marginTop: 2,
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    lineHeight: 24,
+
+  filterRow: {
+    paddingVertical: spacing.sm,
   },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    padding: 20,
-    lineHeight: 24,
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 34,
+    justifyContent: "center",
   },
-  emptyText: {
-    fontSize: 18,
-    textAlign: 'center',
-    lineHeight: 24,
+  chipText: {
+    ...typography.captionStrong,
   },
-  orderCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    lineHeight: 24,
+
+  card: {
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: spacing.base,
+    gap: spacing.md,
   },
-  orderHeader: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    lineHeight: 24,
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    lineHeight: 24,
+  cardEyebrow: {
+    textTransform: "uppercase",
   },
   orderNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    lineHeight: 24,
+    ...typography.subtitle,
+    marginTop: 2,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm + 2,
     paddingVertical: 6,
-    borderRadius: 20,
-    lineHeight: 24,
+    borderRadius: radius.pill,
   },
   statusText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    lineHeight: 24,
+    ...typography.label,
   },
-  expandText: {
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 24,
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
-  quickInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    lineHeight: 24,
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  infoItem: {
+  metaText: {
+    ...typography.caption,
+  },
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    opacity: 0.6,
+  },
+
+  thumbStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  thumbWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbImg: {
+    width: "100%",
+    height: "100%",
+  },
+  thumbMore: {
+    width: 44,
+    height: 44,
+  },
+  thumbMoreText: {
+    ...typography.captionStrong,
+  },
+
+  couponBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.button,
+  },
+  couponText: {
+    ...typography.captionStrong,
     flex: 1,
-    lineHeight: 24,
   },
-  infoLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-    lineHeight: 24,
+  couponSave: {
+    ...typography.captionStrong,
   },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 24,
+
+  totalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  couponSection: {
-    paddingTop: 12,
-    marginTop: 8,
-    borderTopWidth: 1,
-    lineHeight: 24,
-  },
-  couponLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  couponCode: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  discountAmount: {
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 24,
-  },
-  totalSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    marginBottom: 8,
-    lineHeight: 24,
-  },
-  originalTotal: {
-    marginTop: 4,
-  },
-  originalTotalText: {
-    fontSize: 12,
+  totalStruck: {
+    ...typography.caption,
     textDecorationLine: "line-through",
-    lineHeight: 24,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    lineHeight: 24,
+    marginTop: 2,
   },
   totalAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    lineHeight: 24,
+    ...typography.totalAmount,
   },
-  expandedDetails: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    lineHeight: 24,
+
+  actionRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    lineHeight: 24,
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs + 2,
+    paddingVertical: spacing.md,
+    borderRadius: radius.button,
+    minHeight: 46,
   },
-  orderDetails: {
-    marginBottom: 16,
-    lineHeight: 24,
+  actionPrimary: {},
+  actionPrimaryText: {
+    ...typography.bodyStrong,
   },
+  actionSecondary: {
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  actionSecondaryText: {
+    ...typography.bodyStrong,
+  },
+
+  expanded: {
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+
   detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    lineHeight: 24,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md,
   },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '500',
+
+  productRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm + 2,
+    padding: spacing.sm + 2,
+    borderRadius: radius.button,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  productImgWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  productImg: {
+    width: "100%",
+    height: "100%",
+  },
+  productPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  emptyWrap: {
     flex: 1,
-    lineHeight: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
   },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '400',
-    flex: 2,
-    textAlign: 'right',
-    lineHeight: 24,
+  emptyIconRing: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  productsSection: {
-    marginTop: 16,
-    lineHeight: 24,
+  emptyTitle: {
+    ...typography.subtitle,
+    textAlign: "center",
   },
-  productCard: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    lineHeight: 24,
-  },
-  productInfo: {
-    flexDirection: 'row',
-    lineHeight: 24,
-  },
-  productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    lineHeight: 24,
-  },
-  productDetails: {
-    flex: 1,
-    lineHeight: 24,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  productCategory: {
-    fontSize: 12,
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  productPricing: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    lineHeight: 24,
-  },
-  productPrice: {
-    fontSize: 14,
-    marginRight: 8,
-    lineHeight: 24,
-  },
-  productTotal: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    lineHeight: 24,
-  },
-  noProductsText: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    padding: 16,
-    lineHeight: 24,
-  },
-  updateDate: {
-    fontSize: 12,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginTop: 12,
-    lineHeight: 24,
+  emptyCta: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.button,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

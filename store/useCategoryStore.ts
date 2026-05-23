@@ -43,7 +43,12 @@ const useCategoryStore = create<CategoryStoreState>((set, get) => ({
   fetchCategories: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await axiosInstance.get('/categories');
+      const response = await Promise.race([
+        axiosInstance.get('/categories'),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("categories fetch timed out after 20000ms")), 20_000)
+        ),
+      ]);
       
       let rawCategories = [];
       if (Array.isArray(response.data)) {

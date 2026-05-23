@@ -11,6 +11,7 @@ import {
   getUnreadCount,
   type Notification
 } from "@/utils/notificationService";
+import { navigateFromNotificationLink } from "@/utils/deepLinks";
 import { Ionicons } from "@expo/vector-icons";
 
 const NotificationsScreen = () => {
@@ -87,24 +88,9 @@ const NotificationsScreen = () => {
         }
       }
 
-      // Handle deep link
-      if (notification.deepLink) {
-        // Parse deep link and navigate
-        const url = notification.deepLink.startsWith('/')
-          ? notification.deepLink
-          : `/${notification.deepLink}`;
-
-        // Navigate using router
-        if (url.startsWith('/orders/')) {
-          router.push(`/(tabs)/orders/${url.split('/orders/')[1]}`);
-        } else if (url.startsWith('/products/')) {
-          router.push(`/(tabs)/products/${url.split('/products/')[1]}`);
-        } else if (url.startsWith('/cart')) {
-          router.push('/(tabs)/cart');
-        } else {
-          router.push(url as any);
-        }
-      }
+      // Centralised parser in utils/deepLinks so the inbox and the push
+      // foreground handler always navigate to the same route for a given link.
+      navigateFromNotificationLink(notification.deepLink);
     } catch (error) {
       console.error('Error handling notification press:', error);
     }

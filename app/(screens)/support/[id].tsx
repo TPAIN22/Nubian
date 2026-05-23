@@ -71,10 +71,10 @@ export default function TicketDetailScreen() {
 
             {/* Ticket Info Header */}
             <View className="bg-white p-4 border-b border-gray-200">
-                <Text className="text-xl font-bold text-gray-900 mb-1">{currentTicket.subject}</Text>
+                <Text className="text-xl font-bold text-gray-900 mb-1">{currentTicket.subject || 'UNKNOWN'}</Text>
                 <View className="flex-row items-center mb-2">
                     <View className={`px-2 py-0.5 rounded mr-2 bg-gray-200`}>
-                        <Text className="text-xs font-bold text-gray-700">{currentTicket.status.toUpperCase()}</Text>
+                        <Text className="text-xs font-bold text-gray-700">{currentTicket.status?.toUpperCase() || 'UNKNOWN'}</Text>
                     </View>
                     <Text className="text-xs text-gray-500">{new Date(currentTicket.createdAt).toLocaleDateString('ar-EG')}</Text>
                 </View>

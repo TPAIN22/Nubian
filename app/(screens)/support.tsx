@@ -12,6 +12,8 @@ export default function SupportScreen() {
   const tickets = useTicketStore((state) => state.tickets);
   const fetchTickets = useTicketStore((state) => state.fetchTickets);
   const isLoading = useTicketStore((state) => state.isLoading);
+  const loadMore = useTicketStore((state) => state.loadMore);
+  const isLoadingMore = useTicketStore((state) => state.isLoadingMore);
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -36,7 +38,8 @@ export default function SupportScreen() {
     init();
 
     return () => { isMounted = false; };
-  }, [isLoaded, isSignedIn]); // Only re-run if auth state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -49,6 +52,17 @@ export default function SupportScreen() {
       console.error("Failed to refresh", err);
     }
     setRefreshing(false);
+  };
+
+  const onEndReached = async () => {
+    try {
+      const token = await getToken();
+      if (token) {
+        await loadMore(token);
+      }
+    } catch (err) {
+      console.error("Failed to load more", err);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -118,6 +132,13 @@ export default function SupportScreen() {
         renderItem={renderItem}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          isLoadingMore ? (
+            <ActivityIndicator size="small" color="#000" style={{ marginVertical: 16 }} />
+          ) : null
+        }
         ListHeaderComponent={
           <>
             <TouchableOpacity

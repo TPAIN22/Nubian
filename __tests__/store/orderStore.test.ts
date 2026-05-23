@@ -112,3 +112,62 @@ describe("orderStore.getUserOrders", () => {
     expect(useOrderStore.getState().isLoading).toBe(false);
   });
 });
+
+describe("orderStore.getOrderById", () => {
+  beforeEach(reset);
+
+  it("returns the order and stores it as selectedOrder", async () => {
+    const order = { _id: "o1", status: "pending" };
+    mockedAxios.get.mockResolvedValueOnce({ data: { data: order } });
+
+    const result = await useOrderStore.getState().getOrderById("o1");
+
+    expect(mockedAxios.get).toHaveBeenCalledWith("/orders/o1");
+    expect(result).toEqual(order);
+    expect(useOrderStore.getState().selectedOrder).toEqual(order);
+    expect(useOrderStore.getState().isLoading).toBe(false);
+  });
+
+  it("on failure, sets a localized error and returns null", async () => {
+    const err: any = new Error("Network Error");
+    err.code = "ERR_NETWORK";
+    mockedAxios.get.mockRejectedValueOnce(err);
+
+    const result = await useOrderStore.getState().getOrderById("missing");
+
+    expect(result).toBeNull();
+    expect(useOrderStore.getState().error).toBeTruthy();
+    expect(useOrderStore.getState().isLoading).toBe(false);
+  });
+});
+
+describe("orderStore.clearError / clearOrders", () => {
+  beforeEach(reset);
+
+  it("clearError resets only the error", () => {
+    useOrderStore.setState({
+      error: "boom",
+      orders: [{ _id: "o1", status: "pending" }] as any,
+    });
+
+    useOrderStore.getState().clearError();
+
+    expect(useOrderStore.getState().error).toBeNull();
+    expect(useOrderStore.getState().orders).toHaveLength(1);
+  });
+
+  it("clearOrders resets orders, selectedOrder and error", () => {
+    useOrderStore.setState({
+      orders: [{ _id: "o1", status: "pending" }] as any,
+      selectedOrder: { _id: "o1", status: "pending" } as any,
+      error: "boom",
+    });
+
+    useOrderStore.getState().clearOrders();
+
+    const state = useOrderStore.getState();
+    expect(state.orders).toHaveLength(0);
+    expect(state.selectedOrder).toBeNull();
+    expect(state.error).toBeNull();
+  });
+});

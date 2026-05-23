@@ -1,9 +1,21 @@
-import PerformanceMonitor, { usePerformanceMonitor, useNetworkMonitor } from '@/utils/performance';
+import PerformanceMonitor, {
+  usePerformanceMonitor,
+  useNetworkMonitor,
+  markTapStart,
+  markNavigationCall,
+  markScreenMount,
+  markFetchStart,
+  markFetchEnd,
+  markContentReady,
+  getNavigationTiming,
+} from '@/utils/performance';
 
 describe('Performance Monitor', () => {
   beforeEach(() => {
-    // Reset singleton instance
+    // Reset singleton instance — the monitor persists across tests, so clear
+    // accumulated metrics to keep per-test counts isolated.
     PerformanceMonitor.setEnabled(true);
+    PerformanceMonitor.clear();
   });
 
   describe('PerformanceMonitor Instance', () => {
@@ -93,11 +105,96 @@ describe('Performance Monitor', () => {
 
     it('should measure request when called', () => {
       const { measureRequest } = useNetworkMonitor();
-      
+
       measureRequest('/test', 'GET', 1000, 2000, 200);
-      
+
       const stats = PerformanceMonitor.getNetworkStats();
       expect(stats.totalRequests).toBe(1);
     });
+  });
+
+  describe('empty / disabled state', () => {
+    it('returns null stats before anything is measured', () => {
+      expect(PerformanceMonitor.getPerformanceStats()).toBeNull();
+      expect(PerformanceMonitor.getNetworkStats()).toBeNull();
+    });
+
+    it('does not record network metrics while disabled', () => {
+      PerformanceMonitor.setEnabled(false);
+      PerformanceMonitor.measureNetworkRequest('/x', 'GET', 0, 1, 200);
+      PerformanceMonitor.setEnabled(true);
+      expect(PerformanceMonitor.getNetworkStats()).toBeNull();
+    });
+  });
+});
+
+describe('Navigation timing', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  it('records a tap start for a product', () => {
+    markTapStart('prod-1');
+
+    const timing = getNavigationTiming('prod-1');
+    expect(timing).toBeTruthy();
+    expect(timing.productId).toBe('prod-1');
+    expect(typeof timing.tapTime).toBe('number');
+  });
+
+  it('records every stage of the navigation lifecycle', () => {
+    markTapStart('prod-2');
+    markNavigationCall('prod-2');
+    markScreenMount('prod-2');
+    markFetchStart('prod-2');
+    markFetchEnd('prod-2');
+
+    const timing = getNavigationTiming('prod-2');
+    expect(timing.navigationCallTime).toBeDefined();
+    expect(timing.screenMountTime).toBeDefined();
+    expect(timing.dataFetchStartTime).toBeDefined();
+    expect(timing.dataFetchEndTime).toBeDefined();
+  });
+
+  it('ignores lifecycle marks for an unknown product', () => {
+    // No markTapStart for this id — every later mark must be a safe no-op.
+    markNavigationCall('ghost');
+    markScreenMount('ghost');
+    markFetchStart('ghost');
+    markFetchEnd('ghost');
+    markContentReady('ghost');
+
+    expect(getNavigationTiming('ghost')).toBeUndefined();
+  });
+
+  it('tolerates marks that arrive out of order', () => {
+    markTapStart('prod-4');
+    // Skip markNavigationCall and markScreenMount — exercises the missing-stage
+    // fallbacks inside the downstream marks.
+    markFetchEnd('prod-4');
+    markContentReady('prod-4');
+
+    expect(getNavigationTiming('prod-4')).toBeTruthy();
+  });
+
+  it('cleans up a completed timeline after the delay', () => {
+    markTapStart('prod-3');
+    markNavigationCall('prod-3');
+    markScreenMount('prod-3');
+    markFetchStart('prod-3');
+    markFetchEnd('prod-3');
+    markContentReady('prod-3');
+
+    // Still present immediately after content is ready...
+    expect(getNavigationTiming('prod-3')).toBeTruthy();
+
+    // ...and removed once the 5s cleanup timer fires.
+    jest.advanceTimersByTime(5000);
+    expect(getNavigationTiming('prod-3')).toBeUndefined();
   });
 }); 

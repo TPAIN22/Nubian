@@ -516,5 +516,29 @@
   "location_searchSubCity": "Search area",
   "location_noResults": "No matches",
   "location_noResultsHint": "Try a different spelling or shorter query.",
-  "location_noData": "Nothing here yet"
+  "location_noData": "Nothing here yet",
+
+  "pushPromptOrdersTitle": "Get real-time order updates",
+  "pushPromptOrdersBody": "Allow notifications so we can let you know the moment your order ships, is out for delivery, and arrives.",
+  "pushPromptOffersTitle": "Never miss a price drop",
+  "pushPromptOffersBody": "Turn on notifications to hear about flash sales, restocks, and offers tailored to what you love.",
+  "pushPromptGeneralTitle": "Stay in the loop",
+  "pushPromptGeneralBody": "Enable notifications for order updates, offers, and important account activity. You can change this anytime.",
+  "pushPromptEnable": "Enable notifications",
+  "pushPromptNotNow": "Not now",
+  "pushPromptOpenSettings": "Open Settings",
+  "pushPromptDeniedHint": "Notifications are turned off for this app. Open Settings to allow them.",
+
+  "address": "Address",
+  "all": "All",
+  "city": "City",
+  "deliveryInfo": "Delivery information",
+  "lastUpdated": "Last updated",
+  "noOrdersForFilter": "No orders match this filter",
+  "noOrdersHint": "Your orders will appear here once you place one.",
+  "noProductsDetails": "No item details available",
+  "orderUnitOne": "order",
+  "orderUnitMany": "orders",
+  "paymentStatus": "Payment status",
+  "phoneNumber": "Phone"
 }

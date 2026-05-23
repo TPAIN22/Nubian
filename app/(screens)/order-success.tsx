@@ -11,6 +11,7 @@ import Animated, {
 import { Text } from "@/components/ui/text";
 import i18n from "@/utils/i18n";
 import useOrderStore from "@/store/orderStore";
+import { useNotification } from "@/providers/notificationProvider";
 import { formatPrice } from "@/utils/priceUtils";
 import {
   PressableScale,
@@ -46,6 +47,7 @@ export default function OrderSuccessScreen() {
   }>();
   const t = useCheckoutTheme();
   const { getOrderById } = useOrderStore();
+  const { promptIfAppropriate } = useNotification();
 
   const [order, setOrder] = useState<OrderShape | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,6 +67,16 @@ export default function OrderSuccessScreen() {
       cancelled = true;
     };
   }, [orderId, getOrderById]);
+
+  // High-intent moment: user just placed an order. Offer notifications so we
+  // can deliver shipping updates. The sheet self-throttles and won't show if
+  // the user already granted, already denied recently, or hit the decline cap.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      promptIfAppropriate("orders").catch(() => {});
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [promptIfAppropriate]);
 
   const items = order?.productsDetails ?? order?.items ?? [];
   const itemsCount =

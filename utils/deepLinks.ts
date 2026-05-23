@@ -39,7 +39,11 @@ export const ROUTES = {
  * @param productId - Product ID
  * @param product - Optional product object for prefetching
  */
-export function navigateToProduct(productId: string, product?: any): void {
+export function navigateToProduct(
+  productId: string,
+  product?: any,
+  opts?: { variantId?: string | null }
+): void {
   // CRITICAL PERF FIX: Seed the Zustand cache store instantly with the full product object.
   // This completely eliminates loading skeletons on the details screen because useProductFetch
   // will instantly find the cached record (even if marked as partial) before the network request.
@@ -57,6 +61,7 @@ export function navigateToProduct(productId: string, product?: any): void {
     pathname: '/(screens)/details/[details]' as any,
     params: {
       details: productId,
+      ...(opts?.variantId ? { variantId: String(opts.variantId) } : {}),
       ...(product && {
         name: product.name || '',
         price: String(product.price || product.finalPrice || product.discountPrice || 0),
@@ -435,4 +440,65 @@ export function generateDeepLinkUrl(entity: {
 }): string {
   const baseUrl = 'nubian://'; // Replace with your actual deep link scheme
   return `${baseUrl}${entity.type}/${entity.id}`;
+}
+
+// ============================================================================
+// NOTIFICATION DEEP-LINK ROUTER
+// ============================================================================
+
+/**
+ * Resolve a notification's `deepLink` payload to an in-app navigation.
+ *
+ * The backend emits paths like `/orders/<id>`, `/products/<id>`, `/cart`, etc.
+ * Centralised here so both the foreground push handler (notificationProvider)
+ * and the in-app inbox (app/(screens)/notification.tsx) route identically —
+ * previously they each had their own parser and disagreed on the order route
+ * (one pushed to `(tabs)/orders/...` which doesn't exist, the other to
+ * `(screens)/order-tracking/...` which does).
+ *
+ * Returns true if a route was matched and pushed.
+ */
+export function navigateFromNotificationLink(rawLink: string | null | undefined): boolean {
+  if (typeof rawLink !== 'string' || rawLink.length === 0) return false;
+  const url = rawLink.startsWith('/') ? rawLink : `/${rawLink}`;
+
+  // /orders/<id> and /order-tracking/<id> both resolve to order tracking.
+  if (url.startsWith('/orders/') || url.startsWith('/order-tracking/')) {
+    const id = url.split('/').pop();
+    if (id && id !== 'orders' && id !== 'order-tracking') {
+      navigateToOrderTracking(id);
+      return true;
+    }
+    navigateToOrders();
+    return true;
+  }
+
+  // Bare /order or /orders → orders list.
+  if (url === '/order' || url === '/orders') {
+    navigateToOrders();
+    return true;
+  }
+
+  if (url.startsWith('/products/')) {
+    const productId = url.split('/products/')[1];
+    if (productId) {
+      navigateToProduct(productId);
+      return true;
+    }
+  }
+
+  if (url.startsWith('/cart')) {
+    navigateToCart();
+    return true;
+  }
+
+  // Fallback: hand the path straight to the router so future backend paths
+  // (e.g. /support/<ticketId>) work without a code change here.
+  try {
+    router.push(url as any);
+    return true;
+  } catch (err) {
+    console.warn('navigateFromNotificationLink: failed to route', url, err);
+    return false;
+  }
 }

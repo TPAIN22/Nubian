@@ -24,6 +24,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { useTheme } from "@/providers/ThemeProvider";
+import { useNotification } from "@/providers/notificationProvider";
 import { useHomeQuery } from "@/hooks/useHomeQuery";
 import useCartStore from "@/store/useCartStore";
 import useCategoryStore from "@/store/useCategoryStore";
@@ -42,6 +43,7 @@ import { ProductSection } from "@/components/home/ProductSection";
 import { StoreHighlights } from "@/components/home/StoreHighlights";
 import { HomeEmptyState } from "@/components/home/HomeEmptyState";
 import BannerSkeleton from "@/components/BannerSkeleton";
+import { Skeleton } from "moti/skeleton";
 import i18n from "@/utils/i18n";
 
 // ─── Floating Header ──────────────────────────────────────────────────────────
@@ -196,6 +198,20 @@ const CategoryBubbles = memo(({ categories, colors }: CategoryBubblesProps) => {
 });
 CategoryBubbles.displayName = "CategoryBubbles";
 
+const CategoryBubblesSkeleton = memo(({ isDark }: { isDark: boolean }) => {
+  const colorMode = isDark ? "dark" : "light";
+  return (
+    <View style={[styles.bubblesContent, { flexDirection: "row" }]}>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <View key={i} style={styles.bubble}>
+          <Skeleton height={88} width={76} radius={14} colorMode={colorMode} />
+        </View>
+      ))}
+    </View>
+  );
+});
+CategoryBubblesSkeleton.displayName = "CategoryBubblesSkeleton";
+
 // ─── Home Screen ──────────────────────────────────────────────────────────────
 
 function IndexContent() {
@@ -203,6 +219,17 @@ function IndexContent() {
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
   const { trackEvent } = useTracking();
+  const { promptIfAppropriate } = useNotification();
+
+  // First-visit nudge for notifications. The sheet self-throttles via
+  // AsyncStorage cooldowns, so this is safe to fire on every home mount —
+  // it'll only actually show on eligible occasions.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      promptIfAppropriate("general").catch(() => {});
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [promptIfAppropriate]);
 
   // ── Data ──────────────────────────────────────────────────────────────────
 
@@ -223,7 +250,11 @@ function IndexContent() {
     refresh,
   } = useHomeQuery();
 
-  const { categories: rawCategories, fetchCategories } = useCategoryStore();
+  const {
+    categories: rawCategories,
+    loading: categoriesLoading,
+    fetchCategories,
+  } = useCategoryStore();
   const categories = useMemo(() => rawCategories ?? [], [rawCategories]);
 
   const isProductsLoading = homeLoading;
@@ -279,19 +310,6 @@ function IndexContent() {
       ),
     [scrollY, trackEvent]
   );
-
-  // ── Content fade-in ───────────────────────────────────────────────────────
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (!isProductsLoading) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 360,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isProductsLoading, fadeAnim]);
 
   // ── Fetching ──────────────────────────────────────────────────────────────
 
@@ -358,10 +376,13 @@ function IndexContent() {
         {/* Hero banner starts at y=0 — header is transparent on top of it */}
         {homeLoading ? <BannerSkeleton /> : <BannerCarousel banners={banners} colors={colors} />}
 
-        {/* Everything below fades in once data is ready */}
-        <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Category bubbles with images */}
-          <CategoryBubbles categories={categories} colors={colors} />
+        <View>
+          {/* Category bubbles — skeleton only while actively loading */}
+          {categoriesLoading && categories.length === 0 ? (
+            <CategoryBubblesSkeleton isDark={isDark} />
+          ) : (
+            <CategoryBubbles categories={categories} colors={colors} />
+          )}
 
           <View
             style={[
@@ -412,7 +433,7 @@ function IndexContent() {
               isLoading={homeLoading}
             />
           )}
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

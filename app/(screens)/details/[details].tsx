@@ -338,6 +338,32 @@ export default function Details() {
     if (Object.keys(lower).length > 0) setSelectedAttributes(lower);
   }, [displayVariant, selectedAttributes]);
 
+  // When entering from an order line, the caller passes the purchased variant
+  // id. Seed selectedAttributes from that variant so the price/stock the
+  // screen shows matches what the customer actually ordered, instead of
+  // defaulting to whichever variant pickDisplayVariant returns first.
+  const requestedVariantId = params.variantId ? String(params.variantId) : '';
+  const requestedVariantSeededRef = useRef(false);
+  useEffect(() => {
+    if (requestedVariantSeededRef.current) return;
+    if (!requestedVariantId || !viewProduct) return;
+    const variant = (viewProduct.variants || []).find(
+      (v: any) => String(v?._id ?? v?.id ?? '') === requestedVariantId
+    );
+    if (!variant) return;
+    const attrs = (variant as any).attributes || {};
+    const lower: SelectedAttributes = {};
+    Object.entries(attrs).forEach(([k, v]) => {
+      const key = String(k).trim().toLowerCase();
+      const val = String(v ?? '').trim();
+      if (key && val) (lower as any)[key] = val;
+    });
+    if (Object.keys(lower).length > 0) {
+      setSelectedAttributes(lower);
+      requestedVariantSeededRef.current = true;
+    }
+  }, [requestedVariantId, viewProduct]);
+
   const pricing = useMemo(
     () =>
       viewProduct

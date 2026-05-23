@@ -176,7 +176,6 @@ function AppLoaderWithClerk() {
         await SplashScreen.hideAsync();
       } else if (
         isConnected === true &&
-        isLoaded &&
         gifAnimationFinished &&
         !isUpdateChecking &&
         !isCheckingOnboarding
@@ -190,7 +189,6 @@ function AppLoaderWithClerk() {
     hideSplash();
   }, [
     isConnected,
-    isLoaded,
     gifAnimationFinished,
     isUpdateChecking,
     hasGifStartedDisplaying,
@@ -245,7 +243,7 @@ function AppLoaderWithClerk() {
     );
   }
 
-  if (!gifAnimationFinished || !isLoaded || isUpdateChecking || isCheckingOnboarding) {
+  if (!gifAnimationFinished || isUpdateChecking || isCheckingOnboarding) {
     return (
       <GifLoadingScreen
         onAnimationFinish={onGifFinish}

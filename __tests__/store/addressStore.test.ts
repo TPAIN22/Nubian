@@ -172,4 +172,109 @@ describe("addressStore.deleteAddress", () => {
     const list = useAddressStore.getState().addresses;
     expect(list.find((a) => a._id === "a1")).toBeUndefined();
   });
+
+  it("on delete failure, sets a localized error and clears loading", async () => {
+    useAddressStore.setState({ addresses: [baseAddress({ _id: "a1" })] });
+    const err: any = new Error("Network Error");
+    err.code = "ERR_NETWORK";
+    mockedAxios.delete.mockRejectedValueOnce(err);
+
+    await useAddressStore.getState().deleteAddress("a1");
+
+    expect(useAddressStore.getState().error).toBeTruthy();
+    expect(useAddressStore.getState().isLoading).toBe(false);
+    // The address stays since the server rejected the delete.
+    expect(useAddressStore.getState().addresses).toHaveLength(1);
+  });
+});
+
+describe("addressStore.updateAddress", () => {
+  beforeEach(reset);
+
+  it("replaces the matching address on success", async () => {
+    useAddressStore.setState({
+      addresses: [
+        baseAddress({ _id: "a1", name: "Home" }),
+        baseAddress({ _id: "a2", name: "Work" }),
+      ],
+    });
+    mockedAxios.put.mockResolvedValueOnce({
+      data: baseAddress({ _id: "a1", name: "Home (renamed)" }),
+    });
+
+    await useAddressStore
+      .getState()
+      .updateAddress("a1", { name: "Home (renamed)", phone: "0912345678" });
+
+    expect(mockedAxios.put).toHaveBeenCalledWith(
+      "/addresses/a1",
+      expect.objectContaining({ name: "Home (renamed)" })
+    );
+    const list = useAddressStore.getState().addresses;
+    expect(list.find((a) => a._id === "a1")?.name).toBe("Home (renamed)");
+    expect(useAddressStore.getState().isLoading).toBe(false);
+  });
+
+  it("rejects an update with no phone and never hits the network", async () => {
+    await useAddressStore.getState().updateAddress("a1", { name: "No Phone" });
+
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+    expect(useAddressStore.getState().error).toBeTruthy();
+    expect(useAddressStore.getState().isLoading).toBe(false);
+  });
+
+  it("on request failure, surfaces the server's validation message", async () => {
+    const err: any = new Error("boom");
+    err.response = { status: 422, data: { error: { message: "invalid address" } } };
+    mockedAxios.put.mockRejectedValueOnce(err);
+
+    await useAddressStore
+      .getState()
+      .updateAddress("a1", { phone: "0912345678" });
+
+    expect(useAddressStore.getState().error).toBe("invalid address");
+    expect(useAddressStore.getState().isLoading).toBe(false);
+  });
+});
+
+describe("addressStore.setDefaultAddress", () => {
+  beforeEach(reset);
+
+  it("marks the chosen address as default and unsets the rest", async () => {
+    useAddressStore.setState({
+      addresses: [
+        baseAddress({ _id: "a1", isDefault: true }),
+        baseAddress({ _id: "a2", isDefault: false }),
+      ],
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    await useAddressStore.getState().setDefaultAddress("a2");
+
+    expect(mockedAxios.patch).toHaveBeenCalledWith("/addresses/a2/default", {});
+    const list = useAddressStore.getState().addresses;
+    expect(list.find((a) => a._id === "a2")?.isDefault).toBe(true);
+    expect(list.find((a) => a._id === "a1")?.isDefault).toBe(false);
+  });
+
+  it("on failure, sets a localized error", async () => {
+    const err: any = new Error("Network Error");
+    err.code = "ERR_NETWORK";
+    mockedAxios.patch.mockRejectedValueOnce(err);
+
+    await useAddressStore.getState().setDefaultAddress("a1");
+
+    expect(useAddressStore.getState().error).toBeTruthy();
+    expect(useAddressStore.getState().isLoading).toBe(false);
+  });
+});
+
+describe("addressStore.clearError", () => {
+  beforeEach(reset);
+
+  it("resets the error to null", () => {
+    useAddressStore.setState({ error: "boom" });
+    useAddressStore.getState().clearError();
+    expect(useAddressStore.getState().error).toBeNull();
+  });
 });

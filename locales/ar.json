@@ -519,5 +519,29 @@
   "back": "رجوع",
   "location_noResults": "لا توجد نتائج مطابقة",
   "location_noResultsHint": "جرّب بحثاً مختلفاً أو مصطلحاً أقصر.",
-  "location_noData": "لا توجد بيانات بعد"
+  "location_noData": "لا توجد بيانات بعد",
+
+  "pushPromptOrdersTitle": "تابع حالة طلبك لحظة بلحظة",
+  "pushPromptOrdersBody": "فعّل الإشعارات لنُعلِمك فور شحن طلبك، خروجه للتوصيل، ووصوله إليك.",
+  "pushPromptOffersTitle": "لا تفوّت أي تخفيض",
+  "pushPromptOffersBody": "فعّل الإشعارات ليصلك جديد التخفيضات والعروض الخاطفة وعودة المنتجات المفضلة لديك.",
+  "pushPromptGeneralTitle": "ابقَ على اطّلاع",
+  "pushPromptGeneralBody": "فعّل الإشعارات لتصلك تحديثات الطلبات، العروض، والتنبيهات المهمة لحسابك. يمكنك تغيير ذلك في أي وقت.",
+  "pushPromptEnable": "تفعيل الإشعارات",
+  "pushPromptNotNow": "ليس الآن",
+  "pushPromptOpenSettings": "فتح الإعدادات",
+  "pushPromptDeniedHint": "الإشعارات معطّلة لهذا التطبيق. افتح الإعدادات للسماح بها.",
+
+  "address": "العنوان",
+  "all": "الكل",
+  "city": "المدينة",
+  "deliveryInfo": "معلومات التوصيل",
+  "lastUpdated": "آخر تحديث",
+  "noOrdersForFilter": "لا توجد طلبات مطابقة لهذا التصنيف",
+  "noOrdersHint": "ستظهر طلباتك هنا بمجرد إنشائك لأول طلب.",
+  "noProductsDetails": "لا توجد تفاصيل للمنتجات",
+  "orderUnitOne": "طلب",
+  "orderUnitMany": "طلبات",
+  "paymentStatus": "حالة الدفع",
+  "phoneNumber": "رقم الهاتف"
 }

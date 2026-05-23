@@ -26,7 +26,6 @@ import { Text } from '@/components/ui/text';
 import { useColors } from '@/hooks/useColors';
 import i18n from '@/utils/i18n';
 import { LanguageContext } from '@/utils/LanguageContext';
-import { registerForPushNotificationsAsync } from '@/utils/pushToken';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const ONBOARDING_KEY = 'hasSeenOnboarding';
@@ -111,9 +110,8 @@ export default function OnboardingScreen() {
 
   const goAuthChoice = useCallback(async () => {
     await markSeen();
-    // Ask for push notification permission before leaving onboarding.
-    // Fire-and-forget — don't block navigation on the result.
-    registerForPushNotificationsAsync(null).catch(() => {});
+    // Notification permission is requested later via the soft-prompt sheet
+    // on first home-screen visit and at high-intent moments (order success).
     router.replace('/(auth)/welcome');
   }, [markSeen, router]);
 

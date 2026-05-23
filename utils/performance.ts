@@ -256,6 +256,12 @@ class PerformanceMonitor {
     this.networkMetrics = this.networkMetrics.filter(metric => metric.timestamp > oneHourAgo);
   }
 
+  // إعادة تعيين كل البيانات المجمعة (يُستخدم في الاختبارات)
+  clear() {
+    this.metrics = [];
+    this.networkMetrics = [];
+  }
+
   // تفعيل/إلغاء تفعيل المراقبة
   setEnabled(enabled: boolean) {
     this.isEnabled = enabled;
