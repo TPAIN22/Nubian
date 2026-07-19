@@ -98,8 +98,10 @@ const useOrderStore = create<OrderStore>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await axiosInstance.get("/orders/my-orders");
-      // Backend wraps responses in { success, data, meta } via lib/response.js.
-      // Tolerate both wrapped and raw shapes so this store works against either.
+      // The client interceptor unwraps the standard envelope, so in production
+      // `data` is already the paginated orders array. The `data?.data ?? data`
+      // fallback stays for raw shapes and for unit tests that mock the client
+      // (and therefore bypass the interceptor).
       const payload = data?.data ?? data;
       const orders: Order[] = Array.isArray(payload)
         ? payload

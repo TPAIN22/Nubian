@@ -1,6 +1,17 @@
-// API base URL
-import { resolveApiBaseUrl } from "@/services/api/baseUrl";
-const API_BASE_URL = resolveApiBaseUrl();
+// Notification HTTP layer.
+//
+// All requests go through the shared `apiClient` (services/api/client.ts) so they
+// inherit the Clerk bearer token, x-currency/x-country headers, timeout, and the
+// custom fetch adapter. `apiClient`'s baseURL already ends in `/api/`, so paths
+// are passed WITHOUT a leading slash (e.g. "notifications" -> /api/notifications).
+//
+// Responses are read defensively as `res.data?.data ?? res.data` so this module is
+// correct whether or not a response interceptor unwraps the backend's
+// `{ success, data, meta }` envelope. The `authToken` parameters are kept for
+// backward compatibility with existing callers but are now optional — the request
+// interceptor attaches the token automatically. When a token is explicitly passed
+// it overrides the interceptor's Authorization header.
+import apiClient from "@/services/api/client";
 
 export interface Notification {
   _id: string;
@@ -55,10 +66,26 @@ export interface NotificationPreferences {
   };
 }
 
+// Unwrap the backend envelope defensively: works whether the response is the raw
+// `{ success, data, meta }` shape or has already been unwrapped to just `data`.
+function unwrap<T = any>(res: { data?: any }): T {
+  return (res?.data?.data ?? res?.data) as T;
+}
+
+// Build a per-request config that overrides the Authorization header only when an
+// explicit token is supplied. Without an explicit token we let the request
+// interceptor attach the current Clerk token.
+function authConfig(authToken?: string | null) {
+  return authToken
+    ? { headers: { Authorization: `Bearer ${authToken}` } }
+    : undefined;
+}
+
 /**
  * Get notifications for current user
  * @param options Query options for notifications
- * @param authToken Optional auth token (if not provided, request will be unauthenticated)
+ * @param authToken Optional auth token (interceptor attaches one automatically;
+ *                   pass this only to override).
  */
 export async function getNotifications(
   options: {
@@ -71,39 +98,21 @@ export async function getNotifications(
   authToken?: string | null
 ): Promise<{ notifications: Notification[]; total: number; limit: number; offset: number }> {
   try {
-    const token = authToken || null;
     const { limit = 50, offset = 0, category, isRead, type } = options;
 
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString(),
-    });
-    if (category) params.append('category', category);
-    if (isRead !== undefined) params.append('isRead', isRead.toString());
-    if (type) params.append('type', type);
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    // resolveApiBaseUrl() returns a URL that already ends with `/api/`, so we
-    // append without a leading slash to avoid `/api//notifications`.
-    const response = await fetch(`${API_BASE_URL}notifications?${params.toString()}`, {
-      method: 'GET',
-      headers,
+    const res = await apiClient.get("notifications", {
+      params: {
+        limit,
+        offset,
+        category,
+        isRead: isRead !== undefined ? isRead : undefined,
+        type,
+      },
+      ...authConfig(authToken),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to fetch notifications' }));
-      throw new Error(errorData.message || 'Failed to fetch notifications');
-    }
-
-    const data = await response.json();
-    return data.data || { notifications: [], total: 0, limit, offset };
+    const data = unwrap(res);
+    return data || { notifications: [], total: 0, limit, offset };
   } catch (error) {
     throw error;
   }
@@ -112,33 +121,16 @@ export async function getNotifications(
 /**
  * Get unread notification count
  * @param category Optional category filter
- * @param authToken Optional auth token (if not provided, request will be unauthenticated)
+ * @param authToken Optional auth token (interceptor attaches one automatically).
  */
 export async function getUnreadCount(category?: string, authToken?: string | null): Promise<number> {
   try {
-    const token = authToken || null;
-    const params = new URLSearchParams();
-    if (category) params.append('category', category);
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}notifications/unread?${params.toString()}`, {
-      method: 'GET',
-      headers,
+    const res = await apiClient.get("notifications/unread", {
+      params: { category },
+      ...authConfig(authToken),
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch unread count');
-    }
-
-    const data = await response.json();
-    return data.data?.count || 0;
+    return unwrap<{ count?: number }>(res)?.count || 0;
   } catch (error) {
     console.error('Error fetching unread count:', error);
     return 0;
@@ -148,29 +140,17 @@ export async function getUnreadCount(category?: string, authToken?: string | nul
 /**
  * Mark notification as read
  * @param notificationId ID of the notification to mark as read
- * @param authToken Required auth token
+ * @param authToken Optional auth token (interceptor attaches one automatically).
  */
-export async function markAsRead(notificationId: string, authToken: string): Promise<Notification | null> {
+export async function markAsRead(notificationId: string, authToken?: string | null): Promise<Notification | null> {
   try {
-    if (!authToken) {
-      throw new Error('Authentication required');
-    }
+    const res = await apiClient.patch(
+      `notifications/${notificationId}/read`,
+      undefined,
+      authConfig(authToken)
+    );
 
-    const response = await fetch(`${API_BASE_URL}notifications/${notificationId}/read`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to mark as read' }));
-      throw new Error(errorData.message || 'Failed to mark as read');
-    }
-
-    const data = await response.json();
-    return data.data || null;
+    return unwrap<Notification>(res) || null;
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
@@ -180,33 +160,21 @@ export async function markAsRead(notificationId: string, authToken: string): Pro
 /**
  * Mark multiple notifications as read
  * @param notificationIds Array of notification IDs to mark as read
- * @param authToken Required auth token
+ * @param authToken Optional auth token (interceptor attaches one automatically).
  */
 export async function markMultipleAsRead(
   notificationIds: string[],
-  authToken: string
+  authToken?: string | null
 ): Promise<{ modifiedCount: number }> {
   try {
-    if (!authToken) {
-      throw new Error('Authentication required');
-    }
+    const res = await apiClient.post(
+      "notifications/mark-read",
+      { notificationIds },
+      authConfig(authToken)
+    );
 
-    const response = await fetch(`${API_BASE_URL}notifications/mark-read`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-      body: JSON.stringify({ notificationIds }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to mark as read' }));
-      throw new Error(errorData.message || 'Failed to mark as read');
-    }
-
-    const data = await response.json();
-    return data.data || { modifiedCount: 0 };
+    const data = unwrap<{ modifiedCount?: number }>(res);
+    return { modifiedCount: data?.modifiedCount ?? 0 };
   } catch (error) {
     console.error('Error marking multiple notifications as read:', error);
     throw error;
@@ -215,28 +183,13 @@ export async function markMultipleAsRead(
 
 /**
  * Get notification preferences
- * @param authToken Required auth token
+ * @param authToken Optional auth token (interceptor attaches one automatically).
  */
-export async function getPreferences(authToken: string): Promise<NotificationPreferences | null> {
+export async function getPreferences(authToken?: string | null): Promise<NotificationPreferences | null> {
   try {
-    if (!authToken) {
-      throw new Error('Authentication required');
-    }
+    const res = await apiClient.get("notifications/preferences", authConfig(authToken));
 
-    const response = await fetch(`${API_BASE_URL}notifications/preferences`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch preferences');
-    }
-
-    const data = await response.json();
-    return data.data || null;
+    return unwrap<NotificationPreferences>(res) || null;
   } catch (error) {
     return null;
   }
@@ -245,33 +198,20 @@ export async function getPreferences(authToken: string): Promise<NotificationPre
 /**
  * Update notification preferences
  * @param preferences Partial preferences to update
- * @param authToken Required auth token
+ * @param authToken Optional auth token (interceptor attaches one automatically).
  */
 export async function updatePreferences(
   preferences: Partial<NotificationPreferences>,
-  authToken: string
+  authToken?: string | null
 ): Promise<NotificationPreferences | null> {
   try {
-    if (!authToken) {
-      throw new Error('Authentication required');
-    }
+    const res = await apiClient.put(
+      "notifications/preferences",
+      preferences,
+      authConfig(authToken)
+    );
 
-    const response = await fetch(`${API_BASE_URL}notifications/preferences`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-      body: JSON.stringify(preferences),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to update preferences' }));
-      throw new Error(errorData.message || 'Failed to update preferences');
-    }
-
-    const data = await response.json();
-    return data.data || null;
+    return unwrap<NotificationPreferences>(res) || null;
   } catch (error) {
     throw error;
   }
@@ -279,29 +219,13 @@ export async function updatePreferences(
 
 /**
  * Send a test notification to the current user (for debugging)
- * @param authToken Required auth token
+ * @param authToken Optional auth token (interceptor attaches one automatically).
  */
-export async function sendTestNotification(authToken: string): Promise<any> {
+export async function sendTestNotification(authToken?: string | null): Promise<any> {
   try {
-    if (!authToken) {
-      throw new Error('Authentication required');
-    }
+    const res = await apiClient.post("notifications/test", undefined, authConfig(authToken));
 
-    const response = await fetch(`${API_BASE_URL}notifications/test`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to send test notification' }));
-      throw new Error(errorData.message || 'Failed to send test notification');
-    }
-
-    const data = await response.json();
-    return data.data || null;
+    return unwrap(res) || null;
   } catch (error) {
     console.error('Error sending test notification:', error);
     throw error;

@@ -134,8 +134,18 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
         }
       }
 
-      const totalPages = Number(response.data?.totalPages) || Number(response.data?.data?.totalPages) || 1;
-      const currentPage = Number(response.data?.currentPage) || Number(response.data?.data?.currentPage) || Number(response.data?.page) || 1;
+      // Standard backend envelope carries pagination under `meta.pagination`.
+      // Keep the legacy top-level fallbacks for safety.
+      const pagination = response.data?.meta?.pagination || {};
+      const totalPages = Number(pagination.totalPages)
+        || Number(response.data?.totalPages)
+        || Number(response.data?.data?.totalPages)
+        || 1;
+      const currentPage = Number(pagination.page)
+        || Number(response.data?.currentPage)
+        || Number(response.data?.data?.currentPage)
+        || Number(response.data?.page)
+        || 1;
 
       const { _requestInProgress } = get();
       set({
@@ -245,51 +255,6 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
     return useCategoryStore.getState().fetchProductsByCategory(categoryId, 1);
   },
 
-  // Search products
-  searchProducts: async (searchTerm, limit = 10) => {
-    if (!searchTerm || searchTerm.trim() === '') {
-      set({ error: "يرجى إدخال كلمة للبحث" });
-      return;
-    }
-
-    set({ isProductsLoading: true, error: null });
-    
-    try {
-      const currencyCode = useCurrencyStore.getState().currencyCode;
-      const response = await axiosInstance.get("/products/search", {
-        params: { 
-          q: searchTerm.trim(), 
-          limit,
-          currencyCode: currencyCode || undefined
-        },
-      });
-
-      const products = Array.isArray(response.data.products) 
-        ? response.data.products 
-        : Array.isArray(response.data) 
-        ? response.data 
-        : [];
-
-      set({
-        products,
-        isProductsLoading: false,
-        error: null,
-        // Reset pagination for search results
-        page: 1,
-        hasMore: false,
-      });
-    } catch (error) {
-      const errorMessage = error?.response?.data?.message 
-        || error?.message 
-        || "تعذر البحث عن المنتجات";
-      
-      set({
-        isProductsLoading: false,
-        error: errorMessage,
-      });
-    }
-  },
-
   // Reset all products state
   resetProducts: () => 
     set({ 
@@ -331,12 +296,19 @@ const useItemStore = create(subscribeWithSelector((set, get) => ({
           params: { page, limit: 8, currencyCode: currencyCode || undefined },
         });
 
-        const newProducts = Array.isArray(response.data.products) 
-          ? response.data.products 
+        // Standard envelope: products under `data` (array), pagination under
+        // `meta.pagination`. Read defensively so this works whether or not a
+        // response interceptor has unwrapped the envelope.
+        const payload = response.data?.data ?? response.data;
+        const newProducts = Array.isArray(payload?.products)
+          ? payload.products
+          : Array.isArray(payload)
+          ? payload
           : [];
 
-        const totalPages = Number(response.data.totalPages) || 1;
-        const currentPage = Number(response.data.currentPage) || page;
+        const pagination = response.data?.meta?.pagination || {};
+        const totalPages = Number(pagination.totalPages) || Number(response.data?.totalPages) || 1;
+        const currentPage = Number(pagination.page) || Number(response.data?.currentPage) || page;
 
         set((state) => {
           const nextPage = currentPage + 1;
@@ -440,7 +412,6 @@ export const useItemStoreActions = () => {
       getAllProducts: state.getAllProducts,
       getProductById: state.getProductById,
       getCategories: state.getCategories,
-      searchProducts: state.searchProducts,
       resetProducts: state.resetProducts,
       resetProduct: state.resetProduct,
       loadMoreProducts: state.loadMoreProducts,

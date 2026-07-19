@@ -4,9 +4,12 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import i18n from "@/utils/i18n";
 
-// API base URL - use environment variable or fallback
-import { resolveApiBaseUrl } from "@/services/api/baseUrl";
-const API_BASE_URL = resolveApiBaseUrl();
+// Push-token HTTP goes through the shared apiClient so it inherits the Clerk
+// bearer token (when available), x-currency/x-country headers, timeout, and the
+// custom fetch adapter. apiClient's baseURL already ends in `/api/`, so the path
+// is passed WITHOUT a leading slash. Token registration is fire-and-forget:
+// network/HTTP failures are swallowed and we still return the Expo token.
+import apiClient from "@/services/api/client";
 
 /**
  * Enhanced push token registration with new notification system
@@ -70,32 +73,20 @@ export async function registerForPushNotificationsAsync(_userId?: string | null)
     const appVersion = Constants.expoConfig?.version || '1.0.0';
     const osVersion = `${Platform.OS} ${Device.osVersion || ''}`.trim();
 
-    // Prepare headers with authentication if user is logged in
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-
-    // Add Authorization header if user is authenticated
-    // Note: You'll need to get the token from Clerk
-    // For now, we'll send without auth (anonymous tokens are allowed)
-    
-    // Send token to new API endpoint
-    const response = await fetch(`${API_BASE_URL}notifications/tokens`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
+    // Send token to the API. The request interceptor attaches the Clerk token
+    // automatically when the user is signed in; anonymous tokens are allowed by
+    // the backend, so an unauthenticated request is fine too.
+    try {
+      await apiClient.post("notifications/tokens", {
         token,
         platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
         deviceId,
         deviceName,
         appVersion,
         osVersion,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      console.error('Failed to save push token:', errorData);
+      });
+    } catch (error) {
+      console.error('Failed to save push token:', error);
       // Don't fail completely - token registration is fire-and-forget
       return token;
     }
@@ -108,7 +99,10 @@ export async function registerForPushNotificationsAsync(_userId?: string | null)
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
-        sound: 'default',
+        // Omit `sound` so the channel uses the system default notification
+        // sound. Passing the string 'default' makes expo-notifications look for
+        // a bundled custom sound file named "default" (which we don't ship),
+        // throwing: "Custom sound 'default' not found in native app".
         enableVibrate: true,
         showBadge: true,
       });
@@ -172,25 +166,24 @@ export async function registerPushTokenWithAuth(authToken: string) {
     const appVersion = Constants.expoConfig?.version || '1.0.0';
     const osVersion = `${Platform.OS} ${Device.osVersion || ''}`.trim();
 
-    const response = await fetch(`${API_BASE_URL}notifications/tokens`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
-      body: JSON.stringify({
-        token,
-        platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
-        deviceId,
-        deviceName,
-        appVersion,
-        osVersion,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      console.error('Failed to save push token with auth:', errorData);
+    // Pass the supplied auth token explicitly to override the interceptor; the
+    // interceptor would also attach a token, but keeping this honours the
+    // function contract (caller hands us the token to register under).
+    try {
+      await apiClient.post(
+        "notifications/tokens",
+        {
+          token,
+          platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
+          deviceId,
+          deviceName,
+          appVersion,
+          osVersion,
+        },
+        authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : undefined
+      );
+    } catch (error) {
+      console.error('Failed to save push token with auth:', error);
       return null;
     }
 

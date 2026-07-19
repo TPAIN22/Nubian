@@ -22,6 +22,7 @@ import { Text } from '@/components/ui/text';
 import { useTheme } from '@/providers/ThemeProvider';
 import i18n from '../../utils/i18n';
 import { useTracking } from '@/hooks/useTracking';
+import { completeSSOFlow, ssoBrowserSucceeded } from '@/utils/ssoFlow';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -50,14 +51,20 @@ export default function WelcomeScreen() {
           redirectUrl,
         });
 
-        if (result.createdSessionId && result.setActive) {
-          await result.setActive({ session: result.createdSessionId });
+        if (await completeSSOFlow(result)) {
           await AsyncStorage.setItem('hasSeenOnboarding', 'true');
           await AsyncStorage.removeItem('isGuest');
           await mergeSession();
           router.replace('/(tabs)');
+        } else if (ssoBrowserSucceeded(result)) {
+          // OAuth succeeded in the browser but no session was created —
+          // don't fail silently
+          Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
         }
       } catch (err: any) {
+        if (__DEV__) {
+          console.error('[SSO] sign-in error', JSON.stringify(err, null, 2));
+        }
         if (err?.code !== 'oauth_access_denied') {
           Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
         }

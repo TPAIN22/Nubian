@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import i18n from '../../utils/i18n';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useTracking } from '@/hooks/useTracking';
+import { completeSSOFlow, ssoBrowserSucceeded } from '@/utils/ssoFlow';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -47,11 +48,17 @@ const AuthSheet = () => {
         redirectUrl,
       });
 
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId });
+      if (await completeSSOFlow(result)) {
         await finalizeSignedIn();
+      } else if (ssoBrowserSucceeded(result)) {
+        // OAuth succeeded in the browser but no session was created —
+        // don't fail silently
+        Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
       }
     } catch (err: any) {
+      if (__DEV__) {
+        console.error('[SSO] sign-in error', JSON.stringify(err, null, 2));
+      }
       if (err?.code !== 'oauth_access_denied') {
         Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
       }

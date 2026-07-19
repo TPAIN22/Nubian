@@ -25,7 +25,21 @@
       "Bash(npm audit *)",
       "Bash(npx jest *)",
       "Bash(Select-Object -Last 12)",
-      "Bash(echo \"test:ci exit code = $?\")"
+      "Bash(echo \"test:ci exit code = $?\")",
+      "Read(//c/Users/HUAWEI/.claude/**)",
+      "Read(//c/Users/HUAWEI/Desktop/nubian_platform/.claude/skills/**)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//c/Users/HUAWEI/Desktop/nubian_platform/apps/backend/**)",
+      "Bash(ls src/routes/)",
+      "Bash(ls src/controllers/)",
+      "Bash(ls -la api/)",
+      "Bash(ls -la services/)",
+      "Bash(ls -la lib/)",
+      "Bash(ls utils/)",
+      "Bash(ls store/)",
+      "Bash(Select-String -Pattern \"client.ts|checkout.api.ts\" -SimpleMatch)",
+      "Bash(tee /tmp/tsc_out.txt)",
+      "Read(//tmp/**)"
     ]
   }
 }

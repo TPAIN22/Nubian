@@ -64,8 +64,17 @@ export const getProductsByCategory = async (
     let currentPage = page;
     let total = 0;
 
-    // Handle different backend pagination structures
-    if (Array.isArray(response.data?.data) && response.data?.meta?.pagination) {
+    // The client interceptor unwraps the standard envelope: for the paginated
+    // `/products` response it leaves `response.data` as the product array and
+    // hoists pagination to `response.meta.pagination`. The remaining branches
+    // stay as defensive fallbacks for any pre-unwrap / non-enveloped shape.
+    const meta = (response as any).meta;
+    if (Array.isArray(response.data) && meta?.pagination) {
+      products = response.data;
+      totalPages = Number(meta.pagination.totalPages) || 1;
+      currentPage = Number(meta.pagination.page) || page;
+      total = Number(meta.pagination.total) || products.length;
+    } else if (Array.isArray(response.data?.data) && response.data?.meta?.pagination) {
       products = response.data.data;
       totalPages = Number(response.data.meta.pagination.totalPages) || 1;
       currentPage = Number(response.data.meta.pagination.page) || page;

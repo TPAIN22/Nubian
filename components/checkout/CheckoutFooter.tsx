@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
-  I18nManager,
   StyleSheet,
   TouchableOpacity,
   View,

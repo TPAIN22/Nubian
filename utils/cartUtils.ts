@@ -275,7 +275,10 @@ export function findMatchingVariant(product: any, selected: Record<string, any>)
   return null;
 }
 
-/** Any available stock without attribute selection (for list screens). */
+/** Any available stock without attribute selection (for list screens).
+ *  Reads both normalized (`product.simple.stock`) and raw (`product.stock`) shapes
+ *  — normalizeProduct moves the field for simple products, but legacy callers
+ *  may still hand us raw documents. */
 export function hasAnyActiveStock(product: any): boolean {
   if (!product) return false;
   if (product?.isActive === false) return false;
@@ -283,7 +286,8 @@ export function hasAnyActiveStock(product: any): boolean {
   if (variants.length) {
     return variants.some((v: any) => v?.isActive !== false && (v?.stock ?? 0) > 0);
   }
-  return (product?.stock ?? 0) > 0;
+  const simpleStock = product?.simple?.stock ?? product?.stock ?? 0;
+  return simpleStock > 0;
 }
 
 /** Aggregate stock across variants (or product.stock for simple products). */
@@ -293,7 +297,7 @@ export function getAggregateStock(product: any): number {
   if (variants.length) {
     return variants.reduce((sum: number, v: any) => sum + (Number(v?.stock) || 0), 0);
   }
-  return Number(product?.stock) || 0;
+  return Number(product?.simple?.stock ?? product?.stock) || 0;
 }
 
 
@@ -302,7 +306,7 @@ export function getProductStock(product: ProductDTO, selectedAttributes: Selecte
     const v = findMatchingVariant(product, selectedAttributes as Record<string, any>);
     return v ? (v.stock || 0) : 0;
   }
-  return product?.stock || 0;
+  return (product as any)?.simple?.stock ?? product?.stock ?? 0;
 }
 
 export function isProductAvailable(product: ProductDTO, selectedAttributes: SelectedAttributes | undefined | null): boolean {
@@ -317,6 +321,7 @@ export function isProductAvailable(product: ProductDTO, selectedAttributes: Sele
     return (v.stock || 0) > 0;
   }
 
-  // simple product
-  return (product.stock || 0) > 0;
+  // simple product — handle normalized (`simple.stock`) and raw (`stock`) shapes
+  const simpleStock = (product as any)?.simple?.stock ?? product?.stock ?? 0;
+  return simpleStock > 0;
 }

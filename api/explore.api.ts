@@ -80,18 +80,25 @@ export const getExploreProducts = async (params: ExploreParams = {}): Promise<Ex
     if (params.currencyCode) queryParams.append('currencyCode', params.currencyCode);
     
     const response = await axiosInstance.get(`products/explore?${queryParams.toString()}`);
-    
-    // Backend uses sendPaginated which returns: { success: true, data: [...], meta: { pagination: {...} } }
-    const responseData = response.data;
-    
-    if (!responseData) {
+
+    // Backend uses sendPaginated: { success, data: [...], meta: { pagination } }.
+    // The client interceptor unwraps that envelope, so `response.data` is the
+    // product array and pagination is hoisted to `response.meta.pagination`.
+    // We still tolerate the pre-unwrap shape (`response.data.data` /
+    // `response.data.meta`) as a defensive fallback.
+    const meta = (response as any).meta ?? response.data?.meta;
+    const products = Array.isArray(response.data)
+      ? response.data
+      : Array.isArray(response.data?.data)
+        ? response.data.data
+        : [];
+
+    if (!products) {
       throw new Error('Invalid response structure');
     }
 
-    // Handle paginated response structure
-    const products = Array.isArray(responseData.data) ? responseData.data : [];
-    const pagination = responseData.meta?.pagination || {};
-    
+    const pagination = meta?.pagination || {};
+
     const total = pagination.total || products.length;
     const page = pagination.page || params.page || 1;
     const limit = pagination.limit || params.limit || 20;
@@ -103,7 +110,6 @@ export const getExploreProducts = async (params: ExploreParams = {}): Promise<Ex
       page,
       limit,
       totalPages,
-      message: responseData.message,
     };
   } catch (error: any) {
     console.error('Error fetching explore products:', error);

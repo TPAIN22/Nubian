@@ -406,7 +406,7 @@ export default function Profile() {
                 onPress: () => setIsCurrencyModalVisible(true),
                 trailing: currentCurrency
                   ? `${currentCurrency.code} (${currentCurrency.symbol})`
-                  : currencyCode,
+                  : currencyCode ?? undefined,
                 isLast: false,
               },
               "currency"

@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from "react";
 import { Stack } from "expo-router";
 import "./global.css";
 import ClerkProvider from "@/providers/Clerck";
-import { useAuth } from "@clerk/clerk-expo";
 import { StatusBar } from "expo-status-bar";
 import { NotificationProvider } from "@/providers/notificationProvider";
 import * as Notifications from "expo-notifications";
@@ -61,7 +60,6 @@ Notifications.setNotificationHandler({
 SplashScreen.preventAutoHideAsync();
 
 function AppLoaderWithClerk() {
-  const { isLoaded } = useAuth();
   const [gifAnimationFinished, setGifAnimationFinished] =
     useState<boolean>(false);
   const [isUpdateChecking, setIsUpdateChecking] = useState<boolean>(true);
@@ -124,7 +122,7 @@ function AppLoaderWithClerk() {
 
   const { fontsLoaded, fontError } = useFonts();
 
-  // Check if user has seen onboarding
+  // Check if user has seen onboarding — runs immediately, no need to wait for fonts
   useEffect(() => {
     async function checkOnboardingStatus() {
       try {
@@ -132,16 +130,14 @@ function AppLoaderWithClerk() {
         setHasSeenOnboarding(value === 'true');
       } catch (error) {
         console.error('Error checking onboarding status:', error);
-        setHasSeenOnboarding(false); // Default to showing onboarding if error
+        setHasSeenOnboarding(false);
       } finally {
         setIsCheckingOnboarding(false);
       }
     }
 
-    if (fontsLoaded) {
-      checkOnboardingStatus();
-    }
-  }, [fontsLoaded]);
+    checkOnboardingStatus();
+  }, []);
 
   // Debug font loading
   useEffect(() => {
@@ -172,28 +168,13 @@ function AppLoaderWithClerk() {
 
   useEffect(() => {
     async function hideSplash() {
+      // Hide native splash as soon as our loading screen is visible
       if (hasGifStartedDisplaying) {
-        await SplashScreen.hideAsync();
-      } else if (
-        isConnected === true &&
-        gifAnimationFinished &&
-        !isUpdateChecking &&
-        !isCheckingOnboarding
-      ) {
-        await SplashScreen.hideAsync();
-      } else if (isConnected === false) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
         await SplashScreen.hideAsync();
       }
     }
     hideSplash();
-  }, [
-    isConnected,
-    gifAnimationFinished,
-    isUpdateChecking,
-    hasGifStartedDisplaying,
-    isCheckingOnboarding,
-  ]);
+  }, [hasGifStartedDisplaying]);
 
   const handleRetryNetwork = useCallback(() => {
     retryNetworkCheck();
@@ -228,10 +209,11 @@ function AppLoaderWithClerk() {
     return unsubscribe;
   }, []);
 
-  if (isNetworkChecking || !fontsLoaded) {
+  // Show loading screen until every startup task is done — one mount, video plays once
+  if (isNetworkChecking || !fontsLoaded || !gifAnimationFinished || isUpdateChecking || isCheckingOnboarding) {
     return (
       <GifLoadingScreen
-        onAnimationFinish={() => { }}
+        onAnimationFinish={onGifFinish}
         onMount={onGifComponentMounted}
       />
     );
@@ -240,15 +222,6 @@ function AppLoaderWithClerk() {
   if (isConnected === false) {
     return (
       <NoNetworkScreen onRetry={handleRetryNetwork} />
-    );
-  }
-
-  if (!gifAnimationFinished || isUpdateChecking || isCheckingOnboarding) {
-    return (
-      <GifLoadingScreen
-        onAnimationFinish={onGifFinish}
-        onMount={onGifComponentMounted}
-      />
     );
   }
 
