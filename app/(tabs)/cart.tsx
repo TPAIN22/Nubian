@@ -1,6 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -33,6 +32,7 @@ import { formatMoney } from "@/utils/priceUtils";
 import i18n from "@/utils/i18n";
 import { useTracking } from "@/hooks/useTracking";
 import type { CouponValidationResult } from "@/components/CouponInput";
+import { ConfirmSheet, type ConfirmSheetRef } from "@/components/ui/ConfirmSheet";
 
 type CartLine = {
   product: { _id: string };
@@ -51,6 +51,7 @@ export default function CartScreen() {
     () => (screenWidth < 360 ? 80 : screenWidth < 600 ? 92 : 108),
     [screenWidth],
   );
+  const confirmRef = useRef<ConfirmSheetRef>(null);
 
   const {
     fetchCart,
@@ -133,36 +134,30 @@ export default function CartScreen() {
     (item: CartLine) => {
       if (!item?.product?._id) return;
 
-      Alert.alert(
-        i18n.t("cart_removeConfirmTitle") || "Remove item?",
-        i18n.t("cart_removeConfirmMessage") ||
+      confirmRef.current?.present({
+        title: i18n.t("cart_removeConfirmTitle") || "Remove item?",
+        message:
+          i18n.t("cart_removeConfirmMessage") ||
           "This will remove the item from your cart.",
-        [
-          { text: i18n.t("cancel") || "Cancel", style: "cancel" },
-          {
-            text: i18n.t("delete") || "Remove",
-            style: "destructive",
-            onPress: async () => {
-              const { attrs, size } = getLineAttrs(item);
-              trackEvent("remove_from_cart", {
-                productId: item.product._id,
-                screen: "cart",
-              });
-              try {
-                await removeFromCart(item.product._id, size, attrs);
-                toast.success(
-                  i18n.t("cart_itemRemoved") || "Removed from cart",
-                );
-              } catch {
-                const msg =
-                  useCartStore.getState().error ||
-                  i18n.t("cart_removeError");
-                toast.error(msg);
-              }
-            },
-          },
-        ],
-      );
+        confirmLabel: i18n.t("delete") || "Remove",
+        cancelLabel: i18n.t("cancel") || "Cancel",
+        destructive: true,
+        onConfirm: async () => {
+          const { attrs, size } = getLineAttrs(item);
+          trackEvent("remove_from_cart", {
+            productId: item.product._id,
+            screen: "cart",
+          });
+          try {
+            await removeFromCart(item.product._id, size, attrs);
+            toast.success(i18n.t("cart_itemRemoved") || "Removed from cart");
+          } catch {
+            const msg =
+              useCartStore.getState().error || i18n.t("cart_removeError");
+            toast.error(msg);
+          }
+        },
+      });
     },
     [removeFromCart, getLineAttrs, trackEvent],
   );
@@ -458,6 +453,8 @@ export default function CartScreen() {
         variant="cart"
         withSafeArea={false}
       />
+
+      <ConfirmSheet ref={confirmRef} />
     </View>
   );
 }

@@ -3,7 +3,7 @@ import { View } from "react-native";
 
 export default function AuthRoutesLayout() {
   return (
-    <View style={{ flex: 1, height: "100%" }}>
+    <View style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }} />
     </View>
   );

@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
-import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
+import { View, Button, StyleSheet, ScrollView } from 'react-native';
+import { Text } from '@/components/ui/text';
 
 export default function TestFetch() {
     const [log, setLog] = useState<string[]>([]);

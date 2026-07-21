@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Alert, ActivityIndicator, StyleSheet, TouchableOpacity, TextInput, I18nManager, Linking } from 'react-native';
-import { Text } from '@/components/ui/text';
+import { toast } from 'sonner-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { useSSO, useSignUp } from '@clerk/clerk-expo';
@@ -11,6 +10,17 @@ import i18n from '@/utils/i18n';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useTracking } from '@/hooks/useTracking';
 import { completeSSOFlow, ssoBrowserSucceeded } from '@/utils/ssoFlow';
+import {
+  AuthScaffold,
+  AuthCard,
+  ProviderButton,
+  PrimaryButton,
+  AuthTextField,
+  AuthDivider,
+  TermsFooter,
+  AuthTextButton,
+  AuthLinkRow,
+} from '@/components/auth';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -21,7 +31,7 @@ const SignUpSheet = () => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
-  
+
   const router = useRouter();
   const { startSSOFlow } = useSSO();
   const { signUp, isLoaded, setActive } = useSignUp();
@@ -52,14 +62,14 @@ const SignUpSheet = () => {
       } else if (ssoBrowserSucceeded(result)) {
         // OAuth succeeded in the browser but no session was created —
         // don't fail silently
-        Alert.alert(i18n.t('error'), i18n.t('errorCreatingAccount'));
+        toast.error(i18n.t('errorCreatingAccount'));
       }
     } catch (err: any) {
       if (__DEV__) {
         console.error('[SSO] sign-up error', JSON.stringify(err, null, 2));
       }
       if (err?.code !== 'oauth_access_denied') {
-        Alert.alert(i18n.t('error'), i18n.t('errorCreatingAccount'));
+        toast.error(i18n.t('errorCreatingAccount'));
       }
     } finally {
       setLoading(null);
@@ -72,13 +82,13 @@ const SignUpSheet = () => {
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
-      Alert.alert(i18n.t('error'), i18n.t('pleaseEnterValidEmail'));
+      toast.error(i18n.t('pleaseEnterValidEmail'));
       return;
     }
 
     try {
       setLoading('email');
-      
+
       // إنشاء حساب جديد
       await signUp.create({
         emailAddress: trimmedEmail,
@@ -89,16 +99,16 @@ const SignUpSheet = () => {
         strategy: 'email_code',
       });
 
-      Alert.alert('📩', i18n.t('verificationCodeSent'));
+      toast.success(i18n.t('verificationCodeSent'));
       setPendingVerification(true);
     } catch (err: any) {
       console.error('Sign-up error:', err);
       const errorMessage = err.errors?.[0]?.message || i18n.t('errorCreateAcount');
 
       if (errorMessage.includes('already exists') || errorMessage.includes('taken')) {
-        Alert.alert(i18n.t('error'), i18n.t('emailTaken'));
+        toast.error(i18n.t('emailTaken'));
       } else {
-        Alert.alert(i18n.t('error'), errorMessage);
+        toast.error(errorMessage);
       }
     } finally {
       setLoading(null);
@@ -110,7 +120,7 @@ const SignUpSheet = () => {
     if (!isLoaded || !signUp) return;
 
     if (code.length < 6) {
-      Alert.alert(i18n.t('error'), i18n.t('invalidCode'));
+      toast.error(i18n.t('invalidCode'));
       return;
     }
 
@@ -122,15 +132,15 @@ const SignUpSheet = () => {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        Alert.alert('🎉', i18n.t('successCreateAcount'));
+        toast.success(i18n.t('successCreateAcount'));
         await finalizeSignedIn();
       } else {
-        Alert.alert(i18n.t('error'), i18n.t('invalidCode'));
+        toast.error(i18n.t('invalidCode'));
       }
     } catch (err: any) {
       console.error('Verification error:', err);
       const errorMessage = err.errors?.[0]?.message || i18n.t('codeExpired');
-      Alert.alert(i18n.t('error'), errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(null);
     }
@@ -145,312 +155,118 @@ const SignUpSheet = () => {
       await signUp.prepareEmailAddressVerification({
         strategy: 'email_code',
       });
-      Alert.alert('✅', i18n.t('codeResent'));
+      toast.success(i18n.t('codeResent'));
     } catch {
-      Alert.alert(i18n.t('error'), i18n.t('failedToResendCode'));
+      toast.error(i18n.t('failedToResendCode'));
     } finally {
       setLoading(null);
     }
   }, [isLoaded, signUp]);
 
+  const busy = loading !== null;
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      <View style={styles.backdrop}>
-        <Image
-          style={styles.backdropImage}
-          source={require('../../assets/images/nubianLogo.png')}
-          contentFit="cover"
-        />
-      </View>
-      {/* Header */}
-      <Text style={[styles.title, { color: colors.text.gray }]}>{i18n.t('signUp')}</Text>
-      <Text style={[styles.subtitle, { color: colors.text.veryLightGray }]}>{i18n.t('signUpSubtitle')}</Text>
+    <AuthScaffold
+      title={i18n.t('signUp')}
+      subtitle={i18n.t('signUpSubtitle')}
+      footer={<TermsFooter leadKey="signUpTerms" />}
+    >
+      <AuthCard>
+        {!pendingVerification ? (
+          <>
+            <ProviderButton
+              onPress={() => handleOAuth('google')}
+              disabled={busy}
+              loading={loading === 'google'}
+              label={i18n.t('signUpWithGoogle') || 'Google'}
+              background={colors.cardBackground}
+              borderColor={colors.borderLight}
+              textColor={colors.text.gray}
+              icon={
+                <Image
+                  source={require('../../assets/images/google.svg')}
+                  style={{ width: 22, height: 22 }}
+                  contentFit="contain"
+                />
+              }
+            />
+            <ProviderButton
+              onPress={() => handleOAuth('facebook')}
+              disabled={busy}
+              loading={loading === 'facebook'}
+              label={i18n.t('signUpWithFacebook') || 'Facebook'}
+              background={colors.cardBackground}
+              borderColor={colors.borderLight}
+              textColor={colors.text.gray}
+              icon={
+                <Image
+                  source={require('../../assets/images/facebook.png')}
+                  style={{ width: 22, height: 22 }}
+                  contentFit="contain"
+                />
+              }
+            />
 
-      {/* Google Button */}
-      <TouchableOpacity
-        style={[styles.btn, styles.googleBtn, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
-        onPress={() => handleOAuth('google')}
-        disabled={loading !== null}
-        activeOpacity={0.7}
-      >
-        {loading === 'google' ? (
-          <ActivityIndicator color={colors.text.veryLightGray} />
+            <AuthDivider />
+
+            <AuthTextField
+              placeholder={i18n.t('email')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              value={email}
+              onChangeText={setEmail}
+              editable={!busy}
+            />
+            <PrimaryButton
+              label={i18n.t('signUp')}
+              icon="mail-outline"
+              loading={loading === 'email'}
+              disabled={!email}
+              onPress={handleEmail}
+            />
+
+            <AuthLinkRow
+              prompt={i18n.t('alreadyHaveAnAccount')}
+              action={i18n.t('signIn')}
+              onPress={() => router.push('/signin')}
+            />
+          </>
         ) : (
           <>
-            <Image 
-              style={styles.icon} 
-              source={require('../../assets/images/google.svg')}
-              contentFit="contain"
+            <AuthTextField
+              centered
+              placeholder={i18n.t('inputCode')}
+              keyboardType="number-pad"
+              value={code}
+              onChangeText={setCode}
+              maxLength={6}
+              editable={!busy}
             />
-            <Text style={styles.googleBtnText}>{i18n.t('signUpWithGoogle')}</Text>
+            <PrimaryButton
+              label={i18n.t('verify')}
+              loading={loading === 'email'}
+              disabled={!code}
+              onPress={handleVerifyCode}
+            />
+            <AuthTextButton
+              label={i18n.t('resendCode')}
+              onPress={handleResendCode}
+              disabled={busy}
+            />
+            <AuthTextButton
+              label={i18n.t('changeEmail')}
+              tone="muted"
+              onPress={() => {
+                setPendingVerification(false);
+                setCode('');
+              }}
+            />
           </>
         )}
-      </TouchableOpacity>
-
-      {/* Facebook Button */}
-      <TouchableOpacity
-        style={[styles.btn, styles.fbBtn, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
-        onPress={() => handleOAuth('facebook')}
-        disabled={loading !== null}
-        activeOpacity={0.7}
-      >
-        {loading === 'facebook' ? (
-          <ActivityIndicator color={colors.text.veryLightGray} />
-        ) : (
-          <>
-            <Image 
-              style={styles.icon} 
-              source={require('../../assets/images/facebook.png')}
-              contentFit="contain"
-            />
-            <Text style={styles.fbBtnText}>{i18n.t('signUpWithFacebook')}</Text>
-          </>
-        )}
-      </TouchableOpacity>
-
-      {/* Divider */}
-      <View style={styles.divider}>
-        <View style={[styles.line, { backgroundColor: colors.borderLight }]} />
-        <Text style={[styles.orText, { color: colors.text.veryLightGray }]}>{i18n.t('or')}</Text>
-        <View style={[styles.line, { backgroundColor: colors.borderLight }]} />
-      </View>
-
-      {!pendingVerification ? (
-        <>
-          {/* Email Input */}
-          <TextInput
-            style={[styles.input, { borderColor: colors.borderLight, backgroundColor: colors.surface, color: colors.text.gray }]}
-            placeholder={typeof i18n.t('email') === 'string' ? i18n.t('email') : ''}
-            placeholderTextColor={colors.text.veryLightGray}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-            editable={loading === null}
-            textAlign={I18nManager.isRTL ? 'right' : 'left'}
-          />
-
-          {/* Sign up button */}
-          <TouchableOpacity
-            style={[styles.btn, styles.emailBtn, { backgroundColor: colors.primary }]}
-            onPress={handleEmail}
-            disabled={loading !== null || !email}
-            activeOpacity={0.7}
-          >
-            {loading === 'email' ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>{i18n.t('signUp')}</Text>
-            )}
-          </TouchableOpacity>
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: colors.text.veryLightGray }]}>
-              {i18n.t('alreadyHaveAnAccount')}{' '}
-            </Text>
-            <Text style={[styles.footerLink, { color: colors.primary }]} onPress={() => router.push('/signin')}>
-              {i18n.t('signIn')}
-            </Text>
-          </View>
-
-          {/* Terms */}
-          <Text style={[styles.termsText, { color: colors.text.veryLightGray }]}>
-            {i18n.t('signUpTerms')}{' '}
-            <Text
-              style={[styles.link, { color: colors.primary }]}
-              onPress={() => Linking.openURL('https://nubian-sd.com/terms-and-conditions')}
-            >
-              {i18n.t('termsAndConditions')}
-            </Text>
-            {i18n.t('and')}{' '}
-            <Text
-              style={[styles.link, { color: colors.primary }]}
-              onPress={() => Linking.openURL('https://nubian-sd.com/privacy-policy')}
-            >
-              {i18n.t('privacyPolicy')}
-            </Text>
-          </Text>
-        </>
-      ) : (
-        <>
-          {/* Verification code input */}
-          <TextInput
-            style={[styles.input, { borderColor: colors.borderLight, backgroundColor: colors.surface, color: colors.text.gray }]}
-            placeholder={typeof i18n.t('inputCode') === 'string' ? i18n.t('inputCode') : ''}
-            placeholderTextColor={colors.text.veryLightGray}
-            keyboardType="number-pad"
-            value={code}
-            onChangeText={setCode}
-            textAlign="center"
-            maxLength={6}
-          />
-
-          {/* Verify button */}
-          <TouchableOpacity
-            style={[styles.btn, styles.emailBtn, { backgroundColor: colors.primary }]}
-            onPress={handleVerifyCode}
-            disabled={loading !== null || !code}
-            activeOpacity={0.7}
-          >
-            {loading === 'email' ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>{i18n.t('verify')}</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Resend code */}
-          <TouchableOpacity
-            onPress={handleResendCode}
-            disabled={loading !== null}
-            style={styles.resendBtn}
-          >
-            <Text style={[styles.resendText, { color: colors.primary }]}>{i18n.t('resendCode')}</Text>
-          </TouchableOpacity>
-
-          {/* Back button */}
-          <TouchableOpacity
-            onPress={() => {
-              setPendingVerification(false);
-              setCode('');
-            }}
-            style={styles.backBtn}
-          >
-            <Text style={[styles.backText, { color: colors.text.veryLightGray }]}>{i18n.t('changeEmail')}</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
+      </AuthCard>
+    </AuthScaffold>
   );
 };
 
 export default SignUpSheet;
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    borderRadius: 20,
-    gap: 16,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  backdrop: {
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backdropImage: {
-    marginTop: 32,
-    width: 80,
-    height: 80,
-    resizeMode: 'cover',
-    marginBottom: 24,
-  },
-  googleBtnText: {
-    color: '#707070',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  fbBtnText: {
-    color: '#707070',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 34,
-  },
-  subtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  btn: {
-    height: 52,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  googleBtn: {
-    borderWidth: 1,
-  },
-  fbBtn: {
-    borderWidth: 1,
-  },
-  emailBtn: {},
-  btnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  icon: {
-    width: 22,
-    height: 22,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-  },
-  orText: {
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  input: {
-    height: 52,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-  },
-  resendBtn: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  resendText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  backBtn: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  backText: {
-    fontSize: 14,
-  },
-  termsText: {
-    fontSize: 13,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  link: {
-    textDecorationLine: 'underline',
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: 8,
-  },
-  footerText: {
-    fontSize: 13,
-  },
-  footerLink: {
-    textDecorationLine: 'underline',
-  },
-});

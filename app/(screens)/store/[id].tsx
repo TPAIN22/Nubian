@@ -595,7 +595,9 @@ export default function MerchantDetailsScreen() {
   const scrollHandler = useMemo(
     () =>
       Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-        useNativeDriver: false,
+        // Sticky nav/tab animations are pure opacity + translateY, so they run
+        // entirely on the UI thread — no bridge round-trip per scroll frame.
+        useNativeDriver: true,
       }),
     [scrollY]
   );

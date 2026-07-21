@@ -21,6 +21,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { PRODUCT_DETAILS_CONFIG } from '@/constants/productDetails';
+import i18n from '@/utils/i18n';
 import type { LightColors, DarkColors } from '@/theme';
 
 const { SCREEN_WIDTH } = PRODUCT_DETAILS_CONFIG;
@@ -94,6 +95,11 @@ export const ProductImageCarousel = memo(({ images, colors, onImagePress }: Prop
       <TouchableOpacity
         activeOpacity={0.92}
         onPress={() => onImagePress?.(item)}
+        accessibilityRole="imagebutton"
+        accessibilityLabel={
+          (i18n.t('image') || 'Image') +
+          ` ${index + 1} ${i18n.t('of') || 'of'} ${validImages.length}`
+        }
         style={[styles.imageWrapper, { backgroundColor: colors.surface }]}
       >
         <Image
@@ -114,7 +120,7 @@ export const ProductImageCarousel = memo(({ images, colors, onImagePress }: Prop
         )}
       </TouchableOpacity>
     ),
-    [onImagePress, firstLoaded, colors]
+    [onImagePress, firstLoaded, colors, validImages.length]
   );
 
   if (validImages.length === 0) {

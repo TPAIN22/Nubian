@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { Pressable, Text, StyleSheet, ViewStyle, TextStyle, View, ActivityIndicator } from "react-native";
+import { Pressable, StyleSheet, ViewStyle, TextStyle, View, ActivityIndicator } from "react-native";
+import { Text } from "@/components/ui/text";
 import { useTheme } from "@/providers/ThemeProvider";
 import useCartStore from "@/store/useCartStore";
 import { useUser } from "@clerk/clerk-expo";
@@ -252,7 +253,9 @@ const AddToCartButton = ({
         style={[styles.button, { backgroundColor: colors.primary }, buttonStyle, isButtonDisabled && styles.disabledButton]}
         disabled={isLoading}
         onPress={handleAddToCart}
-        accessibilityState={{ disabled: isButtonDisabled }}
+        accessibilityRole="button"
+        accessibilityLabel={buttonTitle}
+        accessibilityState={{ disabled: isButtonDisabled, busy: isLoading }}
       >
         {isLoading ? (
           <ActivityIndicator size="small" color="#FFFFFFFF" />

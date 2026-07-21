@@ -1,7 +1,7 @@
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -126,11 +126,11 @@ const CartItem = React.memo(function CartItem({
 
   return (
     <View style={[styles.container, isUpdating && styles.containerUpdating]}>
-      <TouchableOpacity
+      <Pressable
         onPress={goToProduct}
-        activeOpacity={0.7}
         accessibilityRole="imagebutton"
         accessibilityLabel={productLinkLabel}
+        style={({ pressed }) => pressed && { opacity: 0.7 }}
       >
         {imageUri ? (
           <Image
@@ -161,14 +161,13 @@ const CartItem = React.memo(function CartItem({
             />
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
 
       <View style={styles.details}>
         <View style={styles.topRow}>
-          <TouchableOpacity
-            style={styles.nameWrap}
+          <Pressable
+            style={({ pressed }) => [styles.nameWrap, pressed && { opacity: 0.7 }]}
             onPress={goToProduct}
-            activeOpacity={0.7}
           >
             <Text
               style={[styles.productName, { color: Colors.text.gray }]}
@@ -189,9 +188,9 @@ const CartItem = React.memo(function CartItem({
                 {attributesText}
               </Text>
             ) : null}
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             onPress={() => deleteItem(item)}
             disabled={isUpdating}
             accessibilityRole="button"
@@ -209,7 +208,7 @@ const CartItem = React.memo(function CartItem({
                 color={Colors.text.veryLightGray}
               />
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={styles.bottomRow}>
@@ -222,8 +221,11 @@ const CartItem = React.memo(function CartItem({
             accessibilityLabel={i18n.t("cart_quantity") || "Quantity"}
             accessibilityValue={{ text: String(validQty) }}
           >
-            <TouchableOpacity
-              style={styles.stepperBtn}
+            <Pressable
+              style={({ pressed }) => [
+                styles.stepperBtn,
+                pressed && !isUpdating && { opacity: 0.6 },
+              ]}
               onPress={() => decrement(item)}
               disabled={isUpdating}
               accessibilityRole="button"
@@ -234,14 +236,17 @@ const CartItem = React.memo(function CartItem({
               hitSlop={8}
             >
               <Ionicons name="remove" size={16} color={Colors.text.gray} />
-            </TouchableOpacity>
+            </Pressable>
 
             <Text style={[styles.qtyText, { color: Colors.text.gray }]}>
               {validQty}
             </Text>
 
-            <TouchableOpacity
-              style={styles.stepperBtn}
+            <Pressable
+              style={({ pressed }) => [
+                styles.stepperBtn,
+                pressed && !isUpdating && { opacity: 0.6 },
+              ]}
               onPress={() => increment(item)}
               disabled={isUpdating}
               accessibilityRole="button"
@@ -252,7 +257,7 @@ const CartItem = React.memo(function CartItem({
               hitSlop={8}
             >
               <Ionicons name="add" size={16} color={Colors.text.gray} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.priceWrap}>

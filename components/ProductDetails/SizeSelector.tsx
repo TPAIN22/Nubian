@@ -33,6 +33,9 @@ export const SizeSelector: React.FC<SizeSelectorProps> = ({
                                 key={size}
                                 onPress={() => !disabled && onSelectSize(size)}
                                 disabled={disabled}
+                                accessibilityRole="radio"
+                                accessibilityLabel={size}
+                                accessibilityState={{ selected: isSelected, disabled: !!disabled }}
                                 style={[
                                     styles.option,
                                     isSelected && styles.selectedOption,

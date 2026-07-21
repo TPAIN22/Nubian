@@ -438,7 +438,7 @@ export function generateDeepLinkUrl(entity: {
   type: 'product' | 'category' | 'store' | 'collection';
   id: string;
 }): string {
-  const baseUrl = 'nubian://'; // Replace with your actual deep link scheme
+  const baseUrl = 'sdnubian://'; // must match app.json "scheme"
   return `${baseUrl}${entity.type}/${entity.id}`;
 }
 

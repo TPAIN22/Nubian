@@ -1,4 +1,5 @@
-import { Text, StyleSheet, type StyleProp, type TextStyle } from "react-native";
+import { StyleSheet, type StyleProp, type TextStyle } from "react-native";
+import { Text } from "@/components/ui/text";
 import { formatMoney, type Money as MoneyT } from "@/utils/priceUtils";
 
 type Variant = "primary" | "strike" | "small";

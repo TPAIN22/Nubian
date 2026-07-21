@@ -10,25 +10,28 @@ import {
 } from "@gorhom/bottom-sheet";
 import {
   ActivityIndicator,
-  FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
   View,
   Pressable,
   Platform,
   Animated,
 } from "react-native";
+import { Text } from "@/components/ui/text";
+import { FlashList } from "@shopify/flash-list";
 import BottomSheet from "@/components/BottomSheet";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import Card from "@/components/Card";
 import { useTheme } from "@/providers/ThemeProvider";
+import { useRTL } from "@/hooks/useRTL";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import i18n from "@/utils/i18n";
 import axiosInstance from "@/services/api/client";
+
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
 
 const HEADER_HEIGHT = 200;
 
@@ -43,6 +46,7 @@ interface Category {
 export default function CategoriesScreen() {
   const { theme } = useTheme();
   const Colors = theme.colors;
+  const rtl = useRTL();
   const params = useLocalSearchParams();
   const router = useRouter();
 
@@ -67,11 +71,21 @@ export default function CategoriesScreen() {
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const [categoryData, setCategoryData] = useState<Category | null>(null);
+  // Prefer the category already in the store (came with the home/category list),
+  // so navigating from a bubble shows the name/image instantly with no flash and
+  // no fetch. `fetchedCategory` only backfills the rare miss (deep link / cold
+  // store). categoryData is derived, store value always winning.
+  const categoryFromStore = useMemo(
+    () =>
+      isValidCategoryId
+        ? (categories.find((cat: Category) => cat._id === id) ?? null)
+        : null,
+    [categories, id, isValidCategoryId]
+  );
+  const [fetchedCategory, setFetchedCategory] = useState<Category | null>(null);
+  const categoryData = categoryFromStore ?? fetchedCategory;
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Approximate row height based on card image (200) + text/padding (~100)
-  const ROW_HEIGHT = 300;
   const HEADER_COLLAPSED_HEIGHT = 100;
   const SCROLL_THRESHOLD = 100; // Delay before header starts collapsing
 
@@ -112,45 +126,33 @@ export default function CategoriesScreen() {
     extrapolate: "clamp",
   });
 
-  // Fetch category details - only if ID is valid MongoDB ObjectId
+  // Backfill category details only when the store doesn't already have it.
   useEffect(() => {
-    // Validate ID format before fetching
-    if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
-      return;
-    }
+    if (!isValidCategoryId) return;
 
-    const fetchCategoryDetails = async () => {
-      try {
-        // First try to get from store categories
-        const categoryFromStore = categories.find((cat: Category) => cat._id === id);
-
-        if (categoryFromStore) {
-          setCategoryData(categoryFromStore);
-        } else {
-          // Fetch from API
-          const response = await axiosInstance.get(`/categories/${id}`);
-          const category = response.data?.data || response.data;
-          if (category) {
-            setCategoryData(category);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching category details:", error);
-        // Try to get from store categories as fallback
-        const categoryFromStore = categories.find((cat: Category) => cat._id === id);
-        if (categoryFromStore) {
-          setCategoryData(categoryFromStore);
-        }
-      }
-    };
-
-    fetchCategoryDetails();
-
-    // Also ensure categories are loaded
+    // Make sure the store list is loaded — this is what usually satisfies
+    // categoryFromStore on the next render (no per-screen fetch needed).
     if (categories.length === 0) {
       getCategories();
     }
-  }, [id]);
+
+    if (categoryFromStore) return; // already have it — no fetch, no flash
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await axiosInstance.get(`/categories/${id}`);
+        const category = response.data?.data || response.data;
+        if (category && !cancelled) setFetchedCategory(category);
+      } catch (error: any) {
+        // Flaky network is non-fatal here — the header falls back to a generic
+        // label and the product grid still loads. Keep it quiet in production.
+        if (__DEV__) console.warn("Category details fetch failed:", error?.message);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [id, isValidCategoryId, categoryFromStore, categories.length, getCategories]);
 
 
   const handlePresentModalPress = useCallback(() => {
@@ -197,25 +199,27 @@ export default function CategoriesScreen() {
     }
   }, [getProducts, hasMore, isProductsLoading, id]);
 
+  // FlashList has no columnWrapperStyle, so the column gutter lives on a
+  // per-item wrapper. Even index = left column, odd = right column.
   const renderItem = useCallback(
-    ({ item }: { item: any }) => (
-      <Card
-        item={item}
-        handleSheetChanges={handleSheetChanges}
-        handlePresentModalPress={handlePresentModalPress}
-      />
+    ({ item, index }: { item: any; index: number }) => (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          paddingRight: index % 2 === 0 ? 6 : 0,
+          paddingLeft: index % 2 === 1 ? 6 : 0,
+          marginBottom: 12,
+        }}
+      >
+        <Card
+          item={item}
+          handleSheetChanges={handleSheetChanges}
+          handlePresentModalPress={handlePresentModalPress}
+        />
+      </View>
     ),
     [handleSheetChanges, handlePresentModalPress]
-  );
-
-  const columnWrapper = useMemo(
-    () => ({
-      justifyContent: "space-around" as const,
-      alignItems: "center" as const,
-      paddingHorizontal: 12,
-      gap: 12,
-    }),
-    []
   );
 
   const keyExtractor = useCallback((item: any) => item._id, []);
@@ -264,9 +268,13 @@ export default function CategoriesScreen() {
           >
             {/* Back Button */}
             <View style={[styles.backButton, { top: insets.top + 10 }]}>
-              <Pressable onPress={() => router.back()}>
+              <Pressable
+                onPress={() => router.back()}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t("back") || "Back")}
+              >
                 <View style={[styles.backButtonInner, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-                  <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+                  <Ionicons name={rtl.arrowBack} size={22} color="#FFFFFF" />
                 </View>
               </Pressable>
             </View>
@@ -331,8 +339,13 @@ export default function CategoriesScreen() {
             ]}
           >
             <View style={styles.compactHeaderContent}>
-              <Pressable onPress={() => router.back()} style={styles.compactBackButton}>
-                <Ionicons name="arrow-back" size={24} color={Colors.text.gray} />
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.compactBackButton}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t("back") || "Back")}
+              >
+                <Ionicons name={rtl.arrowBack} size={24} color={Colors.text.gray} />
               </Pressable>
               <View style={styles.compactHeaderText}>
                 <Text style={[styles.compactCategoryName, { color: Colors.text.gray }]} numberOfLines={1}>
@@ -351,40 +364,29 @@ export default function CategoriesScreen() {
           </Animated.View>
         </Animated.View>
 
-        {/* Products List */}
-        <FlatList
+        {/* Products List.
+            FlashList v2 via Animated.createAnimatedComponent preserves the
+            native-driver scroll-linked collapsing header (Animated.event on
+            onScroll). Cell recycling replaces FlatList virtualization props
+            (removeClippedSubviews / windowSize / maxToRenderPerBatch /
+            initialNumToRender / getItemLayout). Column gutter moved from
+            columnWrapperStyle to a per-item wrapper in renderItem. */}
+        <AnimatedFlashList
           data={products}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           numColumns={2}
-          columnWrapperStyle={columnWrapper}
-          contentContainerStyle={[
-            styles.listContent,
-            {
-              paddingTop: HEADER_HEIGHT + 20, // Space for initial header
-              paddingBottom: 100,
-            },
-          ]}
+          contentContainerStyle={{
+            paddingTop: HEADER_HEIGHT + 20, // Space for initial header
+            paddingBottom: 100,
+          }}
           onScroll={handleScroll}
           scrollEventThrottle={16}
           onEndReachedThreshold={0.6}
           onEndReached={onEndReachedHandler}
           keyboardDismissMode="on-drag"
-          removeClippedSubviews={true}
-          initialNumToRender={6}
-          maxToRenderPerBatch={10}
-          windowSize={9}
-          updateCellsBatchingPeriod={50}
           decelerationRate="fast"
           showsVerticalScrollIndicator={false}
-          getItemLayout={(_, index) => {
-            const row = Math.floor(index / 2);
-            return {
-              length: ROW_HEIGHT,
-              offset: ROW_HEIGHT * row,
-              index,
-            };
-          }}
           refreshControl={
             <RefreshControl
               refreshing={isProductsLoading && products.length === 0}
@@ -407,7 +409,7 @@ export default function CategoriesScreen() {
             ) : isProductsLoading && products.length > 0 ? (
               <View style={styles.footerLoader}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={[styles.loadingText, { color: Colors.text.veryLightGray, marginLeft: 8 }]}>
+                <Text style={[styles.loadingText, { color: Colors.text.veryLightGray, marginStart: 8 }]}>
                   {i18n.t("loading") || "Loading..."}
                 </Text>
               </View>
@@ -498,7 +500,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   compactBackButton: {
-    marginRight: 12,
+    marginEnd: 12,
     padding: 4,
   },
   compactHeaderText: {
@@ -598,9 +600,6 @@ const styles = StyleSheet.create({
   productCountText: {
     fontSize: 12,
     fontWeight: "600",
-  },
-  listContent: {
-    paddingBottom: 20,
   },
   contentContainer: {
     flex: 1,

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, FlatList, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { useTicketStore } from '@/store/useTicketStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Text } from '@/components/ui/text';
 
 export default function TicketDetailScreen() {
     const { id } = useLocalSearchParams();
@@ -125,9 +126,13 @@ export default function TicketDetailScreen() {
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
             >
                 <View className="bg-white p-3 border-t border-gray-200 flex-row items-center">
-                    <TouchableOpacity className="p-2 mr-2">
+                    <Pressable
+                        className="p-2 mr-2"
+                        accessibilityRole="button"
+                        accessibilityLabel="Attach file"
+                    >
                         <Ionicons name="attach" size={24} color="#666" />
-                    </TouchableOpacity>
+                    </Pressable>
                     <TextInput
                         className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-2 max-h-24"
                         placeholder="Type a message..."
@@ -135,17 +140,20 @@ export default function TicketDetailScreen() {
                         value={newMessage}
                         onChangeText={setNewMessage}
                     />
-                    <TouchableOpacity
+                    <Pressable
                         className={`p-2 rounded-full ${!newMessage.trim() ? 'bg-gray-200' : 'bg-black'}`}
                         onPress={handleSend}
                         disabled={sending || !newMessage.trim()}
+                        accessibilityRole="button"
+                        accessibilityLabel="Send message"
+                        accessibilityState={{ disabled: sending || !newMessage.trim(), busy: sending }}
                     >
                         {sending ? (
                             <ActivityIndicator size="small" color="white" />
                         ) : (
                             <Ionicons name="arrow-up" size={20} color={!newMessage.trim() ? '#999' : 'white'} />
                         )}
-                    </TouchableOpacity>
+                    </Pressable>
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>

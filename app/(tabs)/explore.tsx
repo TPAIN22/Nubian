@@ -3,7 +3,6 @@ import {
   View,
   TextInput,
   StyleSheet,
-  TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
   ScrollView,
@@ -30,6 +29,7 @@ import { ExploreSort } from "@/api/explore.api";
 import useItemStore from "@/store/useItemStore";
 import ProductCard from "@/components/ProductCard";
 import ItemCardSkeleton from "@/components/ItemCardSkeleton";
+import { FlashList } from "@shopify/flash-list";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { Image } from "expo-image";
@@ -322,12 +322,23 @@ const ExploreScreen = () => {
 
   // ── Render helpers ──
   const renderItem = useCallback(
-    ({ item }: { item: Product }) => (
-      <ProductCard
-        item={item}
-        onPress={() => handleProductPress(item)}
-        showWishlist={false}
-      />
+    ({ item, index }: { item: Product; index: number }) => (
+      // FlashList has no columnWrapperStyle — the gutter/row spacing lives on the
+      // per-item wrapper instead. Even index = left column, odd = right column.
+      <View
+        style={{
+          flex: 1,
+          paddingRight: index % 2 === 0 ? 4 : 0,
+          paddingLeft: index % 2 === 1 ? 4 : 0,
+          marginBottom: 8,
+        }}
+      >
+        <ProductCard
+          item={item}
+          onPress={() => handleProductPress(item)}
+          showWishlist={false}
+        />
+      </View>
     ),
     [handleProductPress]
   );
@@ -363,14 +374,19 @@ const ExploreScreen = () => {
           <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
             {exploreError}
           </Text>
-          <TouchableOpacity
-            style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.retryBtn,
+              { backgroundColor: colors.primary },
+              pressed && { opacity: 0.8 },
+            ]}
             onPress={onRefresh}
-            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={String(i18n.t("retry") || "Retry")}
           >
             <Ionicons name="refresh" size={16} color="#fff" />
             <Text style={styles.retryText}>{String(i18n.t("retry") || "Retry")}</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       );
     }
@@ -403,17 +419,20 @@ const ExploreScreen = () => {
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
 
       {/* ── Product Grid ── */}
-      <Animated.FlatList
+      {/* FlashList v2: cell recycling eliminates the blank-cell flashes a plain
+          FlatList showed on fast flings. No estimatedItemSize / getItemLayout
+          needed — v2 auto-measures. FlatList-only virtualization props
+          (removeClippedSubviews / windowSize / maxToRenderPerBatch) are dropped. */}
+      <FlashList
         data={displayProducts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         numColumns={2}
-        columnWrapperStyle={displayProducts.length > 0 ? styles.row : undefined}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingTop: HEADER_HEIGHT + 12, paddingBottom: insets.bottom + 100 },
-          displayProducts.length === 0 && styles.emptyList,
-        ]}
+        contentContainerStyle={{
+          paddingHorizontal: 12,
+          paddingTop: HEADER_HEIGHT + 12,
+          paddingBottom: insets.bottom + 100,
+        }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
         refreshControl={
@@ -443,10 +462,6 @@ const ExploreScreen = () => {
             </View>
           ) : null
         }
-        removeClippedSubviews
-        maxToRenderPerBatch={8}
-        windowSize={6}
-        initialNumToRender={6}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       />
@@ -492,7 +507,7 @@ const ExploreScreen = () => {
                 name="search"
                 size={17}
                 color={isSearchFocused ? colors.primary : colors.text.mediumGray}
-                style={{ marginRight: 8 }}
+                style={{ marginEnd: 8 }}
               />
               <TextInput
                 style={[styles.searchInput, { color: colors.text.gray }]}
@@ -508,12 +523,14 @@ const ExploreScreen = () => {
                 autoCapitalize="none"
               />
               {searchInput.length > 0 && (
-                <TouchableOpacity
+                <Pressable
                   onPress={() => {
                     setSearchInput("");
                     setActiveSearch("");
                   }}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={String(i18n.t("clear") || "Clear")}
                 >
                   <View
                     style={[
@@ -523,7 +540,7 @@ const ExploreScreen = () => {
                   >
                     <Ionicons name="close" size={11} color={colors.text.mediumGray} />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
 
@@ -535,11 +552,16 @@ const ExploreScreen = () => {
                   { opacity: cancelOpacity, transform: [{ translateX: cancelSlide }] },
                 ]}
               >
-                <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
+                <Pressable
+                  onPress={handleCancel}
+                  style={({ pressed }) => pressed && { opacity: 0.7 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={String(i18n.t("cancel") || "Cancel")}
+                >
                   <Text style={[styles.cancelText, { color: colors.primary }]}>
                     {String(i18n.t("cancel") || "Cancel")}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </Animated.View>
             )}
           </View>
@@ -570,28 +592,38 @@ const ExploreScreen = () => {
                   <Text style={[styles.sugLabel, { color: colors.text.mediumGray }]}>
                     RECENT
                   </Text>
-                  <TouchableOpacity onPress={clearAllRecent} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Pressable
+                    onPress={clearAllRecent}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={String(i18n.t("clear") || "Clear")}
+                  >
                     <Text style={[styles.sugClear, { color: colors.primary }]}>
                       {String(i18n.t("clear") || "Clear")}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 {recentSearches.map((s, i) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={`r-${i}`}
-                    style={[styles.sugItem, { borderBottomColor: colors.borderLight }]}
+                    style={({ pressed }) => [
+                      styles.sugItem,
+                      { borderBottomColor: colors.borderLight },
+                      pressed && { opacity: 0.65 },
+                    ]}
                     onPress={() => {
                       setSearchInput(s);
                       handleSearchSubmit(s);
                     }}
-                    activeOpacity={0.65}
+                    accessibilityRole="button"
+                    accessibilityLabel={s}
                   >
                     <Ionicons
                       name="time-outline"
                       size={18}
                       color={colors.text.mediumGray}
-                      style={{ marginRight: 14 }}
+                      style={{ marginEnd: 14 }}
                     />
                     <Text
                       style={[styles.sugItemText, { color: colors.text.gray }]}
@@ -599,13 +631,15 @@ const ExploreScreen = () => {
                     >
                       {s}
                     </Text>
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => removeRecentSearch(s)}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={String(i18n.t("remove") || "Remove")}
                     >
                       <Ionicons name="close" size={15} color={colors.text.veryLightGray} />
-                    </TouchableOpacity>
-                  </TouchableOpacity>
+                    </Pressable>
+                  </Pressable>
                 ))}
               </View>
             )}
@@ -615,7 +649,7 @@ const ExploreScreen = () => {
               <View style={styles.sugHeader}>
                 <View style={styles.sugHeaderRow}>
                   <Ionicons name="trending-up" size={15} color={colors.primary} />
-                  <Text style={[styles.sugLabel, { color: colors.text.mediumGray, marginLeft: 6 }]}>
+                  <Text style={[styles.sugLabel, { color: colors.text.mediumGray, marginStart: 6 }]}>
                     {String(i18n.t("trending") || "TRENDING").toUpperCase()}
                   </Text>
                 </View>
@@ -623,25 +657,27 @@ const ExploreScreen = () => {
 
               <View style={styles.trendRow}>
                 {TRENDING.map((term, i) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={`t-${i}`}
-                    style={[
+                    style={({ pressed }) => [
                       styles.trendChip,
                       {
                         backgroundColor: colors.primary + "10",
                         borderColor: colors.primary + "30",
                       },
+                      pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => {
                       setSearchInput(term);
                       handleSearchSubmit(term);
                     }}
-                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={term}
                   >
                     <Text style={[styles.trendChipText, { color: colors.primary }]}>
                       {term}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
             </View>
@@ -660,13 +696,15 @@ const ExploreScreen = () => {
             <View style={[styles.fabInner, { backgroundColor: colors.cardBackground + "72" }]}>
 
               {/* Filter */}
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ pressed }) => [
                   styles.fabBtn,
                   hasActiveFilters && { backgroundColor: colors.primary + "15" },
+                  pressed && { opacity: 0.7 },
                 ]}
                 onPress={openFilterModal}
-                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t("filter") || "Filter")}
               >
                 <Ionicons
                   name="options-outline"
@@ -689,15 +727,16 @@ const ExploreScreen = () => {
                     <Text style={styles.badgeText}>!</Text>
                   </Animated.View>
                 )}
-              </TouchableOpacity>
+              </Pressable>
 
               <View style={[styles.fabDivider, { backgroundColor: colors.borderLight }]} />
 
               {/* Sort */}
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ pressed }) => [
                   styles.fabBtn,
                   sort !== "recommended" && { backgroundColor: colors.primary + "15" },
+                  pressed && { opacity: 0.7 },
                 ]}
                 onPress={() => {
                   const cycle: ExploreSort[] = [
@@ -706,7 +745,8 @@ const ExploreScreen = () => {
                   const next = cycle[(cycle.indexOf(sort) + 1) % cycle.length] ?? "recommended";
                   handleSortChange(next);
                 }}
-                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={getSortLabel()}
               >
                 <Ionicons
                   name={getSortIcon()}
@@ -716,23 +756,27 @@ const ExploreScreen = () => {
                 <Text style={[styles.fabBtnText, { color: sort !== "recommended" ? colors.primary : colors.text.gray }]}>
                   {getSortLabel()}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Clear filters shortcut */}
               {hasActiveFilters && (
                 <>
                   <View style={[styles.fabDivider, { backgroundColor: colors.borderLight }]} />
-                  <TouchableOpacity
-                    style={styles.fabClearBtn}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.fabClearBtn,
+                      pressed && { opacity: 0.7 },
+                    ]}
                     onPress={() => {
                       useExploreStore.getState().clearFilters();
                       setFilterCategory(null);
                       setShowAvailableOnly(false);
                     }}
-                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={String(i18n.t("clear") || "Clear")}
                   >
                     <Ionicons name="close-circle" size={20} color={colors.danger || colors.error} />
-                  </TouchableOpacity>
+                  </Pressable>
                 </>
               )}
             </View>
@@ -765,12 +809,14 @@ const ExploreScreen = () => {
               <Text style={[styles.modalTitle, { color: colors.text.gray }]}>
                 {String(i18n.t("filterOptions") || "Filter & Sort")}
               </Text>
-              <TouchableOpacity
+              <Pressable
                 onPress={closeFilterModal}
                 style={[styles.modalCloseBtn, { backgroundColor: colors.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t("close") || "Close")}
               >
                 <Ionicons name="close" size={19} color={colors.text.mediumGray} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView
@@ -787,15 +833,17 @@ const ExploreScreen = () => {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.chipRow}
                 >
-                  <TouchableOpacity
-                    style={[
+                  <Pressable
+                    style={({ pressed }) => [
                       styles.chip,
                       !filterCategory
                         ? { backgroundColor: colors.primary + "15", borderColor: colors.primary }
                         : { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                      pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => setFilterCategory(null)}
-                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={String(i18n.t("all") || "All")}
                   >
                     <Ionicons
                       name="apps-outline"
@@ -805,19 +853,21 @@ const ExploreScreen = () => {
                     <Text style={[styles.chipText, { color: !filterCategory ? colors.primary : colors.text.gray }]}>
                       {String(i18n.t("all") || "All")}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {categories.map((cat: any) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={cat._id}
-                      style={[
+                      style={({ pressed }) => [
                         styles.chip,
                         filterCategory === cat._id
                           ? { backgroundColor: colors.primary + "15", borderColor: colors.primary }
                           : { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                        pressed && { opacity: 0.7 },
                       ]}
                       onPress={() => setFilterCategory(cat._id)}
-                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={cat.name}
                     >
                       {cat.image ? (
                         <Image
@@ -834,16 +884,21 @@ const ExploreScreen = () => {
                       <Text style={[styles.chipText, { color: filterCategory === cat._id ? colors.primary : colors.text.gray }]}>
                         {cat.name}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </ScrollView>
               </View>
 
               {/* In-stock toggle */}
-              <TouchableOpacity
-                style={[styles.toggleRow, { backgroundColor: colors.surface }]}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.toggleRow,
+                  { backgroundColor: colors.surface },
+                  pressed && { opacity: 0.7 },
+                ]}
                 onPress={() => setShowAvailableOnly((p) => !p)}
-                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t("availableOnly") || "In Stock Only")}
               >
                 <View style={styles.toggleLeft}>
                   <View style={[styles.toggleIconWrap, { backgroundColor: colors.success + "15" }]}>
@@ -861,7 +916,7 @@ const ExploreScreen = () => {
                 <View style={[styles.track, { backgroundColor: showAvailableOnly ? colors.primary : colors.borderMedium }]}>
                   <View style={[styles.thumb, { transform: [{ translateX: showAvailableOnly ? 20 : 2 }] }]} />
                 </View>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Sort options */}
               <View style={styles.mSection}>
@@ -877,16 +932,18 @@ const ExploreScreen = () => {
                       { key: "trending",     icon: "trending-up-outline", label: i18n.t("trending") || "Trending" },
                     ] as const
                   ).map((opt) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={opt.key}
-                      style={[
+                      style={({ pressed }) => [
                         styles.sortCard,
                         sort === opt.key
                           ? { backgroundColor: colors.primary + "15", borderColor: colors.primary }
                           : { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                        pressed && { opacity: 0.7 },
                       ]}
                       onPress={() => handleSortChange(opt.key as ExploreSort)}
-                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={String(opt.label)}
                     >
                       <Ionicons
                         name={opt.icon as any}
@@ -901,7 +958,7 @@ const ExploreScreen = () => {
                           <Ionicons name="checkmark" size={10} color="#fff" />
                         </View>
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </View>
               </View>
@@ -909,21 +966,30 @@ const ExploreScreen = () => {
 
             {/* Actions */}
             <View style={[styles.modalActions, { borderTopColor: colors.borderLight }]}>
-              <TouchableOpacity
+              <Pressable
                 onPress={clearAllFilters}
-                style={[styles.clearFilterBtn, { borderColor: colors.borderMedium }]}
-                activeOpacity={0.7}
+                style={({ pressed }) => [
+                  styles.clearFilterBtn,
+                  { borderColor: colors.borderMedium },
+                  pressed && { opacity: 0.7 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t("clear") || "Reset")}
               >
                 <Ionicons name="refresh-outline" size={16} color={colors.text.gray} />
                 <Text style={[styles.clearFilterText, { color: colors.text.gray }]}>
                   {String(i18n.t("clear") || "Reset")}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={applyFilters}
-                style={styles.applyFilterBtn}
-                activeOpacity={0.85}
+                style={({ pressed }) => [
+                  styles.applyFilterBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t("applyFilters") || "Apply")}
               >
                 <LinearGradient
                   colors={[colors.primary, colors.primaryDark || colors.primary]}
@@ -936,7 +1002,7 @@ const ExploreScreen = () => {
                     {String(i18n.t("applyFilters") || "Apply")}
                   </Text>
                 </LinearGradient>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </Pressable>
         </Pressable>
@@ -1038,7 +1104,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  cancelWrap: { marginLeft: 10 },
+  cancelWrap: { marginStart: 10 },
   cancelText: { fontSize: 16, fontWeight: "500" },
 
   // Suggestions
@@ -1117,7 +1183,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 2,
+    marginStart: 2,
   },
   badgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
 

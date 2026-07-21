@@ -41,7 +41,8 @@ const VariantPill = memo(({ label, isSelected, isAvailable, onPress, colors }: P
   return (
     <Pressable
       onPress={handlePress}
-      accessibilityRole="button"
+      accessibilityRole="radio"
+      accessibilityLabel={label}
       accessibilityState={{ selected: isSelected, disabled: !isAvailable }}
     >
       <Animated.View

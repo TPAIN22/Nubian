@@ -1,7 +1,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, subscribeWithSelector } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Localization from 'expo-localization';
 import axiosInstance from '@/services/api/client';
+
+// Device region (ISO 3166 alpha-2) → default currency for the launch markets.
+// The region also becomes the country code we send via x-country. Anything
+// unmapped falls back to USD. This lets a first-run user see local prices with
+// zero taps instead of being blocked by the currency modal.
+const REGION_CURRENCY: Record<string, string> = {
+  SA: 'SAR', AE: 'AED', KW: 'KWD', QA: 'QAR', BH: 'BHD',
+  OM: 'OMR', EG: 'EGP', SD: 'SDG', US: 'USD', GB: 'GBP',
+};
 
 /**
  * Currency preference types
@@ -39,6 +49,7 @@ interface CurrencyState {
   
   // Actions
   loadPreferencesFromStorage: () => Promise<void>;
+  ensureCurrencyDefault: () => string | null;
   fetchMetadata: () => Promise<void>;
   setCountry: (countryCode: string) => void;
   setCurrency: (currencyCode: string) => void;
@@ -71,6 +82,27 @@ export const useCurrencyStore = create<CurrencyState>()(
       loadPreferencesFromStorage: async () => {
         // The persist middleware handles this automatically
         set({ isLoaded: true });
+      },
+
+      // Seed a currency from the device region on first run. No-op if a
+      // preference already exists (persisted or user-chosen), so it never
+      // overrides an explicit choice. Returns the code it applied, else null.
+      // NOTE: only call this after the persist store has rehydrated (isLoaded),
+      // otherwise a stored preference could be clobbered by the locale default.
+      ensureCurrencyDefault: () => {
+        if (get().currencyCode) return null;
+
+        let region: string | null = null;
+        try {
+          region = Localization.getLocales()?.[0]?.regionCode ?? null;
+        } catch {
+          region = null;
+        }
+
+        const countryCode = region ?? 'US';
+        const currencyCode = (region && REGION_CURRENCY[region]) || 'USD';
+        set({ countryCode, currencyCode });
+        return currencyCode;
       },
 
       // Fetch countries and currencies from API

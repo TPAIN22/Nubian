@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
 import { Text } from '@/components/ui/text';
 import useAddressStore from '@/store/addressStore';
 import type { Address } from '@/store/addressStore';
@@ -7,6 +7,7 @@ import useLocationStore from '@/store/locationStore';
 import i18n from "@/utils/i18n";
 import { useTheme } from '@/providers/ThemeProvider';
 import AddressForm from '@/components/AddressForm';
+import { ConfirmSheet, type ConfirmSheetRef } from '@/components/ui/ConfirmSheet';
 
 export default function AddressesTab() {
   const { theme } = useTheme();
@@ -15,6 +16,7 @@ export default function AddressesTab() {
   const { initialize: initializeLocations } = useLocationStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [editAddress, setEditAddress] = useState<Address | null>(null);
+  const confirmRef = useRef<ConfirmSheetRef>(null);
 
   useEffect(() => {
     fetchAddresses();
@@ -32,13 +34,15 @@ export default function AddressesTab() {
     setEditAddress(null);
   };
 
-  const handleDelete = async (id: string) => {
-    Alert.alert(i18n.t('deleteConfirm'), i18n.t('deleteAddressConfirm'), [
-      { text: i18n.t('cancel'), style: 'cancel' },
-      { text: i18n.t('delete'), style: 'destructive', onPress: async () => {
-        await deleteAddress(id);
-      }}
-    ]);
+  const handleDelete = (id: string) => {
+    confirmRef.current?.present({
+      title: i18n.t('deleteConfirm'),
+      message: i18n.t('deleteAddressConfirm'),
+      confirmLabel: i18n.t('delete'),
+      cancelLabel: i18n.t('cancel'),
+      destructive: true,
+      onConfirm: () => { deleteAddress(id); },
+    });
   };
 
   const handleSetDefault = async (id: string) => {
@@ -64,7 +68,12 @@ export default function AddressesTab() {
       {error ? (
         <View style={[styles.errorContainer, { backgroundColor: Colors.error + '20', borderLeftColor: Colors.error }]}>
           <Text style={[styles.errorMessage, { color: Colors.error }]}>{error}</Text>
-          <TouchableOpacity onPress={clearError} style={styles.errorCloseButton}>
+          <TouchableOpacity
+            onPress={clearError}
+            style={styles.errorCloseButton}
+            accessibilityRole="button"
+            accessibilityLabel={i18n.t('close')}
+          >
             <Text style={[styles.errorCloseText, { color: Colors.primary }]}>{i18n.t('close')}</Text>
           </TouchableOpacity>
         </View>
@@ -73,6 +82,8 @@ export default function AddressesTab() {
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: Colors.primary }]}
         onPress={() => { setEditAddress(null); setModalVisible(true); }}
+        accessibilityRole="button"
+        accessibilityLabel={i18n.t('addNewAddress')}
       >
         <Text style={styles.addButtonIcon}>{i18n.t('icon_add')}</Text>
         <Text style={styles.addButtonText}>{i18n.t('addNewAddress')}</Text>
@@ -114,6 +125,8 @@ export default function AddressesTab() {
               <TouchableOpacity
                 onPress={() => { setEditAddress(item); setModalVisible(true); }}
                 style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel={i18n.t('edit')}
               >
                 <Text style={[styles.actionEdit, { color: Colors.primary }]}>{i18n.t('icon_edit')} {i18n.t('edit')}</Text>
               </TouchableOpacity>
@@ -121,6 +134,8 @@ export default function AddressesTab() {
               <TouchableOpacity
                 onPress={() => handleDelete(item._id)}
                 style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel={i18n.t('delete')}
               >
                 <Text style={[styles.actionDelete, { color: Colors.error }]}>{i18n.t('icon_delete')} {i18n.t('delete')}</Text>
               </TouchableOpacity>
@@ -129,6 +144,8 @@ export default function AddressesTab() {
                 <TouchableOpacity
                   onPress={() => handleSetDefault(item._id)}
                   style={styles.actionButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18n.t('setAsDefault')}
                 >
                   <Text style={[styles.actionDefault, { color: Colors.primary }]}>{i18n.t('icon_star')} {i18n.t('setAsDefault')}</Text>
                 </TouchableOpacity>
@@ -151,6 +168,8 @@ export default function AddressesTab() {
         onSubmit={(editAddress ? handleEdit : handleAdd) as (form: any) => void}
         initialValues={editAddress ? (editAddress as any) : undefined}
       />
+
+      <ConfirmSheet ref={confirmRef} />
     </View>
   );
 }
@@ -222,7 +241,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
-    marginRight: 8,
+    marginEnd: 8,
     lineHeight: 38,
   },
   addButtonText: {
@@ -247,7 +266,7 @@ const styles = StyleSheet.create({
   defaultBadge: {
     position: 'absolute',
     top: 10,
-    left: 10,
+    start: 10,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,

@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
+  Pressable,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { toast } from 'sonner-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import * as AuthSession from 'expo-auth-session';
@@ -23,6 +23,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import i18n from '../../utils/i18n';
 import { useTracking } from '@/hooks/useTracking';
 import { completeSSOFlow, ssoBrowserSucceeded } from '@/utils/ssoFlow';
+import { ProviderButton } from '@/components/auth/ProviderButton';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -59,14 +60,14 @@ export default function WelcomeScreen() {
         } else if (ssoBrowserSucceeded(result)) {
           // OAuth succeeded in the browser but no session was created —
           // don't fail silently
-          Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
+          toast.error(i18n.t('failedToSignIn'));
         }
       } catch (err: any) {
         if (__DEV__) {
           console.error('[SSO] sign-in error', JSON.stringify(err, null, 2));
         }
         if (err?.code !== 'oauth_access_denied') {
-          Alert.alert(i18n.t('error'), i18n.t('failedToSignIn'));
+          toast.error(i18n.t('failedToSignIn'));
         }
       } finally {
         setLoading(null);
@@ -178,13 +179,13 @@ export default function WelcomeScreen() {
           <View style={[styles.dividerLine, { backgroundColor: colors.borderLight }]} />
         </View>
 
-        <TouchableOpacity
+        <Pressable
           onPress={handleGuest}
           disabled={isBusy}
-          activeOpacity={0.7}
-          style={styles.guestBtn}
+          style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.7 }]}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('continueAsGuest') || 'Continue as Guest'}
+          accessibilityState={{ disabled: isBusy, busy: loading === 'guest' }}
         >
           {loading === 'guest' ? (
             <ActivityIndicator color={colors.primary} />
@@ -193,7 +194,7 @@ export default function WelcomeScreen() {
               {i18n.t('continueAsGuest') || 'Continue as Guest'}
             </Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </MotiView>
 
       <Text style={[styles.terms, { color: colors.text.veryLightGray }]}>
@@ -214,50 +215,6 @@ export default function WelcomeScreen() {
         .
       </Text>
     </View>
-  );
-}
-
-function ProviderButton({
-  onPress,
-  disabled,
-  loading,
-  icon,
-  label,
-  background,
-  borderColor,
-  textColor,
-}: {
-  onPress: () => void;
-  disabled: boolean;
-  loading: boolean;
-  icon: React.ReactNode;
-  label: string;
-  background: string;
-  borderColor: string;
-  textColor: string;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.85}
-      style={[
-        styles.providerBtn,
-        { backgroundColor: background, borderColor },
-        disabled && !loading ? { opacity: 0.6 } : null,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      {loading ? (
-        <ActivityIndicator color={textColor} />
-      ) : (
-        <>
-          <View style={styles.providerIconWrap}>{icon}</View>
-          <Text style={[styles.providerLabel, { color: textColor }]}>{label}</Text>
-        </>
-      )}
-    </TouchableOpacity>
   );
 }
 
@@ -293,29 +250,9 @@ const styles = StyleSheet.create({
   actions: {
     gap: 12,
   },
-  providerBtn: {
-    height: 54,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-  },
-  providerIconWrap: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   providerIcon: {
     width: 22,
     height: 22,
-  },
-  providerLabel: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   divider: {
     flexDirection: 'row',

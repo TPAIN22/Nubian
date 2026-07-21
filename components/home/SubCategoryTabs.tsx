@@ -29,6 +29,9 @@ export const SubCategoryTabs = memo(({ colors, onTabPress, activeTab = TABS[0] }
             <Pressable
               key={tab}
               style={styles.tab}
+              accessibilityRole="button"
+              accessibilityLabel={tab}
+              accessibilityState={{ selected: isActive }}
               onPress={() => onTabPress?.(tab)}
             >
               <Text 

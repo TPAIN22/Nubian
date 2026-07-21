@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, Pressable, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/clerk-expo';
 import { useTicketStore } from '@/store/useTicketStore';
 
@@ -83,10 +84,11 @@ export default function SupportScreen() {
   };
 
   const renderItem = useCallback(({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.7}
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && { opacity: 0.7 }]}
       onPress={() => router.push(`/(screens)/support/${item._id}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`Ticket ${item.ticketNumber}, ${formatStatus(item.status)}, ${item.subject}`}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.ticketId}>{item.ticketNumber}</Text>
@@ -113,7 +115,7 @@ export default function SupportScreen() {
           {item.createdAt ? new Date(item.createdAt).toLocaleDateString('ar-EG') : 'N/A'}
         </Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   ), [router]);
 
   if (!isLoaded) {
@@ -141,12 +143,14 @@ export default function SupportScreen() {
         }
         ListHeaderComponent={
           <>
-            <TouchableOpacity
-              style={styles.createButton}
+            <Pressable
+              style={({ pressed }) => [styles.createButton, pressed && { opacity: 0.7 }]}
               onPress={() => router.push('/(screens)/support/create')}
+              accessibilityRole="button"
+              accessibilityLabel="Open New Ticket"
             >
               <Text style={styles.createButtonText}>Open New Ticket</Text>
-            </TouchableOpacity>
+            </Pressable>
             <Text style={styles.sectionTitle}>Your Tickets</Text>
           </>
         }

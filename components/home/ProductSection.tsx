@@ -6,6 +6,7 @@ import ItemCard from "@/components/Card";
 import ItemCardSkeleton from "@/components/ItemCardSkeleton";
 import { HomeProduct } from "@/api/home.api";
 import { FlashDealsCountdown } from "./FlashDealsCountdown";
+import { useRTL } from "@/hooks/useRTL";
 import i18n from "@/utils/i18n";
 
 export interface ProductSectionProps {
@@ -25,6 +26,7 @@ export const ProductSection = memo(({
   onViewAll,
   showCountdown = false,
 }: ProductSectionProps) => {
+  const rtl = useRTL();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = screenWidth * 0.45;
   const itemWidth = cardWidth + 12; 
@@ -33,7 +35,7 @@ export const ProductSection = memo(({
   // recommendations.api.ts). No client-side re-normalization here — that path
   // used to silently re-introduce the price-alias confusion.
   const renderItem = useCallback(({ item }: { item: HomeProduct }) => (
-    <View style={{ width: cardWidth, marginRight: 12 }}>
+    <View style={{ width: cardWidth, marginEnd: 12 }}>
       <ItemCard
         item={item}
         cardWidth={cardWidth}
@@ -65,7 +67,7 @@ export const ProductSection = memo(({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={() => (
-            <View style={{ width: cardWidth, marginRight: 12 }}>
+            <View style={{ width: cardWidth, marginEnd: 12 }}>
               <ItemCardSkeleton />
             </View>
           )}
@@ -85,9 +87,15 @@ export const ProductSection = memo(({
           {title}
         </Text>
         {onViewAll && (
-          <Pressable onPress={onViewAll} style={styles.viewAllButton}>
+          <Pressable
+            onPress={onViewAll}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${i18n.t("home_seeAll")} ${title}`}
+            style={styles.viewAllButton}
+          >
             <Text style={[styles.viewAllText, { color: colors.primary }]}>{i18n.t("home_seeAll")}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            <Ionicons name={rtl.chevronForward} size={16} color={colors.primary} />
           </Pressable>
         )}
       </View>

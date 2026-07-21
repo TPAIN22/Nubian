@@ -1,13 +1,13 @@
 import { useCallback, useEffect } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
   Pressable,
   Platform,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";

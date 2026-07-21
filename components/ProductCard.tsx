@@ -1,6 +1,6 @@
 // ProductCard.tsx
 import React, { useMemo, useCallback } from "react";
-import { View, StyleSheet, Pressable, InteractionManager } from "react-native";
+import { View, StyleSheet, Pressable, InteractionManager, useWindowDimensions } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Heading } from "@/components/ui/heading";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { getDisplayPrice } from "@/domain/pricing/pricing.engine";
 import { getProductFinalMoney, getProductOriginalMoney, formatMoney } from "@/utils/priceUtils";
 import { cleanImages } from "@/utils/productUtils";
+import { ikResize } from "@/utils/imageCdn";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { markTapStartTime } from "@/hooks/useProductFetch";
 
@@ -32,9 +33,13 @@ interface ProductCardProps {
 }
 
 const ProductCard = React.memo(
-  ({ item, onPress, variant = "grid", showWishlist = true }: ProductCardProps) => {
+  ({ item, onPress, variant = "grid", showWishlist = true, cardWidth }: ProductCardProps) => {
     const { theme } = useTheme();
     const colors = theme.colors;
+    const { width: windowWidth } = useWindowDimensions();
+    // Target render width for CDN resizing: the explicit cardWidth when the
+    // parent passes one (home rails), else ~half the screen for the 2-col grid.
+    const targetImgWidth = variant === "horizontal" ? 120 : (cardWidth ?? windowWidth / 2);
 
     // Re-render when currency metadata finishes loading (symbol/decimals become available).
     // Do NOT subscribe to currencyCode here — doing so causes an immediate re-render
@@ -97,6 +102,14 @@ const ProductCard = React.memo(
 
     const productHasDiscount = discountPercentage > 0;
 
+    // A11y: main press area announces name + price (+ discount when present).
+    const a11yLabel = useMemo(() => {
+      const priceStr = finalMoney ? formatMoney(finalMoney) : formatPrice(finalPrice);
+      const parts = [item?.name, priceStr];
+      if (productHasDiscount) parts.push(`${discountPercentage}% off`);
+      return parts.filter(Boolean).join(", ");
+    }, [item?.name, finalMoney, finalPrice, formatPrice, productHasDiscount, discountPercentage]);
+
     // PERFORMANCE: Start prefetch on press-in (while user's finger is still down)
     const handlePressIn = useCallback(() => {
       if (!item?.id) return;
@@ -155,9 +168,15 @@ const ProductCard = React.memo(
       return (
         <Card className="p-0" style={[styles.productCard, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.horizontalContainer}>
-            <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.horizontalImageContainer}>
+            <Pressable
+              onPressIn={handlePressIn}
+              onPress={handleClick}
+              accessibilityRole="button"
+              accessibilityLabel={a11yLabel}
+              style={styles.horizontalImageContainer}
+            >
               <Image
-                source={firstImage ? { uri: firstImage } : null}
+                source={firstImage ? { uri: ikResize(firstImage, targetImgWidth) ?? firstImage } : null}
                 alt="product image"
                 style={[styles.horizontalImage, { backgroundColor: colors.surface, aspectRatio: 1 }]}
                 contentFit="cover"
@@ -166,7 +185,13 @@ const ProductCard = React.memo(
             </Pressable>
 
             <View style={styles.horizontalInfo}>
-              <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.horizontalNameContainer}>
+              <Pressable
+                onPressIn={handlePressIn}
+                onPress={handleClick}
+                accessibilityRole="button"
+                accessibilityLabel={a11yLabel}
+                style={styles.horizontalNameContainer}
+              >
                 <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={1}>
                   {item.name}
                 </Heading>
@@ -198,16 +223,26 @@ const ProductCard = React.memo(
           {showWishlist && (
             <Pressable
               onPress={handleWishlistPress}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityState={{ selected: inWishlist }}
+              accessibilityLabel={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
               style={[styles.wishlistButton, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
             >
               <Ionicons name={inWishlist ? "heart" : "heart-outline"} size={20} color={inWishlist ? colors.danger : colors.primary} />
             </Pressable>
           )}
 
-          <Pressable onPressIn={handlePressIn} onPress={handleClick} style={styles.imagePressable}>
+          <Pressable
+            onPressIn={handlePressIn}
+            onPress={handleClick}
+            accessibilityRole="button"
+            accessibilityLabel={a11yLabel}
+            style={styles.imagePressable}
+          >
             {displayImage ? (
               <Image
-                source={{ uri: displayImage }}
+                source={{ uri: ikResize(displayImage, targetImgWidth) ?? displayImage }}
                 alt="product image"
                 style={[styles.productImage, { backgroundColor: colors.surface }]}
                 contentFit="cover"
@@ -229,7 +264,12 @@ const ProductCard = React.memo(
         </View>
 
         <View style={styles.productInfo}>
-          <Pressable onPressIn={handlePressIn} onPress={handleClick}>
+          <Pressable
+            onPressIn={handlePressIn}
+            onPress={handleClick}
+            accessibilityRole="button"
+            accessibilityLabel={a11yLabel}
+          >
             <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={2}>
               {item.name}
             </Heading>
@@ -287,13 +327,13 @@ const styles = StyleSheet.create({
   discountBadge: { position: "absolute", top: 10, left: 10, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, zIndex: 2 },
   discountText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   productInfo: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10, minHeight: 60 },
-  productName: { fontSize: 12, fontWeight: "600", lineHeight: 18, marginBottom: 6, minHeight: 36 },
+  productName: { fontSize: 13, fontWeight: "600", lineHeight: 19, marginBottom: 6, minHeight: 38 },
   priceContainer: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2, minHeight: 20 },
   originalPrice: { textDecorationLine: "line-through", fontSize: 11, fontWeight: "400" },
   currentPrice: { fontWeight: "700", fontSize: 14, flexShrink: 0 },
 
   horizontalContainer: { flexDirection: "row", padding: 12 },
-  horizontalImageContainer: { marginRight: 12 },
+  horizontalImageContainer: { marginEnd: 12 },
   horizontalImage: { width: 100, borderRadius: 8 },
   horizontalInfo: { flex: 1, justifyContent: "space-between" },
   horizontalNameContainer: { marginBottom: 8 },

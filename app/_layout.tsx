@@ -21,7 +21,6 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
 import { Toaster } from "sonner-native";
-import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
 import { useHomeStore } from "@/store/useHomeStore";
 import useItemStore from "@/store/useItemStore";
@@ -67,6 +66,10 @@ function AppLoaderWithClerk() {
     useState<boolean>(false);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState<boolean>(true);
+  // Minimum brand-moment window: the launch video is allowed to show for at most
+  // MIN_SPLASH_MS. Once elapsed, the app enters as soon as startup work is done —
+  // it no longer waits for the video to play all the way to the end.
+  const [minSplashElapsed, setMinSplashElapsed] = useState<boolean>(false);
 
   const { isConnected, isNetworkChecking, retryNetworkCheck } = useNetwork();
 
@@ -158,6 +161,14 @@ function AppLoaderWithClerk() {
     setIsUpdateChecking(false);
   }, []);
 
+  // Cap the launch-video brand moment. After this fires, entry is gated only on
+  // real startup work (network + fonts + onboarding check), never on the video.
+  const MIN_SPLASH_MS = 1200;
+  useEffect(() => {
+    const timer = setTimeout(() => setMinSplashElapsed(true), MIN_SPLASH_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
   const onGifFinish = useCallback(() => {
     setGifAnimationFinished(true);
   }, []);
@@ -209,8 +220,28 @@ function AppLoaderWithClerk() {
     return unsubscribe;
   }, []);
 
-  // Show loading screen until every startup task is done — one mount, video plays once
-  if (isNetworkChecking || !fontsLoaded || !gifAnimationFinished || isUpdateChecking || isCheckingOnboarding) {
+  // 🌍 Seed a default currency from the device locale once the persisted store
+  // has rehydrated, and load currency metadata (symbols/decimals) app-wide.
+  // Replaces the old blocking currency modal: a first-run Gulf user sees local
+  // prices with zero taps. The null→value set here trips the refresh listener
+  // above, so home data re-fetches with the correct x-currency header.
+  const currencyLoaded = useCurrencyStore((s) => s.isLoaded);
+  useEffect(() => {
+    if (!currencyLoaded) return;
+    useCurrencyStore.getState().ensureCurrencyDefault();
+    useCurrencyStore.getState().fetchMetadata();
+  }, [currencyLoaded]);
+
+  // Entry is gated on two things: (1) real startup work being done, and (2) the
+  // brand moment being satisfied — which is EITHER the video finishing OR the
+  // minimum splash window elapsing, whichever comes first. This keeps the launch
+  // snappy: a fast device enters right after MIN_SPLASH_MS instead of waiting out
+  // the whole video. One mount, video plays at most once.
+  const startupDone =
+    !isNetworkChecking && fontsLoaded && !isUpdateChecking && !isCheckingOnboarding;
+  const brandMomentDone = gifAnimationFinished || minSplashElapsed;
+
+  if (!startupDone || !brandMomentDone) {
     return (
       <GifLoadingScreen
         onAnimationFinish={onGifFinish}
@@ -244,7 +275,8 @@ function AppLoaderWithClerk() {
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(screens)" />
         </Stack>
-        <CurrencySelector mandatory />
+        {/* Currency now defaults from device locale at startup (see effect above)
+            and is changed from the Profile screen — no blocking first-run modal. */}
         <Toaster position="top-center" duration={3000} richColors offset={60} />
       </>
     </NotificationProvider>

@@ -8,7 +8,11 @@ import i18n from "@/utils/i18n";
 export const HomeEmptyState = memo(({ colors, onRefresh }: { colors: any, onRefresh: () => void }) => {
   return (
     <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconContainer, { backgroundColor: colors.surface }]}>
+      <View
+        style={[styles.emptyIconContainer, { backgroundColor: colors.surface }]}
+        accessibilityElementsHidden={true}
+        importantForAccessibility="no-hide-descendants"
+      >
         <Ionicons name="bag-handle-outline" size={80} color={colors.primary} />
         <View style={[styles.emptyIconBadge, { backgroundColor: colors.primary }]}>
           <Ionicons name="refresh" size={18} color="white" />

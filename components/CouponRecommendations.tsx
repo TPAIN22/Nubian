@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Text } from '@/components/ui/text';
 import axiosInstance from "@/services/api/client";
 import { useAuth } from '@clerk/clerk-expo';
 import Colors from '@/locales/brandColors';

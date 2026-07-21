@@ -21,6 +21,8 @@ export const CategoryGrid = memo(({ categories, colors }: { categories: HomeCate
         renderItem={({ item }) => (
           <Pressable
             style={styles.categoryItem}
+            accessibilityRole="button"
+            accessibilityLabel={item.name}
             onPress={() => {
               trackEvent('category_open', {
                 categoryId: item._id,

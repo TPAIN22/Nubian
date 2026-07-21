@@ -11,6 +11,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { memo } from 'react';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useRTL } from '@/hooks/useRTL';
+import i18n from '@/utils/i18n';
 
 interface ProductHeaderProps {
   inWishlist: boolean;
@@ -23,11 +25,13 @@ const OverlayButton = ({
   children,
   disabled,
   cardBg,
+  accessibilityLabel,
 }: {
   onPress: () => void;
   children: React.ReactNode;
   disabled?: boolean;
   cardBg: string;
+  accessibilityLabel: string;
 }) => (
   <TouchableOpacity
     onPress={onPress}
@@ -35,6 +39,9 @@ const OverlayButton = ({
     activeOpacity={0.75}
     style={styles.buttonOuter}
     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+    accessibilityRole="button"
+    accessibilityLabel={accessibilityLabel}
+    accessibilityState={{ disabled: !!disabled }}
   >
     {Platform.OS === 'ios' ? (
       <BlurView intensity={60} tint="systemChromeMaterial" style={styles.buttonInner}>
@@ -52,20 +59,30 @@ export const ProductHeader = memo(
     const insets = useSafeAreaInsets();
     const { theme } = useTheme();
     const colors = theme.colors;
+    const rtl = useRTL();
 
     return (
       <View
         style={[styles.container, { paddingTop: insets.top + 8 }]}
         pointerEvents="box-none"
       >
-        <OverlayButton onPress={() => router.back()} cardBg={colors.cardBackground + 'E0'}>
-          <Ionicons name="chevron-back" size={20} color={colors.text.gray} />
+        <OverlayButton
+          onPress={() => router.back()}
+          cardBg={colors.cardBackground + 'E0'}
+          accessibilityLabel={i18n.t('back') || 'Back'}
+        >
+          <Ionicons name={rtl.chevronBack} size={20} color={colors.text.gray} />
         </OverlayButton>
 
         <OverlayButton
           onPress={onWishlistPress}
           disabled={wishlistLoading}
           cardBg={colors.cardBackground + 'E0'}
+          accessibilityLabel={
+            inWishlist
+              ? i18n.t('removeFromWishlist') || 'Remove from wishlist'
+              : i18n.t('addToWishlist') || 'Add to wishlist'
+          }
         >
           {wishlistLoading ? (
             <ActivityIndicator size="small" color={colors.text.gray} />

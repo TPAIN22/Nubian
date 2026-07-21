@@ -2,19 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   TextInput,
-  FlatList,
   StyleSheet,
-  TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
   ScrollView,
   Modal,
   Pressable
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { Text } from "@/components/ui/text";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRTL } from "@/hooks/useRTL";
 import { useExploreStore } from "@/store/useExploreStore";
 import useCategoryStore from "@/store/useCategoryStore";
 import i18n from "@/utils/i18n";
@@ -32,6 +32,7 @@ type Product = NormalizedProduct;
 const ProductsScreen = () => {
   const params = useLocalSearchParams<{ type: string }>();
   const router = useRouter();
+  const rtl = useRTL();
   const { theme } = useTheme();
   const colors = theme.colors;
   const { trackEvent } = useTracking();
@@ -196,17 +197,27 @@ const ProductsScreen = () => {
     );
   }, [products, searchTerm]);
 
-  // Render item
-  const renderItem = useCallback(({ item }: { item: Product; index: number }) => (
-    <ProductCard
-      item={item}
-      onPress={() => {
-        handleProductView(item);
-        navigateToProduct(item.id, item as any);
-        setProduct(item);
+  // Render item — FlashList has no columnWrapperStyle, so the column gutter
+  // lives on a per-item wrapper. Even index = left column, odd = right column.
+  const renderItem = useCallback(({ item, index }: { item: Product; index: number }) => (
+    <View
+      style={{
+        flex: 1,
+        paddingRight: index % 2 === 0 ? 6 : 0,
+        paddingLeft: index % 2 === 1 ? 6 : 0,
+        marginBottom: 12,
       }}
-      showWishlist={false}
-    />
+    >
+      <ProductCard
+        item={item}
+        onPress={() => {
+          handleProductView(item);
+          navigateToProduct(item.id, item as any);
+          setProduct(item);
+        }}
+        showWishlist={false}
+      />
+    </View>
   ), [handleProductView, setProduct]);
 
   // PERFORMANCE: Stable keyExtractor - avoid Math.random() which causes unstable keys
@@ -240,14 +251,16 @@ const ProductsScreen = () => {
           <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
             {String(exploreError || '')}
           </Text>
-          <TouchableOpacity
+          <Pressable
             style={[styles.retryButton, { backgroundColor: colors.primary }]}
             onPress={onRefresh}
+            accessibilityRole="button"
+            accessibilityLabel={String(i18n.t('retry') || 'Retry')}
           >
             <Text style={[styles.retryButtonText, { color: colors.text.white }]}>
               {String(i18n.t('retry') || 'Retry')}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       );
     }
@@ -272,12 +285,14 @@ const ProductsScreen = () => {
   const ListHeaderComponent = useCallback(() => (
     <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
       <View style={styles.headerTop}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => router.back()}
           style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel={String(i18n.t("back") || "Back")}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text.gray} />
-        </TouchableOpacity>
+          <Ionicons name={rtl.arrowBack} size={24} color={colors.text.gray} />
+        </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text.gray }]}>
           {pageTitle}
         </Text>
@@ -295,17 +310,24 @@ const ProductsScreen = () => {
           placeholderTextColor={colors.text.veryLightGray}
         />
         {searchTerm.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchTerm("")} style={styles.searchClearButton}>
+          <Pressable
+            onPress={() => setSearchTerm("")}
+            style={styles.searchClearButton}
+            accessibilityRole="button"
+            accessibilityLabel={String(i18n.t("clear") || "Clear")}
+          >
             <Ionicons name="close-circle" size={20} color={colors.text.lightGray} />
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
 
       {/* Filter and Sort */}
       <View style={styles.filterContainer}>
-        <TouchableOpacity
+        <Pressable
           style={[styles.filterButton, { backgroundColor: colors.cardBackground, borderColor: colors.primary }]}
           onPress={openFilterModal}
+          accessibilityRole="button"
+          accessibilityLabel={String(i18n.t('filter') || 'Filter')}
         >
           <Ionicons name="funnel-outline" size={18} color={colors.primary} />
           <Text style={[styles.filterText, { color: colors.primary }]}>
@@ -314,15 +336,17 @@ const ProductsScreen = () => {
           {(showAvailableOnly || filterCategory) && (
             <View style={[styles.filterBadge, { backgroundColor: colors.danger || colors.primary }]} />
           )}
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
           style={[styles.sortButton, { borderColor: colors.primary }]}
           onPress={() => {
             if (sort === 'recommended') handleSortChange('price_low');
             else if (sort === 'price_low') handleSortChange('price_high');
             else handleSortChange('recommended');
           }}
+          accessibilityRole="button"
+          accessibilityLabel={String(i18n.t('sort') || 'Sort')}
         >
           <Ionicons
             name={sort === 'price_high' ? "arrow-down" : sort === 'price_low' ? "arrow-up" : "funnel-outline"}
@@ -336,25 +360,25 @@ const ProductsScreen = () => {
                   (i18n.t('sort') || 'Sort')
             )}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
-  ), [pageTitle, searchTerm, sort, showAvailableOnly, filterCategory, colors, router, openFilterModal, handleSortChange]);
+  ), [pageTitle, searchTerm, sort, showAvailableOnly, filterCategory, colors, router, rtl, openFilterModal, handleSortChange]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      {/* Products List with scrollable header */}
-      <FlatList
+      {/* Products List with scrollable header.
+          FlashList v2: cell recycling replaces FlatList virtualization props
+          (removeClippedSubviews / windowSize / maxToRenderPerBatch /
+          initialNumToRender). Column gutter moved from columnWrapperStyle to a
+          per-item wrapper in renderItem. */}
+      <FlashList
         data={filteredProducts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListHeaderComponent={ListHeaderComponent}
-        contentContainerStyle={[
-          styles.listContainer,
-          filteredProducts.length === 0 && { flex: 1, justifyContent: 'center' }
-        ]}
+        contentContainerStyle={styles.listContainer}
         numColumns={2}
-        columnWrapperStyle={filteredProducts.length > 0 ? styles.columnWrapper : undefined}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
         refreshControl={
@@ -382,11 +406,7 @@ const ProductsScreen = () => {
             </View>
           ) : null
         }
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={6}
         showsVerticalScrollIndicator={false}
-        initialNumToRender={6}
       />
 
       {/* Filter Modal */}
@@ -408,9 +428,13 @@ const ProductsScreen = () => {
               <Text style={[styles.modalTitle, { color: colors.text.gray }]}>
                 {String(i18n.t('filterOptions') || 'Filter Options')}
               </Text>
-              <TouchableOpacity onPress={closeFilterModal}>
+              <Pressable
+                onPress={closeFilterModal}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t('close') || 'Close')}
+              >
                 <Ionicons name="close" size={24} color={colors.text.mediumGray} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={true}>
@@ -424,7 +448,7 @@ const ProductsScreen = () => {
                   showsHorizontalScrollIndicator={false}
                   style={styles.categoryScroll}
                 >
-                  <TouchableOpacity
+                  <Pressable
                     style={[
                       styles.categoryOption,
                       {
@@ -433,6 +457,8 @@ const ProductsScreen = () => {
                       }
                     ]}
                     onPress={() => setFilterCategory(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel={String(i18n.t('all') || 'All')}
                   >
                     <Text style={[
                       styles.categoryOptionText,
@@ -440,10 +466,10 @@ const ProductsScreen = () => {
                     ]}>
                       {String(i18n.t('all') || 'All')}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {typedCategories.map((cat: Category) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={cat._id}
                       style={[
                         styles.categoryOption,
@@ -453,6 +479,8 @@ const ProductsScreen = () => {
                         }
                       ]}
                       onPress={() => setFilterCategory(cat._id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={cat.name}
                     >
                       <Text style={[
                         styles.categoryOptionText,
@@ -460,15 +488,17 @@ const ProductsScreen = () => {
                       ]}>
                         {cat.name}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </ScrollView>
               </View>
 
               {/* Available Only */}
-              <TouchableOpacity
+              <Pressable
                 style={[styles.filterOption, { backgroundColor: colors.surface }]}
                 onPress={() => setShowAvailableOnly(prev => !prev)}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t('availableOnly') || 'Available Only')}
               >
                 <View style={styles.filterOptionLeft}>
                   <Ionicons name="checkmark-circle-outline" size={20} color={colors.primary} />
@@ -485,7 +515,7 @@ const ProductsScreen = () => {
                     <Ionicons name="checkmark" size={16} color="#fff" />
                   )}
                 </View>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Sort Options */}
               <View style={styles.filterSection}>
@@ -494,10 +524,11 @@ const ProductsScreen = () => {
                 </Text>
 
                 {['price_high', 'price_low', 'recommended', 'trending'].map((sortOption) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={sortOption}
                     style={[styles.filterOption, { backgroundColor: colors.surface }]}
                     onPress={() => handleSortChange(sortOption as ExploreSort)}
+                    accessibilityRole="button"
                   >
                     <View style={styles.filterOptionLeft}>
                       <Ionicons
@@ -528,7 +559,7 @@ const ProductsScreen = () => {
                         <Ionicons name="checkmark" size={16} color="#fff" />
                       )}
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
 
@@ -536,18 +567,22 @@ const ProductsScreen = () => {
 
             {/* Action Buttons */}
             <View style={styles.modalActions}>
-              <TouchableOpacity
+              <Pressable
                 onPress={clearAllFilters}
                 style={[styles.clearButton, { borderColor: colors.borderMedium, backgroundColor: colors.surface }]}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t('clear') || 'Clear')}
               >
                 <Text style={[styles.clearButtonText, { color: colors.text.gray }]}>
                   {String(i18n.t('clear') || 'Clear')}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={applyFilters}
                 style={styles.applyButton}
+                accessibilityRole="button"
+                accessibilityLabel={String(i18n.t('applyFilters') || 'Apply Filters')}
               >
                 <LinearGradient
                   colors={[colors.primary, colors.primaryDark || colors.primary]}
@@ -557,7 +592,7 @@ const ProductsScreen = () => {
                     {String(i18n.t('applyFilters') || 'Apply Filters')}
                   </Text>
                 </LinearGradient>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </Pressable>
         </Pressable>
@@ -658,12 +693,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   listContainer: {
-    padding: 12,
-    paddingTop: 0,
-  },
-  columnWrapper: {
-    justifyContent: 'space-between',
-    gap: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
   },
   emptyContainer: {
     flex: 1,

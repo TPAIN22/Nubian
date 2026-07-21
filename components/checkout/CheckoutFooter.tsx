@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -143,16 +143,16 @@ export const CheckoutFooter = React.memo(function CheckoutFooter({
         </Text>
       ) : null}
 
-      <TouchableOpacity
-        activeOpacity={0.85}
+      <Pressable
         onPress={onPress}
         disabled={isDisabled}
         accessibilityRole="button"
         accessibilityLabel={`${ctaTitle}, ${totalLabel}`}
         accessibilityState={{ disabled: isDisabled, busy: !!loading }}
-        style={[
+        style={({ pressed }) => [
           styles.cta,
           { backgroundColor: buttonBg },
+          pressed && !isDisabled && { opacity: 0.85 },
         ]}
       >
         {loading ? (
@@ -165,10 +165,10 @@ export const CheckoutFooter = React.memo(function CheckoutFooter({
             >
               {ctaTitle}
             </Text>
-           
+
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 });

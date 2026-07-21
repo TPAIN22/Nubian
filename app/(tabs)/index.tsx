@@ -12,7 +12,6 @@ import {
   InteractionManager,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -38,6 +37,7 @@ import {
 } from "@/utils/deepLinks";
 
 import { LinearGradient } from "expo-linear-gradient";
+import { ikResize } from "@/utils/imageCdn";
 import { BannerCarousel } from "@/components/home/BannerCarousel";
 import { ProductSection } from "@/components/home/ProductSection";
 import { StoreHighlights } from "@/components/home/StoreHighlights";
@@ -80,8 +80,10 @@ const Header = memo(
         {/* Icon row */}
         <View style={styles.headerRow}>
           <Pressable
-            hitSlop={12}
+            hitSlop={16}
             onPress={() => router.push("/(tabs)/explore" as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Search"
             style={styles.iconBtn}
           >
             <Ionicons name="search-outline" size={24} color={iconColor} />
@@ -89,16 +91,22 @@ const Header = memo(
 
           <View style={styles.headerRight}>
             <Pressable
-              hitSlop={12}
+              hitSlop={16}
               onPress={() => router.push("/(tabs)/wishlist" as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Wishlist"
               style={styles.iconBtn}
             >
               <Ionicons name="heart-outline" size={24} color={iconColor} />
             </Pressable>
 
             <Pressable
-              hitSlop={12}
+              hitSlop={16}
               onPress={() => router.push("/(tabs)/cart" as any)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                cartQty > 0 ? `Cart, ${cartQty} items` : "Cart"
+              }
               style={styles.iconBtn}
             >
               <Ionicons name="bag-outline" size={24} color={iconColor} />
@@ -108,6 +116,8 @@ const Header = memo(
                     styles.cartBadge,
                     { backgroundColor: colors.primary },
                   ]}
+                  accessibilityElementsHidden={true}
+                  importantForAccessibility="no-hide-descendants"
                 >
                   <Text style={styles.cartBadgeText}>
                     {cartQty > 99 ? "99+" : String(cartQty)}
@@ -157,7 +167,12 @@ const CategoryBubbles = memo(({ categories, colors }: CategoryBubblesProps) => {
       keyExtractor={(item) => item._id}
       contentContainerStyle={styles.bubblesContent}
       renderItem={({ item }) => (
-        <Pressable onPress={() => handlePress(item)} style={styles.bubble}>
+        <Pressable
+          onPress={() => handlePress(item)}
+          accessibilityRole="button"
+          accessibilityLabel={item.name}
+          style={styles.bubble}
+        >
           <View
             style={[
               styles.bubbleImgWrap,
@@ -166,7 +181,7 @@ const CategoryBubbles = memo(({ categories, colors }: CategoryBubblesProps) => {
           >
             {item.image ? (
               <Image
-                source={{ uri: item.image }}
+                source={{ uri: ikResize(item.image, 76) ?? item.image }}
                 style={styles.bubbleImg}
                 contentFit="cover"
                 transition={200}
@@ -283,7 +298,10 @@ function IndexContent() {
       Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
         {
-          useNativeDriver: false,
+          // Native-driven: the header opacity interpolation runs on the UI thread
+          // so the blur fade tracks the finger even while the feed is hydrating.
+          // The JS listener below still fires for the threshold toggle + analytics.
+          useNativeDriver: true,
           listener: (e: any) => {
             const y: number = e.nativeEvent.contentOffset.y;
 
@@ -338,6 +356,103 @@ function IndexContent() {
 
   const emptyTopPad = insets.top + 52;
 
+  // ── Sections (virtualized) ─────────────────────────────────────────────────
+  // The home feed is a vertical FlatList of section rows instead of a ScrollView
+  // that mounts everything up-front. Only the first `initialNumToRender` sections
+  // render on first paint; the rest mount as they scroll into the window. The
+  // horizontal product rails inside each section stay as their own FlatLists
+  // (supported nested horizontal-in-vertical pattern).
+  type SectionKey =
+    | "banner" | "categories" | "divider" | "forYou"
+    | "trending" | "storeHighlights" | "flashDeals"
+    | "newArrivals" | "brands";
+
+  const sections = useMemo<SectionKey[]>(() => {
+    if (isEmpty) return [];
+    const list: SectionKey[] = [
+      "banner", "categories", "divider",
+      "forYou", "trending", "storeHighlights", "flashDeals", "newArrivals",
+    ];
+    if (brandsYouLove.length > 0 || homeLoading) list.push("brands");
+    return list;
+  }, [isEmpty, brandsYouLove.length, homeLoading]);
+
+  const renderSection = useCallback(
+    ({ item }: { item: SectionKey }) => {
+      switch (item) {
+        case "banner":
+          // Hero banner starts at y=0 — header is transparent on top of it
+          return homeLoading ? <BannerSkeleton /> : <BannerCarousel banners={banners} colors={colors} />;
+        case "categories":
+          return categoriesLoading && categories.length === 0
+            ? <CategoryBubblesSkeleton isDark={isDark} />
+            : <CategoryBubbles categories={categories} colors={colors} />;
+        case "divider":
+          return <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />;
+        case "forYou":
+          return (
+            <ProductSection
+              title={i18n.t("home_forYou")}
+              products={forYou}
+              colors={colors}
+              isLoading={isProductsLoading}
+              onViewAll={navigateToForYou}
+            />
+          );
+        case "trending":
+          return (
+            <ProductSection
+              title={`${i18n.t("home_trendingNow")} 🔥`}
+              products={trending}
+              colors={colors}
+              isLoading={isProductsLoading}
+              onViewAll={navigateToTrending}
+            />
+          );
+        case "storeHighlights":
+          return <StoreHighlights colors={colors} isDark={isDark} />;
+        case "flashDeals":
+          return (
+            <ProductSection
+              title={`${i18n.t("home_flashDeals")} ⚡`}
+              products={flashDeals}
+              colors={colors}
+              isLoading={isProductsLoading}
+              onViewAll={navigateToFlashDeals}
+              showCountdown={flashDeals.length > 0}
+            />
+          );
+        case "newArrivals":
+          return (
+            <ProductSection
+              title={i18n.t("home_newArrivals")}
+              products={newArrivals}
+              colors={colors}
+              isLoading={isProductsLoading}
+              onViewAll={navigateToNewArrivals}
+            />
+          );
+        case "brands":
+          return (
+            <ProductSection
+              title={i18n.t("home_brandsYouLove")}
+              products={brandsYouLove}
+              colors={colors}
+              isLoading={homeLoading}
+            />
+          );
+        default:
+          return null;
+      }
+    },
+    [
+      homeLoading, banners, colors, categoriesLoading, categories, isDark,
+      forYou, trending, flashDeals, newArrivals, brandsYouLove, isProductsLoading,
+    ]
+  );
+
+  const keyExtractor = useCallback((item: SectionKey) => item, []);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -351,12 +466,17 @@ function IndexContent() {
         bgOpacity={headerBgOpacity}
       />
 
-      <ScrollView
+      <Animated.FlatList
+        data={sections}
+        renderItem={renderSection}
+        keyExtractor={keyExtractor}
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: insets.bottom + 88 }}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll as any}
         scrollEventThrottle={16}
+        initialNumToRender={3}
+        windowSize={5}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -365,76 +485,12 @@ function IndexContent() {
             progressViewOffset={emptyTopPad}
           />
         }
-      >
-        {/* Empty state — shifted below header */}
-        {isEmpty && (
+        ListEmptyComponent={
           <View style={{ paddingTop: emptyTopPad }}>
             <HomeEmptyState colors={colors} onRefresh={handleRefresh} />
           </View>
-        )}
-
-        {/* Hero banner starts at y=0 — header is transparent on top of it */}
-        {homeLoading ? <BannerSkeleton /> : <BannerCarousel banners={banners} colors={colors} />}
-
-        <View>
-          {/* Category bubbles — skeleton only while actively loading */}
-          {categoriesLoading && categories.length === 0 ? (
-            <CategoryBubblesSkeleton isDark={isDark} />
-          ) : (
-            <CategoryBubbles categories={categories} colors={colors} />
-          )}
-
-          <View
-            style={[
-              styles.divider,
-              { backgroundColor: colors.borderLight },
-            ]}
-          />
-
-          {/* Product sections */}
-          <ProductSection
-            title={i18n.t("home_forYou")}
-            products={forYou}
-            colors={colors}
-            isLoading={isProductsLoading}
-            onViewAll={navigateToForYou}
-          />
-          <ProductSection
-            title={`${i18n.t("home_trendingNow")} 🔥`}
-            products={trending}
-            colors={colors}
-            isLoading={isProductsLoading}
-            onViewAll={navigateToTrending}
-          />
-          <StoreHighlights
-            colors={colors}
-            isDark={isDark}
-          />
-          <ProductSection
-            title={`${i18n.t("home_flashDeals")} ⚡`}
-            products={flashDeals}
-            colors={colors}
-            isLoading={isProductsLoading}
-            onViewAll={navigateToFlashDeals}
-            showCountdown={flashDeals.length > 0}
-          />
-          <ProductSection
-            title={i18n.t("home_newArrivals")}
-            products={newArrivals}
-            colors={colors}
-            isLoading={isProductsLoading}
-            onViewAll={navigateToNewArrivals}
-          />
-          {(brandsYouLove.length > 0 || homeLoading) && (
-            <ProductSection
-              title={i18n.t("home_brandsYouLove")}
-              products={brandsYouLove}
-              colors={colors}
-              isLoading={homeLoading}
-            />
-          )}
-        </View>
-      </ScrollView>
+        }
+      />
     </View>
   );
 }
@@ -470,15 +526,15 @@ const styles = StyleSheet.create({
   cartBadge: {
     position: "absolute",
     top: 1,
-    right: 1,
-    minWidth: 15,
-    height: 15,
-    borderRadius: 8,
+    end: 1,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 3,
+    paddingHorizontal: 4,
   },
-  cartBadgeText: { color: "#fff", fontSize: 8, fontWeight: "800" },
+  cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
 
   // Category bubbles
   bubblesContent: {
@@ -508,7 +564,7 @@ const styles = StyleSheet.create({
     bottom: 7,
     left: 5,
     right: 5,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     textAlign: "center",
     color: "#FFFFFF",

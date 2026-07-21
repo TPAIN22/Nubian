@@ -43,7 +43,7 @@ const RecommendationSection = memo(({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={() => (
-            <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+            <View style={{ width: CARD_WIDTH, marginEnd: 12 }}>
               <ItemCardSkeleton />
             </View>
           )}
@@ -69,7 +69,7 @@ const RecommendationSection = memo(({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
         renderItem={({ item }) => (
-          <View style={{ width: CARD_WIDTH, marginRight: 12 }}>
+          <View style={{ width: CARD_WIDTH, marginEnd: 12 }}>
             <ItemCard
               item={normalizeProduct(item)}
               handleSheetChanges={() => {}}
@@ -150,7 +150,7 @@ const recommendationStyles = StyleSheet.create({
     width: 4,
     height: 20,
     borderRadius: 2,
-    marginRight: 8,
+    marginEnd: 8,
   },
   sectionTitle: {
     fontSize: 18,

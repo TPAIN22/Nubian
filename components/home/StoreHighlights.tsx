@@ -99,7 +99,12 @@ export const StoreHighlights = memo(({ colors, isDark }: Props) => {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.bubblesContent}
           renderItem={({ item }) => (
-            <Pressable onPress={() => handlePress(item)} style={styles.bubble}>
+            <Pressable
+              onPress={() => handlePress(item)}
+              accessibilityRole="button"
+              accessibilityLabel={item.name}
+              style={styles.bubble}
+            >
               <View
                 style={[
                   styles.bubbleImgWrap,

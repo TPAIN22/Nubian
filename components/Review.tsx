@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { View, ActivityIndicator, TextInput, TouchableOpacity, Alert, StyleSheet, I18nManager } from "react-native";
+import { View, ActivityIndicator, TextInput, TouchableOpacity, StyleSheet, I18nManager } from "react-native";
+import { toast } from "sonner-native";
 import { Text } from "@/components/ui/text";
 import axiosInstance from "@/services/api/client";
 import { useUser, useAuth } from "@clerk/clerk-expo";
@@ -45,10 +46,7 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
 
   const handleSubmitReview = async () => {
     if (!rating || !reviewText.trim()) {
-      Alert.alert(
-        i18n.t('error') || 'Error',
-        i18n.t('reviewRequiredFields') || 'Please enter rating and comment'
-      );
+      toast.error(i18n.t('reviewRequiredFields') || 'Please enter rating and comment');
       return;
     }
     setSubmitting(true);
@@ -72,15 +70,9 @@ const Review: React.FC<ReviewProps> = ({ productId }) => {
       // إعادة جلب المراجعات
       const res = await axiosInstance.get(`/reviews?product=${productId}`);
       setReviews(res.data);
-      Alert.alert(
-        i18n.t('success') || 'Success',
-        i18n.t('reviewAddedSuccess') || 'Review added successfully'
-      );
+      toast.success(i18n.t('reviewAddedSuccess') || 'Review added successfully');
     } catch (e: any) {
-      Alert.alert(
-        i18n.t('error') || 'Error',
-        e?.response?.data?.message || (i18n.t('reviewAddError') || 'Error adding review')
-      );
+      toast.error(e?.response?.data?.message || (i18n.t('reviewAddError') || 'Error adding review'));
     } finally {
       setSubmitting(false);
     }

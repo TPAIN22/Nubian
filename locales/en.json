@@ -52,7 +52,7 @@
   "errorOccurred": "An error occurred",
   "loadingOrders": "Loading orders...",
   "paymentMethodBank": "Bank",
-  "exchange": " exchange Policy",
+  "exchange": "Exchange Policy",
   "paymentMethodCash": "Cash",
   "paymentMethodCard": "Card",
   "paymentStatusFailed": "Failed",
@@ -397,6 +397,8 @@
   "applyFilters": "Apply Filters",
   "category": "Category",
   "preferences": "Preferences",
+  "account": "Account",
+  "helpAndLegal": "Support & Legal",
   "from": "From",
   "pleaseSelect": "Please select",
   "continueShopping": "Continue Shopping",
@@ -541,6 +543,7 @@
   "noProductsDetails": "No item details available",
   "orderUnitOne": "order",
   "orderUnitMany": "orders",
+  "signInWithFacebook": "Sign in with Facebook",
   "paymentStatus": "Payment status",
   "phoneNumber": "Phone"
 }

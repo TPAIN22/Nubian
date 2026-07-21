@@ -16,9 +16,9 @@ import {
   TouchableOpacity,
   I18nManager,
   InteractionManager,
-  Image as RNImage,
   Platform,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -308,8 +308,11 @@ export default function Details() {
   useEffect(() => {
     if (!productImages?.length) return;
     const task = InteractionManager.runAfterInteractions(() => {
+      // Prefetch into expo-image's cache — the same cache the gallery renders
+      // from. (Previously used RN's Image.prefetch, which warms a cache the UI
+      // never reads, so the gallery still flashed a load on first swipe.)
       const first = productImages[0];
-      if (first) RNImage.prefetch(first).catch(() => {});
+      if (first) ExpoImage.prefetch(first).catch(() => {});
       setTimeout(() => {
         try {
           productImages
@@ -318,7 +321,7 @@ export default function Details() {
               PRODUCT_DETAILS_CONFIG.PREFETCH_START_INDEX +
                 PRODUCT_DETAILS_CONFIG.PREFETCH_IMAGE_COUNT
             )
-            .forEach((uri: string) => uri && RNImage.prefetch(uri).catch(() => {}));
+            .forEach((uri: string) => uri && ExpoImage.prefetch(uri).catch(() => {}));
         } catch {}
       }, 100);
     });
@@ -692,6 +695,8 @@ export default function Details() {
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: colors.primary }]}
           onPress={() => router.replace('/(tabs)')}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('backToHome') || 'Back to Home'}
         >
           <Text style={[styles.backBtnText, { color: colors.text.white }]}>
             {i18n.t('backToHome') || 'Back to Home'}
@@ -711,6 +716,8 @@ export default function Details() {
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: colors.primary }]}
           onPress={() => router.replace('/(tabs)')}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('backToHome') || 'Back to Home'}
         >
           <Text style={[styles.backBtnText, { color: colors.text.white }]}>
             {i18n.t('backToHome') || 'Back to Home'}
@@ -765,7 +772,12 @@ export default function Details() {
         onRequestClose={closeImageModal}
       >
         <GestureHandlerRootView style={styles.modalContainer}>
-          <TouchableOpacity style={styles.modalClose} onPress={closeImageModal}>
+          <TouchableOpacity
+            style={styles.modalClose}
+            onPress={closeImageModal}
+            accessibilityRole="button"
+            accessibilityLabel={i18n.t('close') || 'Close'}
+          >
             <Ionicons name="close" size={26} color={colors.text.white} />
           </TouchableOpacity>
           {selectedImage && <ZoomableImage uri={selectedImage} />}

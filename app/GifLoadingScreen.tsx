@@ -56,10 +56,10 @@ const FallbackLoadingScreen: React.FC<GifLoadingScreenProps> = ({
 };
 
 // Video loading screen component
-const VideoLoadingScreen: React.FC<GifLoadingScreenProps> = ({ 
-  onAnimationFinish, 
+const VideoLoadingScreen: React.FC<GifLoadingScreenProps> = ({
+  onAnimationFinish,
   onMount,
-  fallbackTimeout = 5000 
+  fallbackTimeout = 1500
 }) => {
   const finishedRef = useRef<boolean>(false);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

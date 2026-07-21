@@ -1,20 +1,21 @@
 import {
   View,
-  Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   Platform,
   ActivityIndicator,
 
 } from 'react-native'
+import { Text } from '@/components/ui/text'
 import { useState } from 'react'
 import { useUser } from '@clerk/clerk-expo'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { toast } from "sonner-native";
 import { useTheme } from '@/providers/ThemeProvider'
+import i18n from '@/utils/i18n'
 export default function EditProfile() {
   const { theme } = useTheme();
   const Colors = theme.colors;
@@ -61,16 +62,30 @@ export default function EditProfile() {
     <ScrollView style={[styles.container, { backgroundColor: Colors.surface }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: Colors.cardBackground, borderBottomColor: Colors.borderLight }]}>
-        <TouchableOpacity style={[styles.backButton, { backgroundColor: Colors.surface }]} onPress={() => router.push('/profile')}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.backButton,
+            { backgroundColor: Colors.surface },
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => router.push('/profile')}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('back') || 'Back'}
+        >
           <Text style={[styles.backButtonText, { color: Colors.text.gray }]}>←</Text>
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[styles.headerTitle, { color: Colors.text.gray }]}>تعديل الملف الشخصي</Text>
         <View style={styles.placeholder} />
       </View>
 
       {/* Profile Image Section */}
       <View style={[styles.imageSection, { backgroundColor: Colors.surface }]}>
-        <TouchableOpacity onPress={() => { }} style={styles.imageContainer}>
+        <Pressable
+          onPress={() => { }}
+          style={({ pressed }) => [styles.imageContainer, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('changePhoto') || 'Change photo'}
+        >
           <Image
             source={
               user?.imageUrl
@@ -79,7 +94,7 @@ export default function EditProfile() {
             }
             style={[styles.profileImage, { borderColor: Colors.primary }]}
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <View style={styles.formContainer}>
@@ -162,8 +177,17 @@ export default function EditProfile() {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={[styles.saveButton, { backgroundColor: Colors.primary }]} onPress={handleSave}
+        <Pressable
+          style={({ pressed }) => [
+            styles.saveButton,
+            { backgroundColor: Colors.primary },
+            pressed && !isEditing && { opacity: 0.85 },
+          ]}
+          onPress={handleSave}
           disabled={isEditing}
+          accessibilityRole="button"
+          accessibilityLabel="حفظ التغييرات"
+          accessibilityState={{ disabled: isEditing, busy: isEditing }}
         >
           {isEditing ?
             (<ActivityIndicator size="small" color="#fff" />)
@@ -172,12 +196,20 @@ export default function EditProfile() {
               حفظ التغييرات
             </Text>
           }
-        </TouchableOpacity>
+        </Pressable>
 
         {/* Delete Account */}
-        <TouchableOpacity style={[styles.deleteButton, { borderColor: Colors.error }]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.deleteButton,
+            { borderColor: Colors.error },
+            pressed && { opacity: 0.7 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="حذف الحساب"
+        >
           <Text style={[styles.deleteButtonText, { color: Colors.error }]}>حذف الحساب</Text>
-        </TouchableOpacity>
+        </Pressable>
 
       </View>
     </ScrollView>

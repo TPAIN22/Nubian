@@ -1,15 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { FC } from "react";
 import { Tabs } from "expo-router";
 import {
   View,
   Pressable,
   StyleSheet,
-  Animated,
   Platform,
-  Text,
-  LayoutAnimation,
 } from "react-native";
+import { Text } from "@/components/ui/text";
+import Reanimated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
 import Svg, { Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
@@ -22,7 +29,7 @@ import { useTheme } from "@/providers/ThemeProvider";
 
 type IconType = "home" | "cart" | "search" | "profile" | "wishlist";
 
-const ACTIVE_FLEX = 2.2;
+const ACTIVE_FLEX = 1.7;
 const INACTIVE_FLEX = 1;
 
 interface RouteMeta {
@@ -118,6 +125,9 @@ const renderIcon = (iconType: IconType, size: number, color: string) => {
 
 /* ---------------- Tab Item ---------------- */
 
+// Animated Cairo text for the focused label (fade in/out on focus change).
+const AnimatedText = Reanimated.createAnimatedComponent(Text);
+
 interface TabItemProps {
   iconType: IconType;
   label: string;
@@ -134,42 +144,30 @@ const TabItem: FC<TabItemProps> = ({
   badgeCount,
 }) => {
   const { theme } = useTheme();
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(focused ? 1 : 0.55)).current;
-  const pressAnim = useRef(new Animated.Value(1)).current;
+
+  // press feedback + focus progress, both on the UI thread via Reanimated
+  const pressScale = useSharedValue(1);
+  const focusProgress = useSharedValue(focused ? 1 : 0);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: focused ? 1.05 : 1,
-        useNativeDriver: true,
-        tension: 280,
-        friction: 12,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: focused ? 1 : 0.55,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [focused]);
+    focusProgress.value = withTiming(focused ? 1 : 0, { duration: 220 });
+  }, [focused, focusProgress]);
+
+  const innerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  const iconWrapStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + 0.05 * focusProgress.value }],
+    opacity: 0.55 + 0.45 * focusProgress.value,
+  }));
 
   const handlePressIn = () => {
-    Animated.spring(pressAnim, {
-      toValue: 0.92,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
+    pressScale.value = withSpring(0.92, { damping: 12, stiffness: 320 });
   };
 
   const handlePressOut = () => {
-    Animated.spring(pressAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
+    pressScale.value = withSpring(1, { damping: 12, stiffness: 320 });
   };
 
   const handlePress = () => {
@@ -199,21 +197,16 @@ const TabItem: FC<TabItemProps> = ({
         focused ? styles.tabItemFocused : styles.tabItemUnfocused,
       ]}
     >
-      <Animated.View
+      <Reanimated.View
         style={[
           styles.itemInner,
           focused
             ? { backgroundColor: theme.colors.primary + "15" }
             : null,
-          { transform: [{ scale: pressAnim }] },
+          innerStyle,
         ]}
       >
-        <Animated.View
-          style={{
-            transform: [{ scale: scaleAnim }],
-            opacity: opacityAnim,
-          }}
-        >
+        <Reanimated.View style={iconWrapStyle}>
           <View style={styles.iconContent}>
             {renderIcon(iconType, 24, iconColor)}
             {hasBadge && (
@@ -233,10 +226,13 @@ const TabItem: FC<TabItemProps> = ({
               </View>
             )}
           </View>
-        </Animated.View>
+        </Reanimated.View>
 
         {focused && (
-          <Text
+          <AnimatedText
+            bold
+            entering={FadeIn.duration(180)}
+            exiting={FadeOut.duration(120)}
             numberOfLines={1}
             style={[
               styles.label,
@@ -244,9 +240,9 @@ const TabItem: FC<TabItemProps> = ({
             ]}
           >
             {label}
-          </Text>
+          </AnimatedText>
         )}
-      </Animated.View>
+      </Reanimated.View>
     </Pressable>
   );
 };
@@ -259,16 +255,10 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   const { isTabBarVisible } = useItemStore();
   const cartCount = useCartQuantity();
 
-  // Smooth flex transition when active tab changes.
-  // LayoutAnimation runs natively — far cheaper than Animated.Value(flex)
-  // which has to round-trip the JS bridge per frame.
-  useEffect(() => {
-    LayoutAnimation.configureNext({
-      duration: 200,
-      update: { type: "easeInEaseOut" },
-    });
-  }, [state.index]);
-
+  // The active-tab flex change is animated per-slot via Reanimated's
+  // LinearTransition layout animation (see the slot Reanimated.View below) —
+  // it runs on the UI thread and doesn't have LayoutAnimation's new-arch
+  // deprecation/glitchiness.
   if (!isTabBarVisible) return null;
 
   const safeAreaBottom = Math.max(insets.bottom, Platform.OS === "ios" ? 20 : 8);
@@ -315,8 +305,9 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
             meta.labelKey;
 
           return (
-            <View
+            <Reanimated.View
               key={route.key}
+              layout={LinearTransition.springify().damping(28).stiffness(240)}
               style={[
                 styles.tabSlot,
                 { flex: focused ? ACTIVE_FLEX : INACTIVE_FLEX },
@@ -329,7 +320,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                 onPress={onPress}
                 badgeCount={meta.iconType === "cart" ? cartCount : undefined}
               />
-            </View>
+            </Reanimated.View>
           );
         })}
       </View>

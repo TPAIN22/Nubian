@@ -1,5 +1,6 @@
 import { memo, useState, useCallback } from "react";
 import { View, StyleSheet, Pressable, I18nManager } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
 import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -7,6 +8,7 @@ import Carousel from "react-native-reanimated-carousel";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useTracking } from "@/hooks/useTracking";
 import { navigateBanner } from "@/utils/deepLinks";
+import { ikResize } from "@/utils/imageCdn";
 
 export const BannerCarousel = memo(
   ({ banners, colors }: { banners: any[]; colors: any }) => {
@@ -16,12 +18,18 @@ export const BannerCarousel = memo(
     const bannerHeight = screenWidth * 1.1; // Tall banner matching Shein proportion
     const [activeIndex, setActiveIndex] = useState(0);
     const { trackEvent } = useTracking();
+    // Pause autoplay when the Home tab isn't focused so the carousel isn't
+    // burning timers + re-rasterizing images behind other screens.
+    const isFocused = useIsFocused();
 
     const onProgressChange = useCallback((_: number, absoluteProgress: number) => {
       const index = Math.round(absoluteProgress) % banners.length;
       // ensure index is positive
       const safeIndex = index < 0 ? index + banners.length : index;
-      setActiveIndex(safeIndex);
+      // Only commit to React state on an actual index change — the progress
+      // callback fires every frame, so unconditional setState would re-render
+      // the whole carousel tree ~60x/sec.
+      setActiveIndex((prev) => (prev === safeIndex ? prev : safeIndex));
     }, [banners.length]);
 
     const renderBannerItem = useCallback(({ item }: { item: any }) => (
@@ -33,10 +41,12 @@ export const BannerCarousel = memo(
           });
           navigateBanner(item);
         }}
+        accessibilityRole="button"
+        accessibilityLabel={item.title || item.description || "Banner"}
         style={{ width: screenWidth, height: bannerHeight }}
       >
         <Image
-          source={{ uri: item.image }}
+          source={{ uri: ikResize(item.image, screenWidth) ?? item.image }}
           style={[styles.bannerImage, { width: screenWidth, height: bannerHeight }]}
           contentFit="cover"
           transition={200}
@@ -81,7 +91,7 @@ export const BannerCarousel = memo(
           width={screenWidth}
           height={bannerHeight}
           loop={banners.length > 1}
-          autoPlay={banners.length > 1}
+          autoPlay={banners.length > 1 && isFocused}
           autoPlayInterval={3500}
           scrollAnimationDuration={800}
           onProgressChange={onProgressChange}
@@ -91,6 +101,8 @@ export const BannerCarousel = memo(
         {banners.length > 1 && (
           <View
             style={[styles.pagination, isRTL && { flexDirection: "row-reverse" }]}
+            accessibilityElementsHidden={true}
+            importantForAccessibility="no-hide-descendants"
           >
             {banners.map((_, i) => (
               <View
@@ -139,7 +151,7 @@ const styles = StyleSheet.create({
     right: 20,
   },
   bannerTitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "bold",
     marginBottom: 8,
   },

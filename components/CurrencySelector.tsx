@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { Modal, View, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCurrencyStore, useHasSelectedCurrency } from '@/store/useCurrencyStore';
 import { useUser } from '@clerk/clerk-expo';

@@ -30,6 +30,9 @@ export const ColorSelector: React.FC<ColorSelectorProps> = ({
                             <TouchableOpacity
                                 key={color}
                                 onPress={() => onSelectColor(color)}
+                                accessibilityRole="radio"
+                                accessibilityLabel={color}
+                                accessibilityState={{ selected: isSelected }}
                                 style={[
                                     styles.option,
                                     isSelected && styles.selectedOption,
@@ -131,7 +134,7 @@ const styles = StyleSheet.create({
         width: 16,
         height: 16,
         borderRadius: 8,
-        marginRight: 8,
+        marginEnd: 8,
         borderWidth: 1,
         borderColor: "#ddd",
     },

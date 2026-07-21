@@ -14,6 +14,7 @@ import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 
 import { Text } from "@/components/ui/text";
 import i18n from "@/utils/i18n";
+import { useRTL } from "@/hooks/useRTL";
 import useOrderStore from "@/store/orderStore";
 import { navigateToProduct } from "@/utils/deepLinks";
 import { normalizeProduct } from "@/domain/product/product.normalize";
@@ -196,6 +197,7 @@ export default function Order() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const t = useCheckoutTheme();
+  const rtl = useRTL();
 
   const { getUserOrders, orders, error, isLoading } = useOrderStore();
   const [refreshing, setRefreshing] = useState(false);
@@ -251,7 +253,7 @@ export default function Order() {
           },
         ]}
       >
-        <Ionicons name="chevron-back" size={20} color={t.textPrimary} />
+        <Ionicons name={rtl.chevronBack} size={20} color={t.textPrimary} />
       </Pressable>
 
       <View style={styles.headerCenter}>
@@ -365,6 +367,8 @@ export default function Order() {
                 key={key}
                 onPress={() => setFilter(key)}
                 accessibilityRole="button"
+                accessibilityLabel={label}
+                accessibilityState={{ selected: active }}
                 style={({ pressed }) => [
                   styles.chip,
                   {
@@ -629,6 +633,7 @@ function OrderCard({
         <PressableScale
           onPress={onTrack}
           accessibilityRole="button"
+          accessibilityLabel={i18n.t("trackOrder") || "Track order"}
           style={[
             styles.actionBtn,
             styles.actionPrimary,
@@ -644,6 +649,12 @@ function OrderCard({
         <PressableScale
           onPress={onToggle}
           accessibilityRole="button"
+          accessibilityLabel={
+            expanded
+              ? i18n.t("hideDetails") || "Hide details"
+              : i18n.t("showDetails") || "View details"
+          }
+          accessibilityState={{ expanded }}
           style={[
             styles.actionBtn,
             styles.actionSecondary,
@@ -892,10 +903,15 @@ function ProductRow({
   const lineTotal = finalPrice * qty;
   const code = product.currencyCode || fallbackCode;
   const img = Array.isArray(product.images) ? product.images[0] : undefined;
+  const productName =
+    product.name || product.productName || i18n.t("product") || "Product";
 
   return (
     <Pressable
       onPress={onPress}
+      disabled={!id}
+      accessibilityRole="button"
+      accessibilityLabel={`${productName}, ${formatCurrency(lineTotal, code)}`}
       style={({ pressed }) => [
         styles.productRow,
         {
@@ -927,7 +943,7 @@ function ProductRow({
           style={[typography.bodyStrong, { color: t.textPrimary }]}
           numberOfLines={2}
         >
-          {product.name || product.productName || i18n.t("product") || "Product"}
+          {productName}
         </Text>
         <View style={styles.productPriceRow}>
           {productHasDiscount ? (

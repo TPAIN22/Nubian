@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, Switch } from "react-native";
+import { View, StyleSheet, ScrollView, ActivityIndicator, Switch } from "react-native";
+import { toast } from "sonner-native";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@clerk/clerk-expo";
 import { Stack } from "expo-router";
@@ -32,7 +33,7 @@ const NotificationPreferencesScreen = () => {
       setLoading(true);
       const token = await getToken();
       if (!token) {
-        Alert.alert(i18n.t("alertErrorTitle"), i18n.t("pleaseLoginToManagePreferences"));
+        toast.error(i18n.t("pleaseLoginToManagePreferences"));
         return;
       }
 
@@ -54,7 +55,7 @@ const NotificationPreferencesScreen = () => {
         setPushEnabled(prefs.channels?.push !== false);
       }
     } catch (error: any) {
-      Alert.alert(i18n.t("alertErrorTitle"), error.message || i18n.t("failedToLoadPreferences"));
+      toast.error(error.message || i18n.t("failedToLoadPreferences"));
     } finally {
       setLoading(false);
     }
@@ -67,7 +68,7 @@ const NotificationPreferencesScreen = () => {
     try {
       const token = await getToken();
       if (!token) {
-        Alert.alert(i18n.t("alertErrorTitle"), i18n.t("pleaseLoginToUpdatePreferences"));
+        toast.error(i18n.t("pleaseLoginToUpdatePreferences"));
         return;
       }
 
@@ -171,7 +172,7 @@ const NotificationPreferencesScreen = () => {
           break;
       }
 
-      Alert.alert(i18n.t("alertErrorTitle"), error.message || i18n.t("failedToUpdatePreferences"));
+      toast.error(error.message || i18n.t("failedToUpdatePreferences"));
     } finally {
       setSaving(false);
     }
