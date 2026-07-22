@@ -357,13 +357,12 @@ export default function Profile() {
                 accessibilityRole="button"
                 accessibilityLabel={label}
                 accessibilityState={{ selected: active }}
-                style={({ pressed }) => [
+                style={[
                   styles.sheetRow,
                   i !== arr.length - 1 && {
                     borderBottomWidth: StyleSheet.hairlineWidth,
                     borderBottomColor: theme.colors.borderLight,
                   },
-                  pressed && { opacity: 0.6 },
                 ]}
               >
                 <Text

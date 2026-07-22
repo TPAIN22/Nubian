@@ -63,11 +63,7 @@ export default function EditProfile() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: Colors.cardBackground, borderBottomColor: Colors.borderLight }]}>
         <Pressable
-          style={({ pressed }) => [
-            styles.backButton,
-            { backgroundColor: Colors.surface },
-            pressed && { opacity: 0.7 },
-          ]}
+          style={[styles.backButton, { backgroundColor: Colors.surface }]}
           onPress={() => router.push('/profile')}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('back') || 'Back'}
@@ -82,7 +78,7 @@ export default function EditProfile() {
       <View style={[styles.imageSection, { backgroundColor: Colors.surface }]}>
         <Pressable
           onPress={() => { }}
-          style={({ pressed }) => [styles.imageContainer, pressed && { opacity: 0.7 }]}
+          style={styles.imageContainer}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('changePhoto') || 'Change photo'}
         >
@@ -178,11 +174,7 @@ export default function EditProfile() {
 
         {/* Save Button */}
         <Pressable
-          style={({ pressed }) => [
-            styles.saveButton,
-            { backgroundColor: Colors.primary },
-            pressed && !isEditing && { opacity: 0.85 },
-          ]}
+          style={[styles.saveButton, { backgroundColor: Colors.primary }]}
           onPress={handleSave}
           disabled={isEditing}
           accessibilityRole="button"
@@ -200,11 +192,7 @@ export default function EditProfile() {
 
         {/* Delete Account */}
         <Pressable
-          style={({ pressed }) => [
-            styles.deleteButton,
-            { borderColor: Colors.error },
-            pressed && { opacity: 0.7 },
-          ]}
+          style={[styles.deleteButton, { borderColor: Colors.error }]}
           accessibilityRole="button"
           accessibilityLabel="حذف الحساب"
         >

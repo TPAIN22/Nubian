@@ -6,13 +6,15 @@ import {
   useState,
 } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
+  // Plain RN Text for labels on colored button fills — the themed <Text> forces
+  // a NativeWind className color that overrides inline color and hides the label.
+  // eslint-disable-next-line no-restricted-imports
+  Text as RNText,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,7 +23,6 @@ import * as Crypto from "expo-crypto";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { toast } from "sonner-native";
-import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 
 import { Text } from "@/components/ui/text";
 import useOrderStore from "@/store/orderStore";
@@ -51,15 +52,18 @@ import { computePricing } from "@/utils/computePricing";
 
 import {
   AddressCard,
+  BankTransferDetails,
   CheckoutFooter,
+  CheckoutHeader,
   CheckoutSection,
   CouponField,
   InlineAlert,
+  OrderItemsCard,
   PaymentCard,
   PriceBreakdown,
   PressableScale,
+  ShippingMethodCard,
   Skeleton,
-  UploadCard,
   radius,
   spacing,
   typography,
@@ -168,6 +172,15 @@ export default function CheckOutModal({
     let mounted = true;
     (async () => {
       try {
+        // Warm the Clerk token before the request. The axios interceptor only
+        // waits ~500ms for a token before sending unauthenticated; on a cold
+        // open that race loses and GET /addresses returns an empty list, so the
+        // user's saved addresses stay hidden until a later authenticated call
+        // (e.g. adding one) triggers a refetch. Awaiting the token first ensures
+        // it's cached and attached on the very first fetch.
+        try {
+          await getToken();
+        } catch {}
         if (!mounted) return;
         await fetchAddresses();
       } catch (err) {
@@ -177,7 +190,7 @@ export default function CheckOutModal({
     return () => {
       mounted = false;
     };
-  }, [fetchAddresses]);
+  }, [fetchAddresses, getToken]);
 
   const { itemsPayload, invalidItems } = useMemo<{
     itemsPayload: any[];
@@ -633,7 +646,7 @@ export default function CheckOutModal({
           },
         ]}
       >
-        <Header onClose={handleClose} />
+        <CheckoutHeader onClose={handleClose} />
         <ScrollView
           style={styles.flex}
           contentContainerStyle={styles.scrollContent}
@@ -674,7 +687,7 @@ export default function CheckOutModal({
           },
         ]}
       >
-        <Header onClose={handleClose} />
+        <CheckoutHeader onClose={handleClose} />
 
         <ScrollView
           style={styles.flex}
@@ -695,19 +708,14 @@ export default function CheckOutModal({
             {addresses && addresses.length > 0 ? (
               <View>
                 {addresses.map((addr: any) => (
-                  <Animated.View
+                  <AddressCard
                     key={String(addr._id)}
-                    entering={FadeIn.duration(180)}
-                    layout={LinearTransition.springify().damping(20)}
-                  >
-                    <AddressCard
-                      address={addr}
-                      selected={
-                        String(selectedAddressId) === String(addr._id)
-                      }
-                      onSelect={id => setSelectedAddressId(id)}
-                    />
-                  </Animated.View>
+                    address={addr}
+                    selected={
+                      String(selectedAddressId) === String(addr._id)
+                    }
+                    onSelect={id => setSelectedAddressId(id)}
+                  />
                 ))}
                 <PressableScale
                   onPress={() => {
@@ -728,14 +736,14 @@ export default function CheckOutModal({
                     size={16}
                     color={t.accent}
                   />
-                  <Text
+                  <RNText
                     style={[
                       styles.addAddressText,
                       { color: t.accent },
                     ]}
                   >
                     {i18n.t("addNewAddress") || "Add new address"}
-                  </Text>
+                  </RNText>
                 </PressableScale>
               </View>
             ) : (
@@ -754,14 +762,14 @@ export default function CheckOutModal({
                   accessibilityRole="button"
                   style={[
                     styles.primaryBtn,
-                    { backgroundColor: t.textPrimary },
+                    { backgroundColor: t.cta },
                   ]}
                 >
-                  <Text
-                    style={[styles.primaryBtnText, { color: t.surface }]}
+                  <RNText
+                    style={[styles.primaryBtnText, { color: t.ctaText }]}
                   >
                     {i18n.t("addNewAddress") || "Add address"}
-                  </Text>
+                  </RNText>
                 </PressableScale>
               </View>
             )}
@@ -776,72 +784,11 @@ export default function CheckOutModal({
             onToggle={v => setSection("delivery", v)}
             complete={!!selectedAddressId}
           >
-            <View
-              style={[
-                styles.deliveryCard,
-                {
-                  backgroundColor: t.card,
-                  borderColor: t.accent,
-                  borderWidth: 1.5,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.deliveryIcon,
-                  { backgroundColor: t.accentSoft },
-                ]}
-              >
-                <Ionicons
-                  name="cube-outline"
-                  size={20}
-                  color={t.accent}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.deliveryTitle,
-                    { color: t.textPrimary },
-                  ]}
-                >
-                  {i18n.t("standardDelivery") || "Standard delivery"}
-                </Text>
-                <Text
-                  style={[
-                    styles.deliveryCaption,
-                    { color: t.textTertiary },
-                  ]}
-                >
-                  {i18n.t("standardDeliveryEta") ||
-                    "Estimated 2–4 business days"}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.deliveryAmount,
-                  { backgroundColor: t.surfaceMuted },
-                ]}
-              >
-                {quoteLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={t.textSecondary}
-                  />
-                ) : (
-                  <Text
-                    style={[
-                      styles.deliveryAmountText,
-                      { color: t.textPrimary },
-                    ]}
-                  >
-                    {pricing.shippingFee > 0
-                      ? formatAmount(pricing.shippingFee)
-                      : i18n.t("free") || "Free"}
-                  </Text>
-                )}
-              </View>
-            </View>
+            <ShippingMethodCard
+              shippingFee={pricing.shippingFee}
+              loading={quoteLoading}
+              format={formatAmount}
+            />
           </CheckoutSection>
 
           {/* Step 3 — Payment */}
@@ -896,40 +843,17 @@ export default function CheckOutModal({
               selected={paymentMethod === "BANKAK"}
               onSelect={() => setPaymentMethod("BANKAK")}
               expanded={
-                <View style={{ gap: spacing.md }}>
-                  <View
-                    style={[
-                      styles.bankBox,
-                      {
-                        backgroundColor: t.surfaceMuted,
-                        borderColor: t.border,
-                      },
-                    ]}
-                  >
-                    <BankRow
-                      label={i18n.t("accountName") || "Account name"}
-                      value={bankTransferConfig.accountName}
-                    />
-                    <BankRow
-                      label={i18n.t("accountNumber") || "Account number"}
-                      value={bankTransferConfig.accountNumber}
-                    />
-                    <BankRow
-                      label={i18n.t("bankName") || "Bank"}
-                      value={bankTransferConfig.bankName}
-                    />
-                  </View>
-                  <UploadCard
-                    imageUri={transferImage}
-                    uploading={uploadingImage}
-                    uploaded={
-                      !!transferImage &&
-                      String(transferImage).startsWith("http")
-                    }
-                    onPick={pickImage}
-                    onRemove={() => setTransferImage(null)}
-                  />
-                </View>
+                <BankTransferDetails
+                  config={bankTransferConfig}
+                  imageUri={transferImage}
+                  uploading={uploadingImage}
+                  uploaded={
+                    !!transferImage &&
+                    String(transferImage).startsWith("http")
+                  }
+                  onPick={pickImage}
+                  onRemove={() => setTransferImage(null)}
+                />
               }
             />
 
@@ -981,9 +905,22 @@ export default function CheckOutModal({
             />
           </CheckoutSection>
 
-          {/* Step 5 — Order summary */}
+          {/* Step 5 — Order items */}
+          {itemsPayload.length > 0 && (cart?.products?.length ?? 0) > 0 ? (
+            <CheckoutSection
+              step={5}
+              title={i18n.t("orderItems") || "Order items"}
+              caption={`${itemCount} ${itemCount === 1 ? i18n.t("item") || "item" : i18n.t("items") || "items"}`}
+              collapsible
+              defaultOpen={false}
+            >
+              <OrderItemsCard items={(cart?.products ?? []) as any} />
+            </CheckoutSection>
+          ) : null}
+
+          {/* Step 6 — Order summary */}
           <CheckoutSection
-            step={5}
+            step={6}
             title={i18n.t("orderSummary") || "Order summary"}
             collapsible={false}
           >
@@ -1036,67 +973,9 @@ export default function CheckOutModal({
   );
 }
 
-function Header({ onClose }: { onClose: () => void }) {
-  const t = useCheckoutTheme();
-  return (
-    <View style={styles.header}>
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={i18n.t("close") || "Close"}
-        hitSlop={12}
-        style={({ pressed }) => [
-          styles.headerBtn,
-          { backgroundColor: t.surfaceMuted },
-          pressed && { opacity: 0.7 },
-        ]}
-      >
-        <Ionicons name="chevron-back" size={20} color={t.textPrimary} />
-      </Pressable>
-      <Text style={[styles.headerTitle, { color: t.textPrimary }]}>
-        {i18n.t("checkout") || "Checkout"}
-      </Text>
-      <View style={styles.headerBtn} />
-    </View>
-  );
-}
-
-function BankRow({ label, value }: { label: string; value: string }) {
-  const t = useCheckoutTheme();
-  return (
-    <View style={styles.bankRow}>
-      <Text style={[styles.bankLabel, { color: t.textTertiary }]}>
-        {label}
-      </Text>
-      <Text
-        style={[styles.bankValue, { color: t.textPrimary }]}
-        numberOfLines={1}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.md,
-    minHeight: 48,
-  },
-  headerTitle: { ...typography.title, flex: 1, textAlign: "center" },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 
   scrollContent: {
     paddingHorizontal: spacing.base,
@@ -1122,7 +1001,10 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     marginTop: spacing.xs,
   },
-  addAddressText: { ...typography.bodyStrong },
+  addAddressText: {
+    ...typography.bodyStrong,
+    fontFamily: Platform.OS === "web" ? undefined : "Cairo-Bold",
+  },
 
   emptyAddress: {
     alignItems: "center",
@@ -1139,49 +1021,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnText: { ...typography.bodyStrong },
-
-  deliveryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.base,
-    borderRadius: radius.card,
+  primaryBtnText: {
+    ...typography.bodyStrong,
+    fontFamily: Platform.OS === "web" ? undefined : "Cairo-Bold",
   },
-  deliveryIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deliveryTitle: { ...typography.bodyStrong },
-  deliveryCaption: { ...typography.caption, marginTop: 2 },
-  deliveryAmount: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: 999,
-    minWidth: 56,
-    alignItems: "center",
-  },
-  deliveryAmountText: { ...typography.captionStrong },
-
-  bankBox: {
-    borderRadius: radius.input,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    gap: spacing.xs + 2,
-  },
-  bankRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: 4,
-  },
-  bankLabel: { ...typography.caption },
-  bankValue: { ...typography.captionStrong, flexShrink: 1, textAlign: "right" },
 
   secureRow: {
     flexDirection: "row",

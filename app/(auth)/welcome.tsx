@@ -182,7 +182,7 @@ export default function WelcomeScreen() {
         <Pressable
           onPress={handleGuest}
           disabled={isBusy}
-          style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.7 }]}
+          style={styles.guestBtn}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('continueAsGuest') || 'Continue as Guest'}
           accessibilityState={{ disabled: isBusy, busy: loading === 'guest' }}

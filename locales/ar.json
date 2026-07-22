@@ -526,6 +526,8 @@
   "location_noResults": "لا توجد نتائج مطابقة",
   "location_noResultsHint": "جرّب بحثاً مختلفاً أو مصطلحاً أقصر.",
   "location_noData": "لا توجد بيانات بعد",
+  "location_loadError": "تعذّر تحميل المواقع",
+  "location_loadErrorHint": "تحقّق من اتصالك وحاول مرة أخرى.",
 
   "pushPromptOrdersTitle": "تابع حالة طلبك لحظة بلحظة",
   "pushPromptOrdersBody": "فعّل الإشعارات لنُعلِمك فور شحن طلبك، خروجه للتوصيل، ووصوله إليك.",

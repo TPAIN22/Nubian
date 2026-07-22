@@ -26,6 +26,16 @@ export type CheckoutPalette = {
   accentSoft: string;
   accentText: string;
 
+  /**
+   * Primary call-to-action (Place order / Save address). A high-contrast brand
+   * green so the button is unmistakably visible in both themes — never resolved
+   * through an optional token that could go missing and leave the CTA invisible.
+   */
+  cta: string;
+  ctaText: string;
+  ctaDisabled: string;
+  ctaDisabledText: string;
+
   success: string;
   successSoft: string;
   warning: string;
@@ -66,6 +76,13 @@ export function useCheckoutTheme(): CheckoutPalette {
       accent: c.primary,
       accentSoft: withAlpha(c.primary, 0.1),
       accentText: c.primary,
+
+      // Match the profile screen's primary button: brand-gold fill with
+      // near-black text (great contrast on gold in both themes).
+      cta: c.primary,
+      ctaText: '#1c1a12',
+      ctaDisabled: isDark ? '#3A4A50' : '#CBD5E1',
+      ctaDisabledText: isDark ? '#C7D0D4' : '#475569',
 
       success: c.success,
       successSoft: withAlpha(c.success, 0.12),

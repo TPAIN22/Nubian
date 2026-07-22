@@ -66,13 +66,7 @@ export const EmptyCartState = React.memo(function EmptyCartState({
           onPress={onCta}
           accessibilityRole="button"
           accessibilityLabel={ctaLabel || i18n.t('startShopping') || 'Start shopping'}
-          style={({ pressed }) => [
-            styles.cta,
-            {
-              backgroundColor: t.textPrimary,
-              opacity: pressed ? 0.9 : 1,
-            },
-          ]}
+          style={[styles.cta, { backgroundColor: t.textPrimary }]}
         >
           <Text style={[styles.ctaText, { color: t.surface }]}>
             {ctaLabel || i18n.t('startShopping') || 'Start shopping'}

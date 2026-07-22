@@ -218,10 +218,7 @@ export default function OnboardingScreen() {
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('onboarding_skip') || 'Skip'}
-          style={({ pressed }) => [
-            styles.skipBtn,
-            { opacity: pressed ? 0.5 : 1 },
-          ]}
+          style={styles.skipBtn}
         >
           <Text style={styles.skipTextOverlay}>
             {i18n.t('onboarding_skip') || 'Skip'}
@@ -258,14 +255,7 @@ export default function OnboardingScreen() {
           accessibilityRole="button"
           accessibilityLabel={ctaLabel}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={({ pressed }) => [
-            styles.ctaWrap,
-            {
-              shadowColor: colors.primary,
-              transform: [{ scale: pressed ? 0.985 : 1 }],
-              opacity: pressed ? 0.96 : 1,
-            },
-          ]}
+          style={[styles.ctaWrap, { shadowColor: colors.primary }]}
         >
           <LinearGradient
             colors={[colors.primary, colors.primaryDark]}

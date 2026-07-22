@@ -244,13 +244,9 @@ export default function Order() {
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel={i18n.t("back") || "Back"}
-        style={({ pressed }) => [
+        style={[
           styles.iconBtn,
-          {
-            backgroundColor: t.card,
-            borderColor: t.border,
-            opacity: pressed ? 0.6 : 1,
-          },
+          { backgroundColor: t.card, borderColor: t.border },
         ]}
       >
         <Ionicons name={rtl.chevronBack} size={20} color={t.textPrimary} />
@@ -369,12 +365,11 @@ export default function Order() {
                 accessibilityRole="button"
                 accessibilityLabel={label}
                 accessibilityState={{ selected: active }}
-                style={({ pressed }) => [
+                style={[
                   styles.chip,
                   {
                     backgroundColor: active ? t.textPrimary : t.card,
                     borderColor: active ? t.textPrimary : t.border,
-                    opacity: pressed ? 0.85 : 1,
                   },
                 ]}
               >
@@ -912,13 +907,9 @@ function ProductRow({
       disabled={!id}
       accessibilityRole="button"
       accessibilityLabel={`${productName}, ${formatCurrency(lineTotal, code)}`}
-      style={({ pressed }) => [
+      style={[
         styles.productRow,
-        {
-          backgroundColor: t.surfaceMuted,
-          borderColor: t.border,
-          opacity: pressed && id ? 0.85 : 1,
-        },
+        { backgroundColor: t.surfaceMuted, borderColor: t.border },
       ]}
     >
       <View

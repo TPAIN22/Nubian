@@ -160,12 +160,9 @@ const SearchBar = memo<{
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.searchBarCenter,
-        {
-          borderColor: pressed ? primaryColor : 'rgb(241, 214, 214)',
-          opacity: pressed ? 0.95 : 1,
-        },
+        { borderColor: 'rgb(241, 214, 214)' },
         SHADOWS.searchBar,
       ]}
     >
@@ -225,7 +222,7 @@ const IconButton = memo<{
 }>(({ icon, onPress, color, isScrolled, isDark, badge }) => (
   <Pressable
     onPress={onPress}
-    style={({ pressed }) => [
+    style={[
       styles.iconButton,
       {
         backgroundColor: isScrolled
@@ -233,7 +230,6 @@ const IconButton = memo<{
             ? 'rgba(255, 255, 255, 0.1)'
             : 'rgba(0, 0, 0, 0.05)'
           : 'rgba(255, 255, 255, 0.15)',
-        transform: [{ scale: pressed ? 0.92 : 1 }],
         borderWidth: isScrolled ? 1 : 0,
         borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
       },

@@ -302,7 +302,7 @@
   "onboarding_slide3_description": "Bank-grade encryption and buyer protection on every order.",
   "welcome_title": "Welcome to Nubian",
   "welcome_subtitle": "Sign in to sync your cart and orders, or keep browsing as a guest.",
-  "continueWithGoogle": "Continue with Google",
+  "signInWithGoogle": "Continue with Google",
   "continueWithApple": "Continue with Apple",
   "signInWithEmail": "Sign in with email",
   "continueAsGuest": "Continue as Guest",
@@ -521,6 +521,8 @@
   "location_noResults": "No matches",
   "location_noResultsHint": "Try a different spelling or shorter query.",
   "location_noData": "Nothing here yet",
+  "location_loadError": "Couldn’t load locations",
+  "location_loadErrorHint": "Check your connection and try again.",
 
   "pushPromptOrdersTitle": "Get real-time order updates",
   "pushPromptOrdersBody": "Allow notifications so we can let you know the moment your order ships, is out for delivery, and arrives.",

@@ -29,10 +29,7 @@ export function AuthTextButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
-      style={({ pressed }) => [
-        styles.button,
-        pressed && !disabled ? { opacity: 0.6 } : null,
-      ]}
+      style={styles.button}
     >
       <Text style={[styles.label, { color }]}>{label}</Text>
     </Pressable>

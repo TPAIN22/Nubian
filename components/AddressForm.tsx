@@ -9,6 +9,10 @@ import {
   StyleSheet,
   TextInput,
   View,
+  // Plain RN Text for labels on colored button fills — the themed <Text> forces
+  // a NativeWind className color that overrides inline color and hides the label.
+  // eslint-disable-next-line no-restricted-imports
+  Text as RNText,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -22,7 +26,6 @@ import {
   typography,
   useCheckoutTheme,
 } from "@/components/checkout";
-import Colors from "@/locales/brandColors";
 
 /**
  * Mirrors the backend `Address` model in `apps/backend/src/models/address.model.js`.
@@ -205,11 +208,7 @@ export default function AddressForm({
                 accessibilityRole="button"
                 accessibilityLabel={i18n.t("close") || "Close"}
                 hitSlop={12}
-                style={({ pressed }) => [
-                  styles.headerBtn,
-                  { backgroundColor: t.surfaceMuted },
-                  pressed && { opacity: 0.7 },
-                ]}
+                style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}
               >
                 <Ionicons
                   name="close"
@@ -240,19 +239,8 @@ export default function AddressForm({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              {/* Recipient details */}
-              <Text
-                style={[styles.sectionLabel, { color: t.textTertiary }]}
-              >
-                {(
-                  i18n.t("addressForm_contactSection") || "Recipient"
-                ).toUpperCase()}
-              </Text>
-
               <Field
-                label={
-                  i18n.t("addressForm_recipientName") || "Recipient name"
-                }
+                label={i18n.t("addressForm_recipientName") || "Full name"}
                 required
                 error={errors.name}
                 focused={focused === "name"}
@@ -266,10 +254,6 @@ export default function AddressForm({
                   onChangeText={text => setField("name", text)}
                   onFocus={() => setFocused("name")}
                   onBlur={() => setFocused(null)}
-                  placeholder={
-                    i18n.t("addressForm_recipientNamePlaceholder") ||
-                    "Full name"
-                  }
                   placeholderTextColor={t.textTertiary}
                   returnKeyType="next"
                   maxLength={MAX_NAME}
@@ -278,7 +262,7 @@ export default function AddressForm({
                   }
                   style={[styles.input, { color: t.textPrimary }]}
                   accessibilityLabel={
-                    i18n.t("addressForm_recipientName") || "Recipient name"
+                    i18n.t("addressForm_recipientName") || "Full name"
                   }
                 />
               </Field>
@@ -288,12 +272,6 @@ export default function AddressForm({
                 required
                 error={errors.phone}
                 focused={focused === "phone"}
-                hint={
-                  !errors.phone
-                    ? i18n.t("addressForm_phoneHint") ||
-                      "Include country code if dialling from abroad"
-                    : undefined
-                }
                 writingDirection={writingDirection}
                 leading={
                   <Ionicons
@@ -327,13 +305,9 @@ export default function AddressForm({
               </Field>
 
               <Field
-                label={i18n.t("addressForm_whatsapp") || "WhatsApp (optional)"}
+                label={i18n.t("addressForm_whatsapp") || "WhatsApp number"}
                 focused={focused === "whatsapp"}
                 writingDirection={writingDirection}
-                hint={
-                  i18n.t("addressForm_whatsappHint") ||
-                  "We'll use this for delivery updates if different from your phone"
-                }
                 leading={
                   <Ionicons
                     name="logo-whatsapp"
@@ -362,77 +336,59 @@ export default function AddressForm({
                 />
               </Field>
 
-              {/* Location */}
-              <Text
-                style={[
-                  styles.sectionLabel,
-                  { color: t.textTertiary, marginTop: spacing.lg },
-                ]}
-              >
-                {(
-                  i18n.t("addressForm_locationSection") || "Delivery location"
-                ).toUpperCase()}
-              </Text>
-
-              <Pressable
-                onPress={() => setLocationOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  i18n.t("addressForm_location") || "Select location"
-                }
-                style={({ pressed }) => [
-                  styles.fieldShell,
-                  {
-                    backgroundColor: t.card,
-                    borderColor: errors.location
-                      ? t.error
-                      : t.border,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <View style={styles.locationRow}>
+              <View style={styles.fieldWrap}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: t.textSecondary, writingDirection },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {i18n.t("addressForm_location") || "City & area"}
+                  <Text style={{ color: t.error }}> *</Text>
+                </Text>
+                <Pressable
+                  onPress={() => setLocationOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    i18n.t("addressForm_location") || "Select location"
+                  }
+                  style={[
+                    styles.inputShell,
+                    {
+                      backgroundColor: t.card,
+                      borderColor: errors.location ? t.error : t.border,
+                      borderWidth: errors.location
+                        ? 1.5
+                        : StyleSheet.hairlineWidth,
+                    },
+                  ]}
+                >
                   <View
                     style={[
                       styles.locationIcon,
                       { backgroundColor: t.accentSoft },
                     ]}
                   >
-                    <Ionicons
-                      name="map-outline"
-                      size={16}
-                      color={t.accent}
-                    />
+                    <Ionicons name="map-outline" size={16} color={t.accent} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.fieldLabel,
-                        { color: t.textTertiary },
-                      ]}
-                    >
-                      {i18n.t("addressForm_location") || "Location"}
-                      <Text style={{ color: t.error }}> *</Text>
-                    </Text>
-                    <Text
-                      style={[
-                        locationLabel
-                          ? styles.locationText
-                          : styles.locationPlaceholder,
-                        {
-                          color: locationLabel
-                            ? t.textPrimary
-                            : t.textTertiary,
-                          writingDirection,
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {locationLabel ||
-                        i18n.t("addressForm_selectLocation") ||
-                        "Select country, city, area"}
-                    </Text>
-                  </View>
+                  <Text
+                    style={[
+                      locationLabel
+                        ? styles.locationText
+                        : styles.locationPlaceholder,
+                      {
+                        flex: 1,
+                        color: locationLabel ? t.textPrimary : t.textTertiary,
+                        writingDirection,
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {locationLabel ||
+                      i18n.t("addressForm_selectLocation") ||
+                      "Tap to choose country, city, and area"}
+                  </Text>
                   <Ionicons
                     name={
                       I18nManager.isRTL ? "chevron-back" : "chevron-forward"
@@ -440,14 +396,11 @@ export default function AddressForm({
                     size={18}
                     color={t.textTertiary}
                   />
-                </View>
-              </Pressable>
-              {errors.location ? (
-                <ErrorLine
-                  message={errors.location}
-                  color={t.error}
-                />
-              ) : null}
+                </Pressable>
+                {errors.location ? (
+                  <ErrorLine message={errors.location} color={t.error} />
+                ) : null}
+              </View>
 
               <Field
                 label={i18n.t("addressForm_street") || "Street"}
@@ -479,17 +432,9 @@ export default function AddressForm({
               </Field>
 
               <Field
-                label={
-                  i18n.t("addressForm_building") || "Building / Apartment"
-                }
+                label={i18n.t("addressForm_building") || "Building"}
                 required
                 error={errors.building}
-                hint={
-                  !errors.building
-                    ? i18n.t("addressForm_buildingHelper") ||
-                      "Building number, floor, or apartment"
-                    : undefined
-                }
                 focused={focused === "building"}
                 writingDirection={writingDirection}
               >
@@ -517,10 +462,6 @@ export default function AddressForm({
 
               <Field
                 label={i18n.t("addressForm_notes") || "Notes"}
-                hint={
-                  i18n.t("addressForm_notesHint") ||
-                  "Landmarks, gate codes, delivery preferences"
-                }
                 focused={focused === "notes"}
                 writingDirection={writingDirection}
                 multiline
@@ -563,36 +504,19 @@ export default function AddressForm({
                   i18n.t("addressForm_makeDefault") ||
                   "Set as default address"
                 }
-                style={({ pressed }) => [
+                style={[
                   styles.toggleRow,
                   {
                     backgroundColor: t.card,
                     borderColor: form.isDefault ? t.accent : t.border,
-                    opacity: pressed ? 0.9 : 1,
                   },
                 ]}
               >
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[
-                      styles.toggleTitle,
-                      { color: t.textPrimary },
-                    ]}
-                  >
-                    {i18n.t("addressForm_makeDefault") ||
-                      "Set as default"}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.toggleDesc,
-                      { color: t.textTertiary },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {i18n.t("addressForm_makeDefaultHint") ||
-                      "Use this address by default at checkout"}
-                  </Text>
-                </View>
+                <Text
+                  style={[styles.toggleTitle, { color: t.textPrimary, flex: 1 }]}
+                >
+                  {i18n.t("addressForm_makeDefault") || "Set as default"}
+                </Text>
                 <View
                   style={[
                     styles.switchTrack,
@@ -632,23 +556,30 @@ export default function AddressForm({
                 {
                   backgroundColor: t.surface,
                   borderTopColor: t.divider,
-                  paddingBottom: Math.max(insets.bottom, spacing.md),
+                  paddingBottom: Math.max(insets.bottom, spacing.base),
                 },
               ]}
             >
+              {/* Touch wrapper only — the visual fill lives on a plain <View>
+                  with a static style so NativeWind always paints it. */}
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel={
-                  i18n.t("addressForm_cancel") || "Cancel"
-                }
-                style={[styles.cancelBtn,  { backgroundColor: "red" }]}
+                accessibilityLabel={i18n.t("addressForm_cancel") || "Cancel"}
+                style={styles.cancelPressable}
               >
-                <Text
-                  style={[styles.cancelText, { color: "#fff" }]}
+                <View
+                  style={[
+                    styles.cancelBtn,
+                    { backgroundColor: t.surfaceMuted, borderColor: t.border },
+                  ]}
                 >
-                  {i18n.t("addressForm_cancel") || "Cancel"}
-                </Text>
+                  <RNText
+                    style={[styles.cancelText, { color: t.textSecondary }]}
+                  >
+                    {i18n.t("addressForm_cancel") || "Cancel"}
+                  </RNText>
+                </View>
               </Pressable>
               <Pressable
                 onPress={handleSubmit}
@@ -658,19 +589,15 @@ export default function AddressForm({
                     ? i18n.t("addressForm_save") || "Save"
                     : i18n.t("addressForm_add") || "Add address"
                 }
-               style={[styles.saveBtn, { backgroundColor: Colors.secondary }]}
-               >
-              
-                <Text
-                  style={[
-                    styles.saveText,
-                    { color: '#fff' },
-                  ]}
-                >
-                  {isEditing
-                    ? i18n.t("addressForm_save") || "Save changes"
-                    : i18n.t("addressForm_add") || "Add address"}
-                </Text>
+                style={styles.savePressable}
+              >
+                <View style={[styles.saveBtn, { backgroundColor: t.cta }]}>
+                  <RNText style={[styles.saveText, { color: t.ctaText }]}>
+                    {isEditing
+                      ? i18n.t("addressForm_save") || "Save changes"
+                      : i18n.t("addressForm_add") || "Add address"}
+                  </RNText>
+                </View>
               </Pressable>
             </View>
           </View>
@@ -703,7 +630,6 @@ function Field({
   label,
   required,
   error,
-  hint,
   focused,
   multiline,
   leading,
@@ -713,7 +639,6 @@ function Field({
   label: string;
   required?: boolean;
   error?: string;
-  hint?: string;
   focused?: boolean;
   multiline?: boolean;
   leading?: React.ReactNode;
@@ -722,46 +647,31 @@ function Field({
 }) {
   const t = useCheckoutTheme();
   return (
-    <View style={{ marginBottom: 10 }}>
+    <View style={styles.fieldWrap}>
+      <Text
+        style={[styles.fieldLabel, { color: t.textSecondary, writingDirection }]}
+        numberOfLines={1}
+      >
+        {label}
+        {required ? <Text style={{ color: t.error }}> *</Text> : null}
+      </Text>
+
       <View
         style={[
-          styles.fieldShell,
-          multiline && styles.fieldShellMultiline,
+          styles.inputShell,
+          multiline && styles.inputShellMultiline,
           {
             backgroundColor: t.card,
-            borderColor: error
-              ? t.error
-              : focused
-                ? t.accent
-                : t.border,
+            borderColor: error ? t.error : focused ? t.accent : t.border,
             borderWidth: focused || error ? 1.5 : StyleSheet.hairlineWidth,
           },
         ]}
       >
-        <View style={styles.fieldHeader}>
-          {leading ? <View style={{ marginRight: 6 }}>{leading}</View> : null}
-          <Text
-            style={[styles.fieldLabel, { color: t.textTertiary }]}
-            numberOfLines={1}
-          >
-            {label}
-            {required ? (
-              <Text style={{ color: t.error }}> *</Text>
-            ) : null}
-          </Text>
-        </View>
-        <View>{children}</View>
+        {leading ? <View style={styles.leading}>{leading}</View> : null}
+        {children}
       </View>
-      {error ? (
-        <ErrorLine message={error} color={t.error} />
-      ) : hint ? (
-        <Text
-          style={[styles.hintText, { color: t.textTertiary, writingDirection }]}
-          numberOfLines={2}
-        >
-          {hint}
-        </Text>
-      ) : null}
+
+      {error ? <ErrorLine message={error} color={t.error} /> : null}
     </View>
   );
 }
@@ -807,73 +717,46 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.base,
   },
 
-  sectionLabel: {
-    ...typography.label,
-    letterSpacing: 0.6,
-    marginBottom: spacing.sm,
+  fieldWrap: { marginBottom: spacing.lg },
+  fieldLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: 0.1,
+    marginBottom: 8,
+    marginLeft: 2,
   },
 
-  chipRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  chip: {
-    flex: 1,
+  inputShell: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.button,
-    borderWidth: StyleSheet.hairlineWidth,
-    minHeight: 44,
-  },
-  chipText: { ...typography.captionStrong },
-
-  fieldShell: {
+    gap: spacing.sm,
     borderRadius: radius.input,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
-    paddingTop: 6,
-    paddingBottom: 6,
-    minHeight: 52,
-    justifyContent: "center",
+    minHeight: 54,
   },
-  fieldShellMultiline: {
-    minHeight: 78,
+  inputShellMultiline: {
+    minHeight: 96,
+    alignItems: "flex-start",
+    paddingVertical: 6,
   },
-  fieldHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 0,
-  },
-  fieldLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
+  leading: { alignItems: "center", justifyContent: "center" },
   input: {
-    fontSize: 14,
+    flex: 1,
+    fontSize: 15,
     fontWeight: "500",
-    paddingVertical: 2,
+    paddingVertical: 15,
     paddingHorizontal: 0,
-    minHeight: 22,
   },
   inputMultiline: {
-    minHeight: 52,
+    minHeight: 78,
+    paddingTop: 10,
     textAlignVertical: "top",
   },
 
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
   locationIcon: {
     width: 28,
     height: 28,
@@ -881,8 +764,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  locationText: { fontSize: 14, fontWeight: "500", lineHeight: 19, marginTop: 2 },
-  locationPlaceholder: { fontSize: 14, fontWeight: "400", lineHeight: 19, marginTop: 2 },
+  locationText: { fontSize: 15, fontWeight: "500", lineHeight: 20 },
+  locationPlaceholder: { fontSize: 15, fontWeight: "400", lineHeight: 20 },
 
   toggleRow: {
     flexDirection: "row",
@@ -895,7 +778,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   toggleTitle: { ...typography.bodyStrong },
-  toggleDesc: { ...typography.caption, marginTop: 2 },
   switchTrack: {
     width: 44,
     height: 26,
@@ -918,35 +800,51 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   errorText: { ...typography.caption, flex: 1 },
-  hintText: {
-    ...typography.caption,
-    marginTop: 6,
-    marginLeft: 4,
-  },
   footer: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    alignItems: "flex-start",
-    justifyContent: "space-around",
- },
+    paddingTop: spacing.base,
+    alignItems: "center",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 12,
+  },
+  cancelPressable: { flex: 1 },
+  savePressable: { flex: 2 },
   cancelBtn: {
-    flex: 0.3,
-    height: 42,
+    width: "100%",
+    height: 56,
     borderRadius: radius.button,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
-    
   },
-  cancelText: { ...typography.bodyStrong },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: -0.2,
+    fontFamily: Platform.OS === "web" ? undefined : "Cairo-Bold",
+  },
   saveBtn: {
-    flex: 0.3,
-    height: 42,
+    width: "100%",
+    height: 56,
     borderRadius: radius.button,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
-  saveText: { ...typography.subtitle },
+  saveText: {
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: -0.2,
+    fontFamily: Platform.OS === "web" ? undefined : "Cairo-Bold",
+  },
 });

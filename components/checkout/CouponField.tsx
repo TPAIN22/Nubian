@@ -146,10 +146,7 @@ export const CouponField = React.memo(function CouponField({
             accessibilityRole="button"
             accessibilityLabel={i18n.t('remove') || 'Remove'}
             hitSlop={10}
-            style={({ pressed }) => [
-              styles.removeBtn,
-              { borderColor: t.border, opacity: pressed ? 0.7 : 1 },
-            ]}
+            style={[styles.removeBtn, { borderColor: t.border }]}
           >
             <Text
               style={[styles.removeText, { color: t.textSecondary }]}
@@ -207,11 +204,9 @@ export const CouponField = React.memo(function CouponField({
           onPress={handleApply}
           disabled={loading || !code.trim()}
           hitSlop={6}
-          style={({ pressed }) => [
+          style={[
             styles.applyBtn,
-            {
-              opacity: !code.trim() || loading ? 0.5 : pressed ? 0.7 : 1,
-            },
+            { opacity: !code.trim() || loading ? 0.5 : 1 },
           ]}
         >
           {loading ? (

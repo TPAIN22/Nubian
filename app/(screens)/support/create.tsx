@@ -61,9 +61,7 @@ export default function CreateTicketScreen() {
         <View className="flex-row mb-4 space-x-3">
           <Pressable
             onPress={() => setType('support')}
-            className={`flex-1 py-3 rounded-lg border items-center ${type === 'support' ? 'bg-black border-black' : 'bg-white border-gray-300'}`}
-            style={({ pressed }) => pressed && { opacity: 0.7 }}
-            accessibilityRole="button"
+            className={`flex-1 py-3 rounded-lg border items-center ${type === 'support' ? 'bg-black border-black' : 'bg-white border-gray-300'}`}            accessibilityRole="button"
             accessibilityLabel="General Support"
             accessibilityState={{ selected: type === 'support' }}
           >
@@ -71,9 +69,7 @@ export default function CreateTicketScreen() {
           </Pressable>
           <Pressable
             onPress={() => setType('complaint')}
-            className={`flex-1 py-3 rounded-lg border items-center ${type === 'complaint' ? 'bg-black border-black' : 'bg-white border-gray-300'}`}
-            style={({ pressed }) => pressed && { opacity: 0.7 }}
-            accessibilityRole="button"
+            className={`flex-1 py-3 rounded-lg border items-center ${type === 'complaint' ? 'bg-black border-black' : 'bg-white border-gray-300'}`}            accessibilityRole="button"
             accessibilityLabel="Complaint / Dispute"
             accessibilityState={{ selected: type === 'complaint' }}
           >
@@ -120,9 +116,7 @@ export default function CreateTicketScreen() {
 
         {/* Attachments Placeholder */}
         <Pressable
-          className="border-dashed border-2 border-gray-300 rounded-lg p-4 items-center mb-6"
-          style={({ pressed }) => pressed && { opacity: 0.7 }}
-          onPress={() => toast('Photo attachments will be supported in a future update.')}
+          className="border-dashed border-2 border-gray-300 rounded-lg p-4 items-center mb-6"          onPress={() => toast('Photo attachments will be supported in a future update.')}
           accessibilityRole="button"
           accessibilityLabel="Tap to upload images (proof)"
         >
@@ -131,9 +125,7 @@ export default function CreateTicketScreen() {
 
         {/* Submit Button */}
         <Pressable
-          className={`py-4 rounded-lg items-center ${isLoading ? 'bg-gray-400' : 'bg-black'}`}
-          style={({ pressed }) => pressed && { opacity: 0.7 }}
-          onPress={handleSubmit}
+          className={`py-4 rounded-lg items-center ${isLoading ? 'bg-gray-400' : 'bg-black'}`}          onPress={handleSubmit}
           disabled={isLoading}
           accessibilityRole="button"
           accessibilityLabel="Submit Request"

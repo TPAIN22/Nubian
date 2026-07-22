@@ -130,7 +130,6 @@ const CartItem = React.memo(function CartItem({
         onPress={goToProduct}
         accessibilityRole="imagebutton"
         accessibilityLabel={productLinkLabel}
-        style={({ pressed }) => pressed && { opacity: 0.7 }}
       >
         {imageUri ? (
           <Image
@@ -166,7 +165,7 @@ const CartItem = React.memo(function CartItem({
       <View style={styles.details}>
         <View style={styles.topRow}>
           <Pressable
-            style={({ pressed }) => [styles.nameWrap, pressed && { opacity: 0.7 }]}
+            style={styles.nameWrap}
             onPress={goToProduct}
           >
             <Text
@@ -222,10 +221,7 @@ const CartItem = React.memo(function CartItem({
             accessibilityValue={{ text: String(validQty) }}
           >
             <Pressable
-              style={({ pressed }) => [
-                styles.stepperBtn,
-                pressed && !isUpdating && { opacity: 0.6 },
-              ]}
+              style={styles.stepperBtn}
               onPress={() => decrement(item)}
               disabled={isUpdating}
               accessibilityRole="button"
@@ -243,10 +239,7 @@ const CartItem = React.memo(function CartItem({
             </Text>
 
             <Pressable
-              style={({ pressed }) => [
-                styles.stepperBtn,
-                pressed && !isUpdating && { opacity: 0.6 },
-              ]}
+              style={styles.stepperBtn}
               onPress={() => increment(item)}
               disabled={isUpdating}
               accessibilityRole="button"

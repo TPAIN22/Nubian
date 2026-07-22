@@ -114,11 +114,10 @@ export const ConfirmSheet = forwardRef<ConfirmSheetRef, object>(
               onPress={handleCancel}
               accessibilityRole="button"
               accessibilityLabel={opts?.cancelLabel || "Cancel"}
-              style={({ pressed }) => [
+              style={[
                 styles.btn,
                 styles.cancelBtn,
                 { borderColor: colors.borderLight },
-                pressed && { opacity: 0.7 },
               ]}
             >
               <Text style={[styles.btnText, { color: colors.text.gray }]}>
@@ -129,11 +128,7 @@ export const ConfirmSheet = forwardRef<ConfirmSheetRef, object>(
               onPress={handleConfirm}
               accessibilityRole="button"
               accessibilityLabel={opts?.confirmLabel || "Confirm"}
-              style={({ pressed }) => [
-                styles.btn,
-                { backgroundColor: accent },
-                pressed && { opacity: 0.85 },
-              ]}
+              style={[styles.btn, { backgroundColor: accent }]}
             >
               <Text style={[styles.btnText, { color: "#fff" }]}>
                 {opts?.confirmLabel || "Confirm"}

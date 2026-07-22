@@ -48,11 +48,7 @@ export const QuantityStepper = React.memo(function QuantityStepper({
         accessibilityRole="button"
         accessibilityLabel={i18n.t('cart_decreaseQuantity') || 'Decrease quantity'}
         accessibilityState={{ disabled: busy || isMin }}
-        style={({ pressed }) => [
-          styles.btn,
-          { width: dim, height: dim },
-          pressed && !isMin && { opacity: 0.6 },
-        ]}
+        style={[styles.btn, { width: dim, height: dim }]}
       >
         <Ionicons
           name="remove"
@@ -78,11 +74,7 @@ export const QuantityStepper = React.memo(function QuantityStepper({
         accessibilityRole="button"
         accessibilityLabel={i18n.t('cart_increaseQuantity') || 'Increase quantity'}
         accessibilityState={{ disabled: busy || isMax }}
-        style={({ pressed }) => [
-          styles.btn,
-          { width: dim, height: dim },
-          pressed && !isMax && { opacity: 0.6 },
-        ]}
+        style={[styles.btn, { width: dim, height: dim }]}
       >
         <Ionicons
           name="add"

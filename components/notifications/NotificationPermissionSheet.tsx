@@ -168,12 +168,9 @@ export function NotificationPermissionSheet({
             accessibilityRole="button"
             disabled={busy}
             onPress={handlePrimary}
-            style={({ pressed }) => [
+            style={[
               styles.primary,
-              {
-                backgroundColor: colors.primary,
-                opacity: pressed || busy ? 0.85 : 1,
-              },
+              { backgroundColor: colors.primary, opacity: busy ? 0.85 : 1 },
             ]}
           >
             {busy ? (
@@ -189,10 +186,7 @@ export function NotificationPermissionSheet({
             accessibilityRole="button"
             disabled={busy}
             onPress={handleSecondary}
-            style={({ pressed }) => [
-              styles.secondary,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
+            style={styles.secondary}
           >
             <Text
               style={[styles.secondaryText, { color: colors.text.tertiary }]}

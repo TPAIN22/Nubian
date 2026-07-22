@@ -1,6 +1,9 @@
 export * from './tokens';
 export * from './theme';
 export * from './CheckoutSection';
+export * from './CheckoutHeader';
+export * from './ShippingMethodCard';
+export * from './BankTransferDetails';
 export * from './PaymentCard';
 export * from './AddressCard';
 export * from './SummaryRow';
@@ -10,6 +13,7 @@ export * from './QuantityStepper';
 export * from './EmptyCartState';
 export * from './CheckoutFooter';
 export * from './CartItemCard';
+export * from './OrderItemsCard';
 export * from './CouponField';
 export * from './SuccessAnimation';
 export * from './InlineAlert';

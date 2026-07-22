@@ -375,11 +375,7 @@ const ExploreScreen = () => {
             {exploreError}
           </Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.retryBtn,
-              { backgroundColor: colors.primary },
-              pressed && { opacity: 0.8 },
-            ]}
+            style={[styles.retryBtn, { backgroundColor: colors.primary }]}
             onPress={onRefresh}
             accessibilityRole="button"
             accessibilityLabel={String(i18n.t("retry") || "Retry")}
@@ -554,7 +550,6 @@ const ExploreScreen = () => {
               >
                 <Pressable
                   onPress={handleCancel}
-                  style={({ pressed }) => pressed && { opacity: 0.7 }}
                   accessibilityRole="button"
                   accessibilityLabel={String(i18n.t("cancel") || "Cancel")}
                 >
@@ -607,10 +602,9 @@ const ExploreScreen = () => {
                 {recentSearches.map((s, i) => (
                   <Pressable
                     key={`r-${i}`}
-                    style={({ pressed }) => [
+                    style={[
                       styles.sugItem,
                       { borderBottomColor: colors.borderLight },
-                      pressed && { opacity: 0.65 },
                     ]}
                     onPress={() => {
                       setSearchInput(s);
@@ -659,13 +653,12 @@ const ExploreScreen = () => {
                 {TRENDING.map((term, i) => (
                   <Pressable
                     key={`t-${i}`}
-                    style={({ pressed }) => [
+                    style={[
                       styles.trendChip,
                       {
                         backgroundColor: colors.primary + "10",
                         borderColor: colors.primary + "30",
                       },
-                      pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => {
                       setSearchInput(term);
@@ -697,10 +690,9 @@ const ExploreScreen = () => {
 
               {/* Filter */}
               <Pressable
-                style={({ pressed }) => [
+                style={[
                   styles.fabBtn,
                   hasActiveFilters && { backgroundColor: colors.primary + "15" },
-                  pressed && { opacity: 0.7 },
                 ]}
                 onPress={openFilterModal}
                 accessibilityRole="button"
@@ -733,10 +725,9 @@ const ExploreScreen = () => {
 
               {/* Sort */}
               <Pressable
-                style={({ pressed }) => [
+                style={[
                   styles.fabBtn,
                   sort !== "recommended" && { backgroundColor: colors.primary + "15" },
-                  pressed && { opacity: 0.7 },
                 ]}
                 onPress={() => {
                   const cycle: ExploreSort[] = [
@@ -763,10 +754,7 @@ const ExploreScreen = () => {
                 <>
                   <View style={[styles.fabDivider, { backgroundColor: colors.borderLight }]} />
                   <Pressable
-                    style={({ pressed }) => [
-                      styles.fabClearBtn,
-                      pressed && { opacity: 0.7 },
-                    ]}
+                    style={styles.fabClearBtn}
                     onPress={() => {
                       useExploreStore.getState().clearFilters();
                       setFilterCategory(null);
@@ -834,12 +822,11 @@ const ExploreScreen = () => {
                   contentContainerStyle={styles.chipRow}
                 >
                   <Pressable
-                    style={({ pressed }) => [
+                    style={[
                       styles.chip,
                       !filterCategory
                         ? { backgroundColor: colors.primary + "15", borderColor: colors.primary }
                         : { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                      pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => setFilterCategory(null)}
                     accessibilityRole="button"
@@ -858,12 +845,11 @@ const ExploreScreen = () => {
                   {categories.map((cat: any) => (
                     <Pressable
                       key={cat._id}
-                      style={({ pressed }) => [
+                      style={[
                         styles.chip,
                         filterCategory === cat._id
                           ? { backgroundColor: colors.primary + "15", borderColor: colors.primary }
                           : { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                        pressed && { opacity: 0.7 },
                       ]}
                       onPress={() => setFilterCategory(cat._id)}
                       accessibilityRole="button"
@@ -891,11 +877,7 @@ const ExploreScreen = () => {
 
               {/* In-stock toggle */}
               <Pressable
-                style={({ pressed }) => [
-                  styles.toggleRow,
-                  { backgroundColor: colors.surface },
-                  pressed && { opacity: 0.7 },
-                ]}
+                style={[styles.toggleRow, { backgroundColor: colors.surface }]}
                 onPress={() => setShowAvailableOnly((p) => !p)}
                 accessibilityRole="button"
                 accessibilityLabel={String(i18n.t("availableOnly") || "In Stock Only")}
@@ -934,12 +916,11 @@ const ExploreScreen = () => {
                   ).map((opt) => (
                     <Pressable
                       key={opt.key}
-                      style={({ pressed }) => [
+                      style={[
                         styles.sortCard,
                         sort === opt.key
                           ? { backgroundColor: colors.primary + "15", borderColor: colors.primary }
                           : { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                        pressed && { opacity: 0.7 },
                       ]}
                       onPress={() => handleSortChange(opt.key as ExploreSort)}
                       accessibilityRole="button"
@@ -968,11 +949,7 @@ const ExploreScreen = () => {
             <View style={[styles.modalActions, { borderTopColor: colors.borderLight }]}>
               <Pressable
                 onPress={clearAllFilters}
-                style={({ pressed }) => [
-                  styles.clearFilterBtn,
-                  { borderColor: colors.borderMedium },
-                  pressed && { opacity: 0.7 },
-                ]}
+                style={[styles.clearFilterBtn, { borderColor: colors.borderMedium }]}
                 accessibilityRole="button"
                 accessibilityLabel={String(i18n.t("clear") || "Reset")}
               >
@@ -984,10 +961,7 @@ const ExploreScreen = () => {
 
               <Pressable
                 onPress={applyFilters}
-                style={({ pressed }) => [
-                  styles.applyFilterBtn,
-                  pressed && { opacity: 0.85 },
-                ]}
+                style={styles.applyFilterBtn}
                 accessibilityRole="button"
                 accessibilityLabel={String(i18n.t("applyFilters") || "Apply")}
               >

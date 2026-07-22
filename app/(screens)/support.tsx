@@ -85,7 +85,7 @@ export default function SupportScreen() {
 
   const renderItem = useCallback(({ item }: { item: any }) => (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.7 }]}
+      style={styles.card}
       onPress={() => router.push(`/(screens)/support/${item._id}`)}
       accessibilityRole="button"
       accessibilityLabel={`Ticket ${item.ticketNumber}, ${formatStatus(item.status)}, ${item.subject}`}
@@ -144,7 +144,7 @@ export default function SupportScreen() {
         ListHeaderComponent={
           <>
             <Pressable
-              style={({ pressed }) => [styles.createButton, pressed && { opacity: 0.7 }]}
+              style={styles.createButton}
               onPress={() => router.push('/(screens)/support/create')}
               accessibilityRole="button"
               accessibilityLabel="Open New Ticket"

@@ -1,20 +1,25 @@
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   View,
+  // Plain RN Text for the label on the colored CTA fill: the themed <Text>
+  // carries a NativeWind className color that overrides inline color.
+  // eslint-disable-next-line no-restricted-imports
+  Text as RNText,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Text } from '@/components/ui/text';
 import i18n from '@/utils/i18n';
-import { useCurrencyStore } from '@/store/useCurrencyStore';
 import { useCheckoutTheme } from './theme';
-import { radius, spacing, typography } from './tokens';
 
 type Props = {
-  total: number;
+  // Kept for API compatibility with existing callers (cart + checkout). The
+  // total now lives in the order summary, so it's no longer rendered here.
+  total?: number;
   currency?: string;
   ctaLabel?: string;
   caption?: string;
@@ -27,49 +32,25 @@ type Props = {
   withSafeArea?: boolean;
 };
 
-const FOOTER_HEIGHT = 56;
+// Brand gold (primary) as literals. The colored surface is a plain <View> with
+// a static style so it always paints — NativeWind's jsx runtime drops the
+// function form of Pressable's `style` prop, which silently ate the fill before.
+const GOLD = '#A37E2C';
+const GOLD_PRESSED = '#8A6824';
+const INK = '#FFFFFF';
 
 export const CheckoutFooter = React.memo(function CheckoutFooter({
-  total,
-  currency,
   ctaLabel,
-  caption,
   hint,
   loading,
   disabled,
   onPress,
-  itemCount,
   variant = 'cart',
   withSafeArea = true,
 }: Props) {
   const t = useCheckoutTheme();
   const insets = useSafeAreaInsets();
-  const activeCode = useCurrencyStore(s => s.currencyCode);
-  const currencies = useCurrencyStore(s => s.currencies);
-
-  const code = currency || activeCode || '';
-  const resolved = useMemo(
-    () => currencies.find(c => c.code === code) ?? null,
-    [currencies, code],
-  );
-  const decimals = resolved?.decimals ?? 2;
-  const symbol = resolved?.symbol || code || '';
-  const symbolAfter = resolved?.symbolPosition === 'after';
-
-  const formattedTotal = useMemo(
-    () =>
-      total.toLocaleString(undefined, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      }),
-    [total, decimals],
-  );
-
-  const totalLabel = symbol
-    ? symbolAfter
-      ? `${formattedTotal} ${symbol}`
-      : `${symbol} ${formattedTotal}`
-    : formattedTotal;
+  const [pressed, setPressed] = useState(false);
 
   const isDisabled = !!(disabled || loading);
 
@@ -79,17 +60,6 @@ export const CheckoutFooter = React.memo(function CheckoutFooter({
       ? i18n.t('checkout') || 'Checkout'
       : i18n.t('placeOrder') || 'Place order');
 
-  const fallbackCaption =
-    typeof itemCount === 'number' && itemCount > 0
-      ? `${itemCount} ${itemCount === 1 ? i18n.t('item') || 'item' : i18n.t('items') || 'items'}`
-      : null;
-
-  // Solid, opaque, never-themed-to-disappear colors. We avoid resolving these
-  // through the theme on the off-chance a token is missing — a checkout button
-  // that is invisible because of a typo in a palette is unforgivable.
-  const buttonBg = isDisabled ? '#9CA3AF' : t.isDark ? '#FFFFFF' : '#111827';
-  const buttonFg = isDisabled ? '#FFFFFF' : t.isDark ? '#111827' : '#FFFFFF';
-
   return (
     <View
       style={[
@@ -97,9 +67,7 @@ export const CheckoutFooter = React.memo(function CheckoutFooter({
         {
           backgroundColor: t.surface,
           borderTopColor: t.divider,
-          paddingBottom: withSafeArea
-            ? Math.max(insets.bottom, 12)
-            : 12,
+          paddingBottom: withSafeArea ? Math.max(insets.bottom, 12) : 12,
         },
       ]}
     >
@@ -119,55 +87,50 @@ export const CheckoutFooter = React.memo(function CheckoutFooter({
         </View>
       ) : null}
 
-      <View style={styles.metaRow}>
-        <Text
-          style={[styles.metaLabel, { color: t.textTertiary }]}
-          numberOfLines={1}
-        >
-          {(caption || i18n.t('orderTotal') || 'Order total').toUpperCase()}
-        </Text>
-        <Text
-          style={[styles.metaValue, { color: t.textPrimary }]}
-          numberOfLines={1}
-        >
-          {totalLabel}
-        </Text>
-      </View>
-
-      {fallbackCaption ? (
-        <Text
-          style={[styles.subMeta, { color: t.textTertiary }]}
-          numberOfLines={1}
-        >
-          {fallbackCaption}
-        </Text>
-      ) : null}
-
       <Pressable
         onPress={onPress}
         disabled={isDisabled}
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}
         accessibilityRole="button"
-        accessibilityLabel={`${ctaTitle}, ${totalLabel}`}
+        accessibilityLabel={ctaTitle}
         accessibilityState={{ disabled: isDisabled, busy: !!loading }}
-        style={({ pressed }) => [
-          styles.cta,
-          { backgroundColor: buttonBg },
-          pressed && !isDisabled && { opacity: 0.85 },
-        ]}
       >
-        {loading ? (
-          <ActivityIndicator size="small" color={buttonFg} />
-        ) : (
-          <View style={styles.ctaInner}>
-            <Text
-              style={[styles.ctaText, { color: buttonFg }]}
+        {/* Visual surface is a plain View with a STATIC style object so the
+            gold fill is guaranteed to render under NativeWind. */}
+        <View
+          style={{
+            width: '100%',
+            height: 56,
+            borderRadius: 14,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: pressed ? GOLD_PRESSED : GOLD,
+            opacity: isDisabled ? 0.5 : 1,
+            shadowColor: '#000000',
+            shadowOpacity: 0.2,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 5 },
+            elevation: 6,
+          }}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color={INK} />
+          ) : (
+            <RNText
               numberOfLines={1}
+              style={{
+                color: INK,
+                fontSize: 17,
+                fontWeight: '800',
+                letterSpacing: 0.2,
+                fontFamily: Platform.OS === 'web' ? undefined : 'Cairo-Bold',
+              }}
             >
               {ctaTitle}
-            </Text>
-
-          </View>
-        )}
+            </RNText>
+          )}
+        </View>
       </Pressable>
     </View>
   );
@@ -182,53 +145,11 @@ const styles = StyleSheet.create({
   hintRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: radius.input,
+    borderRadius: 12,
     marginBottom: 12,
   },
-  hintText: { ...typography.caption, flex: 1 },
-
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  metaLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
-  metaValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  subMeta: {
-    fontSize: 12,
-    fontWeight: '400',
-    marginBottom: 12,
-  },
-
-  cta: {
-    height: FOOTER_HEIGHT,
-    borderRadius: radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  ctaInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  iconLtr: { marginLeft: 8 },
-  iconRtl: { marginRight: 8, transform: [{ scaleX: -1 }] },
+  hintText: { fontSize: 13, flex: 1 },
 });
