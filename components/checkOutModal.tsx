@@ -22,7 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Crypto from "expo-crypto";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
-import { toast } from "sonner-native";
+import { toast } from "@/utils/toast";
 
 import { Text } from "@/components/ui/text";
 import useOrderStore from "@/store/orderStore";

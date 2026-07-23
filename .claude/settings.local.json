@@ -44,7 +44,22 @@
       "Bash(sed -i \"s#'../../../../../Desktop/nubian_platform/apps/backend/src/services/currency.service.js'#'./src/services/currency.service.js'#\" verify-fx.mjs)",
       "Bash(rm -f verify-fx.mjs)",
       "Bash(cp \"C:/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/239c14c7-1808-46b1-8af3-96563c6cd212/scratchpad/sweep-fx.mjs\" ./sweep-fx.mjs)",
-      "Bash(rm -f sweep-fx.mjs)"
+      "Bash(rm -f sweep-fx.mjs)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 60)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(npx expo lint 2>&1 | Select-Object -First 80)",
+      "PowerShell(npx eslint components/cart components/AddToCartButton.tsx components/ProductDetails \"app/\\(tabs\\)/cart.tsx\" \"app/\\(tabs\\)/_layout.tsx\" 2>&1 | Select-Object -First 40)",
+      "Bash(python -)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40)",
+      "PowerShell(npx eslint components/cart components/ProductCard.tsx components/checkout/CartItemCard.tsx components/AddToCartButton.tsx \"app/\\(tabs\\)/cart.tsx\" \"app/\\(tabs\\)/_layout.tsx\" \"app/_layout.tsx\" \"app/\\(screens\\)/details/[details].tsx\" 2>&1 | Select-Object -First 40)",
+      "PowerShell(npx jest __tests__/components/cart --watchAll=false 2>&1 | Select-Object -Last 50)",
+      "PowerShell(npx jest --ci --coverage --watchAll=false 2>&1 | Select-Object -Last 45)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 30; npx eslint components/cart components/AddToCartButton.tsx 2>&1 | Select-Object -First 20)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint components/cart 2>&1 | Select-Object -First 20; Write-Output \"done\")",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint components/cart \"app/\\(tabs\\)/cart.tsx\" 2>&1 | Select-Object -First 20; Write-Output \"clean\")",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint components/cart 2>&1 | Select-Object -First 20; Write-Output \"clean\")",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint \"app/\\(tabs\\)/_layout.tsx\" components/cart 2>&1 | Select-Object -First 20; Write-Output \"clean\")",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 15; npx eslint components/cart/CartSuccessOverlay.tsx 2>&1 | Select-Object -First 10; Write-Output \"clean\")"
     ]
   }
 }

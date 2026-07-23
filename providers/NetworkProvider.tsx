@@ -12,7 +12,7 @@ import React, {
 import * as Network from "expo-network";
 import { EventSubscription } from "expo-modules-core";
 import i18n from "@/utils/i18n";
-import { toast } from "sonner-native";
+import { toast } from "@/utils/toast";
 
 // 1. تعريف أنواع الـ Context
 interface NetworkContextType {

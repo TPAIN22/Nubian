@@ -5,7 +5,7 @@ import { OverlayProvider } from '@gluestack-ui/overlay';
 import { ToastProvider } from '@gluestack-ui/toast';
 import { setFlushStyles } from '@gluestack-ui/nativewind-utils/flush';
 import { script } from './script';
-import { Toaster } from "sonner-native";
+import { NotificationPortal } from '@/components/notifications/NotificationPortal';
 
 export type ModeType = 'light' | 'dark' | 'system';
 
@@ -91,8 +91,8 @@ export function GluestackUIProvider({
       />
       <OverlayProvider>
         <ToastProvider>
-          <Toaster position="top-center" duration={3000} richColors/>
           {props.children}
+          <NotificationPortal />
         </ToastProvider>
       </OverlayProvider>
     </>

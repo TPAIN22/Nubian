@@ -20,7 +20,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTokenManager } from "@/hooks/useTokenManager";
-import { Toaster } from "sonner-native";
+import { NotificationPortal } from "@/components/notifications/NotificationPortal";
+import { CartAnimationLayer } from "@/components/cart/CartAnimationLayer";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
 import { useHomeStore } from "@/store/useHomeStore";
 import useItemStore from "@/store/useItemStore";
@@ -277,7 +278,15 @@ function AppLoaderWithClerk() {
         </Stack>
         {/* Currency now defaults from device locale at startup (see effect above)
             and is changed from the Profile screen — no blocking first-run modal. */}
-        <Toaster position="top-center" duration={3000} richColors offset={60} />
+        {/* In-app notification cards. Mounted last so they render above the
+            navigator; safe-area insets and swipe gestures come from the
+            SafeAreaProvider / GestureHandlerRootView in RootLayout below. */}
+        {/* Add-to-cart feedback: the product image flying to the tab bar and
+            the bottom "Added to cart · View cart" card. Mounted above the
+            navigator, `pointerEvents="box-none"`, and renders nothing at all
+            while idle. */}
+        <CartAnimationLayer />
+        <NotificationPortal />
       </>
     </NotificationProvider>
   );

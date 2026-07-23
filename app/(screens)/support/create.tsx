@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, TextInput, Pressable, ScrollView, ActivityIndicator } from 'react-native';
-import { toast } from 'sonner-native';
+import { toast } from "@/utils/toast";
 import { Text } from '@/components/ui/text';
 import { useRouter, Stack } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';

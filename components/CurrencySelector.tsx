@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCurrencyStore, useHasSelectedCurrency } from '@/store/useCurrencyStore';
 import { useUser } from '@clerk/clerk-expo';
 import { LinearGradient } from 'expo-linear-gradient';
-import { toast } from 'sonner-native';
+import { toast } from "@/utils/toast";
 
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/locales/brandColors';

@@ -9,8 +9,12 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
-import { toast } from "sonner-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from "react-native-reanimated";
+import { toast } from "@/utils/toast";
 
 import { Text } from "@/components/ui/text";
 import useCartStore from "@/store/useCartStore";
@@ -19,7 +23,6 @@ import {
   CheckoutFooter,
   CouponField,
   EmptyCartState,
-  InlineAlert,
   PriceBreakdown,
   Skeleton,
   SkeletonCartRow,
@@ -33,6 +36,8 @@ import i18n from "@/utils/i18n";
 import { useTracking } from "@/hooks/useTracking";
 import type { CouponValidationResult } from "@/components/CouponInput";
 import { ConfirmSheet, type ConfirmSheetRef } from "@/components/ui/ConfirmSheet";
+import { CartErrorState } from "@/components/cart/CartErrorState";
+import { classifyCartError } from "@/components/cart/cartErrors";
 
 type CartLine = {
   product: { _id: string };
@@ -285,76 +290,17 @@ export default function CartScreen() {
     };
   }, [appliedCoupon, discount, finalTotal, subtotal]);
 
-  // === Loading skeleton ===
-  if (isLoading && !cart) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: t.surface, paddingTop: insets.top + spacing.sm },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Skeleton width={120} height={28} />
-          <Skeleton width={48} height={14} />
-        </View>
-        <View style={{ paddingHorizontal: spacing.base, gap: spacing.md }}>
-          {[0, 1, 2].map(i => (
-            <SkeletonCartRow key={i} />
-          ))}
-        </View>
-      </View>
-    );
-  }
+  // The four states below used to be four separate `return`s from the top of
+  // the component, so React unmounted the whole screen on every transition —
+  // the first item you added made the empty illustration vanish and a full list
+  // snap in, with no continuity. They now live under one persistent container,
+  // which is what lets Reanimated run an exit on the outgoing state and an
+  // entrance on the incoming one. The *conditions* are unchanged and evaluated
+  // in the same order.
+  const showSkeleton = isLoading && !cart;
+  const showError = !showSkeleton && !!error && !isCartEmpty;
+  const showEmpty = !showSkeleton && !showError && isCartEmpty;
 
-  // === Error state (with cart context) ===
-  if (error && !isCartEmpty) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: t.surface, paddingTop: insets.top + spacing.sm },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: t.textPrimary }]}>
-            {i18n.t("cart") || "Cart"}
-          </Text>
-        </View>
-        <View style={styles.centerWrap}>
-          <InlineAlert
-            tone="error"
-            title={i18n.t("somethingWentWrong") || "Something went wrong"}
-            message={String(error)}
-          />
-        </View>
-      </View>
-    );
-  }
-
-  // === Empty state ===
-  if (isCartEmpty) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: t.surface, paddingTop: insets.top + spacing.sm },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: t.textPrimary }]}>
-            {i18n.t("cart") || "Cart"}
-          </Text>
-        </View>
-        <EmptyCartState
-          ctaLabel={i18n.t("startShopping") || "Start shopping"}
-          onCta={handleContinueShopping}
-        />
-      </View>
-    );
-  }
-
-  // === Populated state ===
   return (
     <View
       style={[
@@ -363,31 +309,96 @@ export default function CartScreen() {
       ]}
     >
       <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: t.textPrimary }]}>
-          {i18n.t("cart") || "Cart"}
-        </Text>
-        <Text style={[styles.itemCount, { color: t.textTertiary }]}>
-          {itemCount} {itemCount === 1 ? i18n.t("item") || "item" : i18n.t("items") || "items"}
-        </Text>
+        {showSkeleton ? (
+          <>
+            <Skeleton width={120} height={28} />
+            <Skeleton width={48} height={14} />
+          </>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: t.textPrimary }]}>
+              {i18n.t("cart") || "Cart"}
+            </Text>
+            {!isCartEmpty ? (
+              // Keyed on the count so the number crossfades instead of
+              // swapping. Wrapped rather than using `Animated.Text` so the
+              // Cairo font from `@/components/ui/text` is preserved.
+              <Animated.View
+                key={`count-${itemCount}`}
+                entering={FadeIn.duration(180)}
+              >
+                <Text style={[styles.itemCount, { color: t.textTertiary }]}>
+                  {itemCount}{" "}
+                  {itemCount === 1
+                    ? i18n.t("item") || "item"
+                    : i18n.t("items") || "items"}
+                </Text>
+              </Animated.View>
+            ) : null}
+          </>
+        )}
       </View>
 
-      <FlatList
-        data={(cart?.products as any[]) ?? []}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        showsVerticalScrollIndicator={false}
-        style={styles.flex}
-        contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={t.accent}
-            colors={[t.accent]}
+      {showSkeleton ? (
+        <Animated.View
+          key="cart-skeleton"
+          exiting={FadeOut.duration(160)}
+          style={styles.skeletonWrap}
+        >
+          {[0, 1, 2].map(i => (
+            <SkeletonCartRow key={i} />
+          ))}
+        </Animated.View>
+      ) : showError ? (
+        <Animated.View
+          key="cart-error"
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(160)}
+          style={styles.centerWrap}
+        >
+          <CartErrorState
+            kind={classifyCartError(error)}
+            message={String(error)}
+            onPrimary={onRefresh}
+            secondaryLabel={i18n.t("startShopping") || "Start shopping"}
+            onSecondary={handleContinueShopping}
           />
-        }
-        ListFooterComponent={
+        </Animated.View>
+      ) : showEmpty ? (
+        <Animated.View
+          key="cart-empty"
+          entering={FadeIn.duration(260)}
+          exiting={FadeOut.duration(160)}
+          style={styles.flex}
+        >
+          <EmptyCartState
+            ctaLabel={i18n.t("startShopping") || "Start shopping"}
+            onCta={handleContinueShopping}
+          />
+        </Animated.View>
+      ) : (
+        <Animated.View
+          key="cart-list"
+          entering={FadeIn.duration(260)}
+          style={styles.flex}
+        >
+          <FlatList
+            data={(cart?.products as any[]) ?? []}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            showsVerticalScrollIndicator={false}
+            style={styles.flex}
+            contentContainerStyle={styles.list}
+            ItemSeparatorComponent={ItemSeparator}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={t.accent}
+                colors={[t.accent]}
+              />
+            }
+            ListFooterComponent={
           <View style={styles.footerInfo}>
             <View
               style={[
@@ -446,23 +457,28 @@ export default function CartScreen() {
               />
             </View>
           </View>
-        }
-      />
+            }
+          />
 
-      <CheckoutFooter
-        total={finalTotal}
-        currency={cartCurrency}
-        loading={isLoading}
-        onPress={handleCheckout}
-        itemCount={itemCount}
-        variant="cart"
-        withSafeArea={false}
-      />
+          <CheckoutFooter
+            total={finalTotal}
+            currency={cartCurrency}
+            loading={isLoading}
+            onPress={handleCheckout}
+            itemCount={itemCount}
+            variant="cart"
+            withSafeArea={false}
+          />
+        </Animated.View>
+      )}
 
       <ConfirmSheet ref={confirmRef} />
     </View>
   );
 }
+
+/** Hoisted so FlatList doesn't get a brand-new separator component each render. */
+const ItemSeparator = () => <View style={styles.separator} />;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -482,6 +498,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.lg,
   },
+  separator: { height: spacing.md },
+  skeletonWrap: { paddingHorizontal: spacing.base, gap: spacing.md },
   centerWrap: {
     flex: 1,
     justifyContent: "center",

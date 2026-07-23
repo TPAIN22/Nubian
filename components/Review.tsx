@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { View, ActivityIndicator, TextInput, TouchableOpacity, StyleSheet, I18nManager } from "react-native";
-import { toast } from "sonner-native";
+import { toast } from "@/utils/toast";
 import { Text } from "@/components/ui/text";
 import axiosInstance from "@/services/api/client";
 import { useUser, useAuth } from "@clerk/clerk-expo";

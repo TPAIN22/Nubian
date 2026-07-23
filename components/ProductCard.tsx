@@ -21,6 +21,7 @@ import { cleanImages } from "@/utils/productUtils";
 import { ikResize } from "@/utils/imageCdn";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { markTapStartTime } from "@/hooks/useProductFetch";
+import { QuickAddButton } from "@/components/cart/QuickAddButton";
 
 export type Product = NormalizedProduct;
 
@@ -30,10 +31,19 @@ interface ProductCardProps {
   variant?: "grid" | "horizontal";
   showWishlist?: boolean;
   cardWidth?: number;
+  /**
+   * Renders the one-tap add-to-cart button on the card.
+   *
+   * Off by default: cards did not have an add affordance before, and turning it
+   * on everywhere is a product decision, not a redesign. When enabled it runs
+   * the same `useAddToCart` hook as the details CTA and, for products that need
+   * a size/colour choice, opens the details screen instead of guessing.
+   */
+  showQuickAdd?: boolean;
 }
 
 const ProductCard = React.memo(
-  ({ item, onPress, variant = "grid", showWishlist = true, cardWidth }: ProductCardProps) => {
+  ({ item, onPress, variant = "grid", showWishlist = true, cardWidth, showQuickAdd = false }: ProductCardProps) => {
     const { theme } = useTheme();
     const colors = theme.colors;
     const { width: windowWidth } = useWindowDimensions();
@@ -261,6 +271,12 @@ const ProductCard = React.memo(
               <Text style={styles.discountText}>{discountPercentage}%</Text>
             </View>
           )}
+
+          {showQuickAdd && (
+            <View style={styles.quickAddSlot}>
+              <QuickAddButton product={item} imageUri={displayImage} />
+            </View>
+          )}
         </View>
 
         <View style={styles.productInfo}>
@@ -310,6 +326,7 @@ const ProductCard = React.memo(
     if (prevProps.variant !== nextProps.variant) return false;
     if (prevProps.showWishlist !== nextProps.showWishlist) return false;
     if (prevProps.cardWidth !== nextProps.cardWidth) return false;
+    if (prevProps.showQuickAdd !== nextProps.showQuickAdd) return false;
     // Don't compare onPress - if item is same, navigation target is same
     return true;
   }
@@ -326,6 +343,7 @@ const styles = StyleSheet.create({
   wishlistButton: { position: "absolute", top: 10, right: 10, zIndex: 2, borderRadius: 20, width: 36, height: 36, justifyContent: "center", alignItems: "center", borderWidth: 1 },
   discountBadge: { position: "absolute", top: 10, left: 10, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, zIndex: 2 },
   discountText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  quickAddSlot: { position: "absolute", bottom: 8, right: 8, zIndex: 2 },
   productInfo: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10, minHeight: 60 },
   productName: { fontSize: 13, fontWeight: "600", lineHeight: 19, marginBottom: 6, minHeight: 38 },
   priceContainer: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2, minHeight: 20 },

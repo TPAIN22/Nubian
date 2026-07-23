@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { FC } from "react";
 import { Tabs } from "expo-router";
 import {
@@ -22,7 +22,8 @@ import Svg, { Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useItemStore from "@/store/useItemStore";
-import { useCartQuantity } from "../../store/useCartStore";
+import { CartBadge } from "@/components/cart/CartBadge";
+import { setCartTarget } from "@/components/cart/cartFeedback";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
@@ -31,6 +32,28 @@ type IconType = "home" | "cart" | "search" | "profile" | "wishlist";
 
 const ACTIVE_FLEX = 1.7;
 const INACTIVE_FLEX = 1;
+
+/* ---------------- Motion ---------------- */
+
+/**
+ * Tab-bar motion is deliberately restrained: it is chrome the customer sees on
+ * every screen, so it should acknowledge a tap and get out of the way rather
+ * than perform. All of it stays on the UI thread via Reanimated.
+ */
+/** Press-down scale of a tab. Shallow — a nudge, not a squash. */
+const PRESS_SCALE = 0.96;
+/** Overdamped so the tab settles on release instead of springing back. */
+const PRESS_SPRING = { damping: 24, stiffness: 340 };
+/** Focus crossfade (icon opacity + the active pill tint). */
+const FOCUS_MS = 200;
+/** How much the active icon grows. */
+const FOCUS_SCALE = 0.03;
+/**
+ * The active slot's flex change. A timing curve, not a spring: springing the
+ * width made every sibling tab drift past its resting position and back on
+ * each switch.
+ */
+const SLOT_MS = 240;
 
 interface RouteMeta {
   iconType: IconType;
@@ -133,7 +156,12 @@ interface TabItemProps {
   label: string;
   focused: boolean;
   onPress: () => void;
-  badgeCount?: number;
+  /**
+   * Renders the animated cart count. The badge subscribes to the cart store
+   * itself, so a quantity change re-renders 18×18 points instead of the whole
+   * tab bar (which is what passing a `badgeCount` prop down used to do).
+   */
+  showCartBadge?: boolean;
 }
 
 const TabItem: FC<TabItemProps> = ({
@@ -141,16 +169,17 @@ const TabItem: FC<TabItemProps> = ({
   label,
   focused,
   onPress,
-  badgeCount,
+  showCartBadge,
 }) => {
   const { theme } = useTheme();
+  const iconRef = useRef<View | null>(null);
 
   // press feedback + focus progress, both on the UI thread via Reanimated
   const pressScale = useSharedValue(1);
   const focusProgress = useSharedValue(focused ? 1 : 0);
 
   useEffect(() => {
-    focusProgress.value = withTiming(focused ? 1 : 0, { duration: 220 });
+    focusProgress.value = withTiming(focused ? 1 : 0, { duration: FOCUS_MS });
   }, [focused, focusProgress]);
 
   const innerStyle = useAnimatedStyle(() => ({
@@ -158,16 +187,16 @@ const TabItem: FC<TabItemProps> = ({
   }));
 
   const iconWrapStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + 0.05 * focusProgress.value }],
+    transform: [{ scale: 1 + FOCUS_SCALE * focusProgress.value }],
     opacity: 0.55 + 0.45 * focusProgress.value,
   }));
 
   const handlePressIn = () => {
-    pressScale.value = withSpring(0.92, { damping: 12, stiffness: 320 });
+    pressScale.value = withSpring(PRESS_SCALE, PRESS_SPRING);
   };
 
   const handlePressOut = () => {
-    pressScale.value = withSpring(1, { damping: 12, stiffness: 320 });
+    pressScale.value = withSpring(1, PRESS_SPRING);
   };
 
   const handlePress = () => {
@@ -181,8 +210,24 @@ const TabItem: FC<TabItemProps> = ({
     ? theme.colors.primary
     : theme.colors.text.veryLightGray;
 
-  const hasBadge = (badgeCount ?? 0) > 0;
-  const badgeText = (badgeCount ?? 0) > 99 ? "99+" : String(badgeCount);
+  // Publish the cart icon's window rect so `flyToCart` knows where to land.
+  // Re-measured after a focus change because the active tab's flex animation
+  // slides every slot, and `onLayout` doesn't fire for a pure position shift.
+  const measureCartTarget = useCallback(() => {
+    if (!showCartBadge) return;
+    const node = iconRef.current;
+    if (!node || typeof node.measureInWindow !== "function") return;
+    node.measureInWindow((x, y, width, height) => {
+      if (typeof x !== "number" || Number.isNaN(x)) return;
+      setCartTarget({ x, y, width, height });
+    });
+  }, [showCartBadge]);
+
+  useEffect(() => {
+    if (!showCartBadge) return undefined;
+    const timer = setTimeout(measureCartTarget, 380);
+    return () => clearTimeout(timer);
+  }, [focused, showCartBadge, measureCartTarget]);
 
   return (
     <Pressable
@@ -207,23 +252,17 @@ const TabItem: FC<TabItemProps> = ({
         ]}
       >
         <Reanimated.View style={iconWrapStyle}>
-          <View style={styles.iconContent}>
+          <View
+            ref={iconRef}
+            onLayout={measureCartTarget}
+            style={styles.iconContent}
+          >
             {renderIcon(iconType, 24, iconColor)}
-            {hasBadge && (
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor: theme.colors.primary,
-                    borderColor: theme.colors.surface,
-                  },
-                ]}
-                accessibilityLabel={`${badgeCount} items in cart`}
-              >
-                <Text style={styles.badgeText} numberOfLines={1}>
-                  {badgeText}
-                </Text>
-              </View>
+            {showCartBadge && (
+              <CartBadge
+                color={theme.colors.primary}
+                borderColor={theme.colors.surface}
+              />
             )}
           </View>
         </Reanimated.View>
@@ -253,7 +292,6 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { isTabBarVisible } = useItemStore();
-  const cartCount = useCartQuantity();
 
   // The active-tab flex change is animated per-slot via Reanimated's
   // LinearTransition layout animation (see the slot Reanimated.View below) —
@@ -307,7 +345,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
           return (
             <Reanimated.View
               key={route.key}
-              layout={LinearTransition.springify().damping(28).stiffness(240)}
+              layout={LinearTransition.duration(SLOT_MS)}
               style={[
                 styles.tabSlot,
                 { flex: focused ? ACTIVE_FLEX : INACTIVE_FLEX },
@@ -318,7 +356,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                 label={labelText}
                 focused={focused}
                 onPress={onPress}
-                badgeCount={meta.iconType === "cart" ? cartCount : undefined}
+                showCartBadge={meta.iconType === "cart"}
               />
             </Reanimated.View>
           );
@@ -431,26 +469,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  badge: {
-    position: "absolute",
-    top: -6,
-    right: -10,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-  },
-
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "700",
-    lineHeight: 12,
-    includeFontPadding: false,
-  },
+  /* The cart count badge now lives in `components/cart/CartBadge`. */
 
   label: {
     fontSize: 13,

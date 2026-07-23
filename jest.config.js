@@ -8,6 +8,8 @@ module.exports = {
   // Add a source file here when its tests land so the 70% threshold below
   // applies meaningfully instead of being diluted by untested screens.
   collectCoverageFrom: [
+    'components/cart/cartErrors.ts',
+    'components/cart/cartFeedback.ts',
     'domain/pricing/pricing.engine.ts',
     'store/addressStore.ts',
     'store/orderStore.ts',

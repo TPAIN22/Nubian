@@ -1,108 +1,14 @@
-import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text } from '@/components/ui/text';
-import i18n from '@/utils/i18n';
-import { useCheckoutTheme } from './theme';
-import { typography } from './tokens';
+/**
+ * `QuantityStepper` is now an alias for `components/cart/QuantitySelector`.
+ *
+ * The two were the same control with different polish, and having both meant
+ * the cart line and the (future) details-page quantity picker could drift. The
+ * props are unchanged, so every existing call site — `CartItemCard`,
+ * `OrderItemsCard`, checkout — keeps working with no edit.
+ */
 
-type Props = {
-  value: number;
-  onIncrement: () => void;
-  onDecrement: () => void;
-  busy?: boolean;
-  min?: number;
-  max?: number;
-  size?: 'sm' | 'md';
-};
+import { QuantitySelector, type QuantitySelectorProps } from '@/components/cart/QuantitySelector';
 
-export const QuantityStepper = React.memo(function QuantityStepper({
-  value,
-  onIncrement,
-  onDecrement,
-  busy,
-  min = 1,
-  max,
-  size = 'md',
-}: Props) {
-  const t = useCheckoutTheme();
-  const isMin = value <= min;
-  const isMax = max != null && value >= max;
-  const dim = size === 'sm' ? 32 : 36;
-  const iconSize = size === 'sm' ? 14 : 16;
+export type QuantityStepperProps = QuantitySelectorProps;
 
-  return (
-    <View
-      style={[
-        styles.wrap,
-        { borderColor: t.border, backgroundColor: t.surfaceMuted, height: dim + 4 },
-      ]}
-      accessibilityRole="adjustable"
-      accessibilityLabel={i18n.t('cart_quantity') || 'Quantity'}
-      accessibilityValue={{ text: String(value) }}
-    >
-      <Pressable
-        onPress={onDecrement}
-        disabled={busy || isMin}
-        hitSlop={6}
-        accessibilityRole="button"
-        accessibilityLabel={i18n.t('cart_decreaseQuantity') || 'Decrease quantity'}
-        accessibilityState={{ disabled: busy || isMin }}
-        style={[styles.btn, { width: dim, height: dim }]}
-      >
-        <Ionicons
-          name="remove"
-          size={iconSize}
-          color={isMin ? t.textTertiary : t.textPrimary}
-        />
-      </Pressable>
-
-      <View style={[styles.valueWrap, { width: dim }]}>
-        {busy ? (
-          <ActivityIndicator size="small" color={t.textSecondary} />
-        ) : (
-          <Text style={[styles.valueText, { color: t.textPrimary }]}>
-            {value}
-          </Text>
-        )}
-      </View>
-
-      <Pressable
-        onPress={onIncrement}
-        disabled={busy || isMax}
-        hitSlop={6}
-        accessibilityRole="button"
-        accessibilityLabel={i18n.t('cart_increaseQuantity') || 'Increase quantity'}
-        accessibilityState={{ disabled: busy || isMax }}
-        style={[styles.btn, { width: dim, height: dim }]}
-      >
-        <Ionicons
-          name="add"
-          size={iconSize}
-          color={isMax ? t.textTertiary : t.textPrimary}
-        />
-      </Pressable>
-    </View>
-  );
-});
-
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 2,
-    overflow: 'hidden',
-  },
-  btn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  valueWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 28,
-  },
-  valueText: { ...typography.captionStrong },
-});
+export const QuantityStepper = QuantitySelector;

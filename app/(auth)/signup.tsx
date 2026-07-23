@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { toast } from 'sonner-native';
+import { toast } from "@/utils/toast";
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { useSSO, useSignUp } from '@clerk/clerk-expo';

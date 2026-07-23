@@ -22,6 +22,8 @@ import { useCheckoutTheme } from './theme';
 import { radius, spacing, typography } from './tokens';
 import { QuantityStepper } from './QuantityStepper';
 import { PressableScale } from './PressableScale';
+import { StockIndicator } from '@/components/cart/StockIndicator';
+import type { StockLevel } from '@/components/cart/useAddToCart';
 
 type Props = {
   item: CartLineItem;
@@ -125,14 +127,19 @@ export const CartItemCard = React.memo(function CartItemCard({
     [totalOriginal, originalUnitMoney],
   );
 
+  // `stockState` is stamped by the backend on the cart payload. Previously only
+  // `lowStock` surfaced, so a line that had gone out of stock looked completely
+  // normal right up until checkout rejected it.
   const stockState = (item?.product as any)?.stockState as
     | 'lowStock'
     | 'outOfStock'
     | undefined;
-  const stockHint =
+  const stockLevel: StockLevel | null =
     stockState === 'lowStock'
-      ? i18n.t('lowStockWarning') || 'Only a few left in stock'
-      : null;
+      ? 'lowStock'
+      : stockState === 'outOfStock'
+        ? 'outOfStock'
+        : null;
 
   const goToProduct = () => {
     if (item?.product?._id) {
@@ -256,20 +263,12 @@ export const CartItemCard = React.memo(function CartItemCard({
           </PressableScale>
         </View>
 
-        {stockHint ? (
-          <View style={styles.stockRow}>
-            <Ionicons
-              name="alert-circle-outline"
-              size={12}
-              color={t.warning}
-            />
-            <Text
-              style={[styles.stockText, { color: t.warning }]}
-              numberOfLines={1}
-            >
-              {stockHint}
-            </Text>
-          </View>
+        {stockLevel ? (
+          <StockIndicator
+            level={stockLevel}
+            variant="pill"
+            style={styles.stockRow}
+          />
         ) : null}
 
         <View style={styles.bottomRow}>
@@ -341,13 +340,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 14,
   },
-  stockRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-  },
-  stockText: { ...typography.label, flex: 1 },
+  stockRow: { marginTop: 6 },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',

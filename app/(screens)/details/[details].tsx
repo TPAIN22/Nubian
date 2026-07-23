@@ -57,6 +57,8 @@ import { ProductAttributes } from '@/components/ProductDetails/ProductAttributes
 import Review from '@/components/Review';
 import { ProductRecommendations } from '@/components/ProductDetails/ProductRecommendations';
 import { ProductActions } from '@/components/ProductDetails/ProductActions';
+import { StockIndicator } from '@/components/cart/StockIndicator';
+import { LOW_STOCK_THRESHOLD, type StockLevel } from '@/components/cart/useAddToCart';
 import { ZoomableImage } from '@/components/ProductDetails/ZoomableImageModal';
 import { ProductDetailsSkeleton } from '@/components/ProductDetails/ProductDetailsSkeleton';
 
@@ -412,6 +414,14 @@ export default function Details() {
     return 0;
   }, [displayVariant, viewProduct]);
 
+  // Same `> 5` rule the screen has always used, now expressed through the
+  // shared threshold so the sticky bar and the info block can't disagree.
+  const stockLevel = useMemo<StockLevel>(() => {
+    if (currentStock > LOW_STOCK_THRESHOLD) return 'inStock';
+    if (currentStock > 0) return 'lowStock';
+    return 'outOfStock';
+  }, [currentStock]);
+
   const missingRequiredAttributes = useMemo(() => {
     if (!productAttributes.length) return [];
     const missing: string[] = [];
@@ -453,6 +463,10 @@ export default function Details() {
       setWishlistLoading(false);
     }
   }, [viewProduct?.id, wishlistLoading, inWishlist, removeFromWishlist, addToWishlist]);
+
+  // Stable identity: an inline arrow re-rendered the memoised sticky bar on
+  // every parent render.
+  const handleCartAttempt = useCallback(() => setCartAttempted(true), []);
 
   const openImageModal = useCallback((uri: string) => {
     setSelectedImage(uri);
@@ -563,37 +577,18 @@ export default function Details() {
                 )}
               </View>
 
-              {/* Stock indicator */}
+              {/* Stock indicator — shared component, same data, same rule */}
               <View style={styles.stockRow}>
-                {currentStock > 5 ? (
-                  <View style={styles.stockInner}>
-                    <View style={[styles.stockDot, { backgroundColor: colors.success }]} />
-                    <Text style={[styles.stockLabel, { color: colors.success }]}>
-                      {i18n.t('inStock') || 'In Stock'}
-                    </Text>
-                  </View>
-                ) : currentStock > 0 ? (
-                  <View style={styles.stockInner}>
-                    <View style={[styles.stockDot, { backgroundColor: colors.warning }]} />
-                    <Text style={[styles.stockLabel, { color: colors.warning }]}>
-                      {`${i18n.t('only') || 'Only'} ${currentStock} ${i18n.t('left') || 'left'}`}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.stockInner}>
-                    <View style={[styles.stockDot, { backgroundColor: colors.danger }]} />
-                    <Text style={[styles.stockLabel, { color: colors.danger }]}>
-                      {i18n.t('outOfStock') || 'Out of Stock'}
-                    </Text>
-                  </View>
-                )}
+                <StockIndicator level={stockLevel} stock={currentStock} />
               </View>
 
               {/* Missing attr warning */}
               {cartAttempted && missingRequiredAttributes.length > 0 && (
-                <Text style={[styles.missingText, { color: colors.danger }]}>
-                  {`${i18n.t('pleaseSelect') || 'Please select'}: ${missingRequiredAttributes.join(', ')}`}
-                </Text>
+                <Animated.View entering={FadeIn.duration(180)}>
+                  <Text style={[styles.missingText, { color: colors.danger }]}>
+                    {`${i18n.t('pleaseSelect') || 'Please select'}: ${missingRequiredAttributes.join(', ')}`}
+                  </Text>
+                </Animated.View>
               )}
 
               {/* SKU */}
@@ -615,6 +610,7 @@ export default function Details() {
                 onAttributeSelect={handleAttributeSelect}
                 themeColors={colors}
                 pleaseSelectText={i18n.t('pleaseSelect') || 'Please select'}
+                highlightMissing={cartAttempted}
               />
             </View>
           ) : null;
@@ -663,6 +659,7 @@ export default function Details() {
       formattedOriginalPrice,
       discountPct,
       currentStock,
+      stockLevel,
       missingRequiredAttributes,
       selectedAttributes,
       handleAttributeSelect,
@@ -761,7 +758,10 @@ export default function Details() {
         selectedAttributes={normalizedSelection}
         isAvailable={canAddToCart}
         themeColors={colors}
-        onAttempt={() => setCartAttempted(true)}
+        onAttempt={handleCartAttempt}
+        imageUri={productImages[0] ?? null}
+        stockLevel={stockLevel}
+        stock={currentStock}
       />
 
       {/* Fullscreen zoom modal */}
@@ -844,21 +844,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  stockRow: { marginBottom: 8 },
-  stockInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  stockDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  stockLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
+  stockRow: { marginBottom: 8, flexDirection: 'row' },
   missingText: {
     marginTop: 10,
     fontSize: 12,

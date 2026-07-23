@@ -259,6 +259,14 @@
   "myAddresses": "عناويني",
   "manageDeliveryAddresses": "إدارة عناوين التوصيل",
   "close": "إغلاق",
+  "notif_dismiss": "تجاهل",
+  "notif_view": "عرض",
+  "notif_urgent": "عاجل",
+  "notif_justNow": "الآن",
+  "notif_minutesAgo": "قبل %{count} د",
+  "notif_hoursAgo": "قبل %{count} س",
+  "notif_daysAgo": "قبل %{count} ي",
+  "notif_swipeHint": "اسحب للتجاهل، أو انقر مرتين للفتح",
   "addNewAddress": "إضافة عنوان جديد",
   "default": "افتراضي",
   "wishlistEmpty": "المفضلة فارغة",
@@ -461,7 +469,6 @@
   "removeImage": "حذف الصورة",
   "cart_couponRemoved": "تمت إزالة الكوبون",
   "cart_itemRemoved": "تم حذف المنتج من السلة",
-
   "checkout_secureNote": "معلومات الدفع مشفّرة ومحمية.",
   "deliveryAddress": "عنوان التوصيل",
   "deliveryMethod": "طريقة التوصيل",
@@ -477,7 +484,6 @@
   "more": "إضافي",
   "placeOrder": "تأكيد الطلب",
   "noAddressesYet": "لم تقم بإضافة أي عنوان بعد.",
-
   "selectShippingAddress": "اختر عنوان التوصيل",
   "selectPaymentMethod": "اختر طريقة الدفع",
   "addressNotFound": "لم يتم العثور على العنوان",
@@ -494,7 +500,6 @@
   "imageUploadFailed": "فشل الرفع. حاول مرة أخرى.",
   "tryAgain": "حاول مرة أخرى",
   "somethingWentWrong": "حدث خطأ ما",
-
   "lowStockWarning": "الكمية المتبقية قليلة",
   "uploadReceiptTitle": "ارفع إيصال التحويل",
   "uploadReceiptHelper": "صورة بصيغة PNG أو JPG حتى 10MB. مطلوبة لتأكيد التحويل البنكي.",
@@ -506,11 +511,9 @@
   "coupon_invalid": "الكوبون غير صالح",
   "coupon_validateError": "تعذّر التحقق من الكوبون",
   "coupon_needsAddress": "اختر عنوان التوصيل أولاً ثم طبّق الكود",
-
   "address_nick_home": "المنزل",
   "address_nick_work": "العمل",
   "address_nick_other": "آخر",
-
   "addressForm_save": "حفظ التغييرات",
   "addressForm_locationRequired": "اختر موقع التوصيل",
   "addressForm_contactSection": "المستلم",
@@ -522,14 +525,12 @@
   "addressForm_whatsappPlaceholder": "+249 9X XXX XXXX",
   "addressForm_whatsappHint": "نستخدمه لتحديثات التوصيل إذا كان مختلفاً عن رقم الهاتف",
   "shippingAddress": "عنوان الشحن",
-
   "back": "رجوع",
   "location_noResults": "لا توجد نتائج مطابقة",
   "location_noResultsHint": "جرّب بحثاً مختلفاً أو مصطلحاً أقصر.",
   "location_noData": "لا توجد بيانات بعد",
   "location_loadError": "تعذّر تحميل المواقع",
   "location_loadErrorHint": "تحقّق من اتصالك وحاول مرة أخرى.",
-
   "pushPromptOrdersTitle": "تابع حالة طلبك لحظة بلحظة",
   "pushPromptOrdersBody": "فعّل الإشعارات لنُعلِمك فور شحن طلبك، خروجه للتوصيل، ووصوله إليك.",
   "pushPromptOffersTitle": "لا تفوّت أي تخفيض",
@@ -540,7 +541,6 @@
   "pushPromptNotNow": "ليس الآن",
   "pushPromptOpenSettings": "فتح الإعدادات",
   "pushPromptDeniedHint": "الإشعارات معطّلة لهذا التطبيق. افتح الإعدادات للسماح بها.",
-
   "address": "العنوان",
   "all": "الكل",
   "city": "المدينة",
@@ -552,5 +552,15 @@
   "orderUnitOne": "طلب",
   "orderUnitMany": "طلبات",
   "paymentStatus": "حالة الدفع",
-  "phoneNumber": "رقم الهاتف"
+  "phoneNumber": "رقم الهاتف",
+  "cart_adding": "جاري الإضافة…",
+  "cart_added": "تمت الإضافة",
+  "cart_viewCart": "عرض السلة",
+  "cart_lowStock": "الكمية محدودة",
+  "cart_selectOptions": "اختر الخيارات",
+  "cart_unavailable": "غير متوفر",
+  "cart_unavailableCombination": "هذا الخيار غير متوفر",
+  "cart_outOfStockHint": "جرّب خياراً آخر أو عد لاحقاً.",
+  "cart_checkConnection": "تحقق من اتصالك وحاول مرة أخرى.",
+  "cart_quantity": "الكمية"
 }

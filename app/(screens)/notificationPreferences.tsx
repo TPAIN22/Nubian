@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, StyleSheet, ScrollView, ActivityIndicator, Switch } from "react-native";
-import { toast } from "sonner-native";
+import { toast } from "@/utils/toast";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@clerk/clerk-expo";
 import { Stack } from "expo-router";

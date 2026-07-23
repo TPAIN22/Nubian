@@ -7,7 +7,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { toast } from 'sonner-native';
+import { toast } from "@/utils/toast";
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import * as AuthSession from 'expo-auth-session';
