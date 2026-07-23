@@ -18,7 +18,15 @@ import { radius, spacing, typography } from './tokens';
 type Props = {
   products: { productId: string; categoryId?: string }[];
   userId?: string;
+  /** Subtotal in the display currency — used only to fill the result envelope. */
   orderAmount: number;
+  /**
+   * Subtotal in USD, from the quote's `subtotalBase`. This is what gets sent to
+   * the coupon endpoint: coupon values are stored in USD, so validating against
+   * the display subtotal would apply a fixed $10 coupon as 10 SDG. Null until
+   * the first quote resolves, which is why applying is blocked before then.
+   */
+  orderAmountBase: number | null;
   applied: CouponValidationResult | null;
   format: (n: number) => string;
   onApply: (result: CouponValidationResult) => void;
@@ -29,6 +37,7 @@ export const CouponField = React.memo(function CouponField({
   products,
   userId,
   orderAmount,
+  orderAmountBase,
   applied,
   format,
   onApply,
@@ -45,13 +54,24 @@ export const CouponField = React.memo(function CouponField({
       setError(i18n.t('coupon_required') || 'Enter a coupon code');
       return;
     }
+    // Without the USD base we'd either validate against the wrong currency or
+    // send no amount at all (which returns a null preview and shows the user a
+    // 0 saving for a coupon that will actually discount their order).
+    if (!(Number(orderAmountBase) > 0)) {
+      setError(
+        i18n.t('coupon_needsAddress') ||
+          'Select a delivery address first, then apply your code',
+      );
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
       const productIds = products.map(p => p.productId).filter(Boolean);
       const params = new URLSearchParams();
       if (userId) params.append('userId', userId);
-      if (orderAmount) params.append('orderAmount', String(orderAmount));
+      params.append('orderAmount', String(orderAmountBase));
       if (productIds.length) params.append('productIds', productIds.join(','));
 
       const url = `/coupons/code/${trimmed}?${params.toString()}`;
@@ -72,16 +92,21 @@ export const CouponField = React.memo(function CouponField({
 
       const coupon = data.coupon;
       const preview = data.discountPreview;
+      // Every money field on the result must be in the DISPLAY currency — it
+      // feeds computePricing, which subtracts it from a converted subtotal.
+      // `preview.discountAmount` is USD; `discountAmountConverted` is the same
+      // discount converted with the identical helper the order path uses, so
+      // the saving shown here matches what the order is finally booked at.
+      const discountAmount =
+        preview?.discountAmountConverted ?? preview?.discountAmount ?? 0;
       const result: CouponValidationResult = {
         code: coupon.code,
         valid: true,
         type: coupon.type,
         value: coupon.value,
-        discountAmount: preview?.discountAmount || 0,
-        originalAmount: preview?.originalAmount || orderAmount,
-        finalAmount:
-          preview?.finalAmount ||
-          orderAmount - (preview?.discountAmount || 0),
+        discountAmount,
+        originalAmount: orderAmount,
+        finalAmount: Math.max(0, orderAmount - discountAmount),
         minOrderAmount: coupon.minOrderAmount,
         maxDiscount: coupon.maxDiscount,
         message: 'ok',
@@ -101,7 +126,7 @@ export const CouponField = React.memo(function CouponField({
     } finally {
       setLoading(false);
     }
-  }, [code, onApply, orderAmount, products, userId]);
+  }, [code, onApply, orderAmount, orderAmountBase, products, userId]);
 
   if (applied?.valid) {
     return (

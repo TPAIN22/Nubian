@@ -39,7 +39,12 @@
       "Bash(ls store/)",
       "Bash(Select-String -Pattern \"client.ts|checkout.api.ts\" -SimpleMatch)",
       "Bash(tee /tmp/tsc_out.txt)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(cp \"C:/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/239c14c7-1808-46b1-8af3-96563c6cd212/scratchpad/verify-fx.mjs\" ./verify-fx.mjs)",
+      "Bash(sed -i \"s#'../../../../../Desktop/nubian_platform/apps/backend/src/services/currency.service.js'#'./src/services/currency.service.js'#\" verify-fx.mjs)",
+      "Bash(rm -f verify-fx.mjs)",
+      "Bash(cp \"C:/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/239c14c7-1808-46b1-8af3-96563c6cd212/scratchpad/sweep-fx.mjs\" ./sweep-fx.mjs)",
+      "Bash(rm -f sweep-fx.mjs)"
     ]
   }
 }

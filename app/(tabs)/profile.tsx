@@ -6,7 +6,6 @@ import {
   ScrollView,
   I18nManager,
   Linking,
-  Switch,
 } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useClerk, useUser } from "@clerk/clerk-expo";
@@ -40,7 +39,7 @@ import {
 } from "@/components/profile";
 
 export default function Profile() {
-  const { theme, themeMode, setThemeMode, isDark } = useTheme();
+  const { theme } = useTheme();
   const { user, isSignedIn, isLoaded } = useUser();
   const { signOut } = useClerk();
   const tabbarHeight = useBottomTabBarHeight();
@@ -162,35 +161,8 @@ export default function Profile() {
           ? `${currentCurrency.code} (${currentCurrency.symbol})`
           : currencyCode ?? undefined,
       },
-      {
-        key: "darkMode",
-        title: i18n.t("darkMode"),
-        icon: "moon-outline",
-        rightSlot: (
-          <Switch
-            value={isDark}
-            onValueChange={(value) => {
-              const newMode = value ? "dark" : "light";
-              if (themeMode !== newMode) setThemeMode(newMode);
-            }}
-            trackColor={{ false: theme.colors.gray[300], true: gold }}
-            thumbColor={theme.colors.background}
-            ios_backgroundColor={theme.colors.gray[300]}
-          />
-        ),
-      },
     ],
-    [
-      currentLanguageLabel,
-      currentCurrency,
-      currencyCode,
-      isDark,
-      themeMode,
-      setThemeMode,
-      theme.colors.gray,
-      theme.colors.background,
-      gold,
-    ]
+    [currentLanguageLabel, currentCurrency, currencyCode]
   );
 
   const helpItems: ProfileRowItem[] = useMemo(

@@ -270,6 +270,11 @@ export default function CheckOutModal({
   const currentTotal = pricing.total;
   const cartCurrency = cart?.currencyCode;
 
+  // USD subtotal from the quote. Coupon values are stored in USD, so coupon
+  // lookups validate against this rather than the display subtotal above.
+  const orderAmountBase =
+    typeof quote?.subtotalBase === "number" ? quote.subtotalBase : null;
+
   const formatAmount = useCallback(
     (amount: number) =>
       cartCurrency
@@ -898,6 +903,7 @@ export default function CheckOutModal({
               }))}
               userId={user?.id}
               orderAmount={orderAmount}
+              orderAmountBase={orderAmountBase}
               applied={couponResult}
               format={formatAmount}
               onApply={setCouponResult}

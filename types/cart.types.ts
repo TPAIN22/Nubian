@@ -47,6 +47,13 @@ export interface Cart {
   totalQuantity: number;
   /** Sum of unitFinalPrice * quantity, before discount/shipping. */
   subtotal?: number;
+  /**
+   * `subtotal` in USD, before currency conversion. Coupon values are stored in
+   * USD, so coupon lookups must use this. Absent when the active currency is
+   * already USD — fall back to `subtotal` in that case.
+   */
+  subtotalBase?: number;
+  baseCurrency?: string;
   /** Currently-applied coupon discount in the active currency. */
   discount?: number;
   /** Shipping fee in the active currency (0 until shipping is implemented). */

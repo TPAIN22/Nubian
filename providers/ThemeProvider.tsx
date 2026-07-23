@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
-import { useThemeStore } from '@/store/useThemeStore';
 import { Theme, ThemeMode, getTheme } from '@/theme';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 
@@ -26,30 +24,26 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const systemColorScheme = useColorScheme();
-  const { themeMode, setThemeMode } = useThemeStore();
-  
-  // Initialize effective theme based on user preference and system setting
-  const effectiveTheme = useMemo<ThemeMode>(() => {
-    if (themeMode === 'system') {
-      return systemColorScheme === 'dark' ? 'dark' : 'light';
-    }
-    return themeMode;
-  }, [themeMode, systemColorScheme]);
+  // Dark mode has been removed from the app: the UI is always rendered in the
+  // light theme regardless of the system color scheme or any stored preference.
+  const effectiveTheme: ThemeMode = 'light';
 
   // Memoize theme object to prevent unnecessary re-renders
   const theme = useMemo(() => getTheme(effectiveTheme), [effectiveTheme]);
-  const isDark = useMemo(() => effectiveTheme === 'dark', [effectiveTheme]);
+  const isDark = false;
+
+  // setThemeMode is kept as a no-op so existing callers don't break.
+  const setThemeMode = React.useCallback((_mode: ThemeMode | 'system') => {}, []);
 
   // Memoize context value to prevent unnecessary re-renders
   const value: ThemeContextType = useMemo(
     () => ({
       theme,
-      themeMode,
+      themeMode: 'light',
       setThemeMode,
       isDark,
     }),
-    [theme, themeMode, setThemeMode, isDark]
+    [theme, setThemeMode]
   );
 
   return (

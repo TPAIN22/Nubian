@@ -177,6 +177,10 @@ export default function CartScreen() {
 
   const finalTotal = cart?.totalPrice ?? 0;
   const subtotal = cart?.subtotal ?? finalTotal;
+  // USD subtotal for coupon validation (coupon values are stored in USD). The
+  // backend only stamps `subtotalBase` when it actually converted; when the
+  // active currency is USD, `subtotal` already is the base.
+  const subtotalBase = cart?.subtotalBase ?? cart?.subtotal ?? null;
   const discount = cart?.discount ?? 0;
   const shipping = cart?.shipping ?? 0;
   const appliedCoupon = cart?.appliedCoupon ?? null;
@@ -402,6 +406,7 @@ export default function CartScreen() {
                   categoryId: it.product.category,
                 }))}
                 orderAmount={subtotal}
+                orderAmountBase={subtotalBase}
                 applied={localCouponResult}
                 format={formatAmount}
                 onApply={handleApplyCoupon}

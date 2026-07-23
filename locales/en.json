@@ -499,6 +499,7 @@
   "coupon_required": "Enter a coupon code",
   "coupon_invalid": "Coupon is not valid",
   "coupon_validateError": "Could not validate coupon",
+  "coupon_needsAddress": "Select a delivery address first, then apply your code",
 
   "address_nick_home": "Home",
   "address_nick_work": "Work",

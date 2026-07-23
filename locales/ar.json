@@ -505,6 +505,7 @@
   "coupon_required": "أدخل كود الكوبون",
   "coupon_invalid": "الكوبون غير صالح",
   "coupon_validateError": "تعذّر التحقق من الكوبون",
+  "coupon_needsAddress": "اختر عنوان التوصيل أولاً ثم طبّق الكود",
 
   "address_nick_home": "المنزل",
   "address_nick_work": "العمل",
