@@ -71,16 +71,29 @@ const coalesce = <T,>(key: string, factory: () => Promise<T>): Promise<T> => {
 
 /* ── Config ───────────────────────────────────────────────────────────────── */
 
-let configPromise: Promise<GeoConfig> | null = null;
+let configPromise: Promise<GeoConfigResult> | null = null;
+
+export interface GeoConfigResult {
+  config: GeoConfig;
+  /**
+   * True only when the backend actually answered.
+   *
+   * Callers must not memoise a config with `fromServer: false` — doing so pins
+   * the whole session to the no-basemap fallback, so a backend that comes back
+   * up (or a token that arrives late) never gets picked up without an app
+   * restart. It reads exactly like a dead map.
+   */
+  fromServer: boolean;
+}
 
 /**
- * Fetch the map configuration once per app session.
+ * Fetch the map configuration.
  *
- * Never rejects: a failure returns `FALLBACK_GEO_CONFIG`, whose capabilities are
- * all `false`, so the picker renders a coordinate-only experience instead of a
- * broken screen.
+ * Never rejects: a failure resolves with `FALLBACK_GEO_CONFIG` and
+ * `fromServer: false`, so the picker renders a coordinate-only experience
+ * instead of a broken screen — but the caller can tell the difference and retry.
  */
-export const fetchGeoConfig = (): Promise<GeoConfig> => {
+export const fetchGeoConfig = (): Promise<GeoConfigResult> => {
   if (configPromise) return configPromise;
 
   trace('config', 'GET /geo/config …', { baseURL: axiosInstance.defaults.baseURL });
@@ -101,12 +114,14 @@ export const fetchGeoConfig = (): Promise<GeoConfig> => {
       if (config.basemap === 'none') {
         traceError(
           'config',
-          'basemap="none" — the picker will show a coordinate-only placeholder. ' +
-            'Check GEO_PROVIDER / GEO_GOOGLE_API_KEY on the backend.',
+          'backend answered but basemap="none" — the picker will show a ' +
+            'coordinate-only placeholder. The provider is unconfigured: check ' +
+            'GEO_PROVIDER and its API key on the backend.',
+          { provider: config.provider },
         );
       }
 
-      return config;
+      return { config, fromServer: true };
     })
     .catch((error) => {
       // Don't memoise a failure — the next screen open should retry.
@@ -122,7 +137,7 @@ export const fetchGeoConfig = (): Promise<GeoConfig> => {
             : 'is the backend reachable from the device? (localhost != device)',
       });
 
-      return FALLBACK_GEO_CONFIG;
+      return { config: FALLBACK_GEO_CONFIG, fromServer: false };
     });
 
   return configPromise;
