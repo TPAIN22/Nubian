@@ -22,6 +22,7 @@ import { StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import type { GeoPoint } from '@/services/geo/types';
 import type { MapCanvasHandle, MapCanvasProps } from '../types';
+import { trace, traceError } from '../trace';
 import { buildMapHtml } from './webviewMapHtml';
 
 export const WebViewMapAdapter = forwardRef<MapCanvasHandle, MapCanvasProps>(
@@ -48,23 +49,30 @@ export const WebViewMapAdapter = forwardRef<MapCanvasHandle, MapCanvasProps>(
      * mid-gesture, so every later change (centre, zoom, theme) is sent as a
      * command instead — see `useImperativeHandle` below.
      */
-    const html = useMemo(
-      () =>
-        buildMapHtml({
-          center: initialCenter,
-          zoom: initialZoom,
-          // This renderer draws raster tiles. A 'vector' or 'native' source has
-          // no tileUrl, and the document falls back to its coordinate-only
-          // placeholder rather than rendering a blank grid.
-          tileUrl: source.kind === 'raster' ? (source.tileUrl ?? '') : '',
-          attribution: hideAttribution ? '' : source.attribution,
-          maxZoom: source.maxZoom,
-          isDark,
-          interactive,
-        }),
+    const html = useMemo(() => {
+      // This renderer draws raster tiles. A 'vector' or 'native' source has no
+      // tileUrl, and the document falls back to its coordinate-only placeholder
+      // rather than rendering a blank grid.
+      const tileUrl = source.kind === 'raster' ? (source.tileUrl ?? '') : '';
+
+      trace('webview', 'building document', {
+        sourceKind: source.kind,
+        tileUrl: tileUrl || '(none — placeholder will render)',
+        initialCenter,
+        initialZoom,
+      });
+
+      return buildMapHtml({
+        center: initialCenter,
+        zoom: initialZoom,
+        tileUrl,
+        attribution: hideAttribution ? '' : source.attribution,
+        maxZoom: source.maxZoom,
+        isDark,
+        interactive,
+      });
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      [],
-    );
+    }, []);
 
     const send = useCallback((command: Record<string, unknown>) => {
       webRef.current?.injectJavaScript(
@@ -111,6 +119,7 @@ export const WebViewMapAdapter = forwardRef<MapCanvasHandle, MapCanvasProps>(
 
         switch (payload?.type) {
           case 'ready':
+            trace('webview', 'map ready ✅');
             onReady?.();
             break;
           case 'moveStart':
@@ -122,6 +131,7 @@ export const WebViewMapAdapter = forwardRef<MapCanvasHandle, MapCanvasProps>(
             }
             break;
           case 'error':
+            traceError('webview', 'page reported an error', { message: payload.message });
             onError?.(String(payload.message ?? 'map error'));
             break;
           default:

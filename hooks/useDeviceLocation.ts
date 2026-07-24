@@ -11,6 +11,7 @@ import { useCallback, useRef, useState } from 'react';
 import { AppState, Linking, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import type { GeoPoint } from '@/services/geo/types';
+import { trace, traceError } from '@/components/map/trace';
 
 export type LocationStatus =
   | 'idle'
@@ -55,6 +56,7 @@ export function useDeviceLocation() {
   const mountedRef = useRef(true);
 
   const safeSet = useCallback((next: Partial<DeviceLocationState>) => {
+    if (next.status) trace('gps', `status → ${next.status}`, next.coords ?? undefined);
     if (mountedRef.current) setState((prev) => ({ ...prev, ...next }));
   }, []);
 
@@ -152,7 +154,10 @@ export function useDeviceLocation() {
         });
 
         return coords;
-      } catch {
+      } catch (error) {
+        traceError('gps', 'location request threw', {
+          message: (error as Error)?.message,
+        });
         safeSet({ status: 'unavailable', isLoading: false });
         return null;
       } finally {

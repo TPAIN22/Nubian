@@ -32,6 +32,7 @@ import i18n from '@/utils/i18n';
 import { radius, spacing, typography } from '@/theme/tokens';
 import { useCheckoutTheme } from '@/components/checkout';
 import { MapCanvas, CenterPin, toMapSource, type MapCanvasHandle } from '@/components/map';
+import { trace, traceError } from '@/components/map/trace';
 import AddressSearchBar from '@/components/address/AddressSearchBar';
 import AddressDetailsSheet, {
   EMPTY_DETAILS,
@@ -99,6 +100,13 @@ export default function LocationPickerScreen() {
     if (initialCenterRef.current || isConfigLoading) return;
 
     const bootstrap = async () => {
+      trace('picker', 'bootstrap start', {
+        mode: existing ? 'edit' : 'create',
+        provider: config.provider,
+        basemap: config.basemap,
+        defaultCenter: config.defaultCenter,
+      });
+
       if (existing && typeof existing.latitude === 'number' && typeof existing.longitude === 'number') {
         const point = { lat: existing.latitude, lng: existing.longitude };
         initialCenterRef.current = point;
@@ -132,6 +140,11 @@ export default function LocationPickerScreen() {
       // New address: try for a real fix, but never block on it.
       const fix = await device.request();
       const point = fix ?? config.defaultCenter;
+
+      trace('picker', fix ? 'centred on device fix' : 'centred on configured default', {
+        point,
+        gpsStatus: device.status,
+      });
 
       initialCenterRef.current = point;
       setCenter(point);
@@ -288,6 +301,23 @@ export default function LocationPickerScreen() {
 
   const isBootstrapping = !center || isConfigLoading;
 
+  // The two gates that can leave this screen showing a spinner. Logging the
+  // transition means a hang identifies which gate it is stuck behind, instead
+  // of just looking like "the map didn't open".
+  useEffect(() => {
+    trace('picker', 'render gate', {
+      isBootstrapping,
+      isMapReady,
+      waitingOn: isConfigLoading
+        ? 'geo config'
+        : !center
+          ? 'initial centre (GPS or default)'
+          : !isMapReady
+            ? 'renderer ready callback'
+            : 'nothing — map visible',
+    });
+  }, [isBootstrapping, isMapReady, isConfigLoading, center]);
+
   return (
     <View style={[styles.container, { backgroundColor: t.surface }]}>
       {/* ── Map ───────────────────────────────────────────────────────────── */}
@@ -306,10 +336,16 @@ export default function LocationPickerScreen() {
             initialZoom={17}
             source={mapSource}
             isDark={t.isDark}
-            onReady={() => setIsMapReady(true)}
+            onReady={() => {
+              trace('picker', 'renderer reported ready — lifting the loading veil');
+              setIsMapReady(true);
+            }}
             onRegionChangeStart={handleRegionChangeStart}
             onRegionChangeEnd={handleRegionChangeEnd}
-            onError={setMapError}
+            onError={(message) => {
+              traceError('picker', 'renderer reported an error', { message });
+              setMapError(message);
+            }}
             testID="location-picker-map"
           />
         )}

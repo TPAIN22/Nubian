@@ -26,6 +26,7 @@
 import { Platform } from 'react-native';
 import type { ComponentType, ForwardRefExoticComponent, RefAttributes } from 'react';
 import type { MapCanvasHandle, MapCanvasProps } from '../types';
+import { trace, traceError } from '../trace';
 import { NativeMapAdapter } from './NativeMapAdapter';
 import { WebViewMapAdapter } from './WebViewMapAdapter';
 
@@ -60,11 +61,49 @@ export type MapRendererKey = keyof typeof MAP_RENDERERS;
  */
 const resolveRenderer = (): MapRendererKey => {
   const configured = process.env.EXPO_PUBLIC_MAP_RENDERER;
+
   if (configured && configured in MAP_RENDERERS) {
+    trace('renderer', `selected "${configured}" from EXPO_PUBLIC_MAP_RENDERER`);
     return configured as MapRendererKey;
   }
-  return Platform.OS === 'web' ? 'webview' : 'native';
+
+  if (configured) {
+    traceError(
+      'renderer',
+      `EXPO_PUBLIC_MAP_RENDERER="${configured}" is not a known renderer; falling back`,
+      { known: Object.keys(MAP_RENDERERS) },
+    );
+  }
+
+  const resolved: MapRendererKey = Platform.OS === 'web' ? 'webview' : 'native';
+
+  trace('renderer', `selected "${resolved}"`, {
+    platform: Platform.OS,
+    // `native` needs the react-native-maps native module, which is absent in
+    // Expo Go and in any build made before it was added. That is the single
+    // most common reason the map renders blank.
+    nativeModuleLinked: resolved === 'native' ? isNativeMapLinked() : 'n/a',
+  });
+
+  return resolved;
 };
+
+/**
+ * Whether the native map module is actually present in this binary.
+ *
+ * Importing `react-native-maps` succeeds even in Expo Go — it fails later, at
+ * render, when the native view is requested. Probing here turns a confusing
+ * blank screen into an explicit log line.
+ */
+function isNativeMapLinked(): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const maps = require('react-native-maps');
+    return Boolean(maps?.default);
+  } catch {
+    return false;
+  }
+}
 
 export const ACTIVE_MAP_RENDERER: MapRendererKey = resolveRenderer();
 

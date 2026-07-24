@@ -11,6 +11,7 @@
  */
 import axiosInstance from '@/services/api/client';
 import i18n from '@/utils/i18n';
+import { trace, traceError } from '@/components/map/trace';
 import {
   FALLBACK_GEO_CONFIG,
   type GeoAddress,
@@ -82,12 +83,45 @@ let configPromise: Promise<GeoConfig> | null = null;
 export const fetchGeoConfig = (): Promise<GeoConfig> => {
   if (configPromise) return configPromise;
 
+  trace('config', 'GET /geo/config …', { baseURL: axiosInstance.defaults.baseURL });
+
   configPromise = axiosInstance
     .get('/geo/config')
-    .then((res) => ({ ...FALLBACK_GEO_CONFIG, ...unwrap<Partial<GeoConfig>>(res.data, {}) }))
-    .catch(() => {
+    .then((res) => {
+      const config = { ...FALLBACK_GEO_CONFIG, ...unwrap<Partial<GeoConfig>>(res.data, {}) };
+
+      trace('config', 'resolved', {
+        provider: config.provider,
+        basemap: config.basemap,
+        tileUrl: config.tileUrl,
+        capabilities: config.capabilities,
+        defaultCenter: config.defaultCenter,
+      });
+
+      if (config.basemap === 'none') {
+        traceError(
+          'config',
+          'basemap="none" — the picker will show a coordinate-only placeholder. ' +
+            'Check GEO_PROVIDER / GEO_GOOGLE_API_KEY on the backend.',
+        );
+      }
+
+      return config;
+    })
+    .catch((error) => {
       // Don't memoise a failure — the next screen open should retry.
       configPromise = null;
+
+      traceError('config', 'GET /geo/config FAILED — falling back to a no-basemap config', {
+        status: error?.response?.status,
+        message: error?.message,
+        // 401 here almost always means the Clerk token wasn't attached yet.
+        hint:
+          error?.response?.status === 401
+            ? 'unauthenticated — is the auth token attached?'
+            : 'is the backend reachable from the device? (localhost != device)',
+      });
+
       return FALLBACK_GEO_CONFIG;
     });
 
