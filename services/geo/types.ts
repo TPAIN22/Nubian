@@ -60,6 +60,12 @@ export interface GeoCapabilities {
  */
 export interface GeoConfig {
   provider: string;
+  /**
+   * How the client should draw the basemap, without naming a vendor.
+   * 'native' means the provider's tiles are only licensed through its platform
+   * SDK, so the renderer must use its own native basemap.
+   */
+  basemap: 'raster' | 'vector' | 'native' | 'none';
   styleUrl: string | null;
   tileUrl: string | null;
   attribution: string;
@@ -97,6 +103,7 @@ export type AddressConfidence = 'high' | 'medium' | 'low';
 /** Fallback config used before `/api/geo/config` responds, and if it never does. */
 export const FALLBACK_GEO_CONFIG: GeoConfig = {
   provider: 'none',
+  basemap: 'none',
   styleUrl: null,
   tileUrl: null,
   attribution: '',

@@ -54,14 +54,12 @@ export interface MapSource {
  * across screens.
  */
 export const toMapSource = (config: GeoConfig): MapSource => {
-  const kind: MapSource['kind'] = config.styleUrl
-    ? 'vector'
-    : config.tileUrl
-      ? 'raster'
-      : // A provider with neither URL (e.g. one rendered through a platform SDK,
-        // or none at all) still gets a usable picker — the pin and coordinates
-        // are what actually get saved.
-        'none';
+  // The server states the strategy; the URLs are just the payload for it.
+  // Falling back to URL-sniffing keeps this working against an older backend
+  // that predates the `basemap` field.
+  const kind: MapSource['kind'] =
+    config.basemap ??
+    (config.styleUrl ? 'vector' : config.tileUrl ? 'raster' : 'none');
 
   return {
     kind,
