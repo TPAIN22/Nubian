@@ -55,10 +55,27 @@ export function useDeviceLocation() {
   const inFlightRef = useRef(false);
   const mountedRef = useRef(true);
 
+  /**
+   * Live mirror of `status`.
+   *
+   * `request()` is awaited inside effects that captured `state` at creation
+   * time, so reading `status` from that closure afterwards returns the value
+   * from before the call — which made debug logs claim "idle" for a permission
+   * that had actually been granted. Callers that need the current value after
+   * awaiting should use `getStatus()`.
+   */
+  const statusRef = useRef<LocationStatus>('idle');
+
   const safeSet = useCallback((next: Partial<DeviceLocationState>) => {
-    if (next.status) trace('gps', `status → ${next.status}`, next.coords ?? undefined);
+    if (next.status) {
+      statusRef.current = next.status;
+      trace('gps', `status → ${next.status}`, next.coords ?? undefined);
+    }
     if (mountedRef.current) setState((prev) => ({ ...prev, ...next }));
   }, []);
+
+  /** The current status, safe to read immediately after awaiting `request()`. */
+  const getStatus = useCallback(() => statusRef.current, []);
 
   /**
    * Ask for permission and acquire a position.
@@ -190,7 +207,7 @@ export function useDeviceLocation() {
     mountedRef.current = false;
   }, []);
 
-  return { ...state, request, openSettings, dispose };
+  return { ...state, request, openSettings, dispose, getStatus };
 }
 
 export default useDeviceLocation;

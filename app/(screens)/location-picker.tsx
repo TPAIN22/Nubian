@@ -143,7 +143,9 @@ export default function LocationPickerScreen() {
 
       trace('picker', fix ? 'centred on device fix' : 'centred on configured default', {
         point,
-        gpsStatus: device.status,
+        // getStatus(), not device.status — this closure captured the state from
+        // before `request()` was awaited.
+        gpsStatus: device.getStatus(),
       });
 
       initialCenterRef.current = point;
