@@ -1,173 +1,215 @@
-import { useEffect, useRef, useState } from "react";
-import { View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
+/**
+ * Saved addresses.
+ *
+ * Management only — adding and editing both hand off to the map picker, so
+ * there is exactly one place in the app where a location gets chosen and no
+ * city / sub-city / neighbourhood dropdown anywhere.
+ */
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Text } from '@/components/ui/text';
-import useAddressStore from '@/store/addressStore';
-import type { Address } from '@/store/addressStore';
-import useLocationStore from '@/store/locationStore';
-import i18n from "@/utils/i18n";
-import { useTheme } from '@/providers/ThemeProvider';
-import AddressForm from '@/components/AddressForm';
+import i18n from '@/utils/i18n';
+import { radius, spacing, typography } from '@/theme/tokens';
+import { useCheckoutTheme } from '@/components/checkout';
+import SavedAddressCard from '@/components/address/SavedAddressCard';
 import { ConfirmSheet, type ConfirmSheetRef } from '@/components/ui/ConfirmSheet';
+import useAddressStore, { type Address } from '@/store/addressStore';
 
-export default function AddressesTab() {
-  const { theme } = useTheme();
-  const Colors = theme.colors;
-  const { addresses, fetchAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress, isLoading, error, clearError } = useAddressStore();
-  const { initialize: initializeLocations } = useLocationStore();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editAddress, setEditAddress] = useState<Address | null>(null);
+export default function AddressesScreen() {
+  const t = useCheckoutTheme();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const {
+    addresses,
+    fetchAddresses,
+    deleteAddress,
+    setDefaultAddress,
+    isLoading,
+    error,
+    clearError,
+  } = useAddressStore();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const confirmRef = useRef<ConfirmSheetRef>(null);
 
   useEffect(() => {
-    fetchAddresses();
-    initializeLocations();
-  }, [fetchAddresses, initializeLocations]);
-
-  const handleAdd = async (form: Omit<Address, '_id'>) => {
-    await addAddress(form);
-    setModalVisible(false);
-  };
-
-  const handleEdit = async (form: Omit<Address, '_id'>) => {
-    if (!editAddress) return;
-    await updateAddress(editAddress._id, form);
-    setEditAddress(null);
-  };
-
-  const handleDelete = (id: string) => {
-    confirmRef.current?.present({
-      title: i18n.t('deleteConfirm'),
-      message: i18n.t('deleteAddressConfirm'),
-      confirmLabel: i18n.t('delete'),
-      cancelLabel: i18n.t('cancel'),
-      destructive: true,
-      onConfirm: () => { deleteAddress(id); },
+    fetchAddresses().catch(() => {
+      // The store records the message; the inline banner renders it.
     });
-  };
+  }, [fetchAddresses]);
 
-  const handleSetDefault = async (id: string) => {
-    await setDefaultAddress(id);
-  };
+  const refresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchAddresses().catch(() => {});
+    setIsRefreshing(false);
+  }, [fetchAddresses]);
 
-  if (isLoading) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: Colors.surface }]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={[styles.loadingText, { color: Colors.text.veryLightGray }]}>{i18n.t('loadingAddresses')}</Text>
-      </View>
-    );
-  }
+  const openPicker = useCallback(
+    (address?: Address) => {
+      clearError();
+      // Route groups are transparent in expo-router paths — `/location-picker`,
+      // not `/(screens)/location-picker`.
+      router.push(
+        address
+          ? { pathname: '/location-picker', params: { addressId: address._id } }
+          : '/location-picker',
+      );
+    },
+    [router, clearError],
+  );
+
+  const handleDelete = useCallback(
+    (address: Address) => {
+      confirmRef.current?.present({
+        title: i18n.t('deleteConfirm'),
+        message: i18n.t('deleteAddressConfirm'),
+        confirmLabel: i18n.t('delete'),
+        cancelLabel: i18n.t('cancel'),
+        destructive: true,
+        onConfirm: () => {
+          deleteAddress(address._id);
+        },
+      });
+    },
+    [deleteAddress],
+  );
+
+  const handleSetDefault = useCallback(
+    (address: Address) => {
+      setDefaultAddress(address._id);
+    },
+    [setDefaultAddress],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: Address }) => (
+      <SavedAddressCard
+        address={item}
+        onEdit={openPicker}
+        onDelete={handleDelete}
+        onSetDefault={handleSetDefault}
+      />
+    ),
+    [openPicker, handleDelete, handleSetDefault],
+  );
+
+  // Only a full first load blocks; a refresh keeps the list on screen.
+  const showFullScreenLoader = isLoading && addresses.length === 0 && !isRefreshing;
 
   return (
-    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
-      <View style={[styles.header, { backgroundColor: Colors.primary }]}>
-        <Text style={styles.headerTitle}>{i18n.t('myAddresses')}</Text>
-        <Text style={[styles.headerSubtitle, { color: Colors.text.white + 'CC' }]}>{i18n.t('manageDeliveryAddresses')}</Text>
+    <View style={[styles.container, { backgroundColor: t.surface }]}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('back') || 'Back'}
+          hitSlop={12}
+          style={[styles.backBtn, { backgroundColor: t.surfaceMuted }]}
+        >
+          <Ionicons name="arrow-back" size={20} color={t.textPrimary} />
+        </Pressable>
+
+        <View style={styles.headerText}>
+          <Text style={[styles.headerTitle, { color: t.textPrimary }]} numberOfLines={1}>
+            {i18n.t('myAddresses') || 'My addresses'}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: t.textTertiary }]} numberOfLines={1}>
+            {i18n.t('manageDeliveryAddresses') || 'Manage your delivery locations'}
+          </Text>
+        </View>
       </View>
 
       {error ? (
-        <View style={[styles.errorContainer, { backgroundColor: Colors.error + '20', borderLeftColor: Colors.error }]}>
-          <Text style={[styles.errorMessage, { color: Colors.error }]}>{error}</Text>
-          <TouchableOpacity
+        <View style={[styles.errorBanner, { backgroundColor: t.errorSoft, borderColor: t.error }]}>
+          <Ionicons name="alert-circle-outline" size={16} color={t.error} />
+          <Text style={[styles.errorText, { color: t.textSecondary }]} numberOfLines={2}>
+            {error}
+          </Text>
+          <Pressable
             onPress={clearError}
-            style={styles.errorCloseButton}
+            hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={i18n.t('close')}
+            accessibilityLabel={i18n.t('close') || 'Dismiss'}
           >
-            <Text style={[styles.errorCloseText, { color: Colors.primary }]}>{i18n.t('close')}</Text>
-          </TouchableOpacity>
+            <Ionicons name="close" size={16} color={t.error} />
+          </Pressable>
         </View>
       ) : null}
 
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: Colors.primary }]}
-        onPress={() => { setEditAddress(null); setModalVisible(true); }}
-        accessibilityRole="button"
-        accessibilityLabel={i18n.t('addNewAddress')}
-      >
-        <Text style={styles.addButtonIcon}>{i18n.t('icon_add')}</Text>
-        <Text style={styles.addButtonText}>{i18n.t('addNewAddress')}</Text>
-      </TouchableOpacity>
-
-      <FlatList
-        data={addresses}
-        keyExtractor={(item: Address) => item._id}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }: { item: Address }) => (
-          <View style={[
-            styles.addressCard,
-            { backgroundColor: Colors.cardBackground },
-            item.isDefault && { borderColor: Colors.primary, backgroundColor: Colors.surface }
-          ]}>
-            {item.isDefault && (
-              <View style={[styles.defaultBadge, { backgroundColor: Colors.primary }]}>
-                <Text style={styles.defaultBadgeText}>{i18n.t('default')}</Text>
+      {showFullScreenLoader ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={t.accent} />
+          <Text style={[styles.loadingText, { color: t.textTertiary }]}>
+            {i18n.t('loadingAddresses') || 'Loading addresses…'}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={addresses}
+          keyExtractor={(item) => item._id}
+          renderItem={renderItem}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: insets.bottom + 96 },
+            addresses.length === 0 && styles.listEmpty,
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={refresh}
+              tintColor={t.accent}
+              colors={[t.accent]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <View style={[styles.emptyIcon, { backgroundColor: t.accentSoft }]}>
+                <Ionicons name="map-outline" size={30} color={t.accent} />
               </View>
-            )}
-
-            <View style={styles.addressHeader}>
-              <Text style={[styles.addressName, { color: Colors.primary }]}>{item.name}</Text>
-              <Text style={[styles.addressPhone, { color: Colors.primary }]}>{i18n.t('icon_phone')} {item.phone}</Text>
-            </View>
-
-            <View style={styles.addressDetails}>
-              <Text style={[styles.addressLocation, { color: Colors.text.veryLightGray }]}>
-                {i18n.t('icon_location')} {item.subCityName || item.area}، {item.street}، {item.building}
+              <Text style={[styles.emptyTitle, { color: t.textPrimary }]}>
+                {i18n.t('noAddressesSaved') || 'No saved addresses'}
               </Text>
-              {item.notes && (
-                <Text style={[styles.addressNotes, { color: Colors.text.veryLightGray }]}>
-                  {i18n.t('icon_note')} {item.notes}
-                </Text>
-              )}
+              <Text style={[styles.emptySubtitle, { color: t.textTertiary }]}>
+                {i18n.t('address_emptySubtitle') ||
+                  'Drop a pin on the map so we know exactly where to deliver.'}
+              </Text>
             </View>
+          }
+        />
+      )}
 
-            <View style={[styles.actionsRow, { borderTopColor: Colors.borderLight }]}>
-              <TouchableOpacity
-                onPress={() => { setEditAddress(item); setModalVisible(true); }}
-                style={styles.actionButton}
-                accessibilityRole="button"
-                accessibilityLabel={i18n.t('edit')}
-              >
-                <Text style={[styles.actionEdit, { color: Colors.primary }]}>{i18n.t('icon_edit')} {i18n.t('edit')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => handleDelete(item._id)}
-                style={styles.actionButton}
-                accessibilityRole="button"
-                accessibilityLabel={i18n.t('delete')}
-              >
-                <Text style={[styles.actionDelete, { color: Colors.error }]}>{i18n.t('icon_delete')} {i18n.t('delete')}</Text>
-              </TouchableOpacity>
-
-              {!item.isDefault && (
-                <TouchableOpacity
-                  onPress={() => handleSetDefault(item._id)}
-                  style={styles.actionButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={i18n.t('setAsDefault')}
-                >
-                  <Text style={[styles.actionDefault, { color: Colors.primary }]}>{i18n.t('icon_star')} {i18n.t('setAsDefault')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+      {/* Sticky primary action */}
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: t.surface,
+            borderTopColor: t.divider,
+            paddingBottom: Math.max(insets.bottom, spacing.base),
+          },
+        ]}
+      >
+        <Pressable
+          onPress={() => openPicker()}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('addNewAddress') || 'Add a new address'}
+          style={styles.addPressable}
+        >
+          {/* Fill on a plain View with a static style — NativeWind drops the
+              function form of Pressable's style prop. */}
+          <View style={[styles.addBtn, { backgroundColor: t.cta }]}>
+            <Ionicons name="add" size={20} color={t.ctaText} />
+            <Text style={[styles.addText, { color: t.ctaText }]}>
+              {i18n.t('addNewAddress') || 'Add new address'}
+            </Text>
           </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyIcon, { color: Colors.text.veryLightGray }]}>{i18n.t('icon_location')}</Text>
-            <Text style={[styles.emptyTitle, { color: Colors.primary }]}>{i18n.t('noAddressesSaved')}</Text>
-            <Text style={[styles.emptySubtitle, { color: Colors.text.veryLightGray }]}>{i18n.t('addYourFirstAddressToFacilitateDelivery')}</Text>
-          </View>
-        }
-      />
-
-      <AddressForm
-        visible={modalVisible || !!editAddress}
-        onClose={() => { setModalVisible(false); setEditAddress(null); }}
-        onSubmit={(editAddress ? handleEdit : handleAdd) as (form: any) => void}
-        initialValues={editAddress ? (editAddress as any) : undefined}
-      />
+        </Pressable>
+      </View>
 
       <ConfirmSheet ref={confirmRef} />
     </View>
@@ -175,181 +217,80 @@ export default function AddressesTab() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+
   header: {
-    padding: 24,
-    paddingTop: 60,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 38,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  errorContainer: {
-    borderRadius: 12,
-    padding: 16,
-    margin: 16,
-    borderLeftWidth: 4,
-  },
-  errorMessage: {
-    fontSize: 16,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  errorCloseButton: {
-    alignSelf: 'flex-end',
-  },
-  errorCloseText: {
-    fontWeight: 'bold',
-    lineHeight: 20,
-  },
-  addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-    borderRadius: 12,
-    margin: 16,
-    marginTop: 24,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    gap: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.base,
   },
-  addButtonIcon: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginEnd: 8,
-    lineHeight: 38,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    lineHeight: 28,
-  },
-  addressCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    position: 'relative',
-    borderWidth: 1,
-  },
-  defaultBadge: {
-    position: 'absolute',
-    top: 10,
-    start: 10,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  defaultBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  addressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  addressName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  addressPhone: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addressDetails: {
-    marginBottom: 16,
-  },
-  addressLocation: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 8,
-  },
-  addressNotes: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    lineHeight: 20,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 16,
-    borderTopWidth: 1,
-  },
-  actionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  actionEdit: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  actionDelete: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  actionDefault: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  emptyContainer: {
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    marginTop: 40,
   },
+  headerText: { flex: 1 },
+  headerTitle: { ...typography.title },
+  headerSubtitle: { ...typography.caption, marginTop: 2 },
+
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.input,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  errorText: { ...typography.caption, flex: 1 },
+
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  loadingText: { ...typography.caption },
+
+  list: { paddingHorizontal: spacing.base, paddingTop: spacing.xs },
+  listEmpty: { flexGrow: 1, justifyContent: 'center' },
+
+  empty: { alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.sm },
   emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    lineHeight: 80,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    lineHeight: 28,
+  emptyTitle: { ...typography.subtitle, textAlign: 'center' },
+  emptySubtitle: { ...typography.caption, textAlign: 'center', lineHeight: 20 },
+
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  emptySubtitle: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 10,
+  addPressable: { width: '100%' },
+  addBtn: {
+    width: '100%',
+    height: 54,
+    borderRadius: radius.button,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
+  addText: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
 });

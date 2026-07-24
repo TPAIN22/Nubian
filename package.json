@@ -71,6 +71,7 @@
     "expo-linear-gradient": "~55.0.13",
     "expo-linking": "~55.0.14",
     "expo-localization": "~55.0.13",
+    "expo-location": "~55.1.12",
     "expo-navigation-bar": "~55.0.12",
     "expo-network": "~55.0.13",
     "expo-notifications": "~55.0.22",

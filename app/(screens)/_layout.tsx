@@ -14,6 +14,12 @@ export default function _layout() {
         <Stack.Screen name="details/[details]" options={{ headerShown: false }} />
         <Stack.Screen name="order" options={{ headerShown: false }} />
         <Stack.Screen name="addresses" options={{ headerShown: false }} />
+        {/* The map picker draws its own chrome over a full-bleed map, and
+            animates from the bottom so it reads as a modal step in the flow. */}
+        <Stack.Screen
+          name="location-picker"
+          options={{ headerShown: false, animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen name="checkout" options={{ headerShown: false }} />
         <Stack.Screen name="order-success" options={{ headerShown: false }} />
         <Stack.Screen name="order-tracking/[orderId]" options={{ headerShown: false }} />

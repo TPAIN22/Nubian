@@ -28,7 +28,11 @@ import { Text } from "@/components/ui/text";
 import useOrderStore from "@/store/orderStore";
 import useCartStore from "@/store/useCartStore";
 import useAddressStore from "@/store/addressStore";
-import AddressForm from "@/components/AddressForm";
+import { SavedAddressCard } from "@/components/address/SavedAddressCard";
+import {
+  formatAddressLine,
+  formatDeliveryDetails,
+} from "@/utils/addressDisplay";
 import type { CouponValidationResult } from "@/components/CouponInput";
 import i18n from "@/utils/i18n";
 import { useTracking } from "@/hooks/useTracking";
@@ -51,7 +55,6 @@ import { isValidPhone } from "@/utils/phoneValidator";
 import { computePricing } from "@/utils/computePricing";
 
 import {
-  AddressCard,
   BankTransferDetails,
   CheckoutFooter,
   CheckoutHeader,
@@ -81,23 +84,33 @@ const toPlainObject = (x: any) => {
   return {};
 };
 
-// Backend requires a single line ≥ 10 chars. Note: the address controller's
-// `ALLOWED_FIELDS` excludes `city`, so addresses created via the API only have
-// `cityName`/`subCityName` populated from the location refs. Fall back to the
-// legacy `city`/`area` for older records that may still carry them.
+/**
+ * Human-readable shipping line sent alongside `addressId`.
+ *
+ * The server rebuilds this from the saved address anyway (and snapshots it onto
+ * the order), so this is a display/compat value — but the backend still
+ * enforces a 10-character minimum on it, so it has to be substantial.
+ *
+ * Built from the shared address formatter so a map-first address contributes
+ * its `formattedAddress` and delivery details. A pinned address whose owner
+ * entered only a name would otherwise produce a 3-character string and be
+ * rejected at checkout.
+ */
 const buildShippingAddressText = (a: any) => {
-  const parts = [
-    a?.name,
-    a?.subCityName || a?.area,
-    a?.cityName || a?.city,
-    a?.countryName,
-    a?.street,
-    a?.building,
-    a?.notes ? `${i18n.t("notes") || "Notes"}: ${a.notes}` : null,
-  ]
+  const parts = [a?.name, formatAddressLine(a), formatDeliveryDetails(a)]
     .map(v => String(v ?? "").trim())
     .filter(Boolean);
-  const text = parts.join(" - ");
+
+  let text = parts.join(" - ");
+
+  // A bare pin with no geocoded label still has to clear the length floor;
+  // the coordinates are the most useful thing left to say about it.
+  if (text.length < 10 && typeof a?.latitude === "number" && typeof a?.longitude === "number") {
+    text = [text, `${a.latitude.toFixed(5)}, ${a.longitude.toFixed(5)}`]
+      .filter(Boolean)
+      .join(" - ");
+  }
+
   return text.length >= 10 ? text : "";
 };
 
@@ -119,7 +132,6 @@ export default function CheckOutModal({
   const {
     addresses,
     fetchAddresses,
-    addAddress,
     isLoading: isAddressesLoading,
   } = useAddressStore();
 
@@ -129,8 +141,13 @@ export default function CheckOutModal({
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
   );
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [addressFormInitial, setAddressFormInitial] = useState<any>(null);
+
+  /**
+   * Set when we send the user to the map picker to create an address, so the
+   * newly-created one can be auto-selected when they come back. Adding an
+   * address mid-checkout should not then require picking it from the list.
+   */
+  const knownAddressIdsRef = useRef<Set<string> | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -448,28 +465,44 @@ export default function CheckOutModal({
     }
   }, [currentTotal, paymentMethod]);
 
-  const handleAddAddress = useCallback(
-    async (form: Omit<any, "_id">) => {
-      try {
-        setIsSubmitting(true);
-        const newAddress = await addAddress(form);
-        await fetchAddresses();
-        setShowAddressForm(false);
-        if (newAddress?._id) {
-          setSelectedAddressId(String(newAddress._id));
-          refreshQuote(String(newAddress._id));
-        }
-        toast.success(
-          i18n.t("addressAddedSuccessfully") || "Address added",
+  /**
+   * Hand off to the map picker.
+   *
+   * Checkout never collects a location itself — there is one map picker in the
+   * app and this is the same screen the profile uses, so the two can't drift.
+   * Remember the current address ids so whatever comes back new can be
+   * auto-selected.
+   */
+  const openLocationPicker = useCallback(
+    (addressId?: string) => {
+      if (!addressId) {
+        knownAddressIdsRef.current = new Set(
+          (addresses || []).map((a: any) => String(a._id)),
         );
-      } catch (e: any) {
-        toast.error(e?.message || i18n.t("addressAddError"));
-      } finally {
-        setIsSubmitting(false);
       }
+
+      router.push(
+        addressId
+          ? { pathname: "/location-picker", params: { addressId } }
+          : "/location-picker",
+      );
     },
-    [addAddress, fetchAddresses, refreshQuote],
+    [router, addresses],
   );
+
+  // Returning from the picker: adopt the address that wasn't there before.
+  useEffect(() => {
+    const known = knownAddressIdsRef.current;
+    if (!known || !addresses?.length) return;
+
+    const created = addresses.find((a: any) => !known.has(String(a._id)));
+    if (!created) return;
+
+    knownAddressIdsRef.current = null;
+    setSelectedAddressId(String(created._id));
+    refreshQuote(String(created._id));
+    toast.success(i18n.t("addressAddedSuccessfully") || "Address added");
+  }, [addresses, refreshQuote]);
 
   const pickImage = useCallback(async () => {
     const { status } =
@@ -625,20 +658,6 @@ export default function CheckOutModal({
       : i18n.t("bankakPayment") || "Bank transfer (Bankak)"
     : i18n.t("selectPaymentMethod") || "Choose how you'd like to pay";
 
-  const showAddressForm$ = showAddressForm;
-
-  // Address form takes the full screen when adding/editing.
-  if (showAddressForm$) {
-    return (
-      <AddressForm
-        visible={showAddressForm$}
-        onClose={() => setShowAddressForm(false)}
-        onSubmit={handleAddAddress}
-        initialValues={addressFormInitial as any}
-      />
-    );
-  }
-
   // Initial address loading.
   if (isAddressesLoading && !addresses?.length) {
     return (
@@ -713,67 +732,76 @@ export default function CheckOutModal({
             {addresses && addresses.length > 0 ? (
               <View>
                 {addresses.map((addr: any) => (
-                  <AddressCard
+                  <SavedAddressCard
                     key={String(addr._id)}
                     address={addr}
-                    selected={
-                      String(selectedAddressId) === String(addr._id)
-                    }
-                    onSelect={id => setSelectedAddressId(id)}
+                    selectable
+                    selected={String(selectedAddressId) === String(addr._id)}
+                    // Map thumbnails only for the selected card: rendering one
+                    // per address would spin up a map view for every row.
+                    showMap={String(selectedAddressId) === String(addr._id)}
+                    onPress={a => setSelectedAddressId(String(a._id))}
+                    onEdit={a => openLocationPicker(String(a._id))}
                   />
                 ))}
-                <PressableScale
-                  onPress={() => {
-                    setAddressFormInitial(null);
-                    setShowAddressForm(true);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    i18n.t("addNewAddress") || "Add new address"
-                  }
-                  style={[
-                    styles.addAddressBtn,
-                    { borderColor: t.border, backgroundColor: t.card },
-                  ]}
-                >
-                  <Ionicons
-                    name="add"
-                    size={16}
-                    color={t.accent}
-                  />
-                  <RNText
+
+                <View style={styles.addressActions}>
+                  <PressableScale
+                    onPress={() => openLocationPicker()}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      i18n.t("addNewAddress") || "Add new address"
+                    }
                     style={[
-                      styles.addAddressText,
-                      { color: t.accent },
+                      styles.addressActionBtn,
+                      { borderColor: t.border, backgroundColor: t.card },
                     ]}
                   >
-                    {i18n.t("addNewAddress") || "Add new address"}
-                  </RNText>
-                </PressableScale>
+                    <Ionicons name="add" size={16} color={t.accent} />
+                    <RNText
+                      style={[styles.addAddressText, { color: t.accent }]}
+                    >
+                      {i18n.t("addNewAddress") || "Add new"}
+                    </RNText>
+                  </PressableScale>
+
+                  {/* Same destination as "add new" — the picker centres on the
+                      device fix on open — but labelled for the shopper who is
+                      standing at the address right now. */}
+                  <PressableScale
+                    onPress={() => openLocationPicker()}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      i18n.t("address_useMyLocation") || "Use my current location"
+                    }
+                    style={[
+                      styles.addressActionBtn,
+                      { borderColor: t.border, backgroundColor: t.card },
+                    ]}
+                  >
+                    <Ionicons name="locate" size={16} color={t.accent} />
+                    <RNText
+                      style={[styles.addAddressText, { color: t.accent }]}
+                    >
+                      {i18n.t("address_currentLocation") || "Current location"}
+                    </RNText>
+                  </PressableScale>
+                </View>
               </View>
             ) : (
               <View style={styles.emptyAddress}>
-                <Text
-                  style={[styles.emptyText, { color: t.textTertiary }]}
-                >
+                <Text style={[styles.emptyText, { color: t.textTertiary }]}>
                   {i18n.t("noAddressesYet") ||
                     "You haven't added an address yet."}
                 </Text>
                 <PressableScale
-                  onPress={() => {
-                    setAddressFormInitial(null);
-                    setShowAddressForm(true);
-                  }}
+                  onPress={() => openLocationPicker()}
                   accessibilityRole="button"
-                  style={[
-                    styles.primaryBtn,
-                    { backgroundColor: t.cta },
-                  ]}
+                  accessibilityLabel={i18n.t("addNewAddress") || "Add address"}
+                  style={[styles.primaryBtn, { backgroundColor: t.cta }]}
                 >
-                  <RNText
-                    style={[styles.primaryBtnText, { color: t.ctaText }]}
-                  >
-                    {i18n.t("addNewAddress") || "Add address"}
+                  <RNText style={[styles.primaryBtnText, { color: t.ctaText }]}>
+                    {i18n.t("address_pinOnMap") || "Pin your address on the map"}
                   </RNText>
                 </PressableScale>
               </View>
@@ -996,19 +1024,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  addAddressBtn: {
+  addressActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  addressActionBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: spacing.md + 2,
+    minHeight: 48,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.button,
     borderWidth: StyleSheet.hairlineWidth,
     borderStyle: "dashed",
-    marginTop: spacing.xs,
   },
   addAddressText: {
-    ...typography.bodyStrong,
+    ...typography.captionStrong,
     fontFamily: Platform.OS === "web" ? undefined : "Cairo-Bold",
   },
 

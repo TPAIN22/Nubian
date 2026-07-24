@@ -1,3 +1,14 @@
+/**
+ * ⚠️ LEGACY — the old checkout address row.
+ *
+ * Replaced by `components/address/SavedAddressCard.tsx`, which renders both
+ * address generations, shows a map preview and carries the confirm-location
+ * nudge. Nothing imports this by name; it is still re-exported by the
+ * `components/checkout` barrel, so it compiles but never renders.
+ *
+ * Retained as part of the rollback path — see the header of
+ * `components/AddressForm.tsx`.
+ */
 import React, { useMemo } from 'react';
 import { I18nManager, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
