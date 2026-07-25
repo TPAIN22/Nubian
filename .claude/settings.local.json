@@ -59,7 +59,9 @@
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint components/cart \"app/\\(tabs\\)/cart.tsx\" 2>&1 | Select-Object -First 20; Write-Output \"clean\")",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint components/cart 2>&1 | Select-Object -First 20; Write-Output \"clean\")",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint \"app/\\(tabs\\)/_layout.tsx\" components/cart 2>&1 | Select-Object -First 20; Write-Output \"clean\")",
-      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 15; npx eslint components/cart/CartSuccessOverlay.tsx 2>&1 | Select-Object -First 10; Write-Output \"clean\")"
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 15; npx eslint components/cart/CartSuccessOverlay.tsx 2>&1 | Select-Object -First 10; Write-Output \"clean\")",
+      "Read(//c/Users/HUAWEI/Desktop/nubian_platform/apps/dashboard/src/app/admin//**)",
+      "Read(//c/Users/HUAWEI/Desktop/nubian_platform/apps/dashboard/src/**)"
     ]
   }
 }
