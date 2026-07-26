@@ -27,6 +27,7 @@ import { setCartTarget } from "@/components/cart/cartFeedback";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import i18n from "@/utils/i18n";
 import { useTheme } from "@/providers/ThemeProvider";
+import { elevationUp, iconSize, radius, spacing, typography } from "@/theme/tokens";
 
 type IconType = "home" | "cart" | "search" | "profile" | "wishlist";
 
@@ -207,8 +208,8 @@ const TabItem: FC<TabItemProps> = ({
   };
 
   const iconColor = focused
-    ? theme.colors.primary
-    : theme.colors.text.veryLightGray;
+    ? theme.colors.tabBarActive
+    : theme.colors.tabBarInactive;
 
   // Publish the cart icon's window rect so `flyToCart` knows where to land.
   // Re-measured after a focus change because the active tab's flex animation
@@ -246,7 +247,7 @@ const TabItem: FC<TabItemProps> = ({
         style={[
           styles.itemInner,
           focused
-            ? { backgroundColor: theme.colors.primary + "15" }
+            ? { backgroundColor: theme.colors.primarySoft }
             : null,
           innerStyle,
         ]}
@@ -257,11 +258,13 @@ const TabItem: FC<TabItemProps> = ({
             onLayout={measureCartTarget}
             style={styles.iconContent}
           >
-            {renderIcon(iconType, 24, iconColor)}
+            {renderIcon(iconType, iconSize.lg, iconColor)}
             {showCartBadge && (
+              // Sale-red, not brand gold: a count is an alert, and gold on gold
+              // made the badge invisible whenever the cart tab was active.
               <CartBadge
-                color={theme.colors.primary}
-                borderColor={theme.colors.surface}
+                color={theme.colors.sale}
+                borderColor={theme.colors.tabBar}
               />
             )}
           </View>
@@ -275,7 +278,7 @@ const TabItem: FC<TabItemProps> = ({
             numberOfLines={1}
             style={[
               styles.label,
-              { color: theme.colors.primary, marginLeft: 8 },
+              { color: theme.colors.tabBarActive, marginStart: spacing.sm },
             ]}
           >
             {label}
@@ -306,13 +309,15 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
       style={[
         styles.tabBar,
         {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.tabBar,
           paddingBottom: safeAreaBottom,
           borderTopColor: isDark
             ? `${theme.colors.borderLight}30`
             : theme.colors.borderLight,
-          shadowColor: theme.colors.shadow,
         },
+        // Soft upward shadow so the bar lifts off the grey canvas instead of
+        // sitting on it behind a hard 1px line.
+        elevationUp,
       ]}
     >
       <View style={styles.tabBarRow}>
@@ -372,36 +377,34 @@ export default function TabsLayout() {
   const { theme } = useTheme();
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.surface }}>
+    // The canvas colour, not white — screens that don't fill their frame (during
+    // a push transition, or above the keyboard) reveal this, and a white gap
+    // under a grey screen reads as a rendering glitch.
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Tabs
         detachInactiveScreens
         tabBar={(props) => <CustomTabBar {...props} />}
         screenOptions={{
           tabBarHideOnKeyboard: true,
           headerShadowVisible: false,
-          headerStyle: [styles.header, { backgroundColor: theme.colors.cardBackground }],
-          headerTintColor: theme.colors.text.gray,
-          headerTitleStyle: { color: theme.colors.text.gray },
+          headerStyle: [styles.header, { backgroundColor: theme.colors.surface }],
+          headerTintColor: theme.colors.text.title,
+          headerTitleStyle: { ...typography.subtitle, color: theme.colors.text.title },
+          headerTitleAlign: "center",
           lazy: true,
           freezeOnBlur: true,
         }}
         initialRouteName="index"
       >
         <Tabs.Screen name="index" options={{ headerShown: false }} />
-        <Tabs.Screen
-          name="cart"
-          options={{
-            headerShown: false,
-            headerStyle: { backgroundColor: theme.colors.cardBackground },
-          }}
-        />
+        <Tabs.Screen name="cart" options={{ headerShown: false }} />
         <Tabs.Screen name="explore" options={{ headerShown: false }} />
         <Tabs.Screen name="profile" options={{ headerShown: false }} />
         <Tabs.Screen
           name="wishlist"
           options={{
             headerShown: true,
-            headerStyle: { backgroundColor: theme.colors.cardBackground },
+            title: i18n.t("wishlist"),
           }}
         />
       </Tabs>
@@ -413,23 +416,11 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    borderTopWidth: 1,
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 18,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-      },
-      android: {
-        elevation: 16,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-      },
-    }),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
   },
 
   tabBarRow: {
@@ -472,8 +463,8 @@ const styles = StyleSheet.create({
   /* The cart count badge now lives in `components/cart/CartBadge`. */
 
   label: {
-    fontSize: 13,
-    fontWeight: "600",
+    ...typography.caption,
+    fontWeight: "700",
     letterSpacing: 0.2,
     includeFontPadding: false,
   },

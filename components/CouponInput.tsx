@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/ui/text';
 import axiosInstance from "@/services/api/client";
+import Colors from '@/locales/brandColors';
 
 interface CouponInputProps {
   products: { productId: string; categoryId?: string }[];
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.cardBackground,
     textAlign: 'right',
     fontSize: 16,
   },
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   button: {
-    backgroundColor: '#30a1a7',
+    backgroundColor: Colors.accent,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,

@@ -88,7 +88,16 @@
       "expo-notifications",
       "expo-web-browser",
       "expo-localization",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Nubian uses your location to place the map pin on your delivery address so couriers can find you.",
+          "locationWhenInUsePermission": "Nubian uses your location to place the map pin on your delivery address so couriers can find you.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

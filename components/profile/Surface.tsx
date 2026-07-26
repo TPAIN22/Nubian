@@ -1,7 +1,7 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { MotiView } from "moti";
 import { useTheme } from "@/providers/ThemeProvider";
-import { radius } from "@/theme/tokens";
+import { elevation, radius } from "@/theme/tokens";
 
 interface SurfaceProps {
   children: React.ReactNode;
@@ -24,7 +24,9 @@ export function Surface({ children, style }: SurfaceProps) {
           backgroundColor: theme.colors.cardBackground,
           borderColor: theme.colors.borderLight,
         },
-        isDark ? styles.borderDark : styles.shadowLight,
+        // Dark mode has no useful shadow (there's nothing for it to fall on),
+        // so depth is carried by a hairline there and by elevation in light.
+        isDark ? styles.borderDark : elevation.sm,
         style,
       ]}
     >
@@ -59,13 +61,5 @@ const styles = StyleSheet.create({
   },
   borderDark: {
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  shadowLight: {
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 2,
   },
 });

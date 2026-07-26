@@ -11,10 +11,11 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
 import { useTheme } from "@/providers/ThemeProvider";
 import { radius, spacing, typography } from "@/theme/tokens";
+import { lightColors } from "@/theme/colors.light";
 import { Surface } from "./Surface";
 import { PressableScale } from "./PressableScale";
 
-const ON_GOLD = "#1c1a12";
+const ON_GOLD = lightColors.onPrimary;
 
 interface SignInCardProps {
   title: string;

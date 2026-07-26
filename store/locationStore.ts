@@ -1,3 +1,15 @@
+/**
+ * ⚠️ LEGACY — caches the manual Country → City → SubCity hierarchy from
+ * `/api/locations`.
+ *
+ * No live screen reads this store any more; the map flow gets geography from
+ * reverse geocoding instead. Only `components/location/useLocationPicker.ts`
+ * (also legacy) imports it.
+ *
+ * Retained as part of the rollback path — see the header of
+ * `components/AddressForm.tsx`. The `/api/locations` endpoints it calls are
+ * still mounted and still used by the admin dashboard, so this keeps working.
+ */
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '@/services/api/client';

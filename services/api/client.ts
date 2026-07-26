@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getToken } from "@/utils/tokenManager";
+import { getToken, getAuthSnapshot, hasTokenGetter } from "@/utils/tokenManager";
 import { resolveApiBaseUrl } from "@/services/api/baseUrl";
 
 // Serialize axios `config.params` into a query string.
@@ -27,6 +27,25 @@ function appendQueryParams(url: string, params: any): string {
   return url + (url.includes("?") ? "&" : "?") + serialized;
 }
 
+/**
+ * An axios-shaped cancellation error.
+ *
+ * Cancellation must not look like a failure: `axios.isCancel()` keys off
+ * `__CANCEL__`, and the response interceptor below skips its 401-retry and
+ * message-rewriting for anything without a `response`. Callers that abort a
+ * superseded request therefore get a quiet, distinguishable rejection instead
+ * of a spurious "network error".
+ */
+function canceledError(config: any) {
+  const err: any = new Error("canceled");
+  err.name = "CanceledError";
+  err.code = "ERR_CANCELED";
+  err.config = config;
+  err.isAxiosError = true;
+  err.__CANCEL__ = true;
+  return err;
+}
+
 // Custom fetch adapter to fix Android SSL/TLS issues with Render
 // This bypasses the old XMLHttpRequest implementation
 const fetchAdapter = async (config: any) => {
@@ -39,10 +58,44 @@ const fetchAdapter = async (config: any) => {
   // replaced — so do it here or the query string is lost.
   fullUrl = appendQueryParams(fullUrl, config.params);
 
+  // Axios wires `config.signal` into the request inside its *default* adapters.
+  // Replacing the adapter means doing it here — without this, every
+  // AbortController in the app (debounced search, superseded reverse-geocode
+  // lookups, unmounted screens) is decorative: the request runs to completion
+  // regardless, burning the caller's rate-limit budget and, upstream of it,
+  // billed geocoding quota.
+  const callerSignal: AbortSignal | undefined = config.signal;
+
+  // Already aborted before we got here — never open the socket at all.
+  if (callerSignal?.aborted) throw canceledError(config);
+
   const controller = new AbortController();
-  const timeoutId = config.timeout 
-    ? setTimeout(() => controller.abort(), config.timeout) 
+  const timeoutId = config.timeout
+    ? setTimeout(() => controller.abort(), config.timeout)
     : null;
+
+  const onCallerAbort = () => controller.abort();
+
+  if (callerSignal) {
+    // React Native's AbortSignal is an EventTarget; the `onabort` branch is a
+    // safety net for runtimes shipping the older shape.
+    if (typeof callerSignal.addEventListener === "function") {
+      callerSignal.addEventListener("abort", onCallerAbort);
+    } else {
+      (callerSignal as any).onabort = onCallerAbort;
+    }
+  }
+
+  // Idempotent: called on both the success and failure paths.
+  const cleanup = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (!callerSignal) return;
+    if (typeof callerSignal.removeEventListener === "function") {
+      callerSignal.removeEventListener("abort", onCallerAbort);
+    } else if ((callerSignal as any).onabort === onCallerAbort) {
+      (callerSignal as any).onabort = null;
+    }
+  };
 
   try {
     const response = await fetch(fullUrl, {
@@ -52,7 +105,7 @@ const fetchAdapter = async (config: any) => {
       signal: controller.signal,
     });
 
-    if (timeoutId) clearTimeout(timeoutId);
+    cleanup();
 
     const responseText = await response.text();
     let responseData: any = responseText;
@@ -88,8 +141,13 @@ const fetchAdapter = async (config: any) => {
 
     return axiosResponse;
   } catch (error: any) {
-    if (timeoutId) clearTimeout(timeoutId);
+    cleanup();
     if (error.name === 'AbortError') {
+      // Both the caller's abort and our own timeout land here as the same
+      // AbortError. Only the timeout is a genuine failure — the caller walking
+      // away must not be reported as "the server took too long".
+      if (callerSignal?.aborted) throw canceledError(config);
+
       const timeoutError = new Error('timeout of ' + config.timeout + 'ms exceeded');
       (timeoutError as any).code = 'ECONNABORTED';
       (timeoutError as any).config = config;
@@ -138,20 +196,43 @@ function awaitCurrencyHydration() {
   return hydrationPromise;
 }
 
+// How long a request may wait for a Clerk token before giving up and going out
+// unauthenticated.
+//
+// GUEST is deliberately tiny: Clerk can take 30s+ to hydrate on a cold start,
+// and home/categories/products all work fine without auth, so a slow SDK must
+// never hold up first paint.
+//
+// SIGNED_IN is generous because the trade-off inverts completely. Clerk session
+// tokens live ~60s; once the cached one expires `getToken()` does a network
+// round-trip to refresh it. Under the old flat 500ms cap that refresh regularly
+// lost the race, the request went out with NO Authorization header, the backend
+// answered 401, and callers read that as "you have no data" — which is how a
+// minute spent on the checkout screen came back to an empty cart.
+const GUEST_TOKEN_TIMEOUT_MS = 500;
+const SIGNED_IN_TOKEN_TIMEOUT_MS = 10_000;
+
+function resolveToken(): Promise<string | null> {
+  const { isLoaded, isSignedIn } = getAuthSnapshot();
+  // Only wait the long budget when Clerk has actually confirmed a session.
+  // While it's still loading we stay on the short budget and let the 401 retry
+  // below recover, rather than stalling every cold-start request.
+  const budgetMs =
+    isLoaded && isSignedIn ? SIGNED_IN_TOKEN_TIMEOUT_MS : GUEST_TOKEN_TIMEOUT_MS;
+
+  return Promise.race<string | null>([
+    getToken(),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), budgetMs)),
+  ]);
+}
+
 apiClient.interceptors.request.use(
   async (config) => {
     try {
       // Block the request until currency rehydrates so x-currency is always set.
       await awaitCurrencyHydration();
 
-      // Bound the token fetch so a not-yet-loaded Clerk SDK can't block the
-      // request. Cold start: Clerk can take 30s+ to hydrate; without this race
-      // every request sat behind it and the home screen stayed on skeletons.
-      // Guest endpoints (home, categories, etc.) work fine without auth.
-      const token = await Promise.race<string | null>([
-        getToken(),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 500)),
-      ]);
+      const token = await resolveToken();
       if (token) {
         config.headers = config.headers ?? {};
         config.headers.Authorization = `Bearer ${token}`;
@@ -286,7 +367,33 @@ apiClient.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error) => {
+    // A 401 is ambiguous: it can mean "you are not logged in", but it can also
+    // just mean this request left without an Authorization header because the
+    // token refresh hadn't landed yet. Retry exactly once with a token we
+    // actually waited for. If that still 401s, it's a real auth failure and
+    // falls through to the normal error path.
+    const config = error?.config;
+    if (
+      error?.response?.status === 401 &&
+      config &&
+      !config.__retriedWithFreshToken &&
+      hasTokenGetter()
+    ) {
+      config.__retriedWithFreshToken = true;
+      const token = await Promise.race<string | null>([
+        getToken(),
+        new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), SIGNED_IN_TOKEN_TIMEOUT_MS)
+        ),
+      ]);
+      if (token) {
+        config.headers = { ...(config.headers ?? {}), Authorization: `Bearer ${token}` };
+        if (__DEV__) console.log("API Retry after 401:", config.url);
+        return apiClient.request(config);
+      }
+    }
+
     if (__DEV__) {
       console.log("API Error Details:", {
         code: error.code,

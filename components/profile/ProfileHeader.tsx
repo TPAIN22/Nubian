@@ -13,11 +13,12 @@ import { Text } from "@/components/ui/text";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useRTL } from "@/hooks/useRTL";
 import { radius, spacing, typography } from "@/theme/tokens";
+import { lightColors } from "@/theme/colors.light";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { PressableScale } from "./PressableScale";
 
 // Near-black label color for text/icons on the gold fill (see note above).
-const ON_GOLD = "#1c1a12";
+const ON_GOLD = lightColors.onPrimary;
 
 interface ProfileHeaderProps {
   name: string;

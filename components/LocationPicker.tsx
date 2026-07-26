@@ -1,3 +1,12 @@
+/**
+ * ⚠️ LEGACY — the cascading Country → City → SubCity dropdown picker.
+ *
+ * Superseded by the map picker at `app/(screens)/location-picker.tsx`.
+ * Only `components/AddressForm.tsx` (also legacy) imports this.
+ *
+ * Retained as part of the rollback path — see the header of `AddressForm.tsx`
+ * for the full rationale and removal criteria. Do not build on this.
+ */
 import React, { useCallback, useMemo } from "react";
 import {
   FlatList,

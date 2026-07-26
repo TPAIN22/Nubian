@@ -200,10 +200,14 @@ function AppLoaderWithClerk() {
     const unsubscribe = useCurrencyStore.subscribe(
       (state) => state.currencyCode,
       (currencyCode, previousCurrencyCode) => {
-        // Refresh on currency change AND on initial hydration (null → value).
-        // Without this, home data fetched on mount has no currency header (USD prices)
-        // and never gets re-fetched when AsyncStorage restores the saved currency.
-        if (currencyCode && currencyCode !== previousCurrencyCode) {
+        // Only a *genuine* change (the user picking another currency) refreshes
+        // product data. The `null → value` hydration transition is deliberately
+        // excluded: the currency is now resolved inside the store's
+        // `onRehydrateStorage`, before the axios interceptor releases the first
+        // request, so home's very first fetch already carries the right
+        // x-currency header. Refetching on hydration is what made the feed load
+        // and then immediately reload behind skeletons.
+        if (currencyCode && previousCurrencyCode && currencyCode !== previousCurrencyCode) {
           useItemStore.getState().resetProducts();
           useExploreStore.getState().reset();
           useProductCacheStore.getState().clearAll();
@@ -221,15 +225,14 @@ function AppLoaderWithClerk() {
     return unsubscribe;
   }, []);
 
-  // 🌍 Seed a default currency from the device locale once the persisted store
-  // has rehydrated, and load currency metadata (symbols/decimals) app-wide.
-  // Replaces the old blocking currency modal: a first-run Gulf user sees local
-  // prices with zero taps. The null→value set here trips the refresh listener
-  // above, so home data re-fetches with the correct x-currency header.
+  // 🌍 Load currency metadata (symbols/decimals) app-wide once the persisted
+  // store has rehydrated. The country/currency *values* are already resolved by
+  // then — `onRehydrateStorage` seeds the device-locale default in the same
+  // update that flips `isLoaded`, so a first-run Gulf user sees local prices
+  // with zero taps and home never fetches under the wrong currency.
   const currencyLoaded = useCurrencyStore((s) => s.isLoaded);
   useEffect(() => {
     if (!currencyLoaded) return;
-    useCurrencyStore.getState().ensureCurrencyDefault();
     useCurrencyStore.getState().fetchMetadata();
   }, [currencyLoaded]);
 

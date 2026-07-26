@@ -1,3 +1,22 @@
+/**
+ * ⚠️ LEGACY — NOT RENDERED ANYWHERE.
+ *
+ * The manual Country → City → SubCity address form, replaced by the map-first
+ * flow in `app/(screens)/location-picker.tsx` + `components/address/`.
+ *
+ * **Why it is still here:** it is the rollback path. If the map picker has to be
+ * reverted in a hurry, checkout and the addresses screen can point back at this
+ * form and the legacy `/api/locations` endpoints — which are still mounted and
+ * still serve data — without re-implementing anything.
+ *
+ * It is the head of a dead cluster:
+ *   AddressForm → LocationPicker → components/location/* → store/locationStore
+ * Nothing outside that cluster imports any of it.
+ *
+ * **Do not build on this.** New address work belongs in `components/address/`.
+ * Delete the whole cluster once the map flow has been stable in production for
+ * a release or two.
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   I18nManager,

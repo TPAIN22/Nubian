@@ -219,16 +219,27 @@ const useCartStore = create<CartStore>()(
               const parsed = safeParseCartResponse(response.data);
               set({ cart: parsed, isLoading: false });
             } catch (error: any) {
+              // 404 is the only authoritative "this user has no cart" answer —
+              // the backend has no cart document, so clearing is correct.
               if (error?.response?.status === 404) {
                 set({ cart: null, error: null, isLoading: false });
                 return;
               }
+
+              // Everything else (a 401 from a token that hadn't refreshed yet,
+              // a timeout, a 5xx) tells us nothing about what's in the cart, so
+              // keep the last known copy. This used to `set({ cart: null })`,
+              // and because `cart` is the persisted key that also overwrote the
+              // AsyncStorage copy — one failed refresh emptied the cart for
+              // good, until the next successful write echoed the server's real
+              // contents back. Sign-out clears the cart explicitly instead of
+              // relying on a request failing.
               const errorMessage = pickServerError(
                 error,
                 "cart_fetchError",
                 "Failed to load cart."
               );
-              set({ cart: null, error: errorMessage, isLoading: false });
+              set({ error: errorMessage, isLoading: false });
               throw error;
             } finally {
               set({ inFlight: null });

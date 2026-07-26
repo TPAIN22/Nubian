@@ -1,9 +1,6 @@
 // ProductCard.tsx
 import React, { useMemo, useCallback } from "react";
-import { View, StyleSheet, Pressable, InteractionManager, useWindowDimensions } from "react-native";
-import { Text } from "@/components/ui/text";
-import { Heading } from "@/components/ui/heading";
-import { Card } from "@/components/ui/card";
+import { View, StyleSheet, InteractionManager, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/providers/ThemeProvider";
@@ -22,6 +19,8 @@ import { ikResize } from "@/utils/imageCdn";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { markTapStartTime } from "@/hooks/useProductFetch";
 import { QuickAddButton } from "@/components/cart/QuickAddButton";
+import { AppText, DiscountBadge, Price, Rating, Touchable } from "@/components/ui/kit";
+import { elevation, iconSize, radius, spacing, pressScale } from "@/theme/tokens";
 
 export type Product = NormalizedProduct;
 
@@ -42,6 +41,22 @@ interface ProductCardProps {
   showQuickAdd?: boolean;
 }
 
+/**
+ * The product card — the app's most-repeated surface, and therefore the one
+ * that sets the perceived quality of the whole catalogue.
+ *
+ * Visual hierarchy, in the order the eye should land:
+ *   1. A large square photo on a neutral well (was ~150px tall and cramped).
+ *   2. The discount flag, solid sale-red, top-start.
+ *   3. The price — `price` step (17/800) in near-black, not a 14px gold.
+ *   4. The product name, two lines, reserved height so a 1-line and a 2-line
+ *      card in the same row still align their prices.
+ *   5. Rating and category as quiet metadata.
+ *
+ * The wishlist heart floats top-end in its own elevated white circle so it
+ * reads as a control rather than as part of the photo, and it clears 44pt via
+ * `hitSlop` without a 44pt circle crowding the image.
+ */
 const ProductCard = React.memo(
   ({ item, onPress, variant = "grid", showWishlist = true, cardWidth, showQuickAdd = false }: ProductCardProps) => {
     const { theme } = useTheme();
@@ -112,6 +127,11 @@ const ProductCard = React.memo(
 
     const productHasDiscount = discountPercentage > 0;
 
+    // Optional metadata — present on some payloads, absent on others. Rendered
+    // only when real, never as an empty placeholder row.
+    const rating: number = (item as any)?.averageRating ?? (item as any)?.rating ?? 0;
+    const metaLabel: string | undefined = (item as any)?.categoryName || undefined;
+
     // A11y: main press area announces name + price (+ discount when present).
     const a11yLabel = useMemo(() => {
       const priceStr = finalMoney ? formatMoney(finalMoney) : formatPrice(finalPrice);
@@ -172,104 +192,115 @@ const ProductCard = React.memo(
 
     if (!item) return null;
 
-    // Horizontal variant
+    /* ---------------- Horizontal variant (dense list rows) ---------------- */
+
     if (variant === "horizontal") {
       const firstImage = validImages[0];
       return (
-        <Card className="p-0" style={[styles.productCard, { backgroundColor: colors.cardBackground }]}>
-          <View style={styles.horizontalContainer}>
-            <Pressable
-              onPressIn={handlePressIn}
-              onPress={handleClick}
-              accessibilityRole="button"
-              accessibilityLabel={a11yLabel}
-              style={styles.horizontalImageContainer}
-            >
-              <Image
-                source={firstImage ? { uri: ikResize(firstImage, targetImgWidth) ?? firstImage } : null}
-                alt="product image"
-                style={[styles.horizontalImage, { backgroundColor: colors.surface, aspectRatio: 1 }]}
-                contentFit="cover"
-                transition={300}
-              />
-            </Pressable>
-
-            <View style={styles.horizontalInfo}>
-              <Pressable
-                onPressIn={handlePressIn}
-                onPress={handleClick}
-                accessibilityRole="button"
-                accessibilityLabel={a11yLabel}
-                style={styles.horizontalNameContainer}
-              >
-                <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={1}>
-                  {item.name}
-                </Heading>
-              </Pressable>
-
-              <View style={styles.horizontalPriceContainer}>
-                {productHasDiscount && (
-                  <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
-                    {renderOriginal()}
-                  </Text>
-                )}
-                <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
-                  {pricing.isFrom && (
-                    <Text style={{ fontSize: 10, color: colors.text.veryLightGray }}>From </Text>
-                  )}
-                  {renderFinal()}
-                </Text>
-              </View>
-            </View>
+        <Touchable
+          onPressIn={handlePressIn}
+          onPress={handleClick}
+          accessibilityRole="button"
+          accessibilityLabel={a11yLabel}
+          style={[
+            styles.card,
+            styles.horizontalCard,
+            { backgroundColor: colors.cardBackground },
+            elevation.sm,
+          ]}
+        >
+          <View style={[styles.horizontalImageWell, { backgroundColor: colors.imagePlaceholder }]}>
+            <Image
+              source={firstImage ? { uri: ikResize(firstImage, targetImgWidth) ?? firstImage } : null}
+              alt="product image"
+              style={styles.fill}
+              contentFit="cover"
+              transition={260}
+              recyclingKey={item.id}
+            />
+            {productHasDiscount && (
+              <DiscountBadge percentage={discountPercentage} style={styles.horizontalDiscount} />
+            )}
           </View>
-        </Card>
+
+          <View style={styles.horizontalInfo}>
+            <AppText variant="cardTitle" tone="title" numberOfLines={2}>
+              {item.name}
+            </AppText>
+
+            {rating > 0 ? <Rating value={rating} size="sm" /> : null}
+
+            <Price
+              value={renderFinal()}
+              original={productHasDiscount ? renderOriginal() : null}
+              isFrom={pricing.isFrom}
+              size="sm"
+            />
+          </View>
+        </Touchable>
       );
     }
 
-    // Grid variant
+    /* ---------------- Grid variant ---------------- */
+
     return (
-      <Card className="p-0" style={[styles.productCard, styles.productCardFlex, { backgroundColor: colors.cardBackground }]}>
-        <View style={[styles.imageContainer, { backgroundColor: colors.surface, aspectRatio: 1 }]}>
+      <Touchable
+        onPressIn={handlePressIn}
+        onPress={handleClick}
+        scaleTo={pressScale.card}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+        style={[
+          styles.card,
+          styles.gridCard,
+          { backgroundColor: colors.cardBackground },
+          elevation.sm,
+        ]}
+      >
+        <View style={[styles.imageWell, { backgroundColor: colors.imagePlaceholder }]}>
+          {displayImage ? (
+            <Image
+              source={{ uri: ikResize(displayImage, targetImgWidth) ?? displayImage }}
+              alt="product image"
+              style={styles.fill}
+              contentFit="cover"
+              // Fades the photo in rather than popping it — the single cheapest
+              // thing that stops a grid feeling like a spreadsheet.
+              transition={260}
+              recyclingKey={item.id}
+            />
+          ) : (
+            <View style={[styles.fill, styles.center]}>
+              <Ionicons name="image-outline" size={iconSize.xxl} color={colors.text.subtle} />
+            </View>
+          )}
+
+          {productHasDiscount && (
+            <DiscountBadge percentage={discountPercentage} style={styles.discountSlot} />
+          )}
+
           {showWishlist && (
-            <Pressable
+            <Touchable
               onPress={handleWishlistPress}
+              // 4pt of slop on each side takes the visual 36pt circle to the
+              // 44pt accessibility target without enlarging it over the photo.
               hitSlop={8}
+              scaleTo={pressScale.icon}
               accessibilityRole="button"
               accessibilityState={{ selected: inWishlist }}
               accessibilityLabel={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
-              style={[styles.wishlistButton, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
+              style={[
+                styles.wishlistButton,
+                { backgroundColor: colors.surface },
+                elevation.sm,
+              ]}
             >
-              <Ionicons name={inWishlist ? "heart" : "heart-outline"} size={20} color={inWishlist ? colors.danger : colors.primary} />
-            </Pressable>
-          )}
-
-          <Pressable
-            onPressIn={handlePressIn}
-            onPress={handleClick}
-            accessibilityRole="button"
-            accessibilityLabel={a11yLabel}
-            style={styles.imagePressable}
-          >
-            {displayImage ? (
-              <Image
-                source={{ uri: ikResize(displayImage, targetImgWidth) ?? displayImage }}
-                alt="product image"
-                style={[styles.productImage, { backgroundColor: colors.surface }]}
-                contentFit="cover"
-                transition={300}
-                recyclingKey={item.id}
+              <Ionicons
+                name={inWishlist ? "heart" : "heart-outline"}
+                size={iconSize.md}
+                color={inWishlist ? colors.sale : colors.text.muted}
               />
-            ) : (
-              <View style={[styles.productImage, { backgroundColor: colors.surface, justifyContent: "center", alignItems: "center" }]}>
-                <Ionicons name="image-outline" size={48} color={colors.text.veryLightGray} />
-              </View>
-            )}
-          </Pressable>
-
-          {discountPercentage > 0 && (
-            <View style={[styles.discountBadge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.discountText}>{discountPercentage}%</Text>
-            </View>
+            </Touchable>
           )}
 
           {showQuickAdd && (
@@ -279,30 +310,38 @@ const ProductCard = React.memo(
           )}
         </View>
 
-        <View style={styles.productInfo}>
-          <Pressable
-            onPressIn={handlePressIn}
-            onPress={handleClick}
-            accessibilityRole="button"
-            accessibilityLabel={a11yLabel}
+        <View style={styles.info}>
+          <AppText
+            variant="cardTitle"
+            tone="title"
+            numberOfLines={2}
+            // Reserved height: keeps prices on one baseline across a row even
+            // when one product name wraps and its neighbour doesn't.
+            style={styles.name}
           >
-            <Heading size="sm" style={[styles.productName, { color: colors.text.gray }]} numberOfLines={2}>
-              {item.name}
-            </Heading>
-          </Pressable>
+            {item.name}
+          </AppText>
 
-          <View style={styles.priceContainer}>
-            {productHasDiscount && (
-              <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]} numberOfLines={1}>
-                {renderOriginal()}
-              </Text>
-            )}
-            <Text style={[styles.currentPrice, { color: colors.primary }]} numberOfLines={1}>
-              {renderFinal()}
-            </Text>
-          </View>
+          {rating > 0 || metaLabel ? (
+            <View style={styles.metaRow}>
+              {rating > 0 ? <Rating value={rating} size="sm" /> : null}
+              {metaLabel ? (
+                <AppText variant="micro" tone="subtle" numberOfLines={1} style={styles.metaLabel}>
+                  {metaLabel}
+                </AppText>
+              ) : null}
+            </View>
+          ) : null}
+
+          <Price
+            value={renderFinal()}
+            original={productHasDiscount ? renderOriginal() : null}
+            isFrom={pricing.isFrom}
+            size="md"
+            style={styles.price}
+          />
         </View>
-      </Card>
+      </Touchable>
     );
   },
   // PERFORMANCE: Custom comparison to ignore unstable callback references
@@ -335,27 +374,64 @@ const ProductCard = React.memo(
 ProductCard.displayName = "ProductCard";
 
 const styles = StyleSheet.create({
-  productCard: { borderRadius: 14, overflow: "hidden", marginBottom: 4 },
-  productCardFlex: { flex: 1 },
-  imagePressable: { width: "100%", height: "100%" },
-  imageContainer: { position: "relative", overflow: "hidden", width: "100%", minHeight: 0 },
-  productImage: { width: "100%", height: "100%" },
-  wishlistButton: { position: "absolute", top: 10, right: 10, zIndex: 2, borderRadius: 20, width: 36, height: 36, justifyContent: "center", alignItems: "center", borderWidth: 1 },
-  discountBadge: { position: "absolute", top: 10, left: 10, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, zIndex: 2 },
-  discountText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  quickAddSlot: { position: "absolute", bottom: 8, right: 8, zIndex: 2 },
-  productInfo: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10, minHeight: 60 },
-  productName: { fontSize: 13, fontWeight: "600", lineHeight: 19, marginBottom: 6, minHeight: 38 },
-  priceContainer: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2, minHeight: 20 },
-  originalPrice: { textDecorationLine: "line-through", fontSize: 11, fontWeight: "400" },
-  currentPrice: { fontWeight: "700", fontSize: 14, flexShrink: 0 },
+  card: {
+    borderRadius: radius.card,
+    // Deliberately NOT `overflow: hidden`. On iOS that sets masksToBounds on
+    // the layer, which clips the view's own shadow — the card would render
+    // completely flat. Clipping happens on the image well instead, which
+    // carries no shadow of its own.
+  },
+  gridCard: { flex: 1 },
+  fill: { width: "100%", height: "100%" },
+  center: { alignItems: "center", justifyContent: "center" },
 
-  horizontalContainer: { flexDirection: "row", padding: 12 },
-  horizontalImageContainer: { marginEnd: 12 },
-  horizontalImage: { width: 100, borderRadius: 8 },
-  horizontalInfo: { flex: 1, justifyContent: "space-between" },
-  horizontalNameContainer: { marginBottom: 8 },
-  horizontalPriceContainer: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
+  imageWell: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 1,
+    overflow: "hidden",
+    // Only the top corners: the well sits flush against the info block below.
+    borderTopStartRadius: radius.card,
+    borderTopEndRadius: radius.card,
+  },
+
+  discountSlot: { position: "absolute", top: spacing.sm, start: spacing.sm, zIndex: 2 },
+
+  wishlistButton: {
+    position: "absolute",
+    top: spacing.sm,
+    end: spacing.sm,
+    zIndex: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  quickAddSlot: { position: "absolute", bottom: spacing.sm, end: spacing.sm, zIndex: 2 },
+
+  info: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  name: { minHeight: 40 },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  metaLabel: { flex: 1 },
+  price: { marginTop: spacing.xxs },
+
+  /* Horizontal */
+  horizontalCard: { flexDirection: "row", padding: spacing.md, gap: spacing.md, alignItems: "center" },
+  horizontalImageWell: {
+    width: 96,
+    height: 96,
+    borderRadius: radius.md,
+    overflow: "hidden",
+  },
+  horizontalDiscount: { position: "absolute", top: spacing.xs, start: spacing.xs },
+  horizontalInfo: { flex: 1, gap: spacing.sm },
 });
 
 export default ProductCard;

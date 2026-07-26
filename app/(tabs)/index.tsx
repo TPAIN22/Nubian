@@ -10,12 +10,10 @@ import {
   Animated,
   FlatList,
   InteractionManager,
-  Pressable,
   RefreshControl,
   StyleSheet,
   View,
 } from "react-native";
-import { Text } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
@@ -43,11 +41,27 @@ import { ProductSection } from "@/components/home/ProductSection";
 import { StoreHighlights } from "@/components/home/StoreHighlights";
 import { HomeEmptyState } from "@/components/home/HomeEmptyState";
 import BannerSkeleton from "@/components/BannerSkeleton";
-import { Skeleton } from "moti/skeleton";
+import { AppText, SkeletonBlock, Touchable } from "@/components/ui/kit";
+import {
+  elevation,
+  HIT_SLOP,
+  iconSize,
+  pressScale,
+  radius,
+  SCREEN_PADDING,
+  spacing,
+} from "@/theme/tokens";
 import i18n from "@/utils/i18n";
 
+/** Category tile geometry — one place so the rail and its skeleton agree. */
+const BUBBLE_WIDTH = 82;
+const BUBBLE_HEIGHT = 96;
+
 // ─── Floating Header ──────────────────────────────────────────────────────────
-// Transparent at y=0 (white icons over banner), blurs in as user scrolls.
+// Transparent at y=0 (white controls over the hero), blurs in as the user
+// scrolls. The search affordance is a real pill rather than a bare magnifier —
+// a tappable field is the single most-used control on a commerce home screen
+// and it should look like one.
 
 interface HeaderProps {
   colors: any;
@@ -61,7 +75,13 @@ const Header = memo(
   ({ colors, isDark, insetTop, isScrolled, bgOpacity }: HeaderProps) => {
     const router = useRouter();
     const cartQty = useCartStore((s: any) => s.cart?.totalQuantity ?? 0);
-    const iconColor = isScrolled ? colors.text.gray : "#FFFFFF";
+
+    // Over the hero the controls are white; once the blur is opaque they switch
+    // to the normal ink colour so they stay legible on the light canvas.
+    const iconColor = isScrolled ? colors.text.title : "#FFFFFF";
+    const pillBg = isScrolled ? colors.surfaceMuted : "rgba(255,255,255,0.22)";
+    const pillBorder = isScrolled ? colors.border : "rgba(255,255,255,0.35)";
+    const pillText = isScrolled ? colors.text.muted : "rgba(255,255,255,0.92)";
 
     return (
       <View style={[styles.header, { paddingTop: insetTop }]}>
@@ -75,57 +95,66 @@ const Header = memo(
             tint={isDark ? "dark" : "light"}
             style={StyleSheet.absoluteFill}
           />
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: colors.surface, opacity: 0.72 },
+            ]}
+          />
         </Animated.View>
 
-        {/* Icon row */}
         <View style={styles.headerRow}>
-          <Pressable
-            hitSlop={16}
+          <Touchable
             onPress={() => router.push("/(tabs)/explore" as any)}
+            scaleTo={pressScale.button}
+            accessibilityRole="search"
+            accessibilityLabel={i18n.t("searchPlaceholder")}
+            style={[
+              styles.searchPill,
+              { backgroundColor: pillBg, borderColor: pillBorder },
+            ]}
+          >
+            <Ionicons name="search" size={iconSize.md} color={iconColor} />
+            <AppText variant="bodySmall" numberOfLines={1} style={{ color: pillText, flex: 1 }}>
+              {i18n.t("searchPlaceholder")}
+            </AppText>
+          </Touchable>
+
+          <Touchable
+            hitSlop={HIT_SLOP}
+            onPress={() => router.push("/(tabs)/wishlist" as any)}
+            scaleTo={pressScale.icon}
             accessibilityRole="button"
-            accessibilityLabel="Search"
+            accessibilityLabel={i18n.t("wishlist")}
             style={styles.iconBtn}
           >
-            <Ionicons name="search-outline" size={24} color={iconColor} />
-          </Pressable>
+            <Ionicons name="heart-outline" size={iconSize.lg} color={iconColor} />
+          </Touchable>
 
-          <View style={styles.headerRight}>
-            <Pressable
-              hitSlop={16}
-              onPress={() => router.push("/(tabs)/wishlist" as any)}
-              accessibilityRole="button"
-              accessibilityLabel="Wishlist"
-              style={styles.iconBtn}
-            >
-              <Ionicons name="heart-outline" size={24} color={iconColor} />
-            </Pressable>
-
-            <Pressable
-              hitSlop={16}
-              onPress={() => router.push("/(tabs)/cart" as any)}
-              accessibilityRole="button"
-              accessibilityLabel={
-                cartQty > 0 ? `Cart, ${cartQty} items` : "Cart"
-              }
-              style={styles.iconBtn}
-            >
-              <Ionicons name="bag-outline" size={24} color={iconColor} />
-              {cartQty > 0 && (
-                <View
-                  style={[
-                    styles.cartBadge,
-                    { backgroundColor: colors.primary },
-                  ]}
-                  accessibilityElementsHidden={true}
-                  importantForAccessibility="no-hide-descendants"
-                >
-                  <Text style={styles.cartBadgeText}>
-                    {cartQty > 99 ? "99+" : String(cartQty)}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
+          <Touchable
+            hitSlop={HIT_SLOP}
+            onPress={() => router.push("/(tabs)/cart" as any)}
+            scaleTo={pressScale.icon}
+            accessibilityRole="button"
+            accessibilityLabel={cartQty > 0 ? `Cart, ${cartQty} items` : "Cart"}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="bag-outline" size={iconSize.lg} color={iconColor} />
+            {cartQty > 0 && (
+              <View
+                style={[
+                  styles.cartBadge,
+                  { backgroundColor: colors.sale, borderColor: colors.surface },
+                ]}
+                accessibilityElementsHidden={true}
+                importantForAccessibility="no-hide-descendants"
+              >
+                <AppText variant="overline" style={styles.cartBadgeText}>
+                  {cartQty > 99 ? "99+" : String(cartQty)}
+                </AppText>
+              </View>
+            )}
+          </Touchable>
         </View>
       </View>
     );
@@ -133,8 +162,9 @@ const Header = memo(
 );
 Header.displayName = "Header";
 
-// ─── Category Bubbles ─────────────────────────────────────────────────────────
-// Circular image + label below. Shows category images.
+// ─── Category Rail ────────────────────────────────────────────────────────────
+// A tall rounded tile with the category photo and its name on a gradient foot.
+// Reads as a shortcut into the catalogue rather than as decoration.
 
 interface CategoryBubblesProps {
   categories: any[];
@@ -157,6 +187,11 @@ const CategoryBubbles = memo(({ categories, colors }: CategoryBubblesProps) => {
     [trackEvent]
   );
 
+  const renderSeparator = useCallback(
+    () => <View style={{ width: spacing.md }} />,
+    []
+  );
+
   if (categories.length === 0) return null;
 
   return (
@@ -166,65 +201,62 @@ const CategoryBubbles = memo(({ categories, colors }: CategoryBubblesProps) => {
       showsHorizontalScrollIndicator={false}
       keyExtractor={(item) => item._id}
       contentContainerStyle={styles.bubblesContent}
+      ItemSeparatorComponent={renderSeparator}
       renderItem={({ item }) => (
-        <Pressable
+        <Touchable
           onPress={() => handlePress(item)}
+          scaleTo={pressScale.card}
           accessibilityRole="button"
           accessibilityLabel={item.name}
-          style={styles.bubble}
+          style={[
+            styles.bubbleImgWrap,
+            { backgroundColor: colors.surfaceMuted },
+            elevation.xs,
+          ]}
         >
-          <View
-            style={[
-              styles.bubbleImgWrap,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-            ]}
-          >
-            {item.image ? (
-              <Image
-                source={{ uri: ikResize(item.image, 76) ?? item.image }}
-                style={styles.bubbleImg}
-                contentFit="cover"
-                transition={200}
-                recyclingKey={item._id}
-              />
-            ) : (
-              <Ionicons
-                name="grid-outline"
-                size={26}
-                color={colors.text.lightGray}
-              />
-            )}
-            {/* Gradient shade from midpoint down */}
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.68)"]}
-              start={{ x: 0, y: 0.45 }}
-              end={{ x: 0, y: 1 }}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
+          {item.image ? (
+            <Image
+              source={{ uri: ikResize(item.image, BUBBLE_WIDTH * 2) ?? item.image }}
+              style={styles.bubbleImg}
+              contentFit="cover"
+              transition={220}
+              recyclingKey={item._id}
             />
-            <Text style={styles.bubbleName} numberOfLines={1}>
-              {item.name}
-            </Text>
-          </View>
-        </Pressable>
+          ) : (
+            <View style={[styles.bubbleImg, styles.bubbleFallback]}>
+              <Ionicons name="grid-outline" size={iconSize.xl} color={colors.text.subtle} />
+            </View>
+          )}
+
+          <LinearGradient
+            colors={["transparent", "rgba(11,18,32,0.78)"]}
+            start={{ x: 0, y: 0.35 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <AppText variant="micro" numberOfLines={2} style={styles.bubbleName}>
+            {item.name}
+          </AppText>
+        </Touchable>
       )}
     />
   );
 });
 CategoryBubbles.displayName = "CategoryBubbles";
 
-const CategoryBubblesSkeleton = memo(({ isDark }: { isDark: boolean }) => {
-  const colorMode = isDark ? "dark" : "light";
-  return (
-    <View style={[styles.bubblesContent, { flexDirection: "row" }]}>
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <View key={i} style={styles.bubble}>
-          <Skeleton height={88} width={76} radius={14} colorMode={colorMode} />
-        </View>
-      ))}
-    </View>
-  );
-});
+const CategoryBubblesSkeleton = memo(() => (
+  <View style={[styles.bubblesContent, styles.bubblesSkeletonRow]}>
+    {[0, 1, 2, 3, 4, 5].map((i) => (
+      <SkeletonBlock
+        key={i}
+        width={BUBBLE_WIDTH}
+        height={BUBBLE_HEIGHT}
+        rounded={radius.lg}
+      />
+    ))}
+  </View>
+));
 CategoryBubblesSkeleton.displayName = "CategoryBubblesSkeleton";
 
 // ─── Home Screen ──────────────────────────────────────────────────────────────
@@ -354,7 +386,7 @@ function IndexContent() {
     [isProductsLoading, banners, forYou, trending, flashDeals, newArrivals, categories]
   );
 
-  const emptyTopPad = insets.top + 52;
+  const emptyTopPad = insets.top + 60;
 
   // ── Sections (virtualized) ─────────────────────────────────────────────────
   // The home feed is a vertical FlatList of section rows instead of a ScrollView
@@ -363,14 +395,14 @@ function IndexContent() {
   // horizontal product rails inside each section stay as their own FlatLists
   // (supported nested horizontal-in-vertical pattern).
   type SectionKey =
-    | "banner" | "categories" | "divider" | "forYou"
+    | "banner" | "categories" | "forYou"
     | "trending" | "storeHighlights" | "flashDeals"
     | "newArrivals" | "brands";
 
   const sections = useMemo<SectionKey[]>(() => {
     if (isEmpty) return [];
     const list: SectionKey[] = [
-      "banner", "categories", "divider",
+      "banner", "categories",
       "forYou", "trending", "storeHighlights", "flashDeals", "newArrivals",
     ];
     if (brandsYouLove.length > 0 || homeLoading) list.push("brands");
@@ -385,10 +417,8 @@ function IndexContent() {
           return homeLoading ? <BannerSkeleton /> : <BannerCarousel banners={banners} colors={colors} />;
         case "categories":
           return categoriesLoading && categories.length === 0
-            ? <CategoryBubblesSkeleton isDark={isDark} />
+            ? <CategoryBubblesSkeleton />
             : <CategoryBubbles categories={categories} colors={colors} />;
-        case "divider":
-          return <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />;
         case "forYou":
           return (
             <ProductSection
@@ -402,7 +432,8 @@ function IndexContent() {
         case "trending":
           return (
             <ProductSection
-              title={`${i18n.t("home_trendingNow")} 🔥`}
+              title={i18n.t("home_trendingNow")}
+              emoji="🔥"
               products={trending}
               colors={colors}
               isLoading={isProductsLoading}
@@ -414,7 +445,8 @@ function IndexContent() {
         case "flashDeals":
           return (
             <ProductSection
-              title={`${i18n.t("home_flashDeals")} ⚡`}
+              title={i18n.t("home_flashDeals")}
+              emoji="⚡"
               products={flashDeals}
               colors={colors}
               isLoading={isProductsLoading}
@@ -471,7 +503,9 @@ function IndexContent() {
         renderItem={renderSection}
         keyExtractor={keyExtractor}
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 88 }}
+        // Clears the floating tab bar plus a full section gap, so the last rail
+        // never sits under the chrome.
+        contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll as any}
         scrollEventThrottle={16}
@@ -482,6 +516,7 @@ function IndexContent() {
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
+            colors={[colors.primary]}
             progressViewOffset={emptyTopPad}
           />
         }
@@ -512,71 +547,66 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    height: 52,
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingVertical: spacing.sm,
+    height: 60,
   },
-  headerRight: {
+  searchPill: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: spacing.sm,
+    height: 42,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.pill,
+    borderWidth: 1,
   },
-  iconBtn: { position: "relative", padding: 4 },
+  iconBtn: {
+    position: "relative",
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   cartBadge: {
     position: "absolute",
-    top: 1,
-    end: 1,
+    top: 2,
+    end: 0,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
   },
-  cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  cartBadgeText: { color: "#FFFFFF" },
 
-  // Category bubbles
+  // Category rail
   bubblesContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 8,
-    gap: 10,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xs,
   },
-  bubble: {
-    width: 76,
-  },
+  bubblesSkeletonRow: { flexDirection: "row", gap: spacing.md },
   bubbleImgWrap: {
-    width: 76,
-    height: 88,
-    borderRadius: 14,
-    borderWidth: 1,
+    width: BUBBLE_WIDTH,
+    height: BUBBLE_HEIGHT,
+    borderRadius: radius.lg,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
-  bubbleImg: {
-    width: "100%",
-    height: "100%",
-  },
+  bubbleImg: { width: "100%", height: "100%" },
+  bubbleFallback: { alignItems: "center", justifyContent: "center" },
   bubbleName: {
     position: "absolute",
-    bottom: 7,
-    left: 5,
-    right: 5,
-    fontSize: 11,
-    fontWeight: "700",
+    bottom: spacing.sm,
+    start: spacing.xs,
+    end: spacing.xs,
     textAlign: "center",
     color: "#FFFFFF",
-  },
-
-  // Misc
-  divider: {
-    height: 1,
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 4,
-    opacity: 0.4,
   },
 });
 

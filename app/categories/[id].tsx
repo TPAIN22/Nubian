@@ -22,6 +22,7 @@ import ProductCard from "@/components/ProductCard";
 import i18n from "@/utils/i18n";
 import useItemStore from "@/store/useItemStore";
 import { navigateToProduct } from "@/utils/deepLinks";
+import { radius, SCREEN_PADDING, spacing, typography } from "@/theme/tokens";
 
 const ROW_HEIGHT = 300;
 
@@ -92,7 +93,7 @@ export default function CategoryScreen() {
   const categoryImage = selectedCategory?.image;
 
   return (
-    <View style={[styles.container, { backgroundColor: Colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: Colors.background }]}>
       {/* Header */}
       <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
         <View style={styles.headerBackground}>
@@ -209,10 +210,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButtonInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(11,18,32,0.45)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -221,26 +222,25 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     color: "#FFF",
-    fontSize: 26,
-    fontWeight: "bold",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    ...typography.hero,
+    textShadowColor: "rgba(0, 0, 0, 0.45)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
   categoryDescription: {
     color: "#FFF",
-    fontSize: 14,
-    marginTop: 4,
+    ...typography.bodySmall,
+    marginTop: spacing.xs,
     opacity: 0.9,
   },
   listContent: {
-    padding: 12,
-    paddingBottom: 40,
+    padding: SCREEN_PADDING,
+    paddingBottom: spacing.huge,
   },
   columnWrapper: {
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   centerContainer: {
     flex: 1,
@@ -249,40 +249,39 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 16,
+    ...typography.subtitle,
+    marginTop: spacing.base,
   },
   errorSubtitle: {
-    fontSize: 14,
+    ...typography.bodySmall,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   retryButton: {
-    marginTop: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: radius.button,
   },
   retryText: {
     color: "#FFF",
-    fontWeight: "600",
+    ...typography.bodySmallStrong,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 16,
+    ...typography.subtitle,
+    marginTop: spacing.base,
   },
   emptySubtitle: {
-    fontSize: 14,
+    ...typography.bodySmall,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   footerContainer: {
-    paddingVertical: 20,
+    paddingVertical: spacing.lg,
     alignItems: "center",
   },
   footerText: {
-    fontSize: 13,
+    ...typography.caption,
   },
 });

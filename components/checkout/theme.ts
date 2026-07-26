@@ -60,36 +60,41 @@ export function useCheckoutTheme(): CheckoutPalette {
 
   return useMemo<CheckoutPalette>(
     () => ({
+      // Now mapped onto the semantic surface ladder: `surface` is the grey page
+      // canvas and `card` is white, which is what gives checkout the same
+      // card-on-canvas depth as the rest of the app.
       surface: c.background,
-      surfaceMuted: c.surface,
+      surfaceMuted: c.surfaceMuted,
       card: c.cardBackground,
-      cardElevated: isDark ? c.surface : c.background,
-      border: isDark ? c.border : c.borderLight,
-      borderStrong: isDark ? c.borderMedium : c.borderMedium,
-      divider: isDark ? c.border : c.borderLight,
+      cardElevated: c.surfaceRaised,
+      border: c.border,
+      borderStrong: c.borderStrong,
+      divider: c.divider,
 
-      textPrimary: isDark ? c.text.gray : c.text.darkGray,
-      textSecondary: isDark ? c.text.mediumGray : c.text.mediumGray,
-      textTertiary: isDark ? c.text.lightGray : c.text.veryLightGray,
-      textInverse: c.text.white,
+      textPrimary: c.text.title,
+      textSecondary: c.text.body,
+      textTertiary: c.text.muted,
+      textInverse: c.text.inverse,
 
       accent: c.primary,
-      accentSoft: withAlpha(c.primary, 0.1),
-      accentText: c.primary,
+      accentSoft: c.primarySoft,
+      accentText: c.primaryStrong,
 
-      // Match the profile screen's primary button: brand-gold fill with
-      // near-black text (great contrast on gold in both themes).
+      // The one primary CTA treatment, shared with the `Button` kit: brand-gold
+      // fill with the theme's on-primary ink (white in light, near-black in
+      // dark). Hardcoding a colour here is what let the checkout CTA drift out
+      // of step with every other button in the app.
       cta: c.primary,
-      ctaText: '#1c1a12',
-      ctaDisabled: isDark ? '#3A4A50' : '#CBD5E1',
-      ctaDisabledText: isDark ? '#C7D0D4' : '#475569',
+      ctaText: c.onPrimary,
+      ctaDisabled: c.buttonDisabled,
+      ctaDisabledText: c.buttonDisabledText,
 
       success: c.success,
-      successSoft: withAlpha(c.success, 0.12),
+      successSoft: c.successSoft,
       warning: c.warning,
-      warningSoft: withAlpha(c.warning, 0.12),
+      warningSoft: c.warningSoft,
       error: c.error,
-      errorSoft: withAlpha(c.error, 0.1),
+      errorSoft: c.errorSoft,
 
       overlay: c.overlayDark,
       isDark,

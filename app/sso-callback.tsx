@@ -6,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTracking } from '@/hooks/useTracking';
+import Colors from '@/locales/brandColors';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -50,7 +51,7 @@ export default function SSOCallback() {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" color="#A37E2C" />
+      <ActivityIndicator size="large" color={Colors.primary} />
       <Text style={{ marginTop: 12, color: '#666' }}>جارٍ تسجيل الدخول...</Text>
     </View>
   );

@@ -32,6 +32,7 @@ import {
 } from "@/components/checkout";
 import { normalizeAttributes } from "@/utils/cartUtils";
 import { formatMoney } from "@/utils/priceUtils";
+import { elevation, radius } from "@/theme/tokens";
 import i18n from "@/utils/i18n";
 import { useTracking } from "@/hooks/useTracking";
 import type { CouponValidationResult } from "@/components/CouponInput";
@@ -298,7 +299,16 @@ export default function CartScreen() {
   // entrance on the incoming one. The *conditions* are unchanged and evaluated
   // in the same order.
   const showSkeleton = isLoading && !cart;
-  const showError = !showSkeleton && !!error && !isCartEmpty;
+  // An error with nothing to show is a *load* failure — offer a retry. This
+  // condition used to be `!isCartEmpty`, i.e. exactly inverted: a failed fetch
+  // (which had also just nulled the cart) fell through to the cheerful "your
+  // cart is empty" illustration with no hint that anything went wrong, while a
+  // failure that still had items replaced the whole list with an error screen.
+  // Now the list survives — mutation failures already surface as toasts from
+  // the handlers above, so there's no need to tear the screen down for them.
+  // `fetchCart` resets `error` as it starts, so a stale mutation error can't
+  // leak into this state on the next focus.
+  const showError = !showSkeleton && !!error && isCartEmpty;
   const showEmpty = !showSkeleton && !showError && isCartEmpty;
 
   return (
@@ -403,7 +413,7 @@ export default function CartScreen() {
             <View
               style={[
                 styles.couponWrap,
-                { backgroundColor: t.card, borderColor: t.border },
+                { backgroundColor: t.card },
               ]}
             >
               <Text
@@ -435,7 +445,7 @@ export default function CartScreen() {
             <View
               style={[
                 styles.summaryWrap,
-                { backgroundColor: t.card, borderColor: t.border },
+                { backgroundColor: t.card },
               ]}
             >
               <Text
@@ -491,7 +501,7 @@ const styles = StyleSheet.create({
     alignItems: "baseline",
     justifyContent: "space-between",
   },
-  title: { ...typography.title },
+  title: { ...typography.pageTitle },
   itemCount: { ...typography.caption },
 
   list: {
@@ -511,21 +521,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   sectionLabel: {
-    ...typography.label,
-    textTransform: "uppercase",
-    marginBottom: spacing.sm,
+    ...typography.captionStrong,
+    marginBottom: spacing.md,
   },
+  // The coupon and summary blocks are cards on the canvas, same radius and
+  // shadow as every other card in the app — they used to be flat hairline
+  // boxes, which read as form fieldsets rather than content.
   couponWrap: {
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.base,
+    borderRadius: radius.card,
+    padding: spacing.base,
+    ...elevation.sm,
   },
   summaryWrap: {
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.base,
+    borderRadius: radius.card,
+    padding: spacing.base,
+    ...elevation.sm,
   },
   helper: { ...typography.caption, marginTop: spacing.xs + 2 },
 });
