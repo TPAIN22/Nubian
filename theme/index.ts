@@ -22,7 +22,34 @@ export const getTheme = (mode: ThemeMode): Theme => {
   return mode === 'dark' ? darkTheme : lightTheme;
 };
 
-// Export colors for convenience
+// Colours
 export { lightColors, darkColors };
 export type { LightColors, DarkColors };
 
+// Design tokens — spacing, radius, typography, elevation, motion, sizing.
+// Re-exported here so a screen only ever needs `@/theme`.
+export {
+  spacing,
+  SCREEN_PADDING,
+  radius,
+  typography,
+  elevation,
+  elevationUp,
+  iconSize,
+  controlHeight,
+  iconButtonSize,
+  animation,
+  pressSpring,
+  pressScale,
+  layout,
+  withAlpha,
+  HIT_SLOP,
+  MIN_TOUCH,
+} from './tokens';
+export type {
+  ColorsLike,
+  Spacing,
+  Radius,
+  TypographyVariant,
+  ElevationLevel,
+} from './tokens';

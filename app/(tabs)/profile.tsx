@@ -21,9 +21,10 @@ import { useRTL } from "@/hooks/useRTL";
 import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
 import { useWishlistCount } from "@/store/wishlistStore";
+import useCartStore from "@/store/useCartStore";
 import useAddressStore from "@/store/addressStore";
 import useOrderStore from "@/store/orderStore";
-import { spacing, typography } from "@/theme/tokens";
+import { radius, spacing, typography } from "@/theme/tokens";
 import {
   ProfileHeader,
   ProfileStats,
@@ -195,7 +196,14 @@ export default function Profile() {
         key: "logout",
         title: i18n.t("logout"),
         icon: "log-out-outline",
-        onPress: () => signOut(),
+        onPress: () => {
+          // The cart is persisted and belongs to the account that was signed
+          // in, so drop it here. Previously it was cleared only as a side
+          // effect of the next `GET /carts` 401 — which is no longer treated
+          // as "the cart is empty" (see useCartStore.fetchCart).
+          useCartStore.getState().clearCart();
+          signOut();
+        },
       },
     ],
     [signOut]
@@ -208,7 +216,7 @@ export default function Profile() {
           styles.loadingContainer,
           {
             direction: I18nManager.isRTL ? "rtl" : "ltr",
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.background,
           },
         ]}
       >
@@ -218,7 +226,7 @@ export default function Profile() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -227,7 +235,7 @@ export default function Profile() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.screenTitle, { color: theme.colors.text.gray, textAlign }]}>
+        <Text style={[styles.screenTitle, { color: theme.colors.text.title, textAlign }]}>
           {i18n.t("profile")}
         </Text>
 
@@ -369,7 +377,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg },
 
   screenTitle: {
-    ...typography.hero,
+    ...typography.pageTitle,
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.xs,
   },
@@ -377,7 +385,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.xl },
 
   // Language bottom sheet
-  sheetBackground: { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  sheetBackground: { borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet },
   sheetIndicator: { width: 40, borderRadius: 10 },
   languageSheet: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   sheetTitle: {

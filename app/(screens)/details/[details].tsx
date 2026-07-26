@@ -26,7 +26,16 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text } from '@/components/ui/text';
+import {
+  AppText,
+  Badge,
+  EmptyState,
+  Price,
+  Rating,
+  Screen,
+  Touchable,
+} from '@/components/ui/kit';
+import { iconSize, spacing } from '@/theme/tokens';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useProductFetch } from '@/hooks/useProductFetch';
 import { useIsInWishlist, useWishlistActions } from '@/store/wishlistStore';
@@ -85,22 +94,27 @@ const CollapsibleDescription = memo(({ text, colors }: CollapsibleDescriptionPro
 
   return (
     <View style={[descStyles.container, { backgroundColor: colors.cardBackground }]}>
-      <TouchableOpacity
+      <Touchable
         onPress={toggle}
+        scaleTo={1}
         style={descStyles.header}
-        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={i18n.t('description') || 'Details'}
       >
-        <Text style={[descStyles.title, { color: colors.text.gray }]}>
+        <AppText variant="subtitle" tone="title">
           {i18n.t('description') || 'Details'}
-        </Text>
+        </AppText>
         <Animated.View style={chevronStyle}>
-          <Ionicons name="chevron-down" size={18} color={colors.text.mediumGray} />
+          <Ionicons name="chevron-down" size={iconSize.md} color={colors.text.muted} />
         </Animated.View>
-      </TouchableOpacity>
+      </Touchable>
 
       {expanded && (
         <Animated.View entering={FadeIn.duration(200)}>
-          <Text style={[descStyles.body, { color: colors.text.mediumGray }]}>{text}</Text>
+          <AppText variant="body" tone="body" style={descStyles.body}>
+            {text}
+          </AppText>
         </Animated.View>
       )}
     </View>
@@ -110,24 +124,18 @@ CollapsibleDescription.displayName = 'CollapsibleDescription';
 
 const descStyles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
+    // Keeps the whole header row a 44pt target even though the chevron is 20pt.
+    minHeight: 44,
   },
   body: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginTop: 14,
+    marginTop: spacing.md,
   },
 });
 
@@ -449,6 +457,11 @@ export default function Details() {
     return Number(viewProduct.simple?.stock ?? 0) > 0;
   }, [viewProduct, missingRequiredAttributes.length, matchingVariant, productAttributes.length]);
 
+  // Rating is optional on the payload — rendered only when the backend sends
+  // one, never as an empty five-star placeholder.
+  const productRating: number =
+    (viewProduct as any)?.averageRating ?? (viewProduct as any)?.rating ?? 0;
+
   const inWishlist = useIsInWishlist(viewProduct?.id);
 
   const handleWishlistPress = useCallback(async () => {
@@ -526,54 +539,33 @@ export default function Details() {
         case 'INFO':
           return viewProduct ? (
             <View style={[styles.infoSection, { backgroundColor: colors.cardBackground }]}>
-              {/* Category */}
-              {!!viewProduct.categoryName && (
-                <Text
-                  style={[
-                    styles.categoryText,
-                    { color: colors.primary, textAlign: I18nManager.isRTL ? 'right' : 'left' },
-                  ]}
-                >
-                  {viewProduct.categoryName}
-                </Text>
+              {/* Category + rating share a row so the metadata reads as one
+                  quiet band above the name rather than two stacked lines. */}
+              {(!!viewProduct.categoryName || productRating > 0) && (
+                <View style={styles.metaRow}>
+                  {!!viewProduct.categoryName && (
+                    <Badge label={viewProduct.categoryName} tone="primary" size="sm" />
+                  )}
+                  {productRating > 0 && <Rating value={productRating} size="sm" />}
+                </View>
               )}
 
-              {/* Name */}
-              <Text
-                style={[
-                  styles.productName,
-                  { color: colors.text.gray, textAlign: I18nManager.isRTL ? 'right' : 'left' },
-                ]}
-              >
+              {/* Name — the second thing read, after the photo. */}
+              <AppText variant="pageTitle" tone="title" style={styles.productName}>
                 {viewProduct.name}
-              </Text>
+              </AppText>
 
-              {/* Price row */}
+              {/* Price block. The saving is spelled out next to the discount
+                  badge — "-30%" alone makes the shopper do the arithmetic. */}
               <View style={styles.priceRow}>
-                {pricing?.requiresSelection && !isLoading && (
-                  <Text style={[styles.fromText, { color: colors.text.veryLightGray }]}>
-                    {i18n.t('from') || 'From'}{'  '}
-                  </Text>
-                )}
-                <Text
-                  style={[
-                    styles.finalPrice,
-                    { color: productHasDiscount ? colors.danger : colors.text.gray },
-                  ]}
-                >
-                  {formattedFinalPrice}
-                </Text>
-                {productHasDiscount && (
-                  <>
-                    <Text style={[styles.originalPrice, { color: colors.text.veryLightGray }]}>
-                      {formattedOriginalPrice}
-                    </Text>
-                    {discountPct > 0 && (
-                      <View style={[styles.discountBadge, { backgroundColor: colors.danger }]}>
-                        <Text style={styles.discountText}>-{discountPct}%</Text>
-                      </View>
-                    )}
-                  </>
+                <Price
+                  value={formattedFinalPrice}
+                  original={productHasDiscount ? formattedOriginalPrice : null}
+                  isFrom={Boolean(pricing?.requiresSelection) && !isLoading}
+                  size="lg"
+                />
+                {productHasDiscount && discountPct > 0 && (
+                  <Badge label={`-${discountPct}%`} tone="sale" variant="solid" />
                 )}
               </View>
 
@@ -584,18 +576,19 @@ export default function Details() {
 
               {/* Missing attr warning */}
               {cartAttempted && missingRequiredAttributes.length > 0 && (
-                <Animated.View entering={FadeIn.duration(180)}>
-                  <Text style={[styles.missingText, { color: colors.danger }]}>
+                <Animated.View entering={FadeIn.duration(180)} style={styles.missingRow}>
+                  <Ionicons name="alert-circle" size={iconSize.sm} color={colors.error} />
+                  <AppText variant="caption" tone="error" style={styles.missingText}>
                     {`${i18n.t('pleaseSelect') || 'Please select'}: ${missingRequiredAttributes.join(', ')}`}
-                  </Text>
+                  </AppText>
                 </Animated.View>
               )}
 
               {/* SKU */}
               {displayVariant?.sku && (
-                <Text style={[styles.skuText, { color: colors.text.veryLightGray }]}>
+                <AppText variant="micro" tone="subtle" style={styles.skuText}>
                   SKU: {displayVariant.sku}
-                </Text>
+                </AppText>
               )}
             </View>
           ) : null;
@@ -653,6 +646,7 @@ export default function Details() {
       colors,
       openImageModal,
       viewProduct,
+      productRating,
       productHasDiscount,
       pricing,
       formattedFinalPrice,
@@ -681,53 +675,40 @@ export default function Details() {
 
   if (error && !viewProduct) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.cardBackground }]}>
-        <Ionicons name="alert-circle-outline" size={56} color={colors.danger} />
-        <Text style={[styles.errorTitle, { color: colors.text.gray }]}>
-          {i18n.t('errorLoadingProduct') || 'Could not load product'}
-        </Text>
-        <Text style={[styles.errorSub, { color: colors.text.veryLightGray }]}>
-          {String(error)}
-        </Text>
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.replace('/(tabs)')}
-          accessibilityRole="button"
-          accessibilityLabel={i18n.t('backToHome') || 'Back to Home'}
-        >
-          <Text style={[styles.backBtnText, { color: colors.text.white }]}>
-            {i18n.t('backToHome') || 'Back to Home'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <Screen style={styles.centered}>
+        <EmptyState
+          tone="error"
+          icon="alert-circle-outline"
+          title={i18n.t('errorLoadingProduct') || 'Could not load product'}
+          description={String(error)}
+          actionLabel={i18n.t('backToHome') || 'Back to Home'}
+          onAction={() => router.replace('/(tabs)')}
+        />
+      </Screen>
     );
   }
 
   if (!viewProduct?.id && !isLoading) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.cardBackground }]}>
-        <Ionicons name="search-outline" size={56} color={colors.text.veryLightGray} />
-        <Text style={[styles.errorTitle, { color: colors.text.gray }]}>
-          {i18n.t('noProductAvailable') || 'Product not found'}
-        </Text>
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.replace('/(tabs)')}
-          accessibilityRole="button"
-          accessibilityLabel={i18n.t('backToHome') || 'Back to Home'}
-        >
-          <Text style={[styles.backBtnText, { color: colors.text.white }]}>
-            {i18n.t('backToHome') || 'Back to Home'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <Screen style={styles.centered}>
+        <EmptyState
+          icon="search-outline"
+          title={i18n.t('noProductAvailable') || 'Product not found'}
+          actionLabel={i18n.t('backToHome') || 'Back to Home'}
+          onAction={() => router.replace('/(tabs)')}
+        />
+      </Screen>
     );
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+    // The canvas, not white: the 8pt `sectionDivider` bands between the info,
+    // attributes, description, recommendation and review cards now show as grey
+    // gaps. On the old white background those dividers were invisible, which is
+    // why the page read as one undifferentiated column.
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={[{ flex: 1 }, contentFadeStyle]}>
         <FlatList
           data={SECTIONS}
@@ -762,6 +743,8 @@ export default function Details() {
         imageUri={productImages[0] ?? null}
         stockLevel={stockLevel}
         stock={currentStock}
+        priceLabel={formattedFinalPrice}
+        originalPriceLabel={productHasDiscount ? formattedOriginalPrice : null}
       />
 
       {/* Fullscreen zoom modal */}
@@ -789,105 +772,52 @@ export default function Details() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingBottom: 110 },
+  // Clears the sticky purchase bar plus a section gap, so the last review is
+  // never trapped behind the CTA.
+  listContent: { paddingBottom: 140 },
 
   // Info section
   infoSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: spacing.md,
   },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    marginBottom: 10,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   productName: {
-    fontSize: 24,
-    fontWeight: '700',
-    lineHeight: 30,
-    marginBottom: 16,
-    letterSpacing: -0.3,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 14,
+    gap: spacing.md,
   },
-  fromText: {
-    fontSize: 14,
-    fontWeight: '500',
+  stockRow: { flexDirection: 'row' },
+  missingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
-  finalPrice: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 32,
-  },
-  originalPrice: {
-    fontSize: 16,
-    fontWeight: '500',
-    textDecorationLine: 'line-through',
-   lineHeight: 20,
-  },
-  discountBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  discountText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  stockRow: { marginBottom: 8, flexDirection: 'row' },
   missingText: {
-    marginTop: 10,
-    fontSize: 12,
-    fontWeight: '600',
+    flex: 1,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   skuText: {
-    fontSize: 12,
-    marginTop: 6,
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
 
-  // Section divider
-  sectionDivider: { height: 8 },
+  // Canvas-coloured band between white content cards.
+  sectionDivider: { height: spacing.sm },
 
   // Error / empty states
   centered: {
-    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  errorSub: {
-    fontSize: 13,
-    marginTop: 6,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  backBtn: {
-    borderRadius: 30,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    marginTop: 8,
-  },
-  backBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
   },
 
   // Modal
@@ -900,13 +830,13 @@ const styles = StyleSheet.create({
   modalClose: {
     position: 'absolute',
     top: 56,
-    right: 20,
+    end: spacing.lg,
     zIndex: 2,
     width: 44,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: 22,
   },
 });

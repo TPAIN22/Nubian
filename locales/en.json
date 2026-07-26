@@ -278,6 +278,7 @@
   "address_locationServicesOff": "Location services are off — pan the map to your address.",
   "address_locationUnavailable": "Couldn't get a GPS fix — pan the map to your address.",
   "address_mapOffline": "Map tiles are unavailable. Your pin still saves from its coordinates.",
+  "address_lookupUnavailable": "Address lookup is unavailable — your pin still saves. Tap to retry.",
   "remainingStock": "remaining",
   "trending": "Trending",
   "flashDeals": "Flash Deals",

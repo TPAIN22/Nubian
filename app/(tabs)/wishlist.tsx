@@ -1,15 +1,21 @@
 import { useEffect, useCallback, useMemo } from 'react';
-import { View, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
-import { Text } from '@/components/ui/text';
+import { FlatList, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWishlistItems, useWishlistLoading, useWishlistActions } from '@/store/wishlistStore';
 import { useAuth } from '@clerk/clerk-expo';
 import ProductCard from "@/components/Card";
 import i18n from '@/utils/i18n';
-import { useTheme } from '@/providers/ThemeProvider';
 import { normalizeProduct, type NormalizedProduct } from "@/domain/product/product.normalize";
+import { EmptyState, Screen, SkeletonProductCard } from '@/components/ui/kit';
+import { SCREEN_PADDING, spacing } from '@/theme/tokens';
+
+/** Two-column grid: matches the catalogue grid on every other screen. */
+const COLUMNS = 2;
 
 export default function WishlistTab() {
-  const { theme } = useTheme();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   // Use optimized selectors
   const wishlist = useWishlistItems();
   const isLoading = useWishlistLoading();
@@ -34,66 +40,77 @@ export default function WishlistTab() {
   // PERFORMANCE: Stable keyExtractor
   const keyExtractor = useCallback((item: NormalizedProduct) => item.id, []);
 
-  if (isLoading) return (
-    <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface }]}>
-      <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
-    </View>
-  );
-  if (!normalizedWishlist.length) return (
-    <View style={[styles.emptyContainer, { backgroundColor: theme.colors.surface }]}>
-      <Text style={[styles.emptyTitle, { color: theme.colors.text.gray }]}>{i18n.t('wishlistEmpty')}</Text>
-      <Text style={[styles.emptySubtitle, { color: theme.colors.text.veryLightGray }]}>{i18n.t('wishlistEmptySubtitle')}</Text>
-    </View>
+  const listContentStyle = useMemo(
+    () => [styles.list, { paddingBottom: insets.bottom + spacing.huge }],
+    [insets.bottom],
   );
 
+  // A skeleton grid rather than a centred spinner: the customer sees the shape
+  // of what's coming, and the screen doesn't jump from empty → full.
+  if (isLoading) {
+    return (
+      <Screen>
+        <View style={styles.skeletonGrid}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <View key={i} style={styles.skeletonCell}>
+              <SkeletonProductCard />
+            </View>
+          ))}
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!normalizedWishlist.length) {
+    return (
+      <Screen>
+        <EmptyState
+          fullHeight
+          icon="heart-outline"
+          title={i18n.t('wishlistEmpty')}
+          description={i18n.t('wishlistEmptySubtitle')}
+          actionLabel={i18n.t('startShopping') || i18n.t('home')}
+          onAction={() => router.push('/(tabs)' as any)}
+        />
+      </Screen>
+    );
+  }
+
   return (
-    <View style={[{ flex: 1, marginBottom: 40, backgroundColor: theme.colors.surface }]}>
+    <Screen>
       <FlatList
         data={normalizedWishlist}
         keyExtractor={keyExtractor}
-        numColumns={2}
+        numColumns={COLUMNS}
         renderItem={renderItem}
-        contentContainerStyle={[styles.list, { backgroundColor: theme.colors.surface }]}
-        columnWrapperStyle={styles.colomn}
-        style={{ backgroundColor: theme.colors.surface }}
+        contentContainerStyle={listContentStyle}
+        columnWrapperStyle={styles.column}
         // PERFORMANCE: FlatList optimizations
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         windowSize={6}
         initialNumToRender={6}
+        showsVerticalScrollIndicator={false}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    //marginTop: 40,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 5,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 40,
-    fontSize: 18,
-    color: '#888',
-  },
   list: {
-    padding: 16,
-    marginBottom: 30
+    padding: SCREEN_PADDING,
+    // The row gap; `column` carries the gutter between the two cards.
+    gap: spacing.md,
   },
-  colomn: {
-    margin: 5,
-    gap: 10
-  }
-}); 
+  column: {
+    gap: spacing.md,
+  },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: SCREEN_PADDING,
+    gap: spacing.md,
+  },
+  // Fixed 48% so the two placeholder columns line up with the real grid.
+  skeletonCell: { width: '48%' },
+});

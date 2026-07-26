@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import { memo } from 'react';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useRTL } from '@/hooks/useRTL';
+import { elevation, iconSize, SCREEN_PADDING, spacing } from '@/theme/tokens';
 import i18n from '@/utils/i18n';
 
 interface ProductHeaderProps {
@@ -71,7 +72,7 @@ export const ProductHeader = memo(
           cardBg={colors.cardBackground + 'E0'}
           accessibilityLabel={i18n.t('back') || 'Back'}
         >
-          <Ionicons name={rtl.chevronBack} size={20} color={colors.text.gray} />
+          <Ionicons name={rtl.chevronBack} size={iconSize.md} color={colors.text.title} />
         </OverlayButton>
 
         <OverlayButton
@@ -85,12 +86,14 @@ export const ProductHeader = memo(
           }
         >
           {wishlistLoading ? (
-            <ActivityIndicator size="small" color={colors.text.gray} />
+            <ActivityIndicator size="small" color={colors.text.title} />
           ) : (
             <Ionicons
               name={inWishlist ? 'heart' : 'heart-outline'}
-              size={20}
-              color={inWishlist ? colors.danger : colors.text.gray}
+              size={iconSize.md}
+              // `sale` rather than `danger`: saving something is a positive
+              // action, and the error red made a favourite look like a warning.
+              color={inWishlist ? colors.sale : colors.text.title}
             />
           )}
         </OverlayButton>
@@ -109,22 +112,17 @@ const styles = StyleSheet.create({
     zIndex: 100,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingBottom: spacing.sm,
   },
   buttonOuter: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    // 42pt visual + 8pt hitSlop clears the 44pt target comfortably while
+    // staying small enough not to cover the product photo.
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-      },
-    }),
+    ...elevation.md,
   },
   buttonInner: {
     flex: 1,

@@ -1,13 +1,17 @@
 import { memo, useEffect, useState, useCallback } from "react";
-import { View, FlatList, Pressable, StyleSheet, InteractionManager } from "react-native";
-import { Text } from "@/components/ui/text";
+import { View, FlatList, StyleSheet, InteractionManager } from "react-native";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { Skeleton } from "moti/skeleton";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import axiosInstance from "@/services/api/client";
 import { navigateToStore } from "@/utils/deepLinks";
 import { useTracking } from "@/hooks/useTracking";
+import {
+  AppText,
+  SectionHeader,
+  SkeletonBlock,
+  Touchable,
+} from "@/components/ui/kit";
+import { elevation, iconSize, pressScale, radius, SCREEN_PADDING, spacing } from "@/theme/tokens";
 import i18n from "@/utils/i18n";
 
 interface Merchant {
@@ -18,10 +22,26 @@ interface Merchant {
 
 interface Props {
   colors: any;
-  isDark: boolean;
+  isDark?: boolean;
 }
 
-export const StoreHighlights = memo(({ colors, isDark }: Props) => {
+/** Circular logo diameter. Also drives the CDN resize and the skeleton. */
+const AVATAR = 68;
+const TILE_WIDTH = 84;
+
+/**
+ * "Top stores" rail.
+ *
+ * Redesigned from a copy of the category tile (a photo behind a dark gradient
+ * with the name burnt into it) into a proper store identity: a round white
+ * avatar with the merchant logo, name underneath on the canvas.
+ *
+ * Two reasons that matters — merchant logos are usually square marks on a light
+ * background, so darkening them for a text overlay destroyed them; and a round
+ * avatar is the universal signifier for "a seller", which distinguishes this
+ * rail from the category rail directly above it.
+ */
+export const StoreHighlights = memo(({ colors }: Props) => {
   const { trackEvent } = useTracking();
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,31 +84,21 @@ export const StoreHighlights = memo(({ colors, isDark }: Props) => {
     [trackEvent]
   );
 
-  if (!isLoading && merchants.length === 0) return null;
+  const renderSeparator = useCallback(() => <View style={{ width: spacing.md }} />, []);
 
-  const cm = isDark ? "dark" : "light";
+  if (!isLoading && merchants.length === 0) return null;
 
   return (
     <View style={styles.section}>
-      {/* Section header — same accent-bar pattern as ProductSection */}
-      <View style={styles.header}>
-        <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
-        <Text style={[styles.title, { color: colors.text.gray }]}>
-          {i18n.t("home_topStores")}
-        </Text>
-      </View>
+      <SectionHeader title={i18n.t("home_topStores")} />
 
       {isLoading ? (
-        /* Skeleton row — same bubble dimensions */
-        <View style={styles.bubblesContent}>
+        <View style={styles.skeletonRow}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton
-              key={i}
-              height={88}
-              width={76}
-              radius={14}
-              colorMode={cm}
-            />
+            <View key={i} style={styles.tile}>
+              <SkeletonBlock width={AVATAR} height={AVATAR} rounded={AVATAR / 2} />
+              <SkeletonBlock width={56} height={11} rounded={radius.xs} />
+            </View>
           ))}
         </View>
       ) : (
@@ -97,50 +107,42 @@ export const StoreHighlights = memo(({ colors, isDark }: Props) => {
           data={merchants}
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.bubblesContent}
+          contentContainerStyle={styles.railContent}
+          ItemSeparatorComponent={renderSeparator}
           renderItem={({ item }) => (
-            <Pressable
+            <Touchable
               onPress={() => handlePress(item)}
+              scaleTo={pressScale.card}
               accessibilityRole="button"
               accessibilityLabel={item.name}
-              style={styles.bubble}
+              style={styles.tile}
             >
               <View
                 style={[
-                  styles.bubbleImgWrap,
-                  { borderColor: colors.border, backgroundColor: colors.surface },
+                  styles.avatar,
+                  { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                  elevation.xs,
                 ]}
               >
                 {item.logo ? (
                   <Image
                     source={{ uri: item.logo }}
-                    style={styles.bubbleImg}
-                    contentFit="cover"
-                    transition={200}
+                    style={styles.avatarImg}
+                    // `contain` not `cover`: merchant marks are logos, and
+                    // cropping one to fill a circle cuts the brand in half.
+                    contentFit="contain"
+                    transition={220}
                     recyclingKey={item._id}
                   />
                 ) : (
-                  <Ionicons
-                    name="storefront"
-                    size={26}
-                    color={colors.text.lightGray}
-                  />
+                  <Ionicons name="storefront" size={iconSize.xl} color={colors.text.subtle} />
                 )}
-
-                {/* Same gradient as CategoryBubbles */}
-                <LinearGradient
-                  colors={["transparent", "rgba(0,0,0,0.68)"]}
-                  start={{ x: 0, y: 0.45 }}
-                  end={{ x: 0, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-
-                <Text style={styles.bubbleName} numberOfLines={1}>
-                  {item.name}
-                </Text>
               </View>
-            </Pressable>
+
+              <AppText variant="micro" tone="body" numberOfLines={2} align="center">
+                {item.name}
+              </AppText>
+            </Touchable>
           )}
         />
       )}
@@ -150,45 +152,22 @@ export const StoreHighlights = memo(({ colors, isDark }: Props) => {
 StoreHighlights.displayName = "StoreHighlights";
 
 const styles = StyleSheet.create({
-  section: { marginTop: 4 },
-
-  header: {
+  section: { marginTop: spacing.xxl },
+  railContent: { paddingHorizontal: SCREEN_PADDING, paddingVertical: spacing.xs },
+  skeletonRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginBottom: 4,
-    gap: 10,
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_PADDING,
   },
-  accentBar: { width: 4, height: 20, borderRadius: 2 },
-  title: { fontSize: 14, fontWeight: "bold" },
-
-  /* ── Exact match to CategoryBubbles ── */
-  bubblesContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 8,
-    gap: 10,
-    flexDirection: "row",
-  },
-  bubble: { width: 76 },
-  bubbleImgWrap: {
-    width: 76,
-    height: 88,
-    borderRadius: 14,
+  tile: { width: TILE_WIDTH, alignItems: "center", gap: spacing.sm },
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
     borderWidth: 1,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
-  bubbleImg: { width: "100%", height: "100%" },
-  bubbleName: {
-    position: "absolute",
-    bottom: 7,
-    left: 5,
-    right: 5,
-    fontSize: 10,
-    fontWeight: "700",
-    textAlign: "center",
-    color: "#FFFFFF",
-  },
+  avatarImg: { width: "78%", height: "78%" },
 });

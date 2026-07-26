@@ -33,6 +33,8 @@ import { FlashList } from "@shopify/flash-list";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import { markTapStart, markNavigationCall } from "@/utils/performance";
 import { Image } from "expo-image";
+import { EmptyState } from "@/components/ui/kit";
+import { radius, SCREEN_PADDING, spacing, typography } from "@/theme/tokens";
 
 const RECENT_KEY = "nubian_recent_searches";
 const MAX_RECENT = 6;
@@ -328,9 +330,11 @@ const ExploreScreen = () => {
       <View
         style={{
           flex: 1,
-          paddingRight: index % 2 === 0 ? 4 : 0,
-          paddingLeft: index % 2 === 1 ? 4 : 0,
-          marginBottom: 8,
+          // Half the grid gap on the inner edge of each column, so the outer
+          // edges line up with the screen gutter.
+          paddingEnd: index % 2 === 0 ? spacing.sm : 0,
+          paddingStart: index % 2 === 1 ? spacing.sm : 0,
+          marginBottom: spacing.base,
         }}
       >
         <ProductCard
@@ -364,55 +368,37 @@ const ExploreScreen = () => {
 
     if (exploreError) {
       return (
-        <View style={styles.emptyWrap}>
-          <View style={[styles.emptyIcon, { backgroundColor: (colors.danger || colors.primary) + "18" }]}>
-            <Ionicons name="alert-circle-outline" size={44} color={colors.danger || colors.primary} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text.gray }]}>
-            {String(i18n.t("error") || "Something went wrong")}
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
-            {exploreError}
-          </Text>
-          <Pressable
-            style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-            onPress={onRefresh}
-            accessibilityRole="button"
-            accessibilityLabel={String(i18n.t("retry") || "Retry")}
-          >
-            <Ionicons name="refresh" size={16} color="#fff" />
-            <Text style={styles.retryText}>{String(i18n.t("retry") || "Retry")}</Text>
-          </Pressable>
-        </View>
+        <EmptyState
+          tone="error"
+          icon="alert-circle-outline"
+          title={String(i18n.t("error") || "Something went wrong")}
+          description={exploreError}
+          actionLabel={String(i18n.t("retry") || "Retry")}
+          onAction={onRefresh}
+        />
       );
     }
 
     return (
-      <View style={styles.emptyWrap}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "12" }]}>
-          <Ionicons
-            name={activeSearch ? "search-outline" : "bag-outline"}
-            size={44}
-            color={colors.primary}
-          />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text.gray }]}>
-          {activeSearch
+      <EmptyState
+        icon={activeSearch ? "search-outline" : "bag-outline"}
+        title={
+          activeSearch
             ? String(i18n.t("noResults") || "No Results")
-            : String(i18n.t("noProducts") || "No Products")}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
-          {activeSearch
+            : String(i18n.t("noProducts") || "No Products")
+        }
+        description={
+          activeSearch
             ? String(i18n.t("tryNewSearch") || "Try a different search")
-            : String(i18n.t("noProductsFound") || "Check back later")}
-        </Text>
-      </View>
+            : String(i18n.t("noProductsFound") || "Check back later")
+        }
+      />
     );
-  }, [isLoading, exploreError, activeSearch, onRefresh, colors, SkeletonGrid]);
+  }, [isLoading, exploreError, activeSearch, onRefresh, SkeletonGrid]);
 
   // ─────────────────────────────────────────────
   return (
-    <View style={[styles.root, { backgroundColor: colors.surface }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
 
       {/* ── Product Grid ── */}
       {/* FlashList v2: cell recycling eliminates the blank-cell flashes a plain
@@ -425,8 +411,8 @@ const ExploreScreen = () => {
         keyExtractor={keyExtractor}
         numColumns={2}
         contentContainerStyle={{
-          paddingHorizontal: 12,
-          paddingTop: HEADER_HEIGHT + 12,
+          paddingHorizontal: SCREEN_PADDING,
+          paddingTop: HEADER_HEIGHT + spacing.base,
           paddingBottom: insets.bottom + 100,
         }}
         onEndReached={handleLoadMore}
@@ -990,46 +976,17 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
 
   // List
-  listContent: { paddingHorizontal: 12 },
+  listContent: { paddingHorizontal: SCREEN_PADDING },
   emptyList: { flex: 1 },
-  row: { justifyContent: "space-between", gap: 8, marginBottom: 8 },
+  row: { justifyContent: "space-between", gap: spacing.md, marginBottom: spacing.base },
 
   // Skeleton
-  skeletonGrid: { flexDirection: "row", flexWrap: "wrap" },
+  skeletonGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
 
   // Footer
-  footer: { alignItems: "center", paddingVertical: 24, gap: 8 },
+  footer: { alignItems: "center", paddingVertical: spacing.xl, gap: spacing.sm },
   footerLine: { width: 34, height: 3, borderRadius: 2 },
-  footerText: { fontSize: 13, fontWeight: "500" },
-
-  // Empty state
-  emptyWrap: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  emptyTitle: { fontSize: 19, fontWeight: "700", marginBottom: 8, textAlign: "center" },
-  emptySubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },
-  retryBtn: {
-    marginTop: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 13,
-    borderRadius: 14,
-    gap: 8,
-  },
-  retryText: { fontSize: 15, fontWeight: "600", color: "#fff" },
+  footerText: { ...typography.caption },
 
   // Header
   header: {
@@ -1048,10 +1005,8 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   pageTitle: {
-    fontSize: 26,
-    fontWeight: "700",
-    letterSpacing: -0.5,
-    marginBottom: 8,
+    ...typography.pageTitle,
+    marginBottom: spacing.md,
   },
   searchRow: {
     flexDirection: "row",
@@ -1061,16 +1016,18 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 14,
+    borderRadius: radius.input,
     borderWidth: 1.5,
-    paddingHorizontal: 12,
-    height: 44,
+    paddingHorizontal: spacing.md,
+    // 48 rather than 44: a search field is the primary control on this screen
+    // and reads as an input, not a button.
+    height: 48,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 2,
   },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  searchInput: { flex: 1, ...typography.body, paddingVertical: 0 },
   clearCircle: {
     width: 20,
     height: 20,
@@ -1089,31 +1046,34 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 90,
   },
-  sugSection: { paddingHorizontal: 20, paddingTop: 24 },
+  sugSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   sugHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   sugHeaderRow: { flexDirection: "row", alignItems: "center" },
-  sugLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
-  sugClear: { fontSize: 14, fontWeight: "500" },
+  sugLabel: { ...typography.label },
+  sugClear: { ...typography.bodySmallStrong },
   sugItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 13,
+    // 48pt rows: a suggestion list is scanned and tapped quickly, and 13pt of
+    // padding on a 16pt line left the target under the 44pt minimum.
+    minHeight: 48,
+    paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  sugItemText: { flex: 1, fontSize: 16 },
-  trendRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, paddingTop: 4 },
+  sugItemText: { flex: 1, ...typography.body },
+  trendRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, paddingTop: spacing.xs },
   trendChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 20,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
-  trendChipText: { fontSize: 14, fontWeight: "500" },
+  trendChipText: { ...typography.bodySmallStrong },
 
   // Floating filter bar
   fab: { position: "absolute", left: 0, right: 0, alignItems: "center", zIndex: 80 },

@@ -3,7 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useRTL } from "@/hooks/useRTL";
-import { spacing, typography, MIN_TOUCH } from "@/theme/tokens";
+import { radius, spacing, typography, MIN_TOUCH } from "@/theme/tokens";
 import type { ProfileRowItem } from "./types";
 import { PressableScale } from "./PressableScale";
 
@@ -21,7 +21,7 @@ export function ProfileRow({ item, isLast }: ProfileRowProps) {
 
   const danger = item.tone === "danger";
   const accent = danger ? theme.colors.error : gold;
-  const titleColor = danger ? theme.colors.error : theme.colors.text.gray;
+  const titleColor = danger ? theme.colors.error : theme.colors.text.title;
   const isInteractive = Boolean(item.onPress);
 
   return (
@@ -58,7 +58,7 @@ export function ProfileRow({ item, isLast }: ProfileRowProps) {
           <>
             {item.trailingText ? (
               <Text
-                style={[styles.trailing, { color: theme.colors.text.veryLightGray }]}
+                style={[styles.trailing, { color: theme.colors.text.muted }]}
                 numberOfLines={1}
               >
                 {item.trailingText}
@@ -68,7 +68,7 @@ export function ProfileRow({ item, isLast }: ProfileRowProps) {
               <Ionicons
                 name={chevronForward}
                 size={18}
-                color={theme.colors.text.veryLightGray}
+                color={theme.colors.text.subtle}
               />
             ) : null}
           </>
@@ -100,18 +100,17 @@ const styles = StyleSheet.create({
   iconChip: {
     width: 36,
     height: 36,
-    borderRadius: 11,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
   },
   title: {
     ...typography.body,
-    fontWeight: "500",
+    fontWeight: "600",
     flexShrink: 1,
   },
   trailing: {
-    ...typography.caption,
-    fontSize: 14,
+    ...typography.bodySmall,
     flexShrink: 1,
   },
 });

@@ -31,7 +31,17 @@ jest.mock("@/services/api/baseUrl", () => ({
 jest.mock("@/utils/tokenManager", () => ({
   __esModule: true,
   getToken: jest.fn().mockResolvedValue(null),
+  // The client also asks how long it's allowed to wait for a token, and whether
+  // a getter exists at all before retrying a 401. Default to "guest, loaded" so
+  // the request path never blocks; individual tests override.
+  getAuthSnapshot: jest.fn(() => ({ isLoaded: true, isSignedIn: false })),
+  hasTokenGetter: jest.fn(() => true),
 }));
+
+import { getToken, hasTokenGetter } from "@/utils/tokenManager";
+
+const mockedGetToken = getToken as jest.Mock;
+const mockedHasTokenGetter = hasTokenGetter as jest.Mock;
 
 let apiClient: any;
 beforeAll(() => {
@@ -58,6 +68,23 @@ function runResponseInterceptor(response: AxiosResponseLike): AxiosResponseLike 
 }
 
 const make = (data: any): AxiosResponseLike => ({ data, status: 200 });
+
+// Pull the rejected handler off the registered response interceptor.
+function runErrorInterceptor(error: any): Promise<any> {
+  const handlers = (apiClient.interceptors.response as any).handlers as Array<{
+    rejected: (e: any) => Promise<any>;
+  }>;
+  const rejected = handlers.find((h) => h && typeof h.rejected === "function")?.rejected;
+  if (!rejected) throw new Error("No rejected response interceptor registered");
+  return rejected(error);
+}
+
+const authError = (config: any = { url: "/carts", method: "get" }) => ({
+  isAxiosError: true,
+  message: "Authentication required.",
+  config,
+  response: { status: 401, data: { error: { message: "Authentication required." } } },
+});
 
 describe("client response interceptor — envelope unwrapping", () => {
   it("unwraps a standard sendSuccess envelope to the inner data", () => {
@@ -169,5 +196,80 @@ describe("client response interceptor — raw bodies are never corrupted", () =>
     const inner = { _id: "o1", data: "genuine-field" };
     const res = runResponseInterceptor(make({ success: true, data: inner }));
     expect((res.data as any).data).toBe("genuine-field");
+  });
+});
+
+/**
+ * A 401 is ambiguous. It can mean "not logged in", but it can equally mean the
+ * request left without an `Authorization` header because Clerk's ~60s session
+ * token was mid-refresh. Treating the second case as the first is what emptied
+ * the cart when a user came back from checkout, so the interceptor retries once
+ * with a token it actually waited for.
+ */
+describe("client response interceptor — 401 retry", () => {
+  it("retries once with a fresh token and returns that response", async () => {
+    mockedGetToken.mockResolvedValueOnce("fresh-jwt");
+    const requestSpy = jest
+      .spyOn(apiClient, "request")
+      .mockResolvedValue({ status: 200, data: { _id: "cart1" } } as any);
+
+    const error = authError();
+    const res = await runErrorInterceptor(error);
+
+    expect(requestSpy).toHaveBeenCalledTimes(1);
+    const retriedConfig = requestSpy.mock.calls[0]![0] as any;
+    expect(retriedConfig.headers.Authorization).toBe("Bearer fresh-jwt");
+    // The guard flag must be stamped so the retry can't retry itself.
+    expect(retriedConfig.__retriedWithFreshToken).toBe(true);
+    expect(res.data).toEqual({ _id: "cart1" });
+  });
+
+  it("does not retry a request that already retried", async () => {
+    mockedGetToken.mockResolvedValue("fresh-jwt");
+    const requestSpy = jest.spyOn(apiClient, "request");
+
+    const error = authError({ url: "/carts", __retriedWithFreshToken: true });
+
+    await expect(runErrorInterceptor(error)).rejects.toBe(error);
+    expect(requestSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not retry when no token can be obtained (a genuine guest 401)", async () => {
+    mockedGetToken.mockResolvedValueOnce(null);
+    const requestSpy = jest.spyOn(apiClient, "request");
+
+    const error = authError();
+
+    await expect(runErrorInterceptor(error)).rejects.toBe(error);
+    expect(requestSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not retry when there is no token getter registered", async () => {
+    mockedHasTokenGetter.mockReturnValueOnce(false);
+    const requestSpy = jest.spyOn(apiClient, "request");
+
+    const error = authError();
+
+    await expect(runErrorInterceptor(error)).rejects.toBe(error);
+    expect(requestSpy).not.toHaveBeenCalled();
+  });
+
+  it("leaves non-401 failures alone", async () => {
+    const requestSpy = jest.spyOn(apiClient, "request");
+    const error: any = {
+      isAxiosError: true,
+      config: { url: "/carts" },
+      response: { status: 500, data: { message: "server exploded" } },
+    };
+
+    await expect(runErrorInterceptor(error)).rejects.toBe(error);
+    expect(requestSpy).not.toHaveBeenCalled();
+  });
+
+  it("still normalizes transport failures that have no response", async () => {
+    const error: any = { isAxiosError: true, code: "ECONNABORTED", config: { url: "/carts" } };
+
+    await expect(runErrorInterceptor(error)).rejects.toBe(error);
+    expect(error.message).toMatch(/timeout/i);
   });
 });

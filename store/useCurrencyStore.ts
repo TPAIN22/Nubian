@@ -65,6 +65,24 @@ interface CurrencyState {
 
 const STORAGE_KEY = 'nubian_currency_prefs';
 
+/**
+ * Derive a country/currency pair from the device locale. Pure — callers decide
+ * whether an existing preference should win.
+ */
+function deriveRegionDefault(): { countryCode: string; currencyCode: string } {
+  let region: string | null = null;
+  try {
+    region = Localization.getLocales()?.[0]?.regionCode ?? null;
+  } catch {
+    region = null;
+  }
+
+  return {
+    countryCode: region ?? 'US',
+    currencyCode: (region && REGION_CURRENCY[region]) || 'USD',
+  };
+}
+
 export const useCurrencyStore = create<CurrencyState>()(
   subscribeWithSelector(
     persist(
@@ -92,15 +110,7 @@ export const useCurrencyStore = create<CurrencyState>()(
       ensureCurrencyDefault: () => {
         if (get().currencyCode) return null;
 
-        let region: string | null = null;
-        try {
-          region = Localization.getLocales()?.[0]?.regionCode ?? null;
-        } catch {
-          region = null;
-        }
-
-        const countryCode = region ?? 'US';
-        const currencyCode = (region && REGION_CURRENCY[region]) || 'USD';
+        const { countryCode, currencyCode } = deriveRegionDefault();
         set({ countryCode, currencyCode });
         return currencyCode;
       },
@@ -222,10 +232,24 @@ export const useCurrencyStore = create<CurrencyState>()(
         countryCode: state.countryCode,
         currencyCode: state.currencyCode,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.isLoaded = true;
-        }
+      // Resolve the currency and flip `isLoaded` in ONE notified update.
+      //
+      // Two things were wrong before. First, this mutated the state object in
+      // place (`state.isLoaded = true`), which zustand does not broadcast — so
+      // the `isLoaded` subscriber in services/api/client.ts never fired and
+      // every cold start paid that helper's full 1500ms safety timeout before
+      // the first request left. Second, the region default was seeded later,
+      // from a React effect in app/_layout.tsx, so `currencyCode` went
+      // null → value *after* home had already fetched: the currency-change
+      // subscription then re-fetched everything and the feed visibly reloaded
+      // under fresh skeletons. Seeding here means the currency is final before
+      // anything can observe hydration, so home fetches once, correctly.
+      onRehydrateStorage: () => () => {
+        useCurrencyStore.setState((s) =>
+          s.currencyCode
+            ? { isLoaded: true }
+            : { ...deriveRegionDefault(), isLoaded: true }
+        );
       },
     }
     )

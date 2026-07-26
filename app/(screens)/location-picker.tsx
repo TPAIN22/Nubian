@@ -51,7 +51,12 @@ export default function LocationPickerScreen() {
   const insets = useSafeAreaInsets();
   const { addressId } = useLocalSearchParams<{ addressId?: string }>();
 
-  const { config, isLoading: isConfigLoading } = useGeoConfig();
+  const {
+    config,
+    isLoading: isConfigLoading,
+    fromServer: hasServerConfig,
+    refresh: refreshConfig,
+  } = useGeoConfig();
   const mapRef = useRef<MapCanvasHandle>(null);
 
   // Renderer-neutral basemap descriptor. The screen never touches tile or
@@ -301,7 +306,22 @@ export default function LocationPickerScreen() {
     }
   }, [device.status]);
 
-  const isBootstrapping = !center || isConfigLoading;
+  /**
+   * Address lookup is unavailable: either `/geo/config` never answered, or the
+   * provider it named can't reverse geocode. The pin still saves — coordinates
+   * are the deliverable part — but the search bar is hidden and the label stays
+   * blank, and a screen that loses both without explanation just looks broken.
+   */
+  const isLookupDegraded =
+    !isConfigLoading && (!hasServerConfig || !config.capabilities.reverseGeocode);
+
+  /**
+   * `center` is only ever set after the config settles, so it alone covers the
+   * first load. Deliberately not gated on `isConfigLoading` as well: a retry
+   * from the degraded hint would otherwise unmount the map mid-session and
+   * throw the user back to the "finding your location" spinner.
+   */
+  const isBootstrapping = !center;
 
   // The two gates that can leave this screen showing a spinner. Logging the
   // transition means a hang identifies which gate it is stuck behind, instead
@@ -389,6 +409,32 @@ export default function LocationPickerScreen() {
             <Text style={[styles.hintText, { color: t.textSecondary }]} numberOfLines={2}>
               {permissionHint}
             </Text>
+          </Pressable>
+        ) : null}
+
+        {isLookupDegraded ? (
+          <Pressable
+            onPress={() => {
+              traceError('config', 'retrying geo config from the degraded hint');
+              refreshConfig();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={
+              i18n.t('address_lookupUnavailable') ||
+              'Address lookup is unavailable. Your pin still saves. Tap to retry.'
+            }
+            style={[styles.hint, { backgroundColor: t.warningSoft, borderColor: t.warning }]}
+          >
+            <Ionicons name="cloud-offline-outline" size={15} color={t.warning} />
+            <Text style={[styles.hintText, { color: t.textSecondary }]} numberOfLines={2}>
+              {i18n.t('address_lookupUnavailable') ||
+                'Address lookup is unavailable — your pin still saves. Tap to retry.'}
+            </Text>
+            {isConfigLoading ? (
+              <ActivityIndicator size="small" color={t.warning} />
+            ) : (
+              <Ionicons name="refresh" size={15} color={t.warning} />
+            )}
           </Pressable>
         ) : null}
 

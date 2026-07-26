@@ -26,6 +26,8 @@ import useItemStore from "@/store/useItemStore";
 import ProductCard from "@/components/ProductCard";
 import type { NormalizedProduct } from "@/domain/product/product.normalize";
 import type { CategoryDetails as Category } from "@/api/category.api";
+import { EmptyState, SkeletonProductCard } from "@/components/ui/kit";
+import { MIN_TOUCH, radius, SCREEN_PADDING, spacing, typography } from "@/theme/tokens";
 
 type Product = NormalizedProduct;
 
@@ -230,56 +232,44 @@ const ProductsScreen = () => {
 
   // Empty component
   const ListEmptyComponent = useCallback(() => {
+    // A skeleton grid rather than a bare spinner: it shows the shape of the
+    // results, so the screen doesn't jump from a centred spinner to a full grid.
     if (isLoading) {
       return (
-        <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.text.veryLightGray }]}>
-            {i18n.t('loading') || 'Loading'}
-          </Text>
+        <View style={styles.skeletonGrid}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <View key={i} style={styles.skeletonCell}>
+              <SkeletonProductCard />
+            </View>
+          ))}
         </View>
       );
     }
 
     if (exploreError && !isLoading) {
       return (
-        <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-          <Ionicons name="alert-circle-outline" size={60} color={colors.danger || colors.primary} />
-          <Text style={[styles.emptyTitle, { color: colors.text.gray }]}>
-            {String(i18n.t('error') || 'Error')}
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
-            {String(exploreError || '')}
-          </Text>
-          <Pressable
-            style={[styles.retryButton, { backgroundColor: colors.primary }]}
-            onPress={onRefresh}
-            accessibilityRole="button"
-            accessibilityLabel={String(i18n.t('retry') || 'Retry')}
-          >
-            <Text style={[styles.retryButtonText, { color: colors.text.white }]}>
-              {String(i18n.t('retry') || 'Retry')}
-            </Text>
-          </Pressable>
-        </View>
+        <EmptyState
+          tone="error"
+          icon="alert-circle-outline"
+          title={String(i18n.t('error') || 'Error')}
+          description={String(exploreError || '')}
+          actionLabel={String(i18n.t('retry') || 'Retry')}
+          onAction={onRefresh}
+        />
       );
     }
 
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-        <Ionicons name="search-outline" size={60} color={colors.primary} />
-        <Text style={[styles.emptyTitle, { color: colors.text.gray }]}>
-          {String(searchTerm ? (i18n.t('noResults') || 'No Results') : (i18n.t('noProducts') || 'No Products'))}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.text.veryLightGray }]}>
-          {String(searchTerm
-            ? (i18n.t('tryNewSearch') || 'Try a new search')
-            : (i18n.t('noProductsFound') || 'No products found')
-          )}
-        </Text>
-      </View>
+      <EmptyState
+        icon="search-outline"
+        title={String(searchTerm ? (i18n.t('noResults') || 'No Results') : (i18n.t('noProducts') || 'No Products'))}
+        description={String(searchTerm
+          ? (i18n.t('tryNewSearch') || 'Try a new search')
+          : (i18n.t('noProductsFound') || 'No products found')
+        )}
+      />
     );
-  }, [searchTerm, isLoading, exploreError, onRefresh, colors]);
+  }, [searchTerm, isLoading, exploreError, onRefresh]);
 
   // Header component that will scroll with content
   const ListHeaderComponent = useCallback(() => (
@@ -366,7 +356,7 @@ const ProductsScreen = () => {
   ), [pageTitle, searchTerm, sort, showAvailableOnly, filterCategory, colors, router, rtl, openFilterModal, handleSortChange]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Products List with scrollable header.
           FlashList v2: cell recycling replaces FlatList virtualization props
           (removeClippedSubviews / windowSize / maxToRenderPerBatch /
@@ -607,74 +597,77 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    marginBottom: 0,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.base,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    // The header is a white band on the grey canvas — rounding its foot makes
+    // it read as a surface rather than as a hard rule across the screen.
+    borderBottomStartRadius: radius.lg,
+    borderBottomEndRadius: radius.lg,
+    marginBottom: spacing.base,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing.base,
   },
   backButton: {
-    paddingVertical: 4,
+    // 44pt target, not a 4pt-padded glyph.
+    width: MIN_TOUCH,
+    height: MIN_TOUCH,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   headerTitle: {
-    paddingVertical: 10,
-    fontSize: 22,
-    fontWeight: 'bold',
+    ...typography.pageTitle,
     textAlign: 'center',
     flex: 1,
-    marginTop: 10,
   },
   searchContainer: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: radius.input,
     borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginBottom: 10,
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
+    marginBottom: spacing.md,
   },
   searchIcon: {
-    marginRight: 8,
+    marginEnd: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 6,
-    fontSize: 16,
+    paddingVertical: spacing.sm,
+    ...typography.body,
     textAlign: 'right',
   },
   searchClearButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   filterContainer: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
+    gap: spacing.sm,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: spacing.base,
+    minHeight: 38,
+    borderRadius: radius.pill,
     borderWidth: 1,
     position: 'relative',
   },
   filterText: {
-    marginLeft: 6,
-    fontWeight: '600',
-    fontSize: 12,
+    marginStart: spacing.xs + 2,
+    ...typography.label,
   },
   filterBadge: {
     position: 'absolute',
     top: -2,
-    right: -2,
+    end: -2,
     width: 8,
     height: 8,
     borderRadius: 4,
@@ -682,41 +675,45 @@ const styles = StyleSheet.create({
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: spacing.base,
+    minHeight: 38,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
   sortText: {
-    marginLeft: 4,
-    fontWeight: '600',
-    fontSize: 12,
+    marginStart: spacing.xs,
+    ...typography.label,
   },
   listContainer: {
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingBottom: spacing.xxl,
   },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    paddingTop: spacing.md,
+  },
+  skeletonCell: { width: '48%' },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: spacing.xxl,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
+    ...typography.subtitle,
+    marginTop: spacing.base,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 14,
+    ...typography.bodySmall,
     textAlign: 'center',
-    lineHeight: 20,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: spacing.base,
+    ...typography.body,
   },
   retryButton: {
     marginTop: 20,

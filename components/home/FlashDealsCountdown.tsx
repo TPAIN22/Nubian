@@ -1,9 +1,18 @@
 import { memo, useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
-import { Text } from "@/components/ui/text";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { AppText } from "@/components/ui/kit";
+import { iconSize, radius, SCREEN_PADDING, spacing, withAlpha } from "@/theme/tokens";
 import i18n from "@/utils/i18n";
 
+/**
+ * Countdown strip under the flash-deals header.
+ *
+ * Urgency now uses the `sale` colour rather than `warning`: an amber bar reads
+ * as a caution message, a red-pink one reads as a deal ending. The digits sit
+ * in fixed-width dark tiles so the row doesn't jitter as the seconds tick —
+ * the old variable-width boxes visibly nudged the layout every second.
+ */
 export const FlashDealsCountdown = memo(({ colors }: { colors: any }) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
@@ -28,24 +37,30 @@ export const FlashDealsCountdown = memo(({ colors }: { colors: any }) => {
     return () => clearInterval(interval);
   }, []);
 
+  const renderUnit = (value: number) => (
+    <View style={[styles.unit, { backgroundColor: colors.sale }]}>
+      <AppText variant="captionStrong" weight="800" style={styles.unitText}>
+        {String(value).padStart(2, "0")}
+      </AppText>
+    </View>
+  );
+
   return (
-    <View style={[styles.countdownContainer, { backgroundColor: colors.warning + "15" }]}>
-      <Ionicons name="time-outline" size={18} color={colors.warning} />
-      <Text style={[styles.countdownLabel, { color: colors.warning }]}>
-        {i18n.t("home_flashDealsEndsIn")}:
-      </Text>
-      <View style={styles.countdownTimers}>
-        <View style={[styles.countdownBox, { backgroundColor: colors.warning }]}>
-          <Text style={styles.countdownNumber}>{String(timeLeft.hours).padStart(2, "0")}</Text>
-        </View>
-        <Text style={[styles.countdownSeparator, { color: colors.warning }]}>:</Text>
-        <View style={[styles.countdownBox, { backgroundColor: colors.warning }]}>
-          <Text style={styles.countdownNumber}>{String(timeLeft.minutes).padStart(2, "0")}</Text>
-        </View>
-        <Text style={[styles.countdownSeparator, { color: colors.warning }]}>:</Text>
-        <View style={[styles.countdownBox, { backgroundColor: colors.warning }]}>
-          <Text style={styles.countdownNumber}>{String(timeLeft.seconds).padStart(2, "0")}</Text>
-        </View>
+    <View
+      style={[styles.container, { backgroundColor: withAlpha(colors.sale, 0.1) }]}
+      accessibilityLabel={`${i18n.t("home_flashDealsEndsIn")} ${timeLeft.hours} hours ${timeLeft.minutes} minutes`}
+    >
+      <Ionicons name="flash" size={iconSize.sm} color={colors.sale} />
+      <AppText variant="captionStrong" style={{ color: colors.sale, flex: 1 }} numberOfLines={1}>
+        {i18n.t("home_flashDealsEndsIn")}
+      </AppText>
+
+      <View style={styles.timers} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {renderUnit(timeLeft.hours)}
+        <AppText variant="captionStrong" style={{ color: colors.sale }}>:</AppText>
+        {renderUnit(timeLeft.minutes)}
+        <AppText variant="captionStrong" style={{ color: colors.sale }}>:</AppText>
+        {renderUnit(timeLeft.seconds)}
       </View>
     </View>
   );
@@ -53,39 +68,24 @@ export const FlashDealsCountdown = memo(({ colors }: { colors: any }) => {
 FlashDealsCountdown.displayName = "FlashDealsCountdown";
 
 const styles = StyleSheet.create({
-  countdownContainer: {
+  container: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 8,
-    borderRadius: 12,
-    gap: 8,
+    marginHorizontal: SCREEN_PADDING,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    gap: spacing.sm,
   },
-  countdownLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  countdownTimers: {
-    flexDirection: "row",
+  timers: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  unit: {
+    // Fixed width: two monospaced-ish digits never resize the row mid-tick.
+    minWidth: 34,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 3,
+    borderRadius: radius.xs,
     alignItems: "center",
-    marginLeft: "auto",
-    gap: 4,
   },
-  countdownBox: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignItems: "center",
-    minWidth: 40,
-  },
-  countdownNumber: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  countdownSeparator: {
-    fontSize: 13,
-    fontWeight: "bold",
-  },
+  unitText: { color: "#FFFFFF" },
 });

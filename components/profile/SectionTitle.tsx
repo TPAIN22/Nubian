@@ -11,7 +11,7 @@ export function SectionTitle({ children }: { children: string }) {
 
   return (
     <Text
-      style={[styles.title, { color: theme.colors.text.veryLightGray, textAlign }]}
+      style={[styles.title, { color: theme.colors.text.muted, textAlign }]}
     >
       {children.toUpperCase()}
     </Text>

@@ -61,7 +61,21 @@
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20; npx eslint \"app/\\(tabs\\)/_layout.tsx\" components/cart 2>&1 | Select-Object -First 20; Write-Output \"clean\")",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 15; npx eslint components/cart/CartSuccessOverlay.tsx 2>&1 | Select-Object -First 10; Write-Output \"clean\")",
       "Read(//c/Users/HUAWEI/Desktop/nubian_platform/apps/dashboard/src/app/admin//**)",
-      "Read(//c/Users/HUAWEI/Desktop/nubian_platform/apps/dashboard/src/**)"
+      "Read(//c/Users/HUAWEI/Desktop/nubian_platform/apps/dashboard/src/**)",
+      "Bash(npx --no-install jest --listTests)",
+      "Bash(npx --no-install jest --ci --coverage=false)",
+      "Bash(npx --no-install jest __tests__/store/useCartStore.test.ts --ci --coverage=false)",
+      "Bash(npx --no-install jest __tests__/services/client.interceptor.test.ts --ci --coverage=false)",
+      "Bash(echo \"=== tsc exit: $? ===\")",
+      "Bash(xargs wc -l)",
+      "Bash(python -c ' *)",
+      "Bash(npx eas *)",
+      "Bash(curl -s -i -m 60 \"https://nubian-lne4.onrender.com/api/geo/config\")",
+      "Bash(curl -s -m 60 -o /dev/null -w \"%{http_code}\\\\n\" \"https://nubian-lne4.onrender.com/api/geo/reverse?lat=15.5&lng=32.5\")",
+      "Bash(curl -s -m 60 -o /dev/null -w \"%{http_code}\\\\n\" \"https://nubian-lne4.onrender.com/api/geo/search?q=khartoum\")",
+      "Bash(curl -s -m 60 -o /dev/null -w \"%{http_code}\\\\n\" \"https://nubian-lne4.onrender.com/api/categories\")",
+      "Bash(curl -s -m 60 -o /dev/null -w \"%{http_code}\\\\n\" \"https://nubian-lne4.onrender.com/api/addresses\")",
+      "Bash(npx eslint *)"
     ]
   }
 }

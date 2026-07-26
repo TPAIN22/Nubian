@@ -214,13 +214,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   couponCard: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     padding: 16,
     minWidth: 200,
     maxWidth: 250,
     borderWidth: 2,
-    borderColor: '#30a1a7',
+    borderColor: Colors.accent,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   codeText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#30a1a7',
+    color: Colors.accent,
     fontFamily: 'monospace',
   },
   percentageBadge: {

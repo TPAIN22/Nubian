@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Text } from '@/components/ui/text';
 import i18n from '@/utils/i18n';
 import { useCheckoutTheme } from './theme';
+import { lightColors } from '@/theme/colors.light';
 
 type Props = {
   // Kept for API compatibility with existing callers (cart + checkout). The
@@ -32,12 +33,13 @@ type Props = {
   withSafeArea?: boolean;
 };
 
-// Brand gold (primary) as literals. The colored surface is a plain <View> with
-// a static style so it always paints — NativeWind's jsx runtime drops the
-// function form of Pressable's `style` prop, which silently ate the fill before.
-const GOLD = '#A37E2C';
-const GOLD_PRESSED = '#8A6824';
-const INK = '#FFFFFF';
+// The coloured surface is a plain <View> with a static style so it always
+// paints — NativeWind's jsx runtime drops the function form of Pressable's
+// `style` prop, which silently ate the fill before. The values come from the
+// theme so this CTA can't drift away from every other primary button.
+const GOLD = lightColors.primary;
+const GOLD_PRESSED = lightColors.primaryStrong;
+const INK = lightColors.onPrimary;
 
 export const CheckoutFooter = React.memo(function CheckoutFooter({
   ctaLabel,

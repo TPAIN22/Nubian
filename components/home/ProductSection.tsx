@@ -1,12 +1,10 @@
 import { memo, useCallback } from "react";
-import { View, FlatList, Pressable, StyleSheet, useWindowDimensions } from "react-native";
-import { Text } from "@/components/ui/text";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { View, FlatList, StyleSheet, useWindowDimensions } from "react-native";
 import ItemCard from "@/components/Card";
-import ItemCardSkeleton from "@/components/ItemCardSkeleton";
 import { HomeProduct } from "@/api/home.api";
 import { FlashDealsCountdown } from "./FlashDealsCountdown";
-import { useRTL } from "@/hooks/useRTL";
+import { SectionHeader, SkeletonProductCard } from "@/components/ui/kit";
+import { SCREEN_PADDING, spacing } from "@/theme/tokens";
 import i18n from "@/utils/i18n";
 
 export interface ProductSectionProps {
@@ -16,8 +14,25 @@ export interface ProductSectionProps {
   isLoading?: boolean;
   onViewAll?: () => void;
   showCountdown?: boolean;
+  /** Trailing emoji rendered after the title (🔥, ⚡). */
+  emoji?: string;
+  /** One line of context under the title. */
+  subtitle?: string;
 }
 
+/**
+ * A horizontally scrolling product rail with a section header.
+ *
+ * Layout notes:
+ *  - Cards are 46% of the screen so the next card is always ~half visible at
+ *    the trailing edge. That peek is what tells the customer the row scrolls;
+ *    without it a rail reads as a static pair of cards.
+ *  - `snapToInterval` lands each swipe on a card boundary, so flicking through
+ *    a rail feels deliberate rather than loose.
+ *  - `contentContainerStyle` carries the gutter and `ItemSeparatorComponent`
+ *    carries the gap, so the first and last cards align to the screen margin
+ *    exactly like the section title above them.
+ */
 export const ProductSection = memo(({
   title,
   products,
@@ -25,21 +40,19 @@ export const ProductSection = memo(({
   isLoading = false,
   onViewAll,
   showCountdown = false,
+  emoji,
+  subtitle,
 }: ProductSectionProps) => {
-  const rtl = useRTL();
   const { width: screenWidth } = useWindowDimensions();
-  const cardWidth = screenWidth * 0.45;
-  const itemWidth = cardWidth + 12; 
+  const cardWidth = Math.round(screenWidth * 0.46);
+  const itemWidth = cardWidth + spacing.md;
 
   // Products are already normalized at the API boundary (home.api.ts /
   // recommendations.api.ts). No client-side re-normalization here — that path
   // used to silently re-introduce the price-alias confusion.
   const renderItem = useCallback(({ item }: { item: HomeProduct }) => (
-    <View style={{ width: cardWidth, marginEnd: 12 }}>
-      <ItemCard
-        item={item}
-        cardWidth={cardWidth}
-      />
+    <View style={{ width: cardWidth }}>
+      <ItemCard item={item} cardWidth={cardWidth} />
     </View>
   ), [cardWidth]);
 
@@ -52,27 +65,17 @@ export const ProductSection = memo(({
     index,
   }), [itemWidth]);
 
+  const renderSeparator = useCallback(() => <View style={styles.gap} />, []);
+
   if (isLoading) {
     return (
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
-          <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
-            {title}
-          </Text>
+        <SectionHeader title={title} subtitle={subtitle} emoji={emoji} />
+        <View style={styles.skeletonRow}>
+          {[0, 1, 2].map((i) => (
+            <SkeletonProductCard key={i} width={cardWidth} />
+          ))}
         </View>
-        <FlatList
-          horizontal
-          data={[1, 2, 3, 4]}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-          renderItem={() => (
-            <View style={{ width: cardWidth, marginEnd: 12 }}>
-              <ItemCardSkeleton />
-            </View>
-          )}
-          keyExtractor={(_, index) => `${title}-skeleton-${index}`}
-        />
       </View>
     );
   }
@@ -81,33 +84,28 @@ export const ProductSection = memo(({
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
-        <Text style={[styles.sectionTitle, { color: colors.text.gray }]}>
-          {title}
-        </Text>
-        {onViewAll && (
-          <Pressable
-            onPress={onViewAll}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`${i18n.t("home_seeAll")} ${title}`}
-            style={styles.viewAllButton}
-          >
-            <Text style={[styles.viewAllText, { color: colors.primary }]}>{i18n.t("home_seeAll")}</Text>
-            <Ionicons name={rtl.chevronForward} size={16} color={colors.primary} />
-          </Pressable>
-        )}
-      </View>
+      <SectionHeader
+        title={title}
+        subtitle={subtitle}
+        emoji={emoji}
+        onActionPress={onViewAll}
+        actionLabel={i18n.t("home_seeAll")}
+      />
+
       {showCountdown && <FlashDealsCountdown colors={colors} />}
+
       <FlatList
         horizontal
         data={products}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        contentContainerStyle={styles.railContent}
+        ItemSeparatorComponent={renderSeparator}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         getItemLayout={getItemLayout}
+        snapToInterval={itemWidth}
+        decelerationRate="fast"
+        snapToAlignment="start"
         removeClippedSubviews={true}
         maxToRenderPerBatch={4}
         windowSize={3}
@@ -119,25 +117,14 @@ export const ProductSection = memo(({
 ProductSection.displayName = "ProductSection";
 
 const styles = StyleSheet.create({
-  section: { marginTop: 25 },
-  sectionHeader: {
+  // 32pt between sections — the single change that does the most to stop the
+  // feed feeling cramped.
+  section: { marginTop: spacing.xxl },
+  railContent: { paddingHorizontal: SCREEN_PADDING, paddingVertical: spacing.xs },
+  gap: { width: spacing.md },
+  skeletonRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 10,
-    textAlign: "center",
-  },
-  accentBar: { width: 4, height: 22, borderRadius: 2 },
-  sectionTitle: { padding: 10, fontSize: 14, fontWeight: "bold", flex: 1, },
-  viewAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  viewAllText: {
-    padding: 5,
-    fontSize: 12,
-    fontWeight: "600",
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_PADDING,
   },
 });

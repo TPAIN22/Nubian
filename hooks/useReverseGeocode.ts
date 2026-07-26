@@ -50,10 +50,19 @@ export function useReverseGeocode({
    */
   const resolve = useCallback(
     (point: GeoPoint) => {
-      if (!enabled) return;
+      // Every early return below MUST clear `isResolving`. The drag that led
+      // here already latched it true via `markStale()`, and nothing else in this
+      // hook can clear it — so returning without doing so leaves the confirm
+      // card showing its loading skeleton for the rest of the screen's life,
+      // which reads as "the picker is stuck" rather than "no label available".
+      if (!enabled) {
+        setIsResolving(false);
+        return;
+      }
 
       const previous = lastPointRef.current;
       if (previous && haversineMeters(previous, point) < minMoveMeters) {
+        setIsResolving(false);
         return;
       }
       lastPointRef.current = point;
@@ -70,12 +79,22 @@ export function useReverseGeocode({
         const controller = new AbortController();
         abortRef.current = controller;
 
-        const result = await reverseGeocode(point.lat, point.lng, controller.signal);
+        // `superseded` covers both "a newer lookup took over" and "unmounted":
+        // in either case someone else owns the loading flag now, and touching
+        // it here would either flicker the UI or update a dead component.
+        const superseded = () => !mountedRef.current || controller.signal.aborted;
 
-        if (!mountedRef.current || controller.signal.aborted) return;
-
-        setAddress(result);
-        setIsResolving(false);
+        try {
+          const result = await reverseGeocode(point.lat, point.lng, controller.signal);
+          if (superseded()) return;
+          setAddress(result);
+        } catch {
+          // `reverseGeocode` swallows its own failures, so this only catches the
+          // unexpected — but an unhandled rejection here would strand the flag.
+          if (!superseded()) setAddress(null);
+        } finally {
+          if (!superseded()) setIsResolving(false);
+        }
       }, debounceMs);
     },
     [debounceMs, minMoveMeters, enabled],
@@ -96,8 +115,11 @@ export function useReverseGeocode({
 
   /** Called as soon as a drag starts, so the UI can dim the now-stale label. */
   const markStale = useCallback(() => {
+    // With lookups disabled nothing will ever resolve, so showing the loading
+    // state would be a spinner with no end to it.
+    if (!enabled) return;
     setIsResolving(true);
-  }, []);
+  }, [enabled]);
 
   return { address, isResolving, resolve, setResolved, markStale };
 }

@@ -28,12 +28,21 @@ let cachedConfig: GeoConfig | null = null;
 export function useGeoConfig() {
   const [config, setConfig] = useState<GeoConfig>(cachedConfig ?? FALLBACK_GEO_CONFIG);
   const [isLoading, setIsLoading] = useState(!cachedConfig);
+  /**
+   * Whether `config` came from the backend or is the offline fallback.
+   *
+   * Exposed because the two are indistinguishable from the config alone — the
+   * fallback is a valid-looking object with every capability off — and a screen
+   * that can't tell them apart silently presents a crippled picker as if it
+   * were working.
+   */
+  const [fromServer, setFromServer] = useState(Boolean(cachedConfig));
   const mountedRef = useRef(true);
 
   const load = useCallback(async () => {
-    const { config: next, fromServer } = await fetchGeoConfig();
+    const { config: next, fromServer: answered } = await fetchGeoConfig();
 
-    if (fromServer) {
+    if (answered) {
       cachedConfig = next;
     } else {
       trace('config', 'not caching the fallback — will retry on next mount');
@@ -41,6 +50,7 @@ export function useGeoConfig() {
 
     if (mountedRef.current) {
       setConfig(next);
+      setFromServer(answered);
       setIsLoading(false);
     }
   }, []);
@@ -50,6 +60,7 @@ export function useGeoConfig() {
 
     if (cachedConfig) {
       trace('config', 'using cached config', { provider: cachedConfig.provider });
+      setFromServer(true);
       setIsLoading(false);
     } else {
       load();
@@ -67,7 +78,7 @@ export function useGeoConfig() {
     return load();
   }, [load]);
 
-  return { config, isLoading, refresh };
+  return { config, isLoading, fromServer, refresh };
 }
 
 /** Drop the shared config, e.g. on sign-out. */
