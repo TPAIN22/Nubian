@@ -27,7 +27,9 @@ const unwrap = <T,>(payload: any, fallback: T): T => {
   return (payload ?? fallback) as T;
 };
 
-const currentLanguage = () => (i18n.language === 'ar' ? 'ar' : 'en');
+// `i18n.locale` — an i18n-js instance has no `.language`, so reading that
+// pinned every geocode request to English regardless of the app's language.
+const currentLanguage = () => (i18n.locale?.startsWith('ar') ? 'ar' : 'en');
 
 /**
  * In-memory result cache.
