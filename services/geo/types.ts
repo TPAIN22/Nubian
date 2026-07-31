@@ -52,6 +52,27 @@ export interface GeoCapabilities {
 }
 
 /**
+ * The area the platform delivers to, as served by the backend.
+ *
+ * The app uses this only to fail *early* — greying out the confirm button
+ * before the shopper fills in a whole address form. It is never the enforcement
+ * point: the server re-checks the pin on save and again at checkout, because
+ * anything shipped to a device can be edited.
+ *
+ * `enabled: false` means no coverage is configured and everywhere is allowed.
+ */
+export interface GeoServiceArea {
+  enabled: boolean;
+  /** Zone names, for telling the shopper where we *do* deliver. */
+  names: string[];
+  /** The same names in Arabic, so the message doesn't switch script mid-sentence. */
+  namesAr: string[];
+  /** GeoJSON MultiPolygon, coordinates as [lng, lat]. Null when disabled. */
+  geometry: { type: 'MultiPolygon'; coordinates: number[][][][] } | null;
+  bbox: { minLat: number; minLng: number; maxLat: number; maxLng: number } | null;
+}
+
+/**
  * Map configuration served by the backend at boot.
  *
  * `tileUrl` / `styleUrl` are what let the map render without the app knowing
@@ -74,6 +95,8 @@ export interface GeoConfig {
   defaultZoom: number;
   capabilities: GeoCapabilities;
   countryCodes: string[];
+  /** Where the platform delivers. See `GeoServiceArea`. */
+  serviceArea: GeoServiceArea;
   /** Server-tuned debounce for reverse geocoding after the map settles. */
   reverseGeocodeDebounceMs: number;
   /** Server-tuned debounce for the search box. */
@@ -118,6 +141,10 @@ export const FALLBACK_GEO_CONFIG: GeoConfig = {
     staticMap: false,
   },
   countryCodes: [],
+  // Unrestricted until the server says otherwise. A config fetch that failed
+  // must never invent a boundary and lock the shopper out of saving anything —
+  // the server gates still hold, so the honest client default is "allow".
+  serviceArea: { enabled: false, names: [], namesAr: [], geometry: null, bbox: null },
   reverseGeocodeDebounceMs: 500,
   searchDebounceMs: 350,
 };

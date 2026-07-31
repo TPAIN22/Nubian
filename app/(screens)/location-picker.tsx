@@ -43,6 +43,7 @@ import { useDeviceLocation } from '@/hooks/useDeviceLocation';
 import { useReverseGeocode } from '@/hooks/useReverseGeocode';
 import useAddressStore, { type AddressDraft } from '@/store/addressStore';
 import { formatCoordinates } from '@/utils/addressDisplay';
+import { describeServiceArea, isPointInServiceArea } from '@/services/geo/serviceArea';
 import type { GeoAddress, GeoPoint, LocationSource } from '@/services/geo/types';
 
 export default function LocationPickerScreen() {
@@ -291,6 +292,33 @@ export default function LocationPickerScreen() {
   const addressLine = resolvedAddress?.formattedAddress ?? '';
   const coordinatesLine = center ? formatCoordinates(center.lat, center.lng) : '';
 
+  /**
+   * Delivery coverage, checked as the shopper pans.
+   *
+   * Purely to fail early — the server rejects an out-of-area pin on save and
+   * again at checkout regardless. Skipped while the map is moving so the banner
+   * doesn't strobe mid-drag; the settled position is what counts.
+   */
+  const isOutsideServiceArea = useMemo(
+    () => !isMoving && !isPointInServiceArea(center, config.serviceArea),
+    [isMoving, center, config.serviceArea],
+  );
+
+  const serviceAreaMessage = useMemo(() => {
+    if (!isOutsideServiceArea) return null;
+
+    // Naming where we *do* deliver turns a dead end into a usable instruction,
+    // so prefer it whenever the server told us the zone names.
+    const where = describeServiceArea(config.serviceArea);
+
+    return where
+      ? i18n.t('address_outsideServiceAreaNamed', { area: where })
+      : i18n.t('address_outsideServiceArea');
+  }, [isOutsideServiceArea, config.serviceArea]);
+
+  /** Confirm is blocked while there's no pin, mid-drag, or outside coverage. */
+  const isConfirmDisabled = !center || isMoving || isOutsideServiceArea;
+
   const permissionHint = useMemo(() => {
     switch (device.status) {
       case 'blocked':
@@ -447,6 +475,15 @@ export default function LocationPickerScreen() {
             </Text>
           </View>
         ) : null}
+
+        {serviceAreaMessage ? (
+          <View style={[styles.hint, { backgroundColor: t.errorSoft, borderColor: t.error }]}>
+            <Ionicons name="alert-circle-outline" size={15} color={t.error} />
+            <Text style={[styles.hintText, { color: t.textSecondary }]} numberOfLines={3}>
+              {serviceAreaMessage}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {/* ── Locate button ─────────────────────────────────────────────────── */}
@@ -523,15 +560,19 @@ export default function LocationPickerScreen() {
 
         <Pressable
           onPress={() => {
-            if (!center || isMoving) return;
+            if (isConfirmDisabled) return;
             Haptics.selectionAsync().catch(() => {});
             clearError();
             setDetailsOpen(true);
           }}
-          disabled={!center || isMoving}
+          disabled={isConfirmDisabled}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !center || isMoving }}
-          accessibilityLabel={i18n.t('address_confirmLocation') || 'Confirm location'}
+          accessibilityState={{ disabled: isConfirmDisabled }}
+          accessibilityLabel={
+            isOutsideServiceArea
+              ? (serviceAreaMessage ?? i18n.t('address_outsideServiceArea'))
+              : i18n.t('address_confirmLocation') || 'Confirm location'
+          }
           style={styles.confirmPressable}
         >
           {/* Fill on a plain View with a static style — NativeWind drops the
@@ -539,16 +580,18 @@ export default function LocationPickerScreen() {
           <View
             style={[
               styles.confirmBtn,
-              { backgroundColor: !center || isMoving ? t.ctaDisabled : t.cta },
+              { backgroundColor: isConfirmDisabled ? t.ctaDisabled : t.cta },
             ]}
           >
             <RNText
               style={[
                 styles.confirmBtnText,
-                { color: !center || isMoving ? t.ctaDisabledText : t.ctaText },
+                { color: isConfirmDisabled ? t.ctaDisabledText : t.ctaText },
               ]}
             >
-              {i18n.t('address_confirmLocation') || 'Confirm location'}
+              {isOutsideServiceArea
+                ? i18n.t('address_outsideServiceAreaCta')
+                : i18n.t('address_confirmLocation') || 'Confirm location'}
             </RNText>
           </View>
         </Pressable>
