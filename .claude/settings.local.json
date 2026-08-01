@@ -75,7 +75,14 @@
       "Bash(curl -s -m 60 -o /dev/null -w \"%{http_code}\\\\n\" \"https://nubian-lne4.onrender.com/api/geo/search?q=khartoum\")",
       "Bash(curl -s -m 60 -o /dev/null -w \"%{http_code}\\\\n\" \"https://nubian-lne4.onrender.com/api/categories\")",
       "Bash(curl -s -m 60 -o /dev/null -w \"%{http_code}\\\\n\" \"https://nubian-lne4.onrender.com/api/addresses\")",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(curl -s -m 45 -G \"https://overpass-api.de/api/interpreter\" --data-urlencode 'data=[out:json][timeout:40];rel\\(3335654\\);out tags;')",
+      "Bash(curl -s -m 60 -G \"https://overpass-api.de/api/interpreter\" --data-urlencode 'data=[out:json][timeout:55];area[\"ISO3166-1\"=\"SD\"]->.sd;rel\\(area.sd\\)[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"];out tags;')",
+      "Bash(mkdir -p C:/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/28e02de3-1185-4a74-9a8c-4fdbf3f92a24/scratchpad)",
+      "Bash(curl -s -m 90 -G https://overpass-api.de/api/interpreter --data-urlencode 'data=[out:json][timeout:80];rel[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"][\"name\"~\"الخرطوم\"];out tags;' -o C:/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/28e02de3-1185-4a74-9a8c-4fdbf3f92a24/scratchpad/states.json)",
+      "Bash(curl -s -m 90 -A 'nubian-platform-dev/1.0 \\(mamyafreka@gmail.com\\)' -G https://nominatim.openstreetmap.org/lookup --data-urlencode osm_ids=R3774673 --data-urlencode format=json --data-urlencode polygon_geojson=1 -o C:/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/28e02de3-1185-4a74-9a8c-4fdbf3f92a24/scratchpad/khartoum-raw.json)",
+      "Bash(python *)",
+      "Bash(gh auth *)"
     ]
   }
 }
