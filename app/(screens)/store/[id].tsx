@@ -10,20 +10,40 @@ import {
   View,
   StyleSheet,
   Animated,
-  Pressable,
   RefreshControl,
   useWindowDimensions,
   InteractionManager,
   ActivityIndicator,
-  Platform,
+  type LayoutChangeEvent,
 } from 'react-native';
-import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/providers/ThemeProvider';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Skeleton } from 'moti/skeleton';
+import {
+  AppText,
+  EmptyState,
+  Rating,
+  Screen,
+  SkeletonBlock,
+  SkeletonProductCard,
+  Surface,
+  Touchable,
+} from '@/components/ui/kit';
+import {
+  elevation,
+  iconSize,
+  layout,
+  MIN_TOUCH,
+  radius,
+  SCREEN_PADDING,
+  spacing,
+  withAlpha,
+} from '@/theme/tokens';
+import { useColors } from '@/hooks/useColors';
+import { useRTL } from '@/hooks/useRTL';
+import i18n from '@/utils/i18n';
 import axiosInstance from '@/services/api/client';
 import ProductCard from '@/components/ProductCard';
 import { normalizeProduct } from '@/domain/product/product.normalize';
@@ -58,40 +78,52 @@ interface Review {
 
 type Tab = 'products' | 'reviews' | 'about';
 
-// ─── Layout constants ──────────────────────────────────────────────────────────
+// ─── Layout constants ─────────────────────────────────────────────────────────
 
-const BANNER_H = 230;
-const LOGO_SIZE = 80;
-const HERO_H = BANNER_H + 124; // banner + name/stats row
-const TAB_H = 52;
-const STICKY_NAV_H = 56;
-const CARD_GAP = 12;
-const H_PAD = 16;
+const LOGO_SIZE = 84;
+const LOGO_RING = 3;
+const TAB_H = 48;
+const STICKY_NAV_H = 52;
+const PAGE_SIZE = 20;
+const CARD_GAP = layout.gridGap;
+const H_PAD = SCREEN_PADDING;
 
-// ─── StarRating ───────────────────────────────────────────────────────────────
+// ─── StarRow ──────────────────────────────────────────────────────────────────
 
-const StarRating = memo(
-  ({ rating, size = 13, color }: { rating: number; size?: number; color: string }) => (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
+/**
+ * Five discrete stars. The kit's `Rating` pill is the right call for a score in
+ * a dense row (hero, product card); an individual review is the one place the
+ * whole scale should be visible, because the reader is judging *this* rating.
+ */
+const StarRow = memo(({ rating, size = iconSize.xs }: { rating: number; size?: number }) => {
+  const colors = useColors();
+  return (
+    <View style={starStyles.row} accessibilityLabel={`Rated ${rating} out of 5`}>
       {[1, 2, 3, 4, 5].map((i) => (
         <Ionicons
           key={i}
           name={rating >= i ? 'star' : rating >= i - 0.5 ? 'star-half' : 'star-outline'}
           size={size}
-          color={color}
+          color={colors.rating}
         />
       ))}
     </View>
-  )
-);
-StarRating.displayName = 'StarRating';
+  );
+});
+StarRow.displayName = 'StarRow';
+
+const starStyles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: spacing.xxs },
+});
 
 // ─── ReviewCard ───────────────────────────────────────────────────────────────
 
-const ReviewCard = memo(({ review, colors }: { review: Review; colors: any }) => {
+const ReviewCard = memo(({ review }: { review: Review }) => {
+  const colors = useColors();
+
   const date = useMemo(
     () =>
-      new Date(review.createdAt).toLocaleDateString('en-US', {
+      new Date(review.createdAt).toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -102,92 +134,100 @@ const ReviewCard = memo(({ review, colors }: { review: Review; colors: any }) =>
   const initial = review.userName?.charAt(0)?.toUpperCase() ?? '?';
 
   return (
-    <View style={[rc.card, { backgroundColor: colors.cardBackground }]}>
-      <View style={rc.row}>
-        <View style={[rc.avatar, { backgroundColor: colors.primary + '18' }]}>
-          <Text style={[rc.initial, { color: colors.primary }]}>{initial}</Text>
+    <Surface level="xs" padding="lg" style={reviewStyles.card}>
+      <View style={reviewStyles.head}>
+        <View style={[reviewStyles.avatar, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
+          <AppText variant="subtitle" weight="700" tone="primary">
+            {initial}
+          </AppText>
         </View>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text style={[rc.name, { color: colors.text.gray }]}>{review.userName}</Text>
-          <StarRating rating={review.rating} color={colors.warning} />
+
+        <View style={reviewStyles.identity}>
+          <AppText variant="bodySmallStrong" tone="title" numberOfLines={1}>
+            {review.userName}
+          </AppText>
+          <StarRow rating={review.rating} />
         </View>
-        <Text style={[rc.date, { color: colors.text.veryLightGray }]}>{date}</Text>
+
+        <AppText variant="micro" tone="subtle">
+          {date}
+        </AppText>
       </View>
-      {!!review.comment && (
-        <Text style={[rc.comment, { color: colors.text.mediumGray }]}>{review.comment}</Text>
-      )}
-    </View>
+
+      {review.comment ? (
+        <AppText variant="bodySmall" tone="body" style={reviewStyles.comment}>
+          {review.comment}
+        </AppText>
+      ) : null}
+    </Surface>
   );
 });
 ReviewCard.displayName = 'ReviewCard';
 
-const rc = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    marginHorizontal: H_PAD,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-      android: { elevation: 1 },
-    }),
+const reviewStyles = StyleSheet.create({
+  card: { marginHorizontal: H_PAD, marginBottom: spacing.md },
+  head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
-  avatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  initial: { fontSize: 16, fontWeight: '700' },
-  name: { fontSize: 14, fontWeight: '600' },
-  date: { fontSize: 11, marginTop: 2 },
-  comment: { fontSize: 14, lineHeight: 20 },
+  identity: { flex: 1, gap: spacing.xs },
+  comment: { marginTop: spacing.md },
 });
 
-// ─── TabBar content ───────────────────────────────────────────────────────────
+// ─── TabBar ───────────────────────────────────────────────────────────────────
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'products', label: 'Products' },
-  { key: 'reviews', label: 'Reviews' },
-  { key: 'about', label: 'About' },
+const TABS: { key: Tab; labelKey: string; fallback: string }[] = [
+  { key: 'products', labelKey: 'products', fallback: 'Products' },
+  { key: 'reviews', labelKey: 'reviews', fallback: 'Reviews' },
+  { key: 'about', labelKey: 'store_about', fallback: 'About' },
 ];
 
-const TabBarContent = memo(
-  ({
-    activeTab,
-    onChange,
-    colors,
-  }: {
-    activeTab: Tab;
-    onChange: (t: Tab) => void;
-    colors: any;
-  }) => (
-    <View style={[tbs.wrap, { backgroundColor: colors.background }]}>
-      {TABS.map((t) => {
-        const active = activeTab === t.key;
-        return (
-          <Pressable
-            key={t.key}
-            style={tbs.tab}
-            onPress={() => onChange(t.key)}
-            hitSlop={6}
-          >
-            <Text
-              style={[
-                tbs.label,
-                { color: active ? colors.primary : colors.text.veryLightGray },
-              ]}
-            >
-              {t.label}
-            </Text>
-            {active && (
-              <View style={[tbs.indicator, { backgroundColor: colors.primary }]} />
-            )}
-          </Pressable>
-        );
-      })}
-    </View>
-  )
-);
-TabBarContent.displayName = 'TabBarContent';
+const TabBar = memo(
+  ({ activeTab, onChange }: { activeTab: Tab; onChange: (t: Tab) => void }) => {
+    const colors = useColors();
 
-const tbs = StyleSheet.create({
+    return (
+      <View
+        style={[
+          tabStyles.wrap,
+          { backgroundColor: colors.surface, borderBottomColor: colors.borderLight },
+        ]}
+      >
+        {TABS.map((t) => {
+          const active = activeTab === t.key;
+          return (
+            <Touchable
+              key={t.key}
+              style={tabStyles.tab}
+              scaleTo={1}
+              onPress={() => onChange(t.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <AppText
+                variant="bodySmall"
+                weight={active ? '700' : '500'}
+                style={{ color: active ? colors.primary : colors.text.muted }}
+              >
+                {String(i18n.t(t.labelKey) || t.fallback)}
+              </AppText>
+              {active ? (
+                <View style={[tabStyles.indicator, { backgroundColor: colors.primary }]} />
+              ) : null}
+            </Touchable>
+          );
+        })}
+      </View>
+    );
+  }
+);
+TabBar.displayName = 'TabBar';
+
+const tabStyles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     height: TAB_H,
@@ -198,251 +238,221 @@ const tbs = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 4,
     position: 'relative',
   },
-  label: { fontSize: 14, fontWeight: '600' },
-  indicator: { position: 'absolute', bottom: 0, height: 2.5, width: '60%', borderRadius: 2 },
+  indicator: {
+    position: 'absolute',
+    bottom: 0,
+    height: 3,
+    width: '56%',
+    borderTopStartRadius: radius.xs,
+    borderTopEndRadius: radius.xs,
+  },
 });
 
-// ─── HeroSection ─────────────────────────────────────────────────────────────
+// ─── Hero ─────────────────────────────────────────────────────────────────────
 
-const HeroSection = memo(
-  ({
-    merchant,
-    colors,
-    isDark,
-  }: {
-    merchant: Merchant | null;
-    colors: any;
-    isDark: boolean;
-  }) => {
-    const rating = merchant?.rating ?? 0;
-    const reviews = merchant?.totalReviews ?? 0;
+const Hero = memo(({ merchant, bannerH }: { merchant: Merchant | null; bannerH: number }) => {
+  const colors = useColors();
+  const rating = merchant?.rating ?? 0;
+  const reviews = merchant?.totalReviews ?? 0;
+  const verified = merchant?.status === 'approved' || merchant?.verified;
 
-    return (
-      <View>
-        {/* Banner */}
-        <View style={[hs.bannerWrap, { height: BANNER_H }]}>
-          {merchant?.banner ? (
+  return (
+    <View style={{ backgroundColor: colors.surface }}>
+      <View style={[heroStyles.banner, { height: bannerH, backgroundColor: colors.surfaceMuted }]}>
+        {merchant?.banner ? (
+          <Image
+            source={{ uri: merchant.banner }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={320}
+          />
+        ) : (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              heroStyles.center,
+              { backgroundColor: withAlpha(colors.primary, 0.1) },
+            ]}
+          >
+            <Ionicons name="storefront-outline" size={iconSize.hero} color={colors.primary} />
+          </View>
+        )}
+
+        {/* Bottom scrim only — a flat wash over the whole banner is what made
+            store art look muddy; this just protects the logo's edge. */}
+        <LinearGradient
+          colors={['transparent', colors.scrim]}
+          locations={[0.5, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      </View>
+
+      <View style={heroStyles.info}>
+        <View
+          style={[
+            heroStyles.logoRing,
+            { backgroundColor: colors.surface, borderColor: colors.surface },
+            elevation.md,
+          ]}
+        >
+          {merchant?.logoUrl ? (
             <Image
-              source={{ uri: merchant.banner }}
-              style={StyleSheet.absoluteFill}
+              source={{ uri: merchant.logoUrl }}
+              style={heroStyles.logo}
               contentFit="cover"
-              transition={400}
+              transition={280}
             />
           ) : (
             <View
               style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: isDark ? colors.surface : colors.primary + '22' },
-              ]}
-            />
-          )}
-          {/* Gradient overlay */}
-          <View style={hs.bannerOverlay} />
-        </View>
-
-        {/* Logo + info */}
-        <View style={[hs.infoWrap, { backgroundColor: colors.background }]}>
-          {/* Logo overlapping banner */}
-          <View style={hs.logoOuter}>
-            <View
-              style={[
-                hs.logoRing,
-                { backgroundColor: colors.background, borderColor: colors.background },
+                heroStyles.logo,
+                heroStyles.center,
+                { backgroundColor: colors.surfaceMuted },
               ]}
             >
-              {merchant?.logoUrl ? (
-                <Image
-                  source={{ uri: merchant.logoUrl }}
-                  style={hs.logoImg}
-                  contentFit="cover"
-                  transition={300}
-                />
-              ) : (
-                <View
-                  style={[hs.logoImg, { backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }]}
-                >
-                  <Ionicons name="storefront" size={32} color={colors.primary} />
-                </View>
-              )}
+              <Ionicons name="storefront" size={iconSize.xxl} color={colors.primary} />
             </View>
-          </View>
-
-          {/* Name + verified */}
-          <View style={{ marginTop: LOGO_SIZE / 2 + 8, alignItems: 'center', paddingHorizontal: H_PAD }}>
-            <View style={hs.nameRow}>
-              <Text style={[hs.name, { color: colors.text.gray }]} numberOfLines={1}>
-                {merchant?.storeName ?? ''}
-              </Text>
-              {(merchant?.status === 'approved' || merchant?.verified) && (
-                <Ionicons name="checkmark-circle" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
-              )}
-            </View>
-
-            {/* Rating row */}
-            {rating > 0 && (
-              <View style={hs.ratingRow}>
-                <StarRating rating={rating} size={14} color={colors.warning} />
-                <Text style={[hs.ratingNum, { color: colors.text.gray }]}>
-                  {rating.toFixed(1)}
-                </Text>
-                {reviews > 0 && (
-                  <Text style={[hs.reviewCount, { color: colors.text.veryLightGray }]}>
-                    ({reviews} reviews)
-                  </Text>
-                )}
-              </View>
-            )}
-          </View>
+          )}
         </View>
-      </View>
-    );
-  }
-);
-HeroSection.displayName = 'HeroSection';
 
-const hs = StyleSheet.create({
-  bannerWrap: { width: '100%', overflow: 'hidden' },
-  bannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-  },
-  infoWrap: {
+        <View style={heroStyles.nameRow}>
+          <AppText variant="title" tone="title" numberOfLines={1} style={heroStyles.name}>
+            {merchant?.storeName ?? ''}
+          </AppText>
+          {verified ? (
+            <Ionicons name="checkmark-circle" size={iconSize.md} color={colors.primary} />
+          ) : null}
+        </View>
+
+        {rating > 0 ? <Rating value={rating} count={reviews || undefined} /> : null}
+      </View>
+    </View>
+  );
+});
+Hero.displayName = 'Hero';
+
+const heroStyles = StyleSheet.create({
+  banner: { width: '100%', overflow: 'hidden' },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  info: {
     alignItems: 'center',
-    paddingBottom: 16,
-  },
-  logoOuter: {
-    marginTop: -(LOGO_SIZE / 2 + 3),
-    zIndex: 10,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
   },
   logoRing: {
-    width: LOGO_SIZE + 6,
-    height: LOGO_SIZE + 6,
-    borderRadius: (LOGO_SIZE + 6) / 2,
-    borderWidth: 3,
+    width: LOGO_SIZE + LOGO_RING * 2,
+    height: LOGO_SIZE + LOGO_RING * 2,
+    borderRadius: radius.pill,
+    borderWidth: LOGO_RING,
     overflow: 'hidden',
-    justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 4 },
-    }),
+    justifyContent: 'center',
+    marginTop: -(LOGO_SIZE / 2 + LOGO_RING),
+    marginBottom: spacing.sm,
   },
-  logoImg: { width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: LOGO_SIZE / 2 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  ratingNum: { fontSize: 14, fontWeight: '600' },
-  reviewCount: { fontSize: 13 },
+  logo: { width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: radius.pill },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  name: { flexShrink: 1, textAlign: 'center' },
 });
 
-// ─── HeroSkeleton ─────────────────────────────────────────────────────────────
+// ─── Skeletons ────────────────────────────────────────────────────────────────
 
-const HeroSkeleton = memo(({ colors, isDark }: { colors: any; isDark: boolean }) => {
-  const cm = isDark ? 'dark' : 'light';
+const StoreSkeleton = memo(({ bannerH, cardW }: { bannerH: number; cardW: number }) => {
+  const colors = useColors();
   return (
-    <View style={{ backgroundColor: colors.background }}>
-      <Skeleton height={BANNER_H} width="100%" colorMode={cm} />
-      <View style={{ alignItems: 'center', paddingBottom: 16 }}>
-        <View style={{ marginTop: -(LOGO_SIZE / 2 + 4) }}>
-          <Skeleton height={LOGO_SIZE + 6} width={LOGO_SIZE + 6} radius={(LOGO_SIZE + 6) / 2} colorMode={cm} />
+    <View accessibilityLabel={String(i18n.t('loading') || 'Loading')}>
+      <View style={{ backgroundColor: colors.surface }}>
+        <SkeletonBlock height={bannerH} rounded={radius.none} />
+        <View style={skeletonStyles.hero}>
+          <SkeletonBlock
+            height={LOGO_SIZE + LOGO_RING * 2}
+            width={LOGO_SIZE + LOGO_RING * 2}
+            rounded={radius.pill}
+            style={skeletonStyles.logo}
+          />
+          <SkeletonBlock height={22} width={168} />
+          <SkeletonBlock height={16} width={104} />
         </View>
-        <View style={{ height: 16 }} />
-        <Skeleton height={22} width={160} radius={6} colorMode={cm} />
-        <View style={{ height: 8 }} />
-        <Skeleton height={14} width={110} radius={4} colorMode={cm} />
+        <View style={skeletonStyles.tabs}>
+          {[76, 68, 60].map((w) => (
+            <SkeletonBlock key={w} height={18} width={w} />
+          ))}
+        </View>
       </View>
-      <View
-        style={{ height: TAB_H, flexDirection: 'row', gap: 12, paddingHorizontal: H_PAD, alignItems: 'center' }}
-      >
-        {[80, 70, 60].map((w, i) => (
-          <Skeleton key={i} height={28} width={w} radius={14} colorMode={cm} />
+
+      <View style={skeletonStyles.grid}>
+        {Array.from({ length: 4 }, (_, i) => (
+          <SkeletonProductCard key={i} width={cardW} />
         ))}
       </View>
     </View>
   );
 });
-HeroSkeleton.displayName = 'HeroSkeleton';
+StoreSkeleton.displayName = 'StoreSkeleton';
 
-// ─── ProductSkeletons ─────────────────────────────────────────────────────────
+const skeletonStyles = StyleSheet.create({
+  hero: {
+    alignItems: 'center',
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
+  },
+  logo: { marginTop: -(LOGO_SIZE / 2 + LOGO_RING), marginBottom: spacing.sm },
+  tabs: {
+    height: TAB_H,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: H_PAD,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CARD_GAP,
+    paddingHorizontal: H_PAD,
+    paddingTop: spacing.lg,
+  },
+});
 
-const ProductSkeletons = memo(
-  ({ colors, isDark, cardW }: { colors: any; isDark: boolean; cardW: number }) => {
-    const cm = isDark ? 'dark' : 'light';
-    return (
-      <View
-        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, paddingHorizontal: H_PAD, paddingTop: 16 }}
+// ─── About ────────────────────────────────────────────────────────────────────
+
+const About = memo(({ merchant }: { merchant: Merchant | null }) => {
+  const description = merchant?.description?.trim();
+
+  return (
+    <Surface padding="xl" style={aboutStyles.card}>
+      <AppText variant="subtitle" tone="title">
+        {String(i18n.t('store_about') || 'About')}
+      </AppText>
+      <AppText
+        variant="body"
+        tone={description ? 'body' : 'muted'}
+        style={aboutStyles.body}
       >
-        {Array.from({ length: 6 }).map((_, i) => (
-          <View
-            key={i}
-            style={{ width: cardW, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.cardBackground }}
-          >
-            <Skeleton height={cardW} width="100%" colorMode={cm} />
-            <View style={{ padding: 10, gap: 6 }}>
-              <Skeleton height={12} width="70%" radius={4} colorMode={cm} />
-              <Skeleton height={14} width={60} radius={4} colorMode={cm} />
-            </View>
-          </View>
-        ))}
-      </View>
-    );
-  }
-);
-ProductSkeletons.displayName = 'ProductSkeletons';
+        {description || String(i18n.t('store_noDescription') || 'No description provided.')}
+      </AppText>
+    </Surface>
+  );
+});
+About.displayName = 'About';
 
-// ─── AboutSection ─────────────────────────────────────────────────────────────
-
-const AboutSection = memo(({ merchant, colors }: { merchant: Merchant | null; colors: any }) => (
-  <View style={[ab.wrap, { backgroundColor: colors.cardBackground }]}>
-    <Text style={[ab.title, { color: colors.text.gray }]}>About</Text>
-    <Text style={[ab.body, { color: colors.text.mediumGray }]}>
-      {merchant?.description?.trim() || 'No description provided.'}
-    </Text>
-  </View>
-));
-AboutSection.displayName = 'AboutSection';
-
-const ab = StyleSheet.create({
-  wrap: { margin: H_PAD, borderRadius: 20, padding: 20 },
-  title: { fontSize: 17, fontWeight: '700', marginBottom: 10 },
-  body: { fontSize: 15, lineHeight: 24 },
+const aboutStyles = StyleSheet.create({
+  card: { margin: H_PAD },
+  body: { marginTop: spacing.md },
 });
 
-// ─── EmptyState ───────────────────────────────────────────────────────────────
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
-const EmptyState = memo(
-  ({ tab, colors }: { tab: Tab; colors: any }) => (
-    <View style={es.wrap}>
-      <Ionicons
-        name={tab === 'products' ? 'cube-outline' : 'chatbubble-ellipses-outline'}
-        size={52}
-        color={colors.text.veryLightGray}
-      />
-      <Text style={[es.label, { color: colors.text.veryLightGray }]}>
-        {tab === 'products' ? 'No products yet' : 'No reviews yet'}
-      </Text>
-    </View>
-  )
-);
-EmptyState.displayName = 'EmptyState';
-
-const es = StyleSheet.create({
-  wrap: { alignItems: 'center', paddingVertical: 64, gap: 14 },
-  label: { fontSize: 15 },
-});
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-
-export default function MerchantDetailsScreen() {
+export default function StoreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { theme, isDark } = useTheme();
-  const colors = theme.colors;
+  const colors = useColors();
+  const rtl = useRTL();
   const { trackEvent } = useTracking();
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
@@ -459,11 +469,19 @@ export default function MerchantDetailsScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  const BANNER_H = Math.round(width / layout.bannerRatio);
   const CARD_W = (width - H_PAD * 2 - CARD_GAP) / 2;
+
+  // The point at which the inline tab bar has scrolled away and the sticky one
+  // must take over. Measured rather than guessed: the hero's height depends on
+  // whether the store has a rating and how the name wraps, so a hard-coded
+  // estimate desyncs the handoff and the tabs flicker mid-scroll.
+  const [headerH, setHeaderH] = useState(0);
+  const HERO_H = (headerH || BANNER_H + LOGO_SIZE + spacing.huge) - insets.top - STICKY_NAV_H - TAB_H;
 
   // ── Sticky animations ──────────────────────────────────────────────────────
   const navOpacity = scrollY.interpolate({
-    inputRange: [BANNER_H - 70, BANNER_H + 10],
+    inputRange: [BANNER_H - 72, BANNER_H],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
@@ -485,7 +503,9 @@ export default function MerchantDetailsScreen() {
       const res = await axiosInstance.get(`/merchants/store/${id}`);
       const data = res.data?.data ?? res.data;
       setMerchant(data ?? null);
-    } catch { /* silent */ }
+    } catch {
+      /* the products call owns the error state — a missing hero isn't fatal */
+    }
   }, [id]);
 
   const fetchProducts = useCallback(
@@ -496,7 +516,7 @@ export default function MerchantDetailsScreen() {
         else setIsLoadingMore(true);
 
         const res = await axiosInstance.get(`/merchants/store/${id}/products`, {
-          params: { page: pg, limit: 20, currencyCode },
+          params: { page: pg, limit: PAGE_SIZE, currencyCode },
         });
 
         const raw = res.data;
@@ -505,17 +525,33 @@ export default function MerchantDetailsScreen() {
         else if (Array.isArray(raw?.products)) items = raw.products;
         else if (Array.isArray(raw)) items = raw;
 
-        const normalized = items.map((p) => {
-          try { return normalizeProduct(p); } catch { return p as NormalizedProduct; }
-        }).filter(Boolean) as NormalizedProduct[];
+        const normalized = items
+          .map((p) => {
+            try {
+              return normalizeProduct(p);
+            } catch {
+              return p as NormalizedProduct;
+            }
+          })
+          .filter(Boolean) as NormalizedProduct[];
 
         setProducts((prev) => (pg === 1 ? normalized : [...prev, ...normalized]));
+        setError(null);
 
-        const total = raw?.meta?.total ?? raw?.total ?? normalized.length;
-        setHasMore(pg * 20 < total);
+        // `sendPaginated` nests the count under `meta.pagination.total`. Reading
+        // `meta.total` always missed and fell through to `normalized.length`,
+        // which makes a full page look like the last page — the store stopped
+        // at 20 products no matter how many it had.
+        const total =
+          (raw as any)?.meta?.pagination?.total ??
+          (res as any)?.meta?.pagination?.total ??
+          (raw as any)?.total;
+        setHasMore(
+          typeof total === 'number' ? pg * PAGE_SIZE < total : normalized.length === PAGE_SIZE
+        );
         setPage(pg);
       } catch {
-        setError('Failed to load products');
+        setError('load-failed');
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -533,7 +569,9 @@ export default function MerchantDetailsScreen() {
       });
       const data = res.data?.data ?? res.data ?? [];
       setReviews(Array.isArray(data) ? data : []);
-    } catch { /* silent */ }
+    } catch {
+      /* reviews are supplementary — never block the storefront on them */
+    }
   }, [id]);
 
   useEffect(() => {
@@ -543,7 +581,7 @@ export default function MerchantDetailsScreen() {
     InteractionManager.runAfterInteractions(() => {
       trackEvent('store_open', { storeId: id as string, screen: 'merchant_details' });
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleRefresh = useCallback(() => {
@@ -564,30 +602,31 @@ export default function MerchantDetailsScreen() {
   );
 
   // ── Render helpers ─────────────────────────────────────────────────────────
+  const handleHeaderLayout = useCallback(
+    (e: LayoutChangeEvent) => setHeaderH(e.nativeEvent.layout.height),
+    []
+  );
+
   const ListHeader = useMemo(
     () => (
-      <>
-        <HeroSection merchant={merchant} colors={colors} isDark={isDark} />
-        <TabBarContent activeTab={activeTab} onChange={handleTabChange} colors={colors} />
-      </>
+      <View onLayout={handleHeaderLayout}>
+        <Hero merchant={merchant} bannerH={BANNER_H} />
+        <TabBar activeTab={activeTab} onChange={handleTabChange} />
+      </View>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [merchant, colors, isDark, activeTab]
+    [merchant, BANNER_H, activeTab, handleTabChange, handleHeaderLayout]
   );
 
   const renderProduct = useCallback(
-    ({ item, index }: { item: NormalizedProduct; index: number }) => (
-      <View style={{ width: CARD_W, marginLeft: index % 2 === 0 ? 0 : CARD_GAP }}>
+    ({ item }: { item: NormalizedProduct }) => (
+      <View style={{ width: CARD_W }}>
         <ProductCard item={item} variant="grid" />
       </View>
     ),
     [CARD_W]
   );
 
-  const renderReview = useCallback(
-    ({ item }: { item: Review }) => <ReviewCard review={item} colors={colors} />,
-    [colors]
-  );
+  const renderReview = useCallback(({ item }: { item: Review }) => <ReviewCard review={item} />, []);
 
   const keyProduct = useCallback((item: NormalizedProduct) => item.id, []);
   const keyReview = useCallback((item: Review) => item._id, []);
@@ -604,102 +643,118 @@ export default function MerchantDetailsScreen() {
 
   const refreshControl = useMemo(
     () => (
-      <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+      <RefreshControl
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
+        colors={[colors.primary]}
+        tintColor={colors.primary}
+      />
     ),
     [isRefreshing, handleRefresh, colors.primary]
   );
 
+  const backButton = (
+    <View style={[styles.backSlot, { top: insets.top + spacing.sm }]}>
+      <Touchable
+        onPress={() => router.back()}
+        hitSlop={spacing.sm}
+        style={[styles.backButton, { backgroundColor: colors.surface }, elevation.sm]}
+        accessibilityRole="button"
+        accessibilityLabel={String(i18n.t('back') || 'Back')}
+      >
+        <Ionicons name={rtl.arrowBack} size={iconSize.md} color={colors.text.title} />
+      </Touchable>
+    </View>
+  );
+
   // ── Skeleton ───────────────────────────────────────────────────────────────
-  if (isLoading) {
+  if (isLoading && products.length === 0) {
     return (
-      <View style={[s.root, { backgroundColor: colors.background }]}>
-        <View style={[s.fixedBack, { top: insets.top + 8 }]}>
-          <Pressable style={[s.backCircle, { backgroundColor: colors.cardBackground }]} onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="arrow-back" size={20} color={colors.text.gray} />
-          </Pressable>
-        </View>
-        <HeroSkeleton colors={colors} isDark={isDark} />
-        <ProductSkeletons colors={colors} isDark={isDark} cardW={CARD_W} />
-      </View>
+      <Screen>
+        {backButton}
+        <StoreSkeleton bannerH={BANNER_H} cardW={CARD_W} />
+      </Screen>
     );
   }
 
   // ── Error ──────────────────────────────────────────────────────────────────
   if (error && !merchant) {
     return (
-      <View style={[s.root, s.center, { backgroundColor: colors.background }]}>
-        <Ionicons name="alert-circle-outline" size={52} color={colors.text.veryLightGray} />
-        <Text style={[s.errorMsg, { color: colors.text.gray }]}>Could not load store</Text>
-        <Pressable style={[s.retryBtn, { backgroundColor: colors.primary }]} onPress={() => fetchProducts(1)}>
-          <Text style={{ color: colors.text.white, fontWeight: '600', fontSize: 15 }}>Retry</Text>
-        </Pressable>
-      </View>
+      <Screen>
+        {backButton}
+        <EmptyState
+          fullHeight
+          tone="error"
+          icon="alert-circle-outline"
+          title={String(i18n.t('store_loadFailed') || 'Could not load this store')}
+          description={String(i18n.t('store_loadFailedHint') || 'Check your connection and try again.')}
+          actionLabel={String(i18n.t('retry') || 'Retry')}
+          onAction={handleRefresh}
+        />
+      </Screen>
     );
   }
 
   // ── Content ────────────────────────────────────────────────────────────────
   return (
-    <View style={[s.root, { backgroundColor: colors.background }]}>
+    <Screen>
+      {backButton}
 
-      {/* ── Fixed back button (always visible) ── */}
-      <View style={[s.fixedBack, { top: insets.top + 8 }]}>
-        <Pressable
-          style={[s.backCircle, { backgroundColor: colors.cardBackground }]}
-          onPress={() => router.back()}
-          hitSlop={8}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.text.gray} />
-        </Pressable>
-      </View>
-
-      {/* ── Sticky collapsing nav header (merchant name appears on scroll) ── */}
+      {/* Collapsing nav — the store name takes over once the banner scrolls off. */}
       <Animated.View
         style={[
-          s.stickyNav,
+          styles.stickyNav,
           {
             opacity: navOpacity,
-            backgroundColor: colors.background,
+            backgroundColor: colors.surface,
             paddingTop: insets.top,
             borderBottomColor: colors.borderLight,
           },
         ]}
         pointerEvents="none"
       >
-        <Text style={[s.stickyNavTitle, { color: colors.text.gray }]} numberOfLines={1}>
+        <AppText variant="bodySmallStrong" weight="700" tone="title" numberOfLines={1}>
           {merchant?.storeName ?? ''}
-        </Text>
+        </AppText>
       </Animated.View>
 
-      {/* ── Sticky tab bar (slides in when inline tabs scroll away) ── */}
+      {/* Sticky tabs — slide in as the inline tab bar scrolls away. */}
       <Animated.View
         style={[
-          s.stickyTab,
+          styles.stickyTabs,
           {
             top: insets.top + STICKY_NAV_H,
-            backgroundColor: colors.background,
-            borderBottomColor: colors.borderLight,
             opacity: stickyTabOpacity,
             transform: [{ translateY: stickyTabY }],
           },
         ]}
       >
-        <TabBarContent activeTab={activeTab} onChange={handleTabChange} colors={colors} />
+        <TabBar activeTab={activeTab} onChange={handleTabChange} />
       </Animated.View>
 
-      {/* ── Products tab ── */}
       {activeTab === 'products' && (
         <Animated.FlatList<NormalizedProduct>
           data={products}
           numColumns={2}
           keyExtractor={keyProduct}
           renderItem={renderProduct}
-          columnWrapperStyle={{ gap: CARD_GAP }}
-          contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 32 }]}
+          // Gutters live on the column wrapper, not the content container, so
+          // the hero banner stays full-bleed instead of being inset by 12pt.
+          columnWrapperStyle={styles.column}
+          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
           ListHeaderComponent={ListHeader}
-          ListEmptyComponent={<EmptyState tab="products" colors={colors} />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="cube-outline"
+              title={String(i18n.t('store_noProducts') || 'No products yet')}
+              description={String(
+                i18n.t('store_noProductsHint') || "This store hasn't listed anything for sale."
+              )}
+            />
+          }
           ListFooterComponent={
             isLoadingMore ? (
-              <View style={s.loadMore}>
+              <View style={styles.loadMore}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
             ) : null
@@ -713,15 +768,24 @@ export default function MerchantDetailsScreen() {
         />
       )}
 
-      {/* ── Reviews tab ── */}
       {activeTab === 'reviews' && (
         <Animated.FlatList<Review>
           data={reviews}
           keyExtractor={keyReview}
           renderItem={renderReview}
-          contentContainerStyle={[s.listContentSingle, { paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
           ListHeaderComponent={ListHeader}
-          ListEmptyComponent={<EmptyState tab="reviews" colors={colors} />}
+          ListHeaderComponentStyle={styles.listHeaderGap}
+          ListEmptyComponent={
+            <EmptyState
+              icon="chatbubble-ellipses-outline"
+              title={String(i18n.t('store_noReviews') || 'No reviews yet')}
+              description={String(
+                i18n.t('store_noReviewsHint') ||
+                  "Reviews appear here once shoppers rate this store's products."
+              )}
+            />
+          }
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
@@ -729,84 +793,66 @@ export default function MerchantDetailsScreen() {
         />
       )}
 
-      {/* ── About tab ── */}
       {activeTab === 'about' && (
         <Animated.ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
           refreshControl={refreshControl}
         >
           {ListHeader}
-          <AboutSection merchant={merchant} colors={colors} />
+          <About merchant={merchant} />
         </Animated.ScrollView>
       )}
-    </View>
+    </Screen>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
-  root: { flex: 1 },
-  center: { justifyContent: 'center', alignItems: 'center', gap: 16 },
-
-  // Fixed back button
-  fixedBack: {
+const styles = StyleSheet.create({
+  backSlot: {
     position: 'absolute',
-    left: H_PAD,
+    start: H_PAD,
     zIndex: 200,
   },
-  backCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
+  backButton: {
+    width: MIN_TOUCH - spacing.xs,
+    height: MIN_TOUCH - spacing.xs,
+    borderRadius: radius.pill,
     alignItems: 'center',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-      android: { elevation: 3 },
-    }),
+    justifyContent: 'center',
   },
 
-  // Sticky nav (merchant name)
   stickyNav: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     zIndex: 100,
     height: STICKY_NAV_H,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 10,
+    paddingBottom: spacing.md,
+    paddingHorizontal: MIN_TOUCH + H_PAD,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  stickyNavTitle: { fontSize: 16, fontWeight: '700' },
 
-  // Sticky tab bar
-  stickyTab: {
+  stickyTabs: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     zIndex: 99,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 
-  // List content padding
-  listContent: { paddingHorizontal: H_PAD, paddingTop: 16 },
-  listContentSingle: { paddingTop: 16 },
-
-  // Load more indicator
-  loadMore: { paddingVertical: 24, alignItems: 'center' },
-
-  // Error screen
-  errorMsg: { fontSize: 16, textAlign: 'center' },
-  retryBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 24,
-    marginTop: 8,
+  column: {
+    gap: CARD_GAP,
+    paddingHorizontal: H_PAD,
+    marginTop: CARD_GAP,
   },
+
+  listHeaderGap: { marginBottom: spacing.md },
+
+  loadMore: { paddingVertical: spacing.xxl, alignItems: 'center' },
 });

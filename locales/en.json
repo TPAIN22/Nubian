@@ -598,5 +598,13 @@
   "cart_outOfStockHint": "Try a different option or check back later.",
   "cart_checkConnection": "Check your connection and try again.",
   "cart_quantity": "Quantity",
-  "address_confirmPinNudge": "Tap edit to confirm this location on the map"
+  "address_confirmPinNudge": "Tap edit to confirm this location on the map",
+  "store_about": "About",
+  "store_loadFailed": "Could not load this store",
+  "store_loadFailedHint": "Check your connection and try again.",
+  "store_noDescription": "This store hasn't added a description yet.",
+  "store_noProducts": "No products yet",
+  "store_noProductsHint": "This store hasn't listed anything for sale.",
+  "store_noReviews": "No reviews yet",
+  "store_noReviewsHint": "Reviews appear here once shoppers rate this store's products."
 }

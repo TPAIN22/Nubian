@@ -74,8 +74,15 @@ export type NormalizedProduct = {
   rate?: number;
   rateUnavailable?: boolean;
   discountPercentage?: number;
+  hasDiscount?: boolean;
   originalPrice?: number;
-  
+
+  // Re-emitted at the root so a second pass over this object finds them where
+  // the first pass looked. Without these, re-normalizing a normalized product
+  // (wishlist → AsyncStorage → wishlist) nulled out both pricing blocks.
+  merchantPrice?: number;
+  finalPrice?: number;
+
   // Definitive Display Pricing (Source of Truth)
   displayOriginalPrice?: number;
   displayFinalPrice?: number;
@@ -98,6 +105,19 @@ function asBool(v: any, fallback = false): boolean {
 function asNum(v: any): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Numeric read that keeps an explicit `null` as "absent".
+ *
+ * `asNum` is deliberately lenient — `Number(null)` is `0` — which is harmless
+ * when reading a backend payload. It is wrong when reading this function's OWN
+ * output, where `null` is precisely how "no value" is spelled in the `simple`
+ * and `productLevelPricing` blocks: a plain `asNum` would resurrect a missing
+ * price as a genuine 0 on the second pass. Used only for those fallback reads.
+ */
+function asNumKeepingNull(v: any): number | null {
+  return v == null ? null : asNum(v);
 }
 
 function asStringArray(v: any): string[] {
@@ -171,9 +191,14 @@ function passthroughEnvelope(p: any): ProductPriceEnvelope | undefined {
 }
 
 function normalizeVariant(v: any, attrDefs?: ProductAttributeDefDTO[]): ProductVariantDTO {
-  const variantPrice = passthroughEnvelope(v?.price);
   // `price` on a variant is overloaded in the legacy schema (number) vs the new
   // envelope (object). Preserve the envelope under a separate field for safety.
+  //
+  // The `?? priceEnvelope` fallback is what makes a second pass safe: this
+  // function writes the envelope to `priceEnvelope` and a *number* to `price`,
+  // so on re-normalization `v.price` is no longer an envelope and reading only
+  // it would silently drop the Money block.
+  const variantPrice = passthroughEnvelope(v?.price) ?? passthroughEnvelope(v?.priceEnvelope);
   return {
     _id: asString(v?._id),
     sku: asString(v?.sku),
@@ -213,14 +238,61 @@ function normalizeAttrDef(a: any): ProductAttributeDefDTO {
   };
 }
 
+/**
+ * `normalizeProduct` must be idempotent: `normalize(normalize(x))` equals
+ * `normalize(x)`.
+ *
+ * This is load-bearing, not a purity nicety. Several fields are read from one
+ * key and written to another (`_id`→`id`, `category`→`categoryId`,
+ * `merchant`→`merchantId`, `attributes`→`attributeDefs`, root pricing→
+ * `productLevelPricing`/`simple`). `ProductCard` hands its already-normalized
+ * item to `wishlistStore.addToWishlist`, which persists it to AsyncStorage, and
+ * `app/(tabs)/wishlist.tsx` normalizes it again on the next read. A pass that
+ * only understood the raw backend shape therefore blanked `id`, `categoryId`,
+ * `merchantId`, `attributeDefs` and both pricing blocks on that second pass.
+ *
+ * Every rename below accordingly reads the raw key FIRST and falls back to the
+ * key this function itself emits.
+ */
 export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
-  const id = asString(raw?._id);
-  const category = raw?.category as any;
-  const categoryId = typeof category === "string" ? category : asString(category?._id);
-  const categoryName = typeof category === "object" && category ? asString(category?.name) || undefined : undefined;
+  const r = raw as any;
 
-  const attributeDefs = Array.isArray(raw?.attributes) ? raw.attributes.map(normalizeAttrDef) : [];
+  const id = asString(raw?._id) || asString(r?.id);
+
+  // `category` is the raw shape (string id or populated object); `categoryId` /
+  // `categoryName` is what this function emits.
+  const category = raw?.category as any;
+  const categoryId =
+    (typeof category === "string" ? category : asString(category?._id)) || asString(r?.categoryId);
+  const categoryName =
+    (typeof category === "object" && category ? asString(category?.name) || undefined : undefined) ??
+    (asString(r?.categoryName) || undefined);
+
+  const attributeDefs = Array.isArray(raw?.attributes)
+    ? raw.attributes.map(normalizeAttrDef)
+    : Array.isArray(r?.attributeDefs)
+      ? r.attributeDefs.map(normalizeAttrDef)
+      : [];
   const variants = Array.isArray(raw?.variants) ? raw.variants.map((v) => normalizeVariant(v, attributeDefs)) : [];
+
+  // Root pricing, resolved once. `price` is overloaded: a bare number in the
+  // legacy schema, the Money envelope in the current one. `asNum` of an
+  // envelope object is NaN → null, so the envelope can never be mistaken for a
+  // merchant price.
+  const priceEnvelope = passthroughEnvelope(r?.price);
+  const rootMerchantPrice =
+    asNum(raw?.merchantPrice) ?? asNum(r?.price) ?? asNumKeepingNull(r?.productLevelPricing?.merchantPrice);
+  const rootFinalPrice = asNum(raw?.finalPrice) ?? asNumKeepingNull(r?.productLevelPricing?.finalPrice);
+  const rootNubianMarkup = asNum(raw?.nubianMarkup) ?? asNumKeepingNull(r?.productLevelPricing?.nubianMarkup);
+  const rootDynamicMarkup = asNum(raw?.dynamicMarkup) ?? asNumKeepingNull(r?.productLevelPricing?.dynamicMarkup);
+  const rootDiscountPrice = asNum(raw?.discountPrice) ?? asNumKeepingNull(r?.productLevelPricing?.discountPrice);
+
+  // Discount signals are hoisted out of the Money envelope when the root does
+  // not carry them, so the badge and the strikethrough have something to read
+  // on envelope-only payloads. An explicit root value always wins.
+  const discountPercentage = asNum(r?.discountPercentage) ?? priceEnvelope?.discountPercentage ?? undefined;
+  const hasDiscount =
+    typeof r?.hasDiscount === "boolean" ? r.hasDiscount : priceEnvelope?.hasDiscount ?? undefined;
 
   return {
     id,
@@ -233,20 +305,27 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     categoryId,
     categoryName,
 
-    merchantId: raw?.merchant == null ? null : asString(raw.merchant),
+    merchantId:
+      raw?.merchant != null
+        ? asString(raw.merchant)
+        : r?.merchantId != null
+          ? asString(r.merchantId)
+          : null,
     images: asStringArray(raw?.images),
 
     attributeDefs,
     variants,
 
     simple: {
-      stock: variants.length ? null : asNum(raw?.stock),
-      merchantPrice: variants.length ? null : (asNum(raw?.merchantPrice) ?? asNum(raw?.price)),
-      finalPrice: variants.length ? null : asNum(raw?.finalPrice),
-      nubianMarkup: variants.length ? null : asNum(raw?.nubianMarkup),
-      dynamicMarkup: variants.length ? null : asNum(raw?.dynamicMarkup),
-      discountPrice: variants.length ? null : asNum(raw?.discountPrice),
-      
+      // Root-first, then this function's own `simple` block — a normalized
+      // product carries stock and the markups only under `simple`.
+      stock: variants.length ? null : (asNum(raw?.stock) ?? asNumKeepingNull(r?.simple?.stock)),
+      merchantPrice: variants.length ? null : rootMerchantPrice ?? asNumKeepingNull(r?.simple?.merchantPrice),
+      finalPrice: variants.length ? null : rootFinalPrice ?? asNumKeepingNull(r?.simple?.finalPrice),
+      nubianMarkup: variants.length ? null : rootNubianMarkup ?? asNumKeepingNull(r?.simple?.nubianMarkup),
+      dynamicMarkup: variants.length ? null : rootDynamicMarkup ?? asNumKeepingNull(r?.simple?.dynamicMarkup),
+      discountPrice: variants.length ? null : rootDiscountPrice ?? asNumKeepingNull(r?.simple?.discountPrice),
+
       // Map currency fields (safely check simple object if it exists in raw)
       priceDisplay: asString((raw as any)?.simple?.priceDisplay),
       currencyCode: asString((raw as any)?.simple?.currencyCode),
@@ -254,12 +333,12 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     },
 
     productLevelPricing: {
-      merchantPrice: asNum(raw?.merchantPrice) ?? asNum(raw?.price),
-      finalPrice: asNum(raw?.finalPrice),
-      nubianMarkup: asNum(raw?.nubianMarkup),
-      dynamicMarkup: asNum(raw?.dynamicMarkup),
-      discountPrice: asNum(raw?.discountPrice),
-      
+      merchantPrice: rootMerchantPrice,
+      finalPrice: rootFinalPrice,
+      nubianMarkup: rootNubianMarkup,
+      dynamicMarkup: rootDynamicMarkup,
+      discountPrice: rootDiscountPrice,
+
       // Map currency fields
       priceDisplay: asString((raw as any)?.productLevelPricing?.priceDisplay),
       currencyCode: asString((raw as any)?.productLevelPricing?.currencyCode),
@@ -272,8 +351,14 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     priceConverted: asNum((raw as any)?.priceConverted) ?? undefined,
     rate: asNum((raw as any)?.rate) ?? undefined,
     rateUnavailable: asBool((raw as any)?.rateUnavailable),
-    discountPercentage: asNum((raw as any)?.discountPercentage) ?? undefined,
+    discountPercentage,
+    hasDiscount,
     originalPrice: asNum((raw as any)?.originalPrice) ?? undefined,
+
+    // Re-emitted so a second pass resolves the pricing blocks above from the
+    // root, exactly as the first pass did off the backend payload.
+    merchantPrice: rootMerchantPrice ?? undefined,
+    finalPrice: rootFinalPrice ?? undefined,
 
     // Definitive Display Pricing — fall back to priceConverted / originalPrice
     // so that backends returning those field names are handled without code changes everywhere.
@@ -282,7 +367,7 @@ export function normalizeProduct(raw: ProductDTO): NormalizedProduct {
     displayDiscountPercentage: asNum((raw as any)?.displayDiscountPercentage) ?? undefined,
 
     // Typed Money envelope (canonical). Carried verbatim from the backend.
-    price: passthroughEnvelope((raw as any)?.price),
+    price: priceEnvelope,
     currency: passthroughCurrencyMeta((raw as any)?.currency),
   };
 }

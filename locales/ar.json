@@ -603,5 +603,13 @@
   "cart_outOfStockHint": "جرّب خياراً آخر أو عد لاحقاً.",
   "cart_checkConnection": "تحقق من اتصالك وحاول مرة أخرى.",
   "cart_quantity": "الكمية",
-  "address_confirmPinNudge": "اضغط تعديل لتأكيد هذا الموقع على الخريطة"
+  "address_confirmPinNudge": "اضغط تعديل لتأكيد هذا الموقع على الخريطة",
+  "store_about": "نبذة",
+  "store_loadFailed": "تعذّر تحميل هذا المتجر",
+  "store_loadFailedHint": "تحقق من اتصالك وحاول مرة أخرى.",
+  "store_noDescription": "لم يضف هذا المتجر وصفاً بعد.",
+  "store_noProducts": "لا توجد منتجات بعد",
+  "store_noProductsHint": "لم يعرض هذا المتجر أي منتج للبيع.",
+  "store_noReviews": "لا توجد تقييمات بعد",
+  "store_noReviewsHint": "تظهر التقييمات هنا بعد أن يقيّم المتسوقون منتجات هذا المتجر."
 }

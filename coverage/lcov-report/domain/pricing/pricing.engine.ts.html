@@ -354,7 +354,10 @@
 <a name='L289'></a><a href='#L289'>289</a>
 <a name='L290'></a><a href='#L290'>290</a>
 <a name='L291'></a><a href='#L291'>291</a>
-<a name='L292'></a><a href='#L292'>292</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -382,6 +385,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -647,6 +651,7 @@
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { NormalizedProduct, ProductVariantDTO } from "../product/product.normalize";
 import { ResolvedPrice, PricingOptions } from "./pricing.types";
+import { DEFAULT_NUBIAN_MARKUP } from "@/constants/pricing";
 &nbsp;
 /**
  * Authoritative pricing resolver for the mobile app.
@@ -682,12 +687,13 @@ function resolveFromPrice(
   currency: string,
 ): ResolvedPrice {
   // Prefer the converted root finalPrice. Backend convertProductPrices updates
-  // root finalPrice/originalPrice (and on normalized products, productLevelPricing
-  // mirrors them), but the display* aliases were historically left in USD — so
-  // reading the alias first gave stale numbers on currency-converted payloads.
+  // root finalPrice/originalPrice (and normalizeProduct now mirrors them onto
+  // the root as well as productLevelPricing), but the display* aliases were
+  // historically left in USD — so reading the alias first gave stale numbers on
+  // currency-converted payloads.
   const plp = product.productLevelPricing ?? <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
   const rootFinal =
-    (product as any).finalPrice ??
+    product.finalPrice ??
     plp.finalPrice ??
     product.displayFinalPrice;
 &nbsp;
@@ -729,7 +735,7 @@ function resolveFromPrice(
   // 3. Final legacy fallback — productLevelPricing only.
   return localFallback({
     merchant: plp.merchantPrice ?? <span class="branch-1 cbranch-no" title="branch not covered" >0,</span>
-    nubianMarkup: plp.nubianMarkup ?? 30,
+    nubianMarkup: plp.nubianMarkup ?? DEFAULT_NUBIAN_MARKUP,
     dynamicMarkup: plp.dynamicMarkup ?? 0,
     legacyDiscountPrice: plp.discountPrice ?? undefined,
     storedFinalPrice: plp.finalPrice ?? undefined,
@@ -758,7 +764,7 @@ function resolveVariant(variant: ProductVariantDTO, currency = <span class="bran
       },
       breakdown: {
         merchantPrice: merchant,
-        nubianMarkup: variant.nubianMarkup ?? 30,
+        nubianMarkup: variant.nubianMarkup ?? DEFAULT_NUBIAN_MARKUP,
         dynamicMarkup: variant.dynamicMarkup ?? 0,
         finalPrice: final,
       },
@@ -767,7 +773,7 @@ function resolveVariant(variant: ProductVariantDTO, currency = <span class="bran
 &nbsp;
   return localFallback({
     merchant,
-    nubianMarkup: variant.nubianMarkup ?? 30,
+    nubianMarkup: variant.nubianMarkup ?? DEFAULT_NUBIAN_MARKUP,
     dynamicMarkup: variant.dynamicMarkup ?? 0,
     legacyDiscountPrice: variant.discountPrice,
     storedFinalPrice: variant.finalPrice,
@@ -785,7 +791,7 @@ function resolveSimple(product: NormalizedProduct, currency = <span class="branc
   // See resolveFromPrice for the priority rationale — converted root values win
   // over the un-converted display* aliases.
   const rootFinal =
-    (product as any).finalPrice ??
+    product.finalPrice ??
     simple.finalPrice ??
     product.displayFinalPrice;
 &nbsp;
@@ -812,7 +818,7 @@ function resolveSimple(product: NormalizedProduct, currency = <span class="branc
 &nbsp;
   return localFallback({
     merchant,
-    nubianMarkup: simple.nubianMarkup ?? <span class="branch-1 cbranch-no" title="branch not covered" >30,</span>
+    nubianMarkup: simple.nubianMarkup ?? <span class="branch-1 cbranch-no" title="branch not covered" >DEFAULT_NUBIAN_MARKUP,</span>
     dynamicMarkup: simple.dynamicMarkup ?? <span class="branch-1 cbranch-no" title="branch not covered" >0,</span>
     legacyDiscountPrice: simple.discountPrice ?? undefined,
     storedFinalPrice: simple.finalPrice ?? undefined,
@@ -834,7 +840,7 @@ export function getDisplayPrice(product: NormalizedProduct): { price: number; is
     const plp = product.productLevelPricing ?? <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
     // Trust converted root finalPrice over the un-converted displayFinalPrice alias.
     let price =
-      (product as any).finalPrice ??
+      product.finalPrice ??
       plp.finalPrice ??
       product.displayFinalPrice ??
       0;
@@ -853,7 +859,7 @@ export function getDisplayPrice(product: NormalizedProduct): { price: number; is
 &nbsp;
   const simple = product.simple ?? (<span class="branch-1 cbranch-no" title="branch not covered" >{} as NormalizedProduct["simple"])</span>;
   let price =
-    (product as any).finalPrice ??
+    product.finalPrice ??
     simple.finalPrice ??
     product.displayFinalPrice ??
     0;
@@ -943,7 +949,7 @@ const round2 = (n: number) =&gt; Math.round((Number(n) || 0) * 100) / 100;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-11T09:33:01.077Z
+                at 2026-08-06T13:05:36.173Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

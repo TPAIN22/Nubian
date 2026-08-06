@@ -44,6 +44,13 @@ export function navigateToProduct(
   product?: any,
   opts?: { variantId?: string | null }
 ): void {
+  // A missing id used to push `details: ''`, which matches no route: the tap
+  // looked completely dead. Fail loudly in dev instead of silently doing nothing.
+  if (!productId) {
+    console.warn('navigateToProduct: called without a product id', product?.name ?? product);
+    return;
+  }
+
   // CRITICAL PERF FIX: Seed the Zustand cache store instantly with the full product object.
   // This completely eliminates loading skeletons on the details screen because useProductFetch
   // will instantly find the cached record (even if marked as partial) before the network request.

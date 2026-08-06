@@ -1,9 +1,8 @@
 import { View, StyleSheet, FlatList } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { memo } from 'react';
-import type { ProductDTO } from '@/domain/product/product.types';
-import { normalizeProduct } from "@/domain/product/product.normalize";
-import ItemCard from '../Card';
+import type { NormalizedProduct } from '@/domain/product/product.normalize';
+import ProductCard from '../ProductCard';
 import ItemCardSkeleton from '../ItemCardSkeleton';
 import { navigateToProduct } from '@/utils/deepLinks';
 import { useTracking } from '@/hooks/useTracking';
@@ -15,7 +14,12 @@ const { CARD_WIDTH } = PRODUCT_DETAILS_CONFIG;
 
 interface RecommendationSectionProps {
   title: string;
-  products: ProductDTO[];
+  /**
+   * Already normalized — `recommendations.api.ts` runs `normalizeProduct` at the
+   * API boundary. Re-normalizing here would blank out `id` (a NormalizedProduct
+   * has no `_id`), which is what silently broke taps on these cards.
+   */
+  products: NormalizedProduct[];
   colors: LightColors | DarkColors;
   isLoading?: boolean;
 }
@@ -70,21 +74,21 @@ const RecommendationSection = memo(({
         contentContainerStyle={{ paddingHorizontal: 16 }}
         renderItem={({ item }) => (
           <View style={{ width: CARD_WIDTH, marginEnd: 12 }}>
-            <ItemCard
-              item={normalizeProduct(item)}
-              handleSheetChanges={() => {}}
-              handlePresentModalPress={() => {
+            <ProductCard
+              item={item}
+              showWishlist
+              cardWidth={CARD_WIDTH}
+              onPress={() => {
                 trackEvent('recommendation_click', {
-                  productId: item._id,
+                  productId: item.id,
                   screen: 'product_details',
                 });
-                navigateToProduct(item._id, item as any);
+                navigateToProduct(item.id, item as any);
               }}
-              cardWidth={CARD_WIDTH}
             />
           </View>
         )}
-        keyExtractor={(item, index) => `${title}-${item._id}-${index}`}
+        keyExtractor={(item, index) => `${title}-${item.id}-${index}`}
       />
     </View>
   );
@@ -94,11 +98,11 @@ RecommendationSection.displayName = 'RecommendationSection';
 
 interface ProductRecommendationsProps {
   recommendations: {
-    similarItems?: ProductDTO[];
-    frequentlyBoughtTogether?: ProductDTO[];
-    youMayAlsoLike?: ProductDTO[];
-    cheaperAlternatives?: ProductDTO[];
-    fromSameStore?: ProductDTO[];
+    similarItems?: NormalizedProduct[];
+    frequentlyBoughtTogether?: NormalizedProduct[];
+    youMayAlsoLike?: NormalizedProduct[];
+    cheaperAlternatives?: NormalizedProduct[];
+    fromSameStore?: NormalizedProduct[];
   } | null;
   isLoading: boolean;
   colors: LightColors | DarkColors;

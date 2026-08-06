@@ -26,7 +26,7 @@ interface Props {
 }
 
 /** Circular logo diameter. Also drives the CDN resize and the skeleton. */
-const AVATAR = 68;
+const AVATAR = 88;
 const TILE_WIDTH = 84;
 
 /**
@@ -156,18 +156,18 @@ const styles = StyleSheet.create({
   railContent: { paddingHorizontal: SCREEN_PADDING, paddingVertical: spacing.xs },
   skeletonRow: {
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: SCREEN_PADDING,
   },
   tile: { width: TILE_WIDTH, alignItems: "center", gap: spacing.sm },
   avatar: {
     width: AVATAR,
     height: AVATAR,
-    borderRadius: AVATAR / 2,
+    borderRadius: radius.sm,
     borderWidth: 1,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarImg: { width: "78%", height: "78%" },
+  avatarImg: { width: "100%", height: "100%" },
 });
