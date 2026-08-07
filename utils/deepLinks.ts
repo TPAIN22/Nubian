@@ -8,6 +8,11 @@
 import { router } from 'expo-router';
 import { Linking } from 'react-native';
 import useProductCacheStore from '@/store/useProductCacheStore';
+import {
+  isSafeBannerUrl,
+  resolveBannerTarget,
+  type BannerLike,
+} from '@/utils/bannerTarget';
 
 // ============================================================================
 // GLOBAL ROUTING PATHS
@@ -20,7 +25,9 @@ export const ROUTES = {
   PRODUCT: '/(screens)/details/[details]',
   CATEGORY: '/categories/[id]',
   STORE: '/(screens)/store/[id]',
-  COLLECTION: '/(screens)/[id]', // Can be extended later for collections
+  // Its own segment. `/(screens)/[id]` is the Category screen — routing
+  // collections through it would make a bare id ambiguous between the two.
+  COLLECTION: '/(screens)/collection/[id]',
   SEARCH: '/(tabs)/explore',
   PRODUCTS: '/(screens)/products/[type]', // New products screen for headlines
   CART: '/(tabs)/cart',
@@ -281,53 +288,46 @@ export function navigateToForYou(): void {
 // ============================================================================
 
 /**
- * Handle banner tap navigation
- * @param banner - Banner object with type and targetId
+ * Handle banner tap navigation.
+ *
+ * The destination is decided entirely by `resolveBannerTarget`, which collapses
+ * anything unrecognised, incomplete or unsafe to `none`. So this function only
+ * ever dispatches on a target it already knows is well-formed — there is no
+ * "guess the type from the id" fallback any more, because guessing sent taps to
+ * the product screen for ids that were never products.
+ *
+ * @param banner - Banner with a nested `target` (or the legacy flat fields)
+ * @returns true if a destination was opened
  */
-export function navigateBanner(banner: {
-  type?: 'category' | 'store' | 'product' | 'collection' | 'external';
-  targetId?: string;
-  url?: string;
-}): void {
-  if (!banner.type && !banner.url) {
-    console.warn('Banner has no type or URL');
-    return;
-  }
+export function navigateBanner(banner: BannerLike | null | undefined): boolean {
+  const target = resolveBannerTarget(banner);
 
-  switch (banner.type) {
-    case 'category':
-      if (banner.targetId) {
-        navigateToCategory(banner.targetId);
-      }
-      break;
+  switch (target.type) {
     case 'store':
-      if (banner.targetId) {
-        navigateToStore(banner.targetId);
-      }
-      break;
+      navigateToStore(target.id!);
+      return true;
     case 'product':
-      if (banner.targetId) {
-        navigateToProduct(banner.targetId);
+      navigateToProduct(target.id!);
+      return true;
+    case 'category':
+      navigateToCategory(target.id!);
+      return true;
+    case 'url':
+      // Re-checked rather than trusted: `resolveBannerTarget` already rejected
+      // non-http(s) schemes, and this is the last line before the OS opens it.
+      if (isSafeBannerUrl(target.url)) {
+        Linking.openURL(target.url).catch((err) =>
+          console.warn('navigateBanner: failed to open URL', target.url, err),
+        );
+        return true;
       }
-      break;
+      return false;
     case 'collection':
-      if (banner.targetId) {
-        navigateToCollection(banner.targetId);
-      }
-      break;
-    case 'external':
-      if (banner.url) {
-        Linking.openURL(banner.url);
-      }
-      break;
+      navigateToCollection(target.id!);
+      return true;
+    case 'none':
     default:
-      // Fallback: try to open URL if available
-      if (banner.url) {
-        Linking.openURL(banner.url);
-      } else if (banner.targetId) {
-        // Try to infer type from targetId format or default to product
-        navigateToProduct(banner.targetId);
-      }
+      return false;
   }
 }
 

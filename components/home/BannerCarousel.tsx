@@ -7,6 +7,7 @@ import Carousel from "react-native-reanimated-carousel";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useTracking } from "@/hooks/useTracking";
 import { navigateBanner } from "@/utils/deepLinks";
+import { NAVIGABLE_TARGET_TYPES, resolveBannerTarget } from "@/utils/bannerTarget";
 import { ikResize } from "@/utils/imageCdn";
 import { AppText, Touchable } from "@/components/ui/kit";
 import { animation, pressScale, radius, spacing } from "@/theme/tokens";
@@ -46,71 +47,85 @@ export const BannerCarousel = memo(
       setActiveIndex((prev) => (prev === safeIndex ? prev : safeIndex));
     }, [banners.length]);
 
-    const renderBannerItem = useCallback(({ item }: { item: any }) => (
-      <Touchable
-        onPress={() => {
-          trackEvent('banner_click', {
-            bannerId: item._id,
-            screen: 'home',
-          });
-          navigateBanner(item);
-        }}
-        scaleTo={pressScale.card}
-        accessibilityRole="button"
-        accessibilityLabel={item.title || item.description || "Banner"}
-        style={{ width: screenWidth, height: bannerHeight }}
-      >
-        <Image
-          source={{ uri: ikResize(item.image, screenWidth) ?? item.image }}
-          style={[styles.bannerImage, { width: screenWidth, height: bannerHeight }]}
-          contentFit="cover"
-          transition={animation.slow}
-          // Neutral well behind the photo, so a slow image decode shows a calm
-          // grey rather than a white flash against the dark scrim.
-          placeholderContentFit="cover"
-        />
+    const renderBannerItem = useCallback(({ item }: { item: any }) => {
+      // A banner with no target is decoration, not a control. Without this it
+      // still pressed, scaled and announced itself as a button to a screen
+      // reader, then did nothing — which reads as a broken tap.
+      const target = resolveBannerTarget(item);
+      const actionable = NAVIGABLE_TARGET_TYPES.includes(target.type);
 
-        {/* Top scrim: keeps the floating white header icons readable over a
-            bright photo without darkening the whole banner. */}
-        <LinearGradient
-          colors={["rgba(11,18,32,0.45)", "transparent"]}
-          style={styles.topScrim}
-          pointerEvents="none"
-        />
+      return (
+        <Touchable
+          onPress={actionable ? () => {
+            trackEvent('banner_click', {
+              bannerId: item._id,
+              screen: 'home',
+              targetType: target.type,
+              ...(target.id ? { targetId: target.id } : {}),
+            });
+            navigateBanner(item);
+          } : undefined}
+          disabled={!actionable}
+          scaleTo={actionable ? pressScale.card : 1}
+          accessibilityRole={actionable ? "button" : "image"}
+          accessibilityLabel={item.title || item.description || "Banner"}
+          style={{ width: screenWidth, height: bannerHeight }}
+        >
+          <Image
+            source={{ uri: ikResize(item.image, screenWidth) ?? item.image }}
+            style={[styles.bannerImage, { width: screenWidth, height: bannerHeight }]}
+            contentFit="cover"
+            transition={animation.slow}
+            // Neutral well behind the photo, so a slow image decode shows a calm
+            // grey rather than a white flash against the dark scrim.
+            placeholderContentFit="cover"
+          />
 
-        {/* Bottom scrim: three stops instead of two so the fade is smooth
-            rather than a visible band across the image. */}
-        <LinearGradient
-          colors={["transparent", "rgba(11,18,32,0.35)", "rgba(11,18,32,0.82)"]}
-          locations={[0, 0.45, 1]}
-          style={[styles.bottomScrim, { height: SCRIM_HEIGHT }]}
-          pointerEvents="none"
-        />
+          {/* Top scrim: keeps the floating white header icons readable over a
+              bright photo without darkening the whole banner. */}
+          <LinearGradient
+            colors={["rgba(11,18,32,0.45)", "transparent"]}
+            style={styles.topScrim}
+            pointerEvents="none"
+          />
 
-        {(item.title || item.description) && (
-          <View style={styles.content}>
-            {item.title && (
-              <AppText variant="hero" style={styles.title} numberOfLines={2}>
-                {item.title}
-              </AppText>
-            )}
-            {item.description && (
-              <AppText variant="bodySmall" style={styles.description} numberOfLines={2}>
-                {item.description}
-              </AppText>
-            )}
-            {/* Reads as a CTA without being a real button — tapping anywhere on
-                the banner already navigates, and a nested button would create a
-                second, competing target. */}
-            <View style={[styles.cta, { backgroundColor: colors.primary }]}>
-              <AppText variant="label" weight="700" style={{ color: colors.onPrimary }}>
-                Shop now
-              </AppText>
+          {/* Bottom scrim: three stops instead of two so the fade is smooth
+              rather than a visible band across the image. */}
+          <LinearGradient
+            colors={["transparent", "rgba(11,18,32,0.35)", "rgba(11,18,32,0.82)"]}
+            locations={[0, 0.45, 1]}
+            style={[styles.bottomScrim, { height: SCRIM_HEIGHT }]}
+            pointerEvents="none"
+          />
+
+          {(item.title || item.description) && (
+            <View style={styles.content}>
+              {item.title && (
+                <AppText variant="hero" style={styles.title} numberOfLines={2}>
+                  {item.title}
+                </AppText>
+              )}
+              {item.description && (
+                <AppText variant="bodySmall" style={styles.description} numberOfLines={2}>
+                  {item.description}
+                </AppText>
+              )}
+              {/* Reads as a CTA without being a real button — tapping anywhere on
+                  the banner already navigates, and a nested button would create a
+                  second, competing target. Suppressed when there is nowhere to go,
+                  so the banner never promises a destination it doesn't have. */}
+              {actionable && (
+                <View style={[styles.cta, { backgroundColor: colors.primary }]}>
+                  <AppText variant="label" weight="700" style={{ color: colors.onPrimary }}>
+                    Shop now
+                  </AppText>
+                </View>
+              )}
             </View>
-          </View>
-        )}
-      </Touchable>
-    ), [screenWidth, bannerHeight, colors, trackEvent]);
+          )}
+        </Touchable>
+      );
+    }, [screenWidth, bannerHeight, colors, trackEvent]);
 
     if (banners.length === 0) return null;
 

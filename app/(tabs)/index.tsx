@@ -39,6 +39,7 @@ import { ikResize } from "@/utils/imageCdn";
 import { BannerCarousel } from "@/components/home/BannerCarousel";
 import { ProductSection } from "@/components/home/ProductSection";
 import { StoreHighlights } from "@/components/home/StoreHighlights";
+import { QuickCollections } from "@/components/home/QuickCollections";
 import { HomeEmptyState } from "@/components/home/HomeEmptyState";
 import BannerSkeleton from "@/components/BannerSkeleton";
 import { AppText, SkeletonBlock, Touchable } from "@/components/ui/kit";
@@ -287,6 +288,7 @@ function IndexContent() {
   // currency switch.
   const {
     banners,
+    collections,
     trending,
     flashDeals,
     newArrivals,
@@ -395,19 +397,21 @@ function IndexContent() {
   // horizontal product rails inside each section stay as their own FlatLists
   // (supported nested horizontal-in-vertical pattern).
   type SectionKey =
-    | "banner" | "categories" | "forYou"
+    | "banner" | "categories" | "collections" | "forYou"
     | "trending" | "storeHighlights" | "flashDeals"
     | "newArrivals" | "brands";
 
   const sections = useMemo<SectionKey[]>(() => {
     if (isEmpty) return [];
-    const list: SectionKey[] = [
-      "banner", "categories",
-      "forYou", "trending", "storeHighlights", "flashDeals", "newArrivals",
-    ];
+    const list: SectionKey[] = ["banner", "categories"];
+    // Curated collections sit directly under the category bubbles: both are
+    // "where do I start browsing" affordances, and the rail must not appear
+    // once there is nothing to put in it.
+    if (collections.length > 0 || homeLoading) list.push("collections");
+    list.push("forYou", "trending", "storeHighlights", "flashDeals", "newArrivals");
     if (brandsYouLove.length > 0 || homeLoading) list.push("brands");
     return list;
-  }, [isEmpty, brandsYouLove.length, homeLoading]);
+  }, [isEmpty, brandsYouLove.length, collections.length, homeLoading]);
 
   const renderSection = useCallback(
     ({ item }: { item: SectionKey }) => {
@@ -419,6 +423,8 @@ function IndexContent() {
           return categoriesLoading && categories.length === 0
             ? <CategoryBubblesSkeleton />
             : <CategoryBubbles categories={categories} colors={colors} />;
+        case "collections":
+          return <QuickCollections collections={collections} isLoading={homeLoading} />;
         case "forYou":
           return (
             <ProductSection
@@ -478,7 +484,7 @@ function IndexContent() {
       }
     },
     [
-      homeLoading, banners, colors, categoriesLoading, categories, isDark,
+      homeLoading, banners, colors, categoriesLoading, categories, collections, isDark,
       forYou, trending, flashDeals, newArrivals, brandsYouLove, isProductsLoading,
     ]
   );

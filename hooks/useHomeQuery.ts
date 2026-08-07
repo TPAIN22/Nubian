@@ -8,6 +8,7 @@ export const useHomeQuery = () => {
   const {
     banners,
     categories,
+    collections,
     trending,
     flashDeals,
     newArrivals,
@@ -51,6 +52,7 @@ export const useHomeQuery = () => {
   return {
     banners,
     categories,
+    collections,
     trending,
     flashDeals,
     newArrivals,

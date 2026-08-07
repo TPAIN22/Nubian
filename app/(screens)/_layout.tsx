@@ -21,6 +21,8 @@ export default function ScreensLayout() {
       >
         <Stack.Screen name="[id]" options={{ headerShown: false }} />
         <Stack.Screen name="store/[id]" options={{ headerShown: false }} />
+        {/* Its own segment, not `[id]` — that one is the Category screen. */}
+        <Stack.Screen name="collection/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="products/[type]" options={{ headerShown: false }} />
         <Stack.Screen name="editProfile" options={{ headerShown: false }} />
         <Stack.Screen name="notification" options={{ headerShown: false }} />

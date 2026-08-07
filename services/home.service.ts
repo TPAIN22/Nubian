@@ -1,4 +1,4 @@
-import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeStore } from "../api/home.api";
+import { getHomeData, HomeData, HomeProduct, HomeCategory, HomeBanner, HomeCollection, HomeStore } from "../api/home.api";
 import { hasAnyActiveStock } from "@/utils/cartUtils";
 
 export class HomeService {
@@ -41,6 +41,24 @@ export class HomeService {
 
   static filterActiveBanners(banners: HomeBanner[]): HomeBanner[] {
     return Array.isArray(banners) ? banners.filter((banner) => !!banner.image) : [];
+  }
+
+  /**
+   * Collections that can actually be rendered and tapped.
+   *
+   * Unlike `filterActiveCategories`, this does NOT require an image: a
+   * collection is created by an admin who may reasonably leave the cover blank,
+   * and dropping it here would make it silently vanish from the home screen
+   * with nothing in the dashboard to explain why. The card falls back to a
+   * tinted tile instead. An entry with no id or no name is unusable, so those
+   * are dropped.
+   *
+   * A collection whose products are all unavailable is left in: the API still
+   * serves it, and its screen has a proper empty state.
+   */
+  static filterActiveCollections(collections: HomeCollection[]): HomeCollection[] {
+    if (!Array.isArray(collections)) return [];
+    return collections.filter((c) => !!c && !!c._id && !!String(c.name || "").trim());
   }
 
   static filterVerifiedStores(stores: HomeStore[]): HomeStore[] {

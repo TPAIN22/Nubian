@@ -5,6 +5,7 @@ import { useCurrencyStore } from "./useCurrencyStore";
 interface HomeState {
   banners: any[];
   categories: any[];
+  collections: any[];
   trending: any[];
   flashDeals: any[];
   newArrivals: any[];
@@ -46,6 +47,7 @@ async function buildHomePayload(currencyCode?: string) {
   return {
     banners:       HomeService.filterActiveBanners(homeData.banners),
     categories:    HomeService.filterActiveCategories(homeData.categories),
+    collections:   HomeService.filterActiveCollections(homeData.collections),
     trending:      HomeService.filterAvailableProducts(homeData.trending      || []),
     flashDeals:    HomeService.filterAvailableProducts(homeData.flashDeals    || []),
     newArrivals:   HomeService.filterAvailableProducts(homeData.newArrivals   || []),
@@ -58,6 +60,7 @@ async function buildHomePayload(currencyCode?: string) {
 const initialState = {
   banners: [],
   categories: [],
+  collections: [],
   trending: [],
   flashDeals: [],
   newArrivals: [],

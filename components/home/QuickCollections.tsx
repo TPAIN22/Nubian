@@ -1,95 +1,171 @@
-import { memo } from "react";
-import { View, FlatList, Pressable, StyleSheet, I18nManager } from "react-native";
-import { Text } from "@/components/ui/text";
+import { memo, useCallback } from "react";
+import { View, FlatList, StyleSheet, InteractionManager } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
-import { router } from "expo-router";
+import { AppText, SectionHeader, SkeletonBlock, Touchable } from "@/components/ui/kit";
+import { navigateToCollection } from "@/utils/deepLinks";
+import { useTracking } from "@/hooks/useTracking";
+import { ikResize } from "@/utils/imageCdn";
 import {
-  navigateToTrending,
-  navigateToFlashDeals,
-  navigateToNewArrivals,
-  navigateToTopRated,
-} from "@/utils/deepLinks";
+  iconSize,
+  pressScale,
+  radius,
+  SCREEN_PADDING,
+  spacing,
+  withAlpha,
+} from "@/theme/tokens";
+import i18n from "@/utils/i18n";
+import type { HomeCollection } from "@/api/home.api";
 
-const MOCK_COLLECTIONS = [
-  { id: "1", title: "Brands", image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&q=80", action: () => router.push('/(tabs)/explore') },
-  { id: "2", title: "New In", image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=300&q=80", action: () => navigateToNewArrivals() },
-  { id: "3", title: "Spring &\nSummer", image: "https://images.unsplash.com/photo-1513094735237-8f2714d57c13?w=300&q=80", action: () => navigateToTrending() },
-  { id: "4", title: "Plus-Size", image: "https://images.unsplash.com/photo-1574634534894-89d7576c8259?w=300&q=80", action: () => navigateToTopRated() },
-  { id: "5", title: "Fandom", image: "https://images.unsplash.com/photo-1583316174775-bd6dc0e9f298?w=300&q=80", action: () => navigateToFlashDeals() },
-];
+/**
+ * "Quick collections" rail — admin-curated collections, straight from the home
+ * payload.
+ *
+ * This used to be five hardcoded Unsplash photos wired to sort presets
+ * ("New In" → newArrivals, "Fandom" → flashDeals), which meant the labels
+ * promised editorial curation the app could not actually deliver. Now each card
+ * is a real Collection and taps through to `/(screens)/collection/[id]`, the
+ * same destination a banner with a `collection` target reaches.
+ *
+ * Data arrives with the rest of the home screen rather than through its own
+ * request — the backend already batches banners/categories/collections/stores
+ * into one cached call, and adding a second round-trip here would cost a
+ * request on every cold start to save nothing.
+ */
 
-export const QuickCollections = memo(() => {
-  const isRTL = I18nManager.isRTL;
+const CARD_W = 90;
+const CARD_H = 130;
+
+interface Props {
+  collections: HomeCollection[];
+  isLoading?: boolean;
+}
+
+export const QuickCollections = memo(({ collections, isLoading = false }: Props) => {
+  const { trackEvent } = useTracking();
+
+  const handlePress = useCallback(
+    (item: HomeCollection) => {
+      navigateToCollection(item._id, item);
+      InteractionManager.runAfterInteractions(() => {
+        trackEvent("collection_open", { collectionId: item._id, screen: "home" });
+      });
+    },
+    [trackEvent],
+  );
+
+  const renderSeparator = useCallback(() => <View style={{ width: spacing.sm }} />, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: HomeCollection }) => (
+      <Touchable
+        onPress={() => handlePress(item)}
+        scaleTo={pressScale.card}
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
+        style={styles.card}
+      >
+        {item.image ? (
+          <Image
+            // `ikResize` is a no-op (returning null only for a falsy input) on
+            // non-ImageKit URLs, so fall back to the original.
+            source={{ uri: ikResize(item.image, CARD_W * 2) ?? item.image }}
+            style={styles.image}
+            contentFit="cover"
+            transition={220}
+            recyclingKey={item._id}
+          />
+        ) : (
+          // A cover is optional in the dashboard, so a collection without one
+          // still gets a card rather than being dropped from the rail.
+          <View style={[styles.image, styles.placeholder]}>
+            <Ionicons name="albums-outline" size={iconSize.xl} color="#FFFFFF" />
+          </View>
+        )}
+
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.8)"]}
+          style={styles.overlay}
+          pointerEvents="none"
+        />
+
+        <AppText variant="micro" weight="700" numberOfLines={2} align="center" style={styles.title}>
+          {item.name}
+        </AppText>
+      </Touchable>
+    ),
+    [handlePress],
+  );
+
+  const keyExtractor = useCallback((item: HomeCollection) => item._id, []);
+
+  // Nothing curated yet, and nothing on the way — the rail disappears rather
+  // than leaving a titled empty band on the home screen.
+  if (!isLoading && collections.length === 0) return null;
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={MOCK_COLLECTIONS}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.listContent,
-          isRTL && { flexDirection: "row-reverse" },
-        ]}
-        renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={item.action}>
-            <Image
-              source={{ uri: item.image }}
-              style={styles.image}
-              contentFit="cover"
-            />
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.8)"]}
-              style={styles.overlay}
-            />
-            <Text style={styles.title} numberOfLines={2}>
-              {item.title}
-            </Text>
-          </Pressable>
-        )}
-        keyExtractor={(item) => item.id}
-      />
+    <View style={styles.section}>
+      <SectionHeader title={String(i18n.t("home_collections") || "Collections")} />
+
+      {isLoading && collections.length === 0 ? (
+        <View style={styles.skeletonRow}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <SkeletonBlock key={i} width={CARD_W} height={CARD_H} rounded={radius.sm} />
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          horizontal
+          data={collections}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          ItemSeparatorComponent={renderSeparator}
+          contentContainerStyle={styles.railContent}
+        />
+      )}
     </View>
   );
 });
 QuickCollections.displayName = "QuickCollections";
 
 const styles = StyleSheet.create({
-  container: {
-    marginVertical: 12,
-  },
-  listContent: {
-    paddingHorizontal: 12,
-    gap: 8,
+  section: { marginTop: spacing.xxl },
+  railContent: { paddingHorizontal: SCREEN_PADDING },
+  skeletonRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: SCREEN_PADDING,
   },
   card: {
-    width: 90,
-    height: 130,
-    borderRadius: 8,
+    width: CARD_W,
+    height: CARD_H,
+    borderRadius: radius.sm,
     overflow: "hidden",
     position: "relative",
   },
-  image: {
-    width: "100%",
-    height: "100%",
+  image: { width: "100%", height: "100%" },
+  placeholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    // Literal rather than themed: the title below is burnt white onto the
+    // gradient, so this tile has to stay dark in both light and dark mode.
+    backgroundColor: withAlpha("#000000", 0.55),
   },
   overlay: {
     position: "absolute",
     bottom: 0,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     height: "50%",
   },
   title: {
     position: "absolute",
-    bottom: 8,
-    left: 4,
-    right: 4,
+    bottom: spacing.sm,
+    start: spacing.xs,
+    end: spacing.xs,
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "bold",
-    textAlign: "center",
   },
 });

@@ -1,5 +1,6 @@
 import axiosInstance from "@/services/api/client";
 import { normalizeProduct, type NormalizedProduct } from "@/domain/product/product.normalize";
+import type { BannerTarget } from "@/utils/bannerTarget";
 
 export interface HomeBanner {
   _id: string;
@@ -8,10 +9,16 @@ export interface HomeBanner {
   title?: string;
   description?: string;
   order: number;
-  // Deep linking fields
+  /**
+   * Where tapping the banner goes. Absent on banners created before targets
+   * existed, which `resolveBannerTarget` reads as `{ type: 'none' }`.
+   */
+  target?: BannerTarget;
+  // Legacy flat deep-link fields. The API never emitted these; kept so a cached
+  // payload still resolves. See `utils/bannerTarget.ts`.
   type?: 'category' | 'store' | 'product' | 'collection' | 'external';
-  targetId?: string; // ID of the target entity (category, store, product, etc.)
-  url?: string; // For external banners
+  targetId?: string;
+  url?: string;
   slug?: string; // URL-friendly identifier
 }
 
@@ -31,6 +38,23 @@ export interface HomeCategory {
 // that read raw fields could resurface currency-leak bugs).
 export type HomeProduct = NormalizedProduct;
 
+/**
+ * A curated collection, as it appears on the home rail.
+ *
+ * Summary only — the products arrive when the shopper taps through to
+ * `/(screens)/collection/[id]`, so the home payload stays small no matter how
+ * many products a collection holds.
+ */
+export interface HomeCollection {
+  _id: string;
+  name: string;
+  slug?: string;
+  description?: string;
+  image?: string | null;
+  productCount?: number;
+  type?: 'collection';
+}
+
 export interface HomeStore {
   _id: string;
   id?: string;
@@ -45,6 +69,7 @@ export interface HomeStore {
 export interface HomeData {
   banners: HomeBanner[];
   categories: HomeCategory[];
+  collections: HomeCollection[];
   trending: HomeProduct[];
   flashDeals: HomeProduct[];
   newArrivals: HomeProduct[];
@@ -75,6 +100,9 @@ export const getHomeData = async (currencyCode?: string): Promise<HomeData> => {
     return {
       banners: data.banners || [],
       categories: data.categories || [],
+      // Absent from an older backend or a cached payload written before the
+      // home rail existed — an empty list simply hides the section.
+      collections: data.collections || [],
       trending:      norm(data.trending),
       flashDeals:    norm(data.flashDeals),
       newArrivals:   norm(data.newArrivals),
