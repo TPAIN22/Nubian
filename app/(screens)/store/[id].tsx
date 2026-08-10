@@ -44,6 +44,7 @@ import {
 import { useColors } from '@/hooks/useColors';
 import { useRTL } from '@/hooks/useRTL';
 import i18n from '@/utils/i18n';
+import { resolveStoreCover, storeGradient } from '@/utils/storeCover';
 import axiosInstance from '@/services/api/client';
 import ProductCard from '@/components/ProductCard';
 import { normalizeProduct } from '@/domain/product/product.normalize';
@@ -258,26 +259,50 @@ const Hero = memo(({ merchant, bannerH }: { merchant: Merchant | null; bannerH: 
   const reviews = merchant?.totalReviews ?? 0;
   const verified = merchant?.status === 'approved' || merchant?.verified;
 
+  // Every store gets a cover — uploaded, derived from the logo, or generated.
+  // See `utils/storeCover` for why an empty hero is not an option.
+  const cover = useMemo(() => (merchant ? resolveStoreCover(merchant) : null), [merchant]);
+
   return (
     <View style={{ backgroundColor: colors.surface }}>
       <View style={[heroStyles.banner, { height: bannerH, backgroundColor: colors.surfaceMuted }]}>
-        {merchant?.banner ? (
+        {cover?.kind === 'image' ? (
           <Image
-            source={{ uri: merchant.banner }}
+            source={{ uri: cover.uri }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             transition={320}
           />
+        ) : cover?.kind === 'blurred' ? (
+          <>
+            <Image
+              source={{ uri: cover.uri }}
+              style={StyleSheet.absoluteFill}
+              // Cropped and heavily blurred on purpose: this is the logo used as
+              // a colour field, not as a readable mark — the sharp copy sits in
+              // the ring directly below.
+              contentFit="cover"
+              blurRadius={40}
+              transition={320}
+            />
+            <View
+              style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha('#000000', 0.15) }]}
+              pointerEvents="none"
+            />
+          </>
         ) : (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              heroStyles.center,
-              { backgroundColor: withAlpha(colors.primary, 0.1) },
-            ]}
+          <LinearGradient
+            colors={cover?.colors ?? storeGradient('')}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[StyleSheet.absoluteFill, heroStyles.center]}
           >
-            <Ionicons name="storefront-outline" size={iconSize.hero} color={colors.primary} />
-          </View>
+            <Ionicons
+              name="storefront-outline"
+              size={iconSize.hero}
+              color={withAlpha('#FFFFFF', 0.9)}
+            />
+          </LinearGradient>
         )}
 
         {/* Bottom scrim only — a flat wash over the whole banner is what made

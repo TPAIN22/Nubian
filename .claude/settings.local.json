@@ -97,7 +97,12 @@
       "Bash(rm -f /c/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/17a690bb-f903-42ea-aca7-1fdd32efde75/scratchpad/build4.log)",
       "Bash(rm -f /c/Users/HUAWEI/AppData/Local/Temp/claude/C--Users-HUAWEI-Desktop-nubian-platform-apps-mobile/17a690bb-f903-42ea-aca7-1fdd32efde75/scratchpad/build5.log)",
       "Bash(NODE_OPTIONS=\"--max-old-space-size=6144\" npm run build)",
-      "Bash(grep -rn 'timeseries\\\\|timeSeries\\\\|dateRange\\\\|$dateToString\\\\|groupBy.*day\\\\|daily' src/controllers src/services)"
+      "Bash(grep -rn 'timeseries\\\\|timeSeries\\\\|dateRange\\\\|$dateToString\\\\|groupBy.*day\\\\|daily' src/controllers src/services)",
+      "PowerShell(npm run *)",
+      "PowerShell(npx eslint components/home/QuickCollections.tsx)",
+      "PowerShell(npx eslint app/'\\(screens\\)'/store/'[id]'.tsx utils/storeCover.ts __tests__/utils/storeCover.test.ts)",
+      "Bash(docker version *)",
+      "Bash(timeout 240 npm test)"
     ]
   }
 }

@@ -405,7 +405,7 @@ function IndexContent() {
     if (isEmpty) return [];
     const list: SectionKey[] = ["banner", "categories"];
     // Curated collections sit directly under the category bubbles: both are
-    // "where do I start browsing" affordances, and the rail must not appear
+    // "where do I start browsing" affordances, and the section must not appear
     // once there is nothing to put in it.
     if (collections.length > 0 || homeLoading) list.push("collections");
     list.push("forYou", "trending", "storeHighlights", "flashDeals", "newArrivals");
